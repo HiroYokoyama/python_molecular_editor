@@ -659,7 +659,7 @@ class View3DManager:
                 )
 
                 # Helper to add segments
-                def add_segment(p1, p2, radius, color_rgb):
+                def add_segment(p1: Any, p2: Any, radius: Any, color_rgb: Any) -> None:
                     nonlocal current_point_idx
                     all_points.append(p1)
                     all_points.append(p2)

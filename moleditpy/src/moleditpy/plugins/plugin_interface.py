@@ -176,7 +176,7 @@ class PluginContext:
         )
 
     @current_mol.setter
-    def current_mol(self, mol: Any):
+    def current_mol(self, mol: Any) -> None:
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
             mw.view_3d_manager.current_mol = mol
@@ -188,7 +188,7 @@ class PluginContext:
         return self.current_mol
 
     @current_molecule.setter
-    def current_molecule(self, mol: Any):
+    def current_molecule(self, mol: Any) -> None:
         self.current_mol = mol
 
     @property
@@ -289,7 +289,7 @@ class PluginContext:
         """
         self._manager.register_analysis_tool(self._plugin_name, label, callback)
 
-    def register_save_handler(self, callback: Callable[[], dict]):
+    def register_save_handler(self, callback: Callable[[], dict]) -> None:
         """
         Register a callback to save state into the project file.
 
@@ -298,7 +298,7 @@ class PluginContext:
         """
         self._manager.register_save_handler(self._plugin_name, callback)
 
-    def register_load_handler(self, callback: Callable[[dict], None]):
+    def register_load_handler(self, callback: Callable[[dict], None]) -> None:
         """
         Register a callback to restore state from the project file.
 

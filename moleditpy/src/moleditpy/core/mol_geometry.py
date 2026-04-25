@@ -601,13 +601,13 @@ def resolve_2d_overlaps(
     # Union-Find for overlap groups
     parent = {aid: aid for aid in atom_ids}
 
-    def find_set(aid):
+    def find_set(aid: Any) -> Any:
         if parent[aid] == aid:
             return aid
         parent[aid] = find_set(parent[aid])
         return parent[aid]
 
-    def unite_sets(aid1, aid2):
+    def unite_sets(aid1: Any, aid2: Any) -> None:
         root1 = find_set(aid1)
         root2 = find_set(aid2)
         if root1 != root2:

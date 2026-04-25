@@ -11,12 +11,20 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
+from typing import Any, Optional
 
 import os
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QCursor, QPainter, QPen, QPixmap
-from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from PyQt6.QtGui import QCursor, QMouseEvent, QPainter, QPen, QPixmap
+from PyQt6.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 try:
     from ..utils.constants import VERSION
@@ -25,14 +33,14 @@ except ImportError:
 
 
 class AboutDialog(QDialog):
-    def __init__(self, main_window, parent=None):
+    def __init__(self, main_window: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.main_window = main_window
         self.setWindowTitle("About MoleditPy")
         self.setFixedSize(250, 300)
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         layout = QVBoxLayout(self)
 
         # Create a clickable image label
@@ -90,7 +98,7 @@ class AboutDialog(QDialog):
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
-    def image_clicked(self, event):
+    def image_clicked(self, event: QMouseEvent) -> None:
         """Easter egg: Clear all and load bipyrimidine from SMILES"""
         # Clear the current scene
         self.main_window.edit_actions_manager.clear_all()
@@ -101,7 +109,7 @@ class AboutDialog(QDialog):
         # Close the dialog
         self.accept()
 
-    def image_mouse_press_event(self, event):
+    def image_mouse_press_event(self, event: QMouseEvent) -> None:
         """Handle mouse press on the image: trigger easter egg only for right-click."""
         try:
             if event.button() == Qt.MouseButton.RightButton:

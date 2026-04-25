@@ -664,7 +664,7 @@ class EditActionsManager:
                 bond_length = 75
 
                 # Helper: determine bond_stereo for hydrogen
-                def _choose_stereo(i):
+                def _choose_stereo(i: Any) -> Any:
                     # 0: plain, 1: wedge, 2: dash, 3: plain, 4+: all plain
                     if i == 0:
                         return 0
@@ -1133,7 +1133,7 @@ class EditActionsManager:
             h_count_map = self._compute_h_counts(mol)
             problem_map = self._detect_chemistry_problems(mol)
 
-            def _ui_closure():
+            def _ui_closure() -> None:
                 self._apply_ui_h_counts(h_count_map, problem_map, my_token)
 
             try:
@@ -1272,7 +1272,7 @@ class EditActionsManager:
 
         from moleditpy.core.mol_geometry import resolve_2d_overlaps
 
-        def has_bond_check(id1, id2):
+        def has_bond_check(id1: Any, id2: Any) -> Any:
             item1 = self.host.state_manager.data.atoms[id1]["item"]
             item2 = self.host.state_manager.data.atoms[id2]["item"]
             return (

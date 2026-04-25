@@ -145,7 +145,7 @@ class IOManager:
             settings = getattr(self.host.init_manager, "settings", {}) or {}
             skip_checks = bool(settings.get("skip_chemistry_checks", False))
 
-            def _set_prop(m, key, val):
+            def _set_prop(m: Any, key: str, val: Any) -> None:
                 try:
                     if isinstance(val, int):
                         m.SetIntProp(key, val)
@@ -154,7 +154,7 @@ class IOManager:
                 except (RuntimeError, TypeError, ValueError):
                     pass
 
-            def _process(charge_val, use_rd_determine=True):
+            def _process(charge_val: int, use_rd_determine: bool = True) -> Any:
                 if use_rd_determine:
                     try:
                         from rdkit.Chem import rdDetermineBonds

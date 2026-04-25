@@ -15,6 +15,7 @@ import sys
 import argparse
 import logging
 import os
+from typing import Any
 
 try:
     from .utils.constants import VERSION
@@ -43,7 +44,7 @@ def setup_logging() -> None:
         force=True,
     )
 
-    def handle_exception(exc_type, exc_value, exc_traceback):
+    def handle_exception(exc_type: Any, exc_value: Any, exc_traceback: Any) -> None:
         """Log unhandled exceptions using the configured logging system."""
         if issubclass(exc_type, KeyboardInterrupt):
             # Allow keyboard interrupt to exit normally

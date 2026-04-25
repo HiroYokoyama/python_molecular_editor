@@ -732,7 +732,7 @@ class CalculationWorker(QObject):
         options = options or {}
         w_id = options.get("worker_id")
 
-        def _check_halted():
+        def _check_halted() -> None:
             h_ids = getattr(self, "halt_ids", None)
             if getattr(self, "halt_all", False):
                 return True
@@ -744,19 +744,19 @@ class CalculationWorker(QObject):
                 or (w_id is not None and w_id in h_ids)
             )
 
-        def _safe_status(msg):
+        def _safe_status(msg: str) -> None:
             if _check_halted():
                 raise WorkerHaltError("Halted")
             with contextlib.suppress(AttributeError, RuntimeError):
                 self.status_update.emit(msg)
 
-        def _safe_finished(payload):
+        def _safe_finished(payload: Any) -> None:
             if _check_halted():
                 raise WorkerHaltError("Halted")
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.finished.emit(payload)
 
-        def _safe_error(msg):
+        def _safe_error(msg: str) -> None:
             # If we're already halting, don't raise another error
             if msg == "Halted":
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):

@@ -637,7 +637,7 @@ class MainInitManager:
         """Clear all plugin actions from the plugin menu and other UI components."""
         PLUGIN_ACTION_TAG = "plugin_managed"
 
-        def clear_menu(menu):
+        def clear_menu(menu: Any) -> None:
             if not menu:
                 return
             for act in list(menu.actions()):
@@ -886,8 +886,8 @@ class MainInitManager:
                 f"{p_name} Files ({' '.join(['*' + e for e in exts])});;All Files (*)"
             )
 
-            def make_cb(m, f, n):
-                def _cb():
+            def make_cb(m: Any, f: Any, n: Any) -> Any:
+                def _cb() -> None:
                     fpath, _ = QFileDialog.getOpenFileName(
                         self.host, f"Import {n} Files", "", f
                     )
@@ -1915,7 +1915,7 @@ class MainInitManager:
         self.plugin_menu = menu_bar.addMenu("&Plugin")
         manage_plugins_action = QAction("Plugin Manager...", self.host)
 
-        def show_plugin_manager():
+        def show_plugin_manager() -> None:
             if not self.host.plugin_manager:
                 QMessageBox.information(
                     self.host, "Safe Mode", "Plugins are disabled (safe mode)."
@@ -1950,7 +1950,7 @@ class MainInitManager:
         conv_group = QActionGroup(self.host)
         conv_group.setExclusive(True)
 
-        def _set_conv_mode(mode):
+        def _set_conv_mode(mode: Any) -> None:
             try:
                 self.host.init_manager.settings["3d_conversion_mode"] = mode
                 self.host.init_manager.settings_dirty = True
