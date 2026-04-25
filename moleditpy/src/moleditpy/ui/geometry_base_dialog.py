@@ -11,11 +11,18 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
+from typing import TYPE_CHECKING, Optional, Union
+
+from PyQt6.QtWidgets import QLineEdit, QSlider, QWidget
+from rdkit import Chem
 
 try:
     from .base_picking_dialog import BasePickingDialog
 except ImportError:
     from moleditpy.ui.base_picking_dialog import BasePickingDialog
+
+if TYPE_CHECKING:
+    from .main_window import MainWindow
 
 
 class GeometryBaseDialog(BasePickingDialog):
@@ -24,12 +31,23 @@ class GeometryBaseDialog(BasePickingDialog):
     Handles synchronization between QLineEdit and QSlider and real-time 3D updates.
     """
 
-    def __init__(self, mol, main_window, parent=None):
+    def __init__(
+        self,
+        mol: Chem.Mol,
+        main_window: "MainWindow",
+        parent: Optional[QWidget] = None,
+    ) -> None:
         super().__init__(mol, main_window, parent)
         self._slider_dragging = False
         self._snapshot_positions = None
 
-    def _sync_input_to_slider(self, val, slider, scale=1.0, wrap=False):
+    def _sync_input_to_slider(
+        self,
+        val: Union[str, float],
+        slider: QSlider,
+        scale: float = 1.0,
+        wrap: bool = False,
+    ) -> None:
         """Sync a numerical value from input text to the slider."""
         try:
             f_val = float(val)
@@ -42,7 +60,7 @@ class GeometryBaseDialog(BasePickingDialog):
         except (ValueError, TypeError):
             pass
 
-    def on_slider_pressed(self):
+    def on_slider_pressed(self) -> None:
         """Prepare for a slider drag operation by saving a geometry snapshot."""
         if not self._is_selection_complete():
             return
@@ -52,7 +70,7 @@ class GeometryBaseDialog(BasePickingDialog):
         # Capture geometry snapshot to ensure stable axes during rotation/dragging
         self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
 
-    def on_slider_released(self):
+    def on_slider_released(self) -> None:
         """Finalize a slider drag operation."""
         self._slider_dragging = False
         # Snapshot is usually kept until selection changes to preserve turn direction,
@@ -65,7 +83,9 @@ class GeometryBaseDialog(BasePickingDialog):
                 "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
             )
 
-    def on_slider_value_changed_click(self, value, input_box, scale=1.0):
+    def on_slider_value_changed_click(
+        self, value: int, input_box: QLineEdit, scale: float = 1.0
+    ) -> None:
         """
         Handle a discrete value change (e.g., clicking on the slider rail).
         Triggers a geometric update and saves undo state.
@@ -93,7 +113,9 @@ class GeometryBaseDialog(BasePickingDialog):
                 "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
             )
 
-    def on_slider_moved_realtime(self, value, input_box, scale=1.0):
+    def on_slider_moved_realtime(
+        self, value: int, input_box: QLineEdit, scale: float = 1.0
+    ) -> None:
         """Update geometry in real-time as the slider is dragged."""
         if not self._is_selection_complete():
             return
@@ -104,10 +126,10 @@ class GeometryBaseDialog(BasePickingDialog):
 
         self.apply_geometry_update(float(value / scale))
 
-    def _is_selection_complete(self):
+    def _is_selection_complete(self) -> bool:
         """Must be implemented by subclass to check if enough atoms are picked."""
         raise NotImplementedError
 
-    def apply_geometry_update(self, new_value):  # pylint: disable=arguments-renamed
+    def apply_geometry_update(self, new_value: float) -> None:  # pylint: disable=arguments-renamed
         """Must be implemented by subclass to perform the actual RdKit/Numpy update."""
         raise NotImplementedError

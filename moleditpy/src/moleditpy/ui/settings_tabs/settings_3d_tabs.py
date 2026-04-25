@@ -10,25 +10,31 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from collections.abc import Mapping
+from typing import Any, Optional
+
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
-    QPushButton,
-    QComboBox,
     QCheckBox,
+    QColorDialog,
+    QComboBox,
     QFormLayout,
     QLabel,
-    QColorDialog,
+    QPushButton,
+    QWidget,
 )
 from .settings_tab_base import SettingsTabBase
 
 
 class Settings3DSceneTab(SettingsTabBase):
-    def __init__(self, default_settings, parent=None):
+    def __init__(
+        self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
+    ) -> None:
         super().__init__(default_settings, parent)
         self.current_bg_color = default_settings["background_color"]
         self._setup_ui()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         form_layout = QFormLayout(self)
 
         self.bg_button = QPushButton()
@@ -66,18 +72,18 @@ class Settings3DSceneTab(SettingsTabBase):
         self.projection_combo.addItems(["Perspective", "Orthographic"])
         form_layout.addRow("Projection Mode:", self.projection_combo)
 
-    def _select_color(self):
+    def _select_color(self) -> None:
         color = QColorDialog.getColor(QColor(self.current_bg_color), self)
         if color.isValid():
             self.current_bg_color = color.name()
             self._update_color_button()
 
-    def _update_color_button(self):
+    def _update_color_button(self) -> None:
         self.bg_button.setStyleSheet(
             f"background-color: {self.current_bg_color}; border: 1px solid #888;"
         )
 
-    def update_ui(self, settings_dict):
+    def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
         self.current_bg_color = settings_dict.get(
             "background_color", self.default_settings["background_color"]
         )
@@ -99,7 +105,7 @@ class Settings3DSceneTab(SettingsTabBase):
         if idx >= 0:
             self.projection_combo.setCurrentIndex(idx)
 
-    def get_settings(self):
+    def get_settings(self) -> dict[str, Any]:
         return {
             "background_color": self.current_bg_color,
             "show_3d_axes": self.axes_checkbox.isChecked(),
@@ -112,13 +118,19 @@ class Settings3DSceneTab(SettingsTabBase):
 
 
 class SettingsModelTab(SettingsTabBase):
-    def __init__(self, model_prefix, info_text, default_settings, parent=None):
+    def __init__(
+        self,
+        model_prefix: str,
+        info_text: str,
+        default_settings: Mapping[str, Any],
+        parent: Optional[QWidget] = None,
+    ) -> None:
         self.prefix = model_prefix
         self.info_text = info_text
         super().__init__(default_settings, parent)
         self._setup_ui()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         form_layout = QFormLayout(self)
 
         info_label = QLabel(self.info_text)
@@ -210,7 +222,7 @@ class SettingsModelTab(SettingsTabBase):
             self.use_cpk_checkbox = QCheckBox("Use CPK colors for bonds")
             form_layout.addRow(self.use_cpk_checkbox)
 
-    def _pick_bond_color(self):
+    def _pick_bond_color(self) -> None:
         cur = getattr(self, "current_bond_color", "#7F7F7F")
         color = QColorDialog.getColor(QColor(cur), self)
         if color.isValid():
@@ -219,7 +231,7 @@ class SettingsModelTab(SettingsTabBase):
                 f"background-color: {self.current_bond_color}; border: 1px solid #888;"
             )
 
-    def update_ui(self, settings_dict):
+    def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
         p = self.prefix
         if p in ["ball_stick", "cpk"]:
             val = settings_dict.get(f"{p}_atom_scale", 1.0)
@@ -254,8 +266,8 @@ class SettingsModelTab(SettingsTabBase):
                 settings_dict.get("ball_stick_use_cpk_bond_color", False)
             )
 
-    def get_settings(self):
-        s = {}
+    def get_settings(self) -> dict[str, Any]:
+        s: dict[str, Any] = {}
         p = self.prefix
         if p in ["ball_stick", "cpk"]:
             s[f"{p}_atom_scale"] = self.atom_scale_slider.value() / 100.0

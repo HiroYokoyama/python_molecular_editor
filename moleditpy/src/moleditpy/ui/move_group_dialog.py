@@ -11,6 +11,8 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
+from typing import Any
+
 import numpy as np
 import pyvista as pv
 from PyQt6.QtCore import QEvent, Qt
@@ -35,7 +37,13 @@ except ImportError:
 class MoveGroupDialog(BasePickingDialog):
     """Dialog to select a connected molecular group and perform translation/rotation."""
 
-    def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
+    def __init__(
+        self,
+        mol: Any,
+        main_window: Any,
+        preselected_atoms: Any = None,
+        parent: Any = None,
+    ) -> None:
         super().__init__(mol, main_window, parent)
         self.selected_atoms = set()
         self.group_atoms = set()  # All atoms connected to selected atoms
@@ -53,7 +61,7 @@ class MoveGroupDialog(BasePickingDialog):
 
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("Move Group")
         self.setModal(False)
         self.resize(300, 400)
@@ -166,7 +174,7 @@ class MoveGroupDialog(BasePickingDialog):
         # Enable picking to handle atom selection
         self.enable_picking()
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, obj: Any, event: Any) -> bool:
         """Mouse event handling in 3D view - delegate to CustomInteractorStyle if a group is selected."""
         if obj == self.main_window.view_3d_manager.plotter.interactor:
             # Prevent state confusion from double/triple clicks
@@ -407,7 +415,7 @@ class MoveGroupDialog(BasePickingDialog):
 
         return super().eventFilter(obj, event)
 
-    def on_atom_picked(self, atom_idx):
+    def on_atom_picked(self, atom_idx: int) -> None:
         """Select the entire connected component the atom belongs to."""
         if getattr(self, "is_dragging_group", False):
             return
@@ -441,7 +449,7 @@ class MoveGroupDialog(BasePickingDialog):
         self.show_atom_labels()
         self.update_display()
 
-    def update_display(self):
+    def update_display(self) -> None:
         if not self.group_atoms:
             self.selection_label.setText("No group selected")
         else:
@@ -454,7 +462,7 @@ class MoveGroupDialog(BasePickingDialog):
                 f"Selected group: {len(self.group_atoms)} atoms - {', '.join(atom_info[:5])}{' ...' if len(atom_info) > 5 else ''}"
             )
 
-    def show_atom_labels(self):
+    def show_atom_labels(self) -> None:
         """Highlight atoms in the selected group."""
         self.clear_atom_labels()
 
@@ -490,7 +498,7 @@ class MoveGroupDialog(BasePickingDialog):
 
         self.main_window.view_3d_manager.plotter.render()
 
-    def clear_atom_labels(self):
+    def clear_atom_labels(self) -> None:
         """Clear highlights."""
         # Call base which clears selection_labels (standard labels)
         super().clear_atom_labels()
@@ -517,12 +525,12 @@ class MoveGroupDialog(BasePickingDialog):
         except (AttributeError, RuntimeError, ValueError, TypeError):
             pass
 
-    def reset_translation_inputs(self):
+    def reset_translation_inputs(self) -> None:
         self.x_trans_input.setText("0.0")
         self.y_trans_input.setText("0.0")
         self.z_trans_input.setText("0.0")
 
-    def apply_translation(self):
+    def apply_translation(self) -> None:
         """Translate the selected group."""
         if not self.group_atoms:
             QMessageBox.warning(self, "Warning", "Please select a group first.")
@@ -550,12 +558,12 @@ class MoveGroupDialog(BasePickingDialog):
         self._push_undo()
         self.show_atom_labels()
 
-    def reset_rotation_inputs(self):
+    def reset_rotation_inputs(self) -> None:
         self.x_rot_input.setText("0.0")
         self.y_rot_input.setText("0.0")
         self.z_rot_input.setText("0.0")
 
-    def apply_rotation(self):
+    def apply_rotation(self) -> None:
         """Rotate the selected group."""
         if not self.group_atoms:
             QMessageBox.warning(self, "Warning", "Please select a group first.")
@@ -613,7 +621,7 @@ class MoveGroupDialog(BasePickingDialog):
         self._push_undo()
         self.show_atom_labels()
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         """Clear selection."""
         self.selected_atoms.clear()
         self.group_atoms.clear()
@@ -621,3 +629,6 @@ class MoveGroupDialog(BasePickingDialog):
         self.update_display()
         self.is_dragging_group = False
         self.drag_start_pos = None
+
+
+from typing import Any

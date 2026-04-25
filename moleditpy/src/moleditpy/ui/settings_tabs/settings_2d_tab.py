@@ -10,26 +10,32 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from collections.abc import Mapping
+from typing import Any, Optional
+
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
-    QPushButton,
+    QColorDialog,
     QComboBox,
     QFontComboBox,
     QFormLayout,
     QLabel,
-    QColorDialog,
+    QPushButton,
+    QWidget,
 )
 from .settings_tab_base import SettingsTabBase
 
 
 class Settings2DTab(SettingsTabBase):
-    def __init__(self, default_settings, parent=None):
+    def __init__(
+        self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
+    ) -> None:
         super().__init__(default_settings, parent)
         self.current_bg_color_2d = default_settings["background_color_2d"]
         self.current_bond_color_2d = default_settings["bond_color_2d"]
         self._setup_ui()
 
-    def _setup_ui(self):
+    def _setup_ui(self) -> None:
         form_layout = QFormLayout(self)
 
         # --- View Appearance ---
@@ -139,7 +145,7 @@ class Settings2DTab(SettingsTabBase):
             "Use Bond Color for Atoms:", self.atom_use_bond_color_2d_checkbox
         )
 
-    def _pick_bg_color_2d(self):
+    def _pick_bg_color_2d(self) -> None:
         color = QColorDialog.getColor(
             QColor(self.current_bg_color_2d), self, "Select 2D Background Color"
         )
@@ -147,7 +153,7 @@ class Settings2DTab(SettingsTabBase):
             self.current_bg_color_2d = color.name()
             self._update_color_buttons()
 
-    def _pick_bond_color_2d(self):
+    def _pick_bond_color_2d(self) -> None:
         color = QColorDialog.getColor(
             QColor(self.current_bond_color_2d), self, "Select 2D Bond Color"
         )
@@ -155,7 +161,7 @@ class Settings2DTab(SettingsTabBase):
             self.current_bond_color_2d = color.name()
             self._update_color_buttons()
 
-    def _update_color_buttons(self):
+    def _update_color_buttons(self) -> None:
         self.bg_color_2d_button.setStyleSheet(
             f"background-color: {self.current_bg_color_2d}; border: 1px solid #888;"
         )
@@ -163,7 +169,7 @@ class Settings2DTab(SettingsTabBase):
             f"background-color: {self.current_bond_color_2d}; border: 1px solid #888;"
         )
 
-    def update_ui(self, settings_dict):
+    def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
         self.current_bg_color_2d = settings_dict.get(
             "background_color_2d", self.default_settings["background_color_2d"]
         )
@@ -204,7 +210,7 @@ class Settings2DTab(SettingsTabBase):
             settings_dict.get("atom_use_bond_color_2d", False)
         )
 
-    def get_settings(self):
+    def get_settings(self) -> dict[str, Any]:
         return {
             "background_color_2d": self.current_bg_color_2d,
             "bond_color_2d": self.current_bond_color_2d,

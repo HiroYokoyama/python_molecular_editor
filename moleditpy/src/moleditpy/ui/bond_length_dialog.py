@@ -11,6 +11,8 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import numpy as np
+from typing import TYPE_CHECKING, Optional, Sequence
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -23,6 +25,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from rdkit import Chem
 
 try:
     from .geometry_base_dialog import GeometryBaseDialog
@@ -31,9 +34,18 @@ except ImportError:
     from moleditpy.ui.geometry_base_dialog import GeometryBaseDialog
     from moleditpy.core.mol_geometry import calc_distance, get_connected_group
 
+if TYPE_CHECKING:
+    from .main_window import MainWindow
+
 
 class BondLengthDialog(GeometryBaseDialog):
-    def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
+    def __init__(
+        self,
+        mol: Chem.Mol,
+        main_window: "MainWindow",
+        preselected_atoms: Optional[Sequence[int]] = None,
+        parent: Optional[QWidget] = None,
+    ) -> None:
         super().__init__(mol, main_window, parent)
         self.atom1_idx = None
         self.atom2_idx = None
@@ -45,7 +57,7 @@ class BondLengthDialog(GeometryBaseDialog):
 
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("Adjust Bond Length")
         self.setModal(False)
 
@@ -144,7 +156,7 @@ class BondLengthDialog(GeometryBaseDialog):
             self.show_atom_labels()
             self.update_display()
 
-    def on_atom_picked(self, atom_idx):
+    def on_atom_picked(self, atom_idx: int) -> None:
         """Handle atom picking event in the 3D view."""
         if self.atom1_idx is None:
             self.atom1_idx = atom_idx
@@ -157,14 +169,14 @@ class BondLengthDialog(GeometryBaseDialog):
 
         self.update_display()
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         """Clear the current atom selection."""
         self.atom1_idx = None
         self.atom2_idx = None
         self.clear_selection_labels()
         self.update_display()
 
-    def show_atom_labels(self):
+    def show_atom_labels(self) -> None:
         """Display labels on the selected atoms."""
         selected_atoms = [self.atom1_idx, self.atom2_idx]
         labels = ["1st", "2nd"]
@@ -173,7 +185,7 @@ class BondLengthDialog(GeometryBaseDialog):
         ]
         self.show_atom_labels_for(pairs)
 
-    def update_display(self):
+    def update_display(self) -> None:
         """Update the UI display."""
         # Clear existing labels
         self.clear_selection_labels()
@@ -247,13 +259,13 @@ class BondLengthDialog(GeometryBaseDialog):
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2")
 
-    def on_distance_input_changed(self, text):
+    def on_distance_input_changed(self, text: str) -> None:
         """Line edit text changed, update slider."""
         if not self.distance_input.isEnabled() or not self.apply_button.isEnabled():
             return
         self._sync_input_to_slider(text, self.distance_slider, 100.0)
 
-    def apply_changes(self):
+    def apply_changes(self) -> None:
         """Apply the bond length changes to the molecule."""
         if not self._is_selection_complete():
             return
@@ -273,10 +285,10 @@ class BondLengthDialog(GeometryBaseDialog):
         # Push Undo state AFTER modification
         self._push_undo()
 
-    def _is_selection_complete(self):
+    def _is_selection_complete(self) -> bool:
         return self.atom1_idx is not None and self.atom2_idx is not None
 
-    def apply_geometry_update(self, new_distance):  # pylint: disable=arguments-renamed
+    def apply_geometry_update(self, new_distance: float) -> None:  # pylint: disable=arguments-renamed
         """Adjust the bond length."""
         conf = self.mol.GetConformer()
 

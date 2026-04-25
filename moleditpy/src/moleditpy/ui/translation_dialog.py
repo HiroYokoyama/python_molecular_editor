@@ -10,6 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from typing import Any
+
 import numpy as np
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -33,7 +35,13 @@ _TAB_DELTA = 1
 
 
 class TranslationDialog(BasePickingDialog):
-    def __init__(self, mol, main_window, preselected_atoms=None, parent=None):
+    def __init__(
+        self,
+        mol: Any,
+        main_window: Any,
+        preselected_atoms: Any = None,
+        parent: Any = None,
+    ) -> None:
         super().__init__(mol, main_window, parent)
         self.selected_atoms = set()
 
@@ -59,7 +67,7 @@ class TranslationDialog(BasePickingDialog):
     # UI construction
     # ------------------------------------------------------------------
 
-    def init_ui(self):
+    def init_ui(self) -> None:
         self.setWindowTitle("Translate Atoms")
         self.setModal(False)
         layout = QVBoxLayout(self)
@@ -80,7 +88,7 @@ class TranslationDialog(BasePickingDialog):
 
         self.enable_picking()
 
-    def _build_absolute_tab(self):
+    def _build_absolute_tab(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
@@ -128,7 +136,7 @@ class TranslationDialog(BasePickingDialog):
         layout.addStretch()
         return widget
 
-    def _build_delta_tab(self):
+    def _build_delta_tab(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
@@ -177,7 +185,7 @@ class TranslationDialog(BasePickingDialog):
     # Tab switching
     # ------------------------------------------------------------------
 
-    def _on_tab_changed(self, index):
+    def _on_tab_changed(self, index: int) -> None:
         if hasattr(self, "_is_initializing") and self._is_initializing:
             return
         self.selected_atoms.clear()
@@ -188,20 +196,20 @@ class TranslationDialog(BasePickingDialog):
     # Atom picking dispatch
     # ------------------------------------------------------------------
 
-    def on_atom_picked(self, atom_idx):
+    def on_atom_picked(self, atom_idx: int) -> None:
         if self.tabs.currentIndex() == _TAB_ABSOLUTE:
             self._abs_on_atom_picked(atom_idx)
         else:
             self._delta_on_atom_picked(atom_idx)
 
-    def _abs_on_atom_picked(self, atom_idx):
+    def _abs_on_atom_picked(self, atom_idx: int) -> None:
         # Enforce single selection: replace previous atom
         self.selected_atoms = {atom_idx}
         self._populate_abs_inputs_from_atom(atom_idx)
         self.update_display()
         self.show_atom_labels()
 
-    def _delta_on_atom_picked(self, atom_idx):
+    def _delta_on_atom_picked(self, atom_idx: int) -> None:
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
@@ -213,7 +221,7 @@ class TranslationDialog(BasePickingDialog):
     # Absolute tab helpers
     # ------------------------------------------------------------------
 
-    def _populate_abs_inputs_from_atom(self, atom_idx):
+    def _populate_abs_inputs_from_atom(self, atom_idx: int) -> None:
         pos = (
             self.main_window.view_3d_manager.current_mol.GetConformer().GetPositions()[
                 atom_idx
@@ -223,7 +231,7 @@ class TranslationDialog(BasePickingDialog):
         self.abs_y_input.setText(f"{pos[1]:.4f}")
         self.abs_z_input.setText(f"{pos[2]:.4f}")
 
-    def _abs_clear_selection(self):
+    def _abs_clear_selection(self) -> None:
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.abs_x_input.setText("0.000")
@@ -231,16 +239,16 @@ class TranslationDialog(BasePickingDialog):
         self.abs_z_input.setText("0.000")
         self.update_display()
 
-    def _set_origin(self):
+    def _set_origin(self) -> None:
         self.abs_x_input.setText("0.0000")
         self.abs_y_input.setText("0.0000")
         self.abs_z_input.setText("0.0000")
 
-    def _on_move_mol_toggled(self, state):
+    def _on_move_mol_toggled(self, state: int) -> None:
         label = "Move Molecule" if self.move_mol_checkbox.isChecked() else "Move Atom"
         self.abs_apply_btn.setText(label)
 
-    def apply_absolute(self):
+    def apply_absolute(self) -> None:
         self.mol = self.main_window.view_3d_manager.current_mol
         if len(self.selected_atoms) != 1:
             QMessageBox.warning(self, "Warning", "Please select exactly one atom.")
@@ -277,12 +285,12 @@ class TranslationDialog(BasePickingDialog):
     # Delta tab methods (unchanged logic)
     # ------------------------------------------------------------------
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
 
-    def select_all_atoms(self):
+    def select_all_atoms(self) -> None:
         try:
             if hasattr(self, "mol") and self.mol is not None:
                 self.selected_atoms = set(range(self.mol.GetNumAtoms()))
@@ -297,7 +305,7 @@ class TranslationDialog(BasePickingDialog):
         except (AttributeError, RuntimeError, TypeError, KeyError) as e:
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
-    def apply_translation(self):
+    def apply_translation(self) -> None:
         self.mol = self.main_window.view_3d_manager.current_mol
         if not self.selected_atoms:
             QMessageBox.warning(self, "Warning", "Please select at least one atom.")
@@ -329,7 +337,7 @@ class TranslationDialog(BasePickingDialog):
     # Shared display update
     # ------------------------------------------------------------------
 
-    def update_display(self):
+    def update_display(self) -> None:
         tab = self.tabs.currentIndex()
         count = len(self.selected_atoms)
 
@@ -354,7 +362,7 @@ class TranslationDialog(BasePickingDialog):
                 )
                 self.apply_button.setEnabled(True)
 
-    def show_atom_labels(self):
+    def show_atom_labels(self) -> None:
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
             pairs = [(idx, str(i + 1)) for i, idx in enumerate(sorted_atoms)]
