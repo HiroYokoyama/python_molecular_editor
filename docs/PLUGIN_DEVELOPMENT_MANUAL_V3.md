@@ -297,10 +297,10 @@ The correct file name and location depend on your plugin type:
 | Plugin type | File to use | Why it survives updates |
 |---|---|---|
 | **Single-file** (`my_plugin.py`) | `my_plugin.json` — same name, same folder | Installer only overwrites the `.py` file |
-| **Folder** (`MyPlugin/__init__.py`) | `MyPlugin/settings.json` | Plugin Installer backs up and restores `settings.json` before/after replacing the folder |
+| **Folder** (`MyPlugin/__init__.py`) | `MyPlugin/settings.json` | Plugin Installer plugin backs up and restores `settings.json` before/after replacing the folder |
 
 > [!IMPORTANT]
-> For folder plugins, the file **must** be named exactly `settings.json`. The Plugin Installer only preserves this specific filename during updates — any other name will be wiped.
+> For folder plugins, the file **must** be named exactly `settings.json`. The Plugin Installer plugin only preserves this specific filename during updates — any other name will be wiped.
 
 **Single-file plugin** — name your JSON after the plugin file:
 
