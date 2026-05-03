@@ -136,6 +136,14 @@ moleditpy
 
 This project is licensed under the **GNU General Public License v3.0 (GPL-v3)**. See the `LICENSE` file for details.
 
+## Citation
+
+If you use this software in your work, please cite it as follows:
+
+```
+Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Zenodo. https://doi.org/10.5281/zenodo.17268532
+```
+
 -----
 
 <div id="japanese"></div>
@@ -259,3 +267,11 @@ moleditpy
 ## ライセンス
 
 このプロジェクトは **GNU General Public License v3.0 (GPL-v3)** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
+
+## 引用
+
+本ソフトウェアを研究で使用される場合は、以下の通り引用を明記してください。
+
+```
+Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Zenodo. https://doi.org/10.5281/zenodo.17268532
+```
