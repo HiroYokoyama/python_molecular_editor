@@ -74,6 +74,7 @@ class MoveGroupDialog(BasePickingDialog):
         self.is_dragging_group: bool = False
         self.drag_start_pos: Optional[Any] = None
         self.mouse_moved_during_drag: bool = False
+        self._consume_next_left_release = False
         self.highlight_actor: Optional[pv.Actor] = None
 
         self.init_ui()
@@ -266,6 +267,7 @@ class MoveGroupDialog(BasePickingDialog):
                         else:
                             # Atom outside group - select new group
                             self.on_atom_picked(clicked_atom_idx)
+                            self._consume_next_left_release = True
                             return True
                     else:
                         # Clicked outside atoms
@@ -383,6 +385,10 @@ class MoveGroupDialog(BasePickingDialog):
                 and isinstance(event, QMouseEvent)
                 and event.button() == Qt.MouseButton.LeftButton
             ):
+                if self._consume_next_left_release:
+                    self._consume_next_left_release = False
+                    return True
+
                 if getattr(self, "potential_drag", False) or (
                     self.is_dragging_group and self.drag_start_pos
                 ):

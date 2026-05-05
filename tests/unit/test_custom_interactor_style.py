@@ -86,3 +86,44 @@ def test_custom_interactor_style_background_click(app, mock_parser_host):
         # Verify drag is false and superclass rotation method was called
         assert interactor_style._is_dragging_atom is False
         mock_super_down.assert_called_once()
+
+
+def test_measurement_atom_click_suppresses_vtk_release(app, mock_parser_host):
+    """Atom measurement clicks consume press and must not leak release to VTK."""
+    mock_parser_host.edit_3d_manager.is_3d_edit_mode = False
+    mock_parser_host.edit_3d_manager.measurement_mode = True
+
+    interactor_style = CustomInteractorStyle(mock_parser_host)
+
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (100, 100)
+    interactor_style.GetInteractor = MagicMock(return_value=mock_interactor)
+
+    mock_mol = MagicMock()
+    mock_mol.GetNumAtoms.return_value = 1
+    mock_mol.GetAtomWithIdx.return_value = MagicMock()
+    mock_parser_host.view_3d_manager.current_mol = mock_mol
+
+    mock_picker = MagicMock()
+    mock_parser_host.plotter.picker = mock_picker
+    mock_parser_host.view_3d_manager.atom_actor = MagicMock()
+    mock_picker.GetActor.return_value = mock_parser_host.view_3d_manager.atom_actor
+    mock_picker.GetPickPosition.return_value = (0, 0, 0)
+
+    import numpy as np
+
+    mock_parser_host.view_3d_manager.atom_positions_3d = np.array([[0.0, 0.0, 0.0]])
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera.OnLeftButtonUp"
+        ) as mock_super_up,
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        mock_qapp.keyboardModifiers.return_value = Qt.KeyboardModifier.NoModifier
+
+        interactor_style.on_left_button_down(None, None)
+        interactor_style.on_left_button_up(None, None)
+
+        mock_super_up.assert_not_called()

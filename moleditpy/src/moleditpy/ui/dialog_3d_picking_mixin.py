@@ -33,6 +33,7 @@ class Dialog3DPickingMixin:
         self.picking_enabled = False
         self._mouse_press_pos: Optional[QPoint] = None
         self._mouse_moved = False
+        self._consume_next_left_release = False
         self.selection_labels: list[Any] = []
 
     def eventFilter(self, obj: Optional[QObject], event: Optional[QEvent]) -> bool:
@@ -101,6 +102,7 @@ class Dialog3DPickingMixin:
 
                                 # We picked an atom, so stop tracking for background click
                                 self._mouse_press_pos = None
+                                self._consume_next_left_release = True
                                 return True
 
                 # Clicked something other than an atom
@@ -129,6 +131,12 @@ class Dialog3DPickingMixin:
             and isinstance(event, QMouseEvent)
             and event.button() == Qt.MouseButton.LeftButton
         ):
+            if self._consume_next_left_release:
+                self._consume_next_left_release = False
+                self._mouse_press_pos = None
+                self._mouse_moved = False
+                return True
+
             if self._mouse_press_pos is not None:
                 if not self._mouse_moved:
                     # Pure click (no drag) on background -> Clear selection
@@ -170,6 +178,7 @@ class Dialog3DPickingMixin:
             if plotter is not None and plotter.interactor is not None:
                 plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
+        self._consume_next_left_release = False
         if hasattr(self.main_window, "_picking_consumed"):
             self.main_window._picking_consumed = False
 

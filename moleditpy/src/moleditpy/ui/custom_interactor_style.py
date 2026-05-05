@@ -38,6 +38,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self.is_dragging = False
         self._mouse_moved_during_drag = False
         self._mouse_press_pos: Optional[tuple[int, int]] = None
+        self._suppress_next_left_button_up = False
 
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)  # type: ignore[arg-type]
         # self.AddObserver("LeftButtonDoubleClickEvent", self.on_left_button_down)
@@ -64,6 +65,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self.is_dragging = False
         self._mouse_moved_during_drag = False
         self._mouse_press_pos = None
+        self._suppress_next_left_button_up = False
 
         # Clear dangling atom drag info on main window
         mw = self.main_window
@@ -147,6 +149,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     mw.view_3d_manager.plotter.setCursor(
                         Qt.CursorShape.ClosedHandCursor
                     )
+                    self._suppress_next_left_button_up = True
                     return  # Disable camera rotation
                 else:
                     # Clicked outside group - Search connected component
@@ -253,6 +256,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                     pass
 
                             QTimer.singleShot(0, _deferred_measure)
+                            self._suppress_next_left_button_up = True
                             return  # Selection complete, disable camera rotation
 
             # Clear measurement if not dragging
@@ -291,6 +295,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             mw.view_3d_manager.plotter.setCursor(
                                 Qt.CursorShape.ClosedHandCursor
                             )
+                            self._suppress_next_left_button_up = True
                             return  # Prevent camera rotation
 
         # Track mouse event to distinguish rotation from click
@@ -727,14 +732,21 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
             QTimer.singleShot(0, _deferred_updates)
         else:
-            # Delegate cleanup to parent
-            super().OnLeftButtonUp()
+            if self._suppress_next_left_button_up:
+                try:
+                    self.StopState()
+                except (AttributeError, RuntimeError):
+                    pass
+            else:
+                # Delegate cleanup to parent
+                super().OnLeftButtonUp()
 
         # Handle click release and reset state.
         self._is_dragging_atom = False
         self.is_dragging = False
         self._mouse_press_pos = None
         self._mouse_moved_during_drag = False
+        self._suppress_next_left_button_up = False
 
         # Clear Move Group state
         try:

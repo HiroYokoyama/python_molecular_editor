@@ -158,6 +158,22 @@ def test_eventfilter_atom_click_calls_on_atom_picked(app):
     assert 0 in dlg._picked
 
 
+def test_eventfilter_atom_click_consumes_matching_release(app):
+    dlg, mw = _make_dlg(app)
+    plotter = mw.view_3d_manager.plotter
+
+    mw.view_3d_manager.atom_actor = MagicMock()
+    plotter.picker.GetActor.return_value = mw.view_3d_manager.atom_actor
+    plotter.picker.GetPickPosition.return_value = (0.0, 0.0, 0.0)
+    plotter.interactor.GetEventPosition.return_value = (10, 10)
+    dlg.mol.GetAtomWithIdx.return_value = MagicMock()
+
+    assert dlg.eventFilter(plotter.interactor, _left_press_event()) is True
+    assert dlg.eventFilter(plotter.interactor, _release_event()) is True
+    assert dlg._mouse_press_pos is None
+    assert dlg._mouse_moved is False
+
+
 def test_eventfilter_atom_click_miss_returns_false(app):
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
