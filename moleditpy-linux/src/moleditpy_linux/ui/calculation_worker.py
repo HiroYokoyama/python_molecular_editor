@@ -16,6 +16,7 @@ import re
 import numpy as np
 import sys
 import subprocess
+import time
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
@@ -250,6 +251,8 @@ def _iterative_optimize(
             chunk = min(chunk_size, max_iters - iters_done)
             res = ff.Minimize(maxIts=chunk)
             iters_done += chunk
+            time.sleep(0.001)
+
             if res == 0:
                 break
         return True
@@ -286,8 +289,6 @@ def _iterative_optimize_obabel(
             if check_halted_cb():
                 raise WorkerHaltError("Halted")
             ff.ConjugateGradients(chunk_size)
-            import time
-
             time.sleep(0.001)
 
         ff.GetCoordinates(ob_mol.OBMol)
