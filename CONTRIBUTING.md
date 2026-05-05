@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to **MoleditPy**! We welcome contributions from the community to make this molecular editor more robust and feature-rich for scientific research.
 
-To maintain the high quality and stability of the application (Pylint > 9.0, Core Logic Coverage > 75%), please review the following guidelines.
+To maintain the high quality and stability of the application (Pylint > 9.0, Core Logic Coverage > 80%), please review the following guidelines.
 
 ## 1. How to Report Bugs
 
@@ -46,7 +46,7 @@ MoleditPy uses a hybrid approach to quality assurance: **Automated Unit Tests** 
 
 ### A. Core Molecular Logic (Automated)
 * Files in `core/` related to calculation, parsing, or data structure (e.g., `molecular_data.py`, `calculation_worker.py`) **MUST** have unit tests.
-* **Target Coverage:** Maintain or exceed **75%** coverage for logic modules.
+* **Target Coverage:** Maintain or exceed **80%** coverage for logic modules.
 * Any new public method added to `plugin_interface.py` (`PluginContext` or `Plugin3DController`) **MUST** have a corresponding test in `tests/unit/test_plugin_interface.py`.
 
 ### B. Error Handling — No Hiding, No Crashing

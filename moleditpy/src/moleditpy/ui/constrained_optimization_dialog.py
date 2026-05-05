@@ -427,6 +427,13 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         if positions:
             plotter = self.main_window.view_3d_manager.plotter
             if plotter is not None:
+                # Save camera position to prevent reset
+                try:
+                    cam = plotter.camera_position
+                except (AttributeError, RuntimeError, TypeError) as e:
+                    logging.debug(f"Could not save camera position: {e}")
+                    cam = None
+
                 label_actor = plotter.add_point_labels(
                     positions,
                     texts,
@@ -436,6 +443,13 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     always_visible=True,
                 )
                 self.constraint_labels.append(label_actor)
+
+                # Restore camera position
+                if cam is not None:
+                    try:
+                        plotter.camera_position = cam
+                    except (AttributeError, RuntimeError, TypeError) as e:
+                        logging.debug(f"Could not restore camera position: {e}")
 
     def clear_constraint_labels(self) -> None:
         for label_actor in self.constraint_labels:
@@ -680,6 +694,13 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         if positions:
             plotter = self.main_window.view_3d_manager.plotter
             if plotter is not None:
+                # Save camera position to prevent reset
+                try:
+                    cam = plotter.camera_position
+                except (AttributeError, RuntimeError, TypeError) as e:
+                    logging.debug(f"Could not save camera position: {e}")
+                    cam = None
+
                 label_actor = plotter.add_point_labels(
                     positions,
                     texts,
@@ -693,6 +714,13 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     self.selection_labels.extend(label_actor)
                 else:
                     self.selection_labels.append(label_actor)
+
+                # Restore camera position
+                if cam is not None:
+                    try:
+                        plotter.camera_position = cam
+                    except (AttributeError, RuntimeError, TypeError) as e:
+                        logging.debug(f"Could not restore camera position: {e}")
 
     def on_cell_changed(self, row: int, column: int) -> None:
         """Update internal data when a table cell is edited."""

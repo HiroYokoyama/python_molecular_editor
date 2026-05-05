@@ -422,6 +422,90 @@ _Two neighbors: should continue skeleton (opposite to average bond vector)._
 - assert offset.x() == pytest.approx(0)
 - assert offset.y() == pytest.approx(-L)
 
+## tests/unit/test_base_picking_dialog.py
+
+### test_key_enter_clicks_apply_button_if_enabled
+_No description provided._
+
+- apply_btn.click.assert_called_once()
+- ev.accept.assert_called_once()
+
+### test_key_enter_does_not_click_disabled_apply_button
+_No description provided._
+
+- apply_btn.click.assert_not_called()
+
+### test_key_enter_no_apply_button_does_not_raise
+_No description provided._
+
+
+### test_key_none_event_returns_early
+_No description provided._
+
+
+### test_key_other_key_passes_to_super
+_No description provided._
+
+
+### test_close_event_clears_labels_and_disables_picking
+_No description provided._
+
+- mock_clear.assert_called_once()
+- mock_disable.assert_called_once()
+
+### test_reject_clears_labels_and_disables_picking
+_No description provided._
+
+- mock_clear.assert_called_once()
+- mock_disable.assert_called_once()
+
+### test_accept_clears_labels_and_disables_picking
+_No description provided._
+
+- mock_clear.assert_called_once()
+- mock_disable.assert_called_once()
+
+### test_update_molecule_geometry_array_updates_conformer
+_No description provided._
+
+- assert updated[0] == pytest.approx([10.0, 20.0, 30.0], abs=0.0001)
+- assert dlg._molecule_modified is True
+
+### test_update_molecule_geometry_dict_form
+_No description provided._
+
+- assert updated[0] == pytest.approx([5.0, 6.0, 7.0], abs=0.0001)
+
+### test_update_molecule_geometry_calls_draw_molecule_3d
+_No description provided._
+
+- mw.view_3d_manager.draw_molecule_3d.assert_called_once_with(mol)
+
+### test_update_molecule_geometry_updates_cache
+_No description provided._
+
+- assert mw.view_3d_manager.atom_positions_3d[1] == pytest.approx([99.0, 0.0, 0.0], abs=0.0001)
+
+### test_push_undo_calls_push_undo_state
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called_once()
+- assert dlg._molecule_modified is False
+
+### test_push_undo_no_state_manager_no_crash
+_No description provided._
+
+
+### test_done_pushes_undo_if_molecule_modified
+_No description provided._
+
+- mock_undo.assert_called_once()
+
+### test_done_skips_undo_if_not_modified
+_No description provided._
+
+- mock_undo.assert_not_called()
+
 ## tests/unit/test_benzene_placement_shortcut.py
 
 ### test_benzene_shortcut_on_atom
@@ -574,6 +658,87 @@ _Verify that apply_changes pushes updates to the parent window settings._
 - assert mock_parser_host.settings_dirty is True
 - assert mock_parser_host.settings['cpk_colors']['O'] == '#00ff00'
 - assert mock_parser_host.settings['ball_stick_bond_color'] == '#112233'
+
+## tests/unit/test_color_settings_dialog_extended.py
+
+### test_pick_bs_bond_color_valid_updates_changed_bs
+_No description provided._
+
+- assert dialog.changed_bs_color == '#aabbcc'
+- assert 'background-color: #aabbcc' in dialog.bs_button.styleSheet()
+
+### test_pick_bs_bond_color_invalid_no_change
+_No description provided._
+
+- assert dialog.changed_bs_color is None
+
+### test_reset_all_with_parent_uses_default_bond_color
+_No description provided._
+
+- assert dialog.changed_bs_color == '#123456'
+- assert 'background-color: #123456' in dialog.bs_button.styleSheet()
+
+### test_reset_all_without_parent_defaults_to_gray
+_No description provided._
+
+- assert dialog.changed_bs_color == '#7F7F7F'
+- assert 'background-color: #7f7f7f' in dialog.bs_button.styleSheet().lower()
+
+### test_reset_all_restores_element_buttons
+_No description provided._
+
+- assert dialog.changed_cpk == {}
+- assert dialog._reset_all_flag is True
+
+### test_apply_changes_no_parent_returns_early
+_No description provided._
+
+
+### test_apply_changes_reset_flag_deletes_cpk_colors
+_No description provided._
+
+- assert 'cpk_colors' not in parent.init_manager.settings
+
+### test_apply_changes_with_mol_calls_draw_molecule_3d
+_No description provided._
+
+- parent.view_3d_manager.draw_molecule_3d.assert_called()
+
+### test_apply_changes_reset_flag_resets_bond_color
+_No description provided._
+
+- assert parent.init_manager.settings.get('ball_stick_bond_color') == '#7F7F7F'
+
+### test_apply_changes_updates_2d_scene_items
+_No description provided._
+
+- item_with_style.update_style.assert_called()
+
+### test_apply_changes_calls_update_cpk_colors
+_No description provided._
+
+- parent.init_manager.update_cpk_colors_from_settings.assert_called()
+
+### test_apply_changes_calls_save_settings_when_cpk_changed
+_No description provided._
+
+- parent.init_manager.save_settings.assert_called()
+
+### test_accept_calls_apply_then_super
+_No description provided._
+
+- mock_apply.assert_called_once()
+- mock_super.assert_called_once()
+
+### test_on_element_clicked_invalid_color_no_change
+_No description provided._
+
+- assert 'C' not in dialog.changed_cpk
+
+### test_init_cpk_override_applied_to_button
+_No description provided._
+
+- assert '#112233' in style
 
 ## tests/unit/test_compute_logic.py
 
@@ -1043,6 +1208,131 @@ _Verify that clicking the background (no atom selected) allows VTK trackball rot
 - assert interactor_style._is_dragging_atom is False
 - mock_super_down.assert_called_once()
 
+## tests/unit/test_dialog_3d_picking_mixin.py
+
+### test_init_defaults
+_No description provided._
+
+- assert dlg.picking_enabled is False
+- assert dlg._mouse_press_pos is None
+- assert dlg._mouse_moved is False
+- assert dlg.selection_labels == []
+
+### test_eventfilter_none_event_returns_false
+_No description provided._
+
+- assert dlg.eventFilter(MagicMock(), None) is False
+
+### test_eventfilter_plotter_none_returns_false
+_No description provided._
+
+- assert dlg.eventFilter(MagicMock(), _left_press_event()) is False
+
+### test_eventfilter_mol_none_returns_false
+_No description provided._
+
+- assert dlg.eventFilter(MagicMock(), _left_press_event()) is False
+
+### test_eventfilter_non_interactor_returns_false
+_No description provided._
+
+- assert dlg.eventFilter(other_obj, _left_press_event()) is False
+
+### test_eventfilter_atom_click_calls_on_atom_picked
+_No description provided._
+
+- assert result is True
+- assert 0 in dlg._picked
+
+### test_eventfilter_atom_click_miss_returns_false
+_No description provided._
+
+- assert result is False
+- assert dlg._picked == []
+
+### test_eventfilter_mouse_move_sets_moved_flag
+_No description provided._
+
+- assert dlg._mouse_moved is True
+
+### test_eventfilter_mouse_move_small_does_not_set_flag
+_No description provided._
+
+- assert dlg._mouse_moved is False
+
+### test_eventfilter_release_pure_click_calls_clear_selection
+_No description provided._
+
+- dlg.clear_selection.assert_called_once()
+- assert dlg._mouse_press_pos is None
+
+### test_eventfilter_release_after_drag_no_clear_selection
+_No description provided._
+
+- dlg.clear_selection.assert_not_called()
+- assert dlg._mouse_press_pos is None
+
+### test_enable_picking_installs_event_filter
+_No description provided._
+
+- plotter.interactor.installEventFilter.assert_called_once_with(dlg)
+- assert dlg.picking_enabled is True
+
+### test_enable_picking_none_plotter_no_crash
+_No description provided._
+
+- assert dlg.picking_enabled is False
+
+### test_disable_picking_removes_event_filter
+_No description provided._
+
+- plotter.interactor.removeEventFilter.assert_called_once_with(dlg)
+- assert dlg.picking_enabled is False
+
+### test_disable_picking_when_not_enabled_is_noop
+_No description provided._
+
+- plotter.interactor.removeEventFilter.assert_not_called()
+
+### test_clear_atom_labels_removes_actors
+_No description provided._
+
+- plotter.remove_actor.assert_any_call(actor1)
+- plotter.remove_actor.assert_any_call(actor2)
+- assert dlg.selection_labels == []
+
+### test_clear_atom_labels_none_plotter_empties_list
+_No description provided._
+
+- assert dlg.selection_labels == []
+
+### test_add_selection_label_calls_add_point_labels
+_No description provided._
+
+- plotter.add_point_labels.assert_called_once()
+- assert len(dlg.selection_labels) == 1
+
+### test_add_selection_label_none_plotter_no_crash
+_No description provided._
+
+- assert dlg.selection_labels == []
+
+### test_add_selection_label_none_positions_no_crash
+_No description provided._
+
+- assert dlg.selection_labels == []
+
+### test_show_atom_labels_for_clears_then_adds
+_No description provided._
+
+- plotter.remove_actor.assert_called()
+- assert len(dlg.selection_labels) == 2
+
+### test_show_atom_labels_for_empty_list_clears_all
+_No description provided._
+
+- assert dlg.selection_labels == []
+
 ## tests/unit/test_dialog_logic.py
 
 ### test_bond_length_adjustment_logic
@@ -1500,6 +1790,116 @@ _Verify toggle_atom_selection_3d removes an already-selected atom._
 _Verify toggling different atoms accumulates them independently._
 
 - assert edit3d.selected_atoms_3d == {1, 2}
+
+## tests/unit/test_edit_3d_logic_extended.py
+
+### test_toggle_on_when_edit_mode_active_disables_edit_mode
+_No description provided._
+
+- host.init_manager.edit_3d_action.setChecked.assert_called_once_with(False)
+- host.ui_manager.toggle_3d_edit_mode.assert_called_once_with(False)
+
+### test_toggle_on_closes_active_dialogs
+_No description provided._
+
+- dlg.close.assert_called_once()
+- assert mgr.active_3d_dialogs == []
+
+### test_close_all_closes_each_dialog
+_No description provided._
+
+- d1.close.assert_called_once()
+- d2.close.assert_called_once()
+- assert mgr.active_3d_dialogs == []
+
+### test_close_all_handles_close_error
+_No description provided._
+
+- assert mgr.active_3d_dialogs == []
+
+### test_close_all_empty_list_is_noop
+_No description provided._
+
+
+### test_update_labels_display_adds_point_labels
+_No description provided._
+
+- host.view_3d_manager.plotter.add_point_labels.assert_called_once()
+
+### test_update_labels_display_no_labels_returns_early
+_No description provided._
+
+- host.view_3d_manager.plotter.add_point_labels.assert_not_called()
+
+### test_update_labels_display_no_mol_returns_early
+_No description provided._
+
+- host.view_3d_manager.plotter.add_point_labels.assert_not_called()
+
+### test_clear_measurement_selection_clears_state
+_No description provided._
+
+- assert mgr.selected_atoms_for_measurement == []
+- assert mgr.measurement_labels == []
+- host.view_3d_manager.plotter.render.assert_called()
+
+### test_clear_measurement_selection_removes_text_actor
+_No description provided._
+
+- host.view_3d_manager.plotter.remove_actor.assert_any_call(actor)
+- assert mgr.measurement_text_actor is None
+
+### test_update_2d_labels_no_mol_returns_early
+_No description provided._
+
+- mock_add.assert_not_called()
+
+### test_update_2d_labels_no_atoms_data_returns_early
+_No description provided._
+
+- mock_add.assert_not_called()
+
+### test_update_2d_labels_maps_atom_and_adds_label
+_No description provided._
+
+- mock_add.assert_called_once_with(atom_item, '1')
+
+### test_update_3d_selection_empty_renders
+_No description provided._
+
+- host.view_3d_manager.plotter.render.assert_called()
+
+### test_update_3d_selection_no_mol_renders
+_No description provided._
+
+- host.view_3d_manager.plotter.render.assert_called()
+
+### test_remove_dialog_present
+_No description provided._
+
+- assert dlg not in mgr.active_3d_dialogs
+
+### test_remove_dialog_absent_is_noop
+_No description provided._
+
+
+### test_calculate_and_display_3_atoms_includes_angle
+_No description provided._
+
+- assert any(('Angle' in l for l in lines))
+- assert any(('Distance' in l for l in lines))
+
+### test_calculate_and_display_4_atoms_includes_dihedral
+_No description provided._
+
+- assert any(('Dihedral' in l for l in lines))
+- assert any(('Angle' in l for l in lines))
+- assert any(('Distance' in l for l in lines))
+
+### test_calculate_and_display_1_atom_does_nothing
+_No description provided._
+
+- mock_disp.assert_not_called()
 
 ## tests/unit/test_edit_actions.py
 
@@ -2467,6 +2867,74 @@ _Verify MainWindow instantiates MainInitManager during initialization._
 - assert mw.init_manager == MockInitManager.return_value
 - assert args[0] == mw
 
+## tests/unit/test_main_window_proxies.py
+
+### test_mainwindow_all_managers_assigned
+_No description provided._
+
+- assert hasattr(mw, 'export_manager')
+- assert hasattr(mw, 'view_3d_manager')
+- assert hasattr(mw, 'edit_3d_manager')
+- assert hasattr(mw, 'edit_actions_manager')
+- assert hasattr(mw, 'compute_manager')
+- assert hasattr(mw, 'dialog_manager')
+- assert hasattr(mw, 'io_manager')
+- assert hasattr(mw, 'state_manager')
+- assert hasattr(mw, 'string_importer_manager')
+- assert hasattr(mw, 'ui_manager')
+- assert hasattr(mw, 'init_manager')
+
+### test_mainwindow_is_restoring_state_default
+_No description provided._
+
+- assert mw._is_restoring_state is False
+
+### test_mainwindow_start_calculation_signal_exists
+_No description provided._
+
+- assert hasattr(MainWindow, 'start_calculation')
+
+### test_current_mol_getter_delegates_to_view_3d_manager
+_No description provided._
+
+- assert mw.current_mol is mock_mol
+
+### test_current_mol_setter_delegates_to_view_3d_manager
+_No description provided._
+
+- assert mw.view_3d_manager.current_mol is mock_mol
+
+### test_plotter_property_delegates_to_view_3d_manager
+_No description provided._
+
+- assert mw.plotter is mock_plotter
+
+### test_data_property_delegates_to_state_manager
+_No description provided._
+
+- assert mw.data is mock_data
+
+### test_scene_property_delegates_to_init_manager
+_No description provided._
+
+- assert mw.scene is mock_scene
+
+### test_draw_molecule_3d_sets_current_mol
+_No description provided._
+
+- assert mw.view_3d_manager.current_mol is mock_mol
+
+### test_draw_molecule_3d_delegates_to_view_3d_manager
+_No description provided._
+
+- mw.view_3d_manager.draw_molecule_3d.assert_called_once_with(mock_mol)
+
+### test_draw_molecule_3d_none_mol
+_No description provided._
+
+- assert mw.view_3d_manager.current_mol is None
+- mw.view_3d_manager.draw_molecule_3d.assert_called_once_with(None)
+
 ## tests/unit/test_measurement_calcs.py
 
 ### test_angle_dialog_logic_matches_rdkit
@@ -2945,6 +3413,120 @@ _No description provided._
 _No description provided._
 
 - assert 'No group' in dlg.selection_label.text()
+
+## tests/unit/test_move_group_dialog_extended.py
+
+### TestInit.test_preselected_atoms_triggers_on_atom_picked
+_No description provided._
+
+- assert len(dlg.group_atoms) == mol.GetNumAtoms()
+
+### TestInit.test_no_preselected_atoms_leaves_group_empty
+_No description provided._
+
+- assert len(dlg.group_atoms) == 0
+
+### TestInit.test_initial_drag_state
+_No description provided._
+
+- assert dlg.is_dragging_group is False
+- assert dlg.drag_start_pos is None
+- assert dlg.potential_drag is False
+
+### TestInit.test_window_title
+_No description provided._
+
+- assert dlg.windowTitle() == 'Move Group'
+
+### TestInitUI.test_translation_inputs_default_zero
+_No description provided._
+
+- assert dlg.x_trans_input.text() == '0.0'
+- assert dlg.y_trans_input.text() == '0.0'
+- assert dlg.z_trans_input.text() == '0.0'
+
+### TestInitUI.test_rotation_inputs_default_zero
+_No description provided._
+
+- assert dlg.x_rot_input.text() == '0.0'
+- assert dlg.y_rot_input.text() == '0.0'
+- assert dlg.z_rot_input.text() == '0.0'
+
+### TestInitUI.test_selection_label_initial_text
+_No description provided._
+
+- assert 'No group' in dlg.selection_label.text()
+
+### TestUpdateDisplayBoundary.test_exactly_5_atoms_no_ellipsis
+_Exactly 5 selected atoms must NOT show '...'._
+
+- assert '5' in text
+- assert '...' not in text
+
+### TestUpdateDisplayBoundary.test_more_than_5_atoms_has_ellipsis
+_8-atom ethane (with H) must show '...' after 5th._
+
+- assert '...' in dlg.selection_label.text()
+
+### TestApplyRotationAxes.test_90deg_x_rotation_around_centroid
+_90° rotation around X maps [0,1,0] → [0,0,1] relative to centroid._
+
+- assert after[0] == pytest.approx([0.0, 0.0, 1.0], abs=1e-05)
+- assert after[1] == pytest.approx([0.0, 0.0, -1.0], abs=1e-05)
+
+### TestApplyRotationAxes.test_90deg_y_rotation_around_centroid
+_90° rotation around Y maps [1,0,0] → [0,0,-1] relative to centroid._
+
+- assert after[0] == pytest.approx([0.0, 0.0, -1.0], abs=1e-05)
+- assert after[1] == pytest.approx([0.0, 0.0, 1.0], abs=1e-05)
+
+### TestApplyRotationAxes.test_combined_rotation_pushes_undo
+_No description provided._
+
+- mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestAtomLabels.test_show_atom_labels_calls_plotter_add_mesh
+_No description provided._
+
+- mock_plotter.add_mesh.assert_called()
+- mock_plotter.render.assert_called()
+
+### TestAtomLabels.test_show_atom_labels_no_group_does_nothing
+_No description provided._
+
+- mw.view_3d_manager.plotter.add_mesh.assert_not_called()
+
+### TestAtomLabels.test_clear_atom_labels_removes_highlight_actor
+_No description provided._
+
+- mock_plotter.remove_actor.assert_called()
+- assert dlg.highlight_actor is None
+
+### TestAtomLabels.test_clear_atom_labels_none_plotter_does_not_raise
+_No description provided._
+
+
+### TestEventFilter.test_returns_false_when_plotter_is_none
+_No description provided._
+
+- assert result is False
+
+### TestEventFilter.test_returns_false_when_mol_is_none
+_No description provided._
+
+- assert result is False
+
+### TestEventFilter.test_double_click_resets_state_and_returns_false
+_No description provided._
+
+- assert result is False
+- assert dlg.is_dragging_group is False
+- assert dlg.potential_drag is False
+
+### TestEventFilter.test_non_interactor_obj_delegates_to_super
+_Events on objects other than the plotter interactor use base behaviour._
+
+- assert result is False
 
 ## tests/unit/test_parser_robustness.py
 
@@ -4863,6 +5445,287 @@ _No description provided._
 
 - assert detect_system_dark_mode() is None
 
+## tests/unit/test_template_preview.py
+
+### test_preview_item_init_defaults
+_No description provided._
+
+- assert item.is_aromatic is False
+- assert item.is_user_template is False
+- assert item.user_template_points == []
+- assert item.user_template_bonds == []
+- assert item.user_template_atoms == []
+
+### test_set_geometry_updates_polygon
+_No description provided._
+
+- assert not item.polygon.isEmpty()
+- assert item.is_aromatic is False
+- assert item.is_user_template is False
+
+### test_set_geometry_aromatic_flag
+_No description provided._
+
+- assert item.is_aromatic is True
+
+### test_set_user_template_geometry
+_No description provided._
+
+- assert item.is_user_template is True
+- assert item.user_template_points == pts
+- assert item.user_template_bonds == bonds
+- assert item.user_template_atoms == atoms
+- assert item.is_aromatic is False
+
+### test_bounding_rect_empty_polygon
+_No description provided._
+
+- assert isinstance(rect, QRectF)
+
+### test_bounding_rect_regular_polygon
+_No description provided._
+
+- assert rect.width() > 0
+
+### test_bounding_rect_user_template_with_points
+_No description provided._
+
+- assert rect.width() > 0
+- assert rect.height() > 0
+
+### test_bounding_rect_user_template_no_points
+_No description provided._
+
+- assert isinstance(rect, QRectF)
+
+### test_paint_none_painter_returns_early
+_No description provided._
+
+
+### test_paint_regular_template_non_aromatic
+_No description provided._
+
+
+### test_paint_regular_template_aromatic
+_No description provided._
+
+
+### test_paint_regular_template_empty_polygon
+_No description provided._
+
+
+### test_paint_user_template_no_points_returns_early
+_No description provided._
+
+
+### test_paint_user_template_single_bond
+_No description provided._
+
+
+### test_paint_user_template_double_bond
+_No description provided._
+
+
+### test_paint_user_template_triple_bond
+_No description provided._
+
+
+### test_paint_user_template_non_carbon_atom
+_No description provided._
+
+
+### test_paint_user_template_bond_info_2_elements
+_bond_info with only 2 elements (no order) defaults to single bond._
+
+
+### test_paint_user_template_out_of_range_indices
+_Bond indices beyond point list should be skipped without error._
+
+
+### test_preview_view_init_defaults
+_No description provided._
+
+- assert view.original_scene_rect is None
+- assert view.template_data is None
+- assert view.parent_dialog is None
+
+### test_preview_view_set_template_data
+_No description provided._
+
+- assert view.template_data == data
+- assert view.parent_dialog is parent
+
+### test_preview_view_resize_no_scene_rect_no_timer
+_No description provided._
+
+- mock_timer.assert_not_called()
+
+### test_preview_view_resize_with_scene_rect_schedules_timer
+_No description provided._
+
+- mock_timer.assert_called_once()
+
+### test_refit_view_no_rect_is_noop
+_No description provided._
+
+
+### test_refit_view_empty_rect_is_noop
+_No description provided._
+
+
+### test_refit_view_valid_rect
+_No description provided._
+
+
+### test_show_event_no_rect_no_timer
+_No description provided._
+
+- mock_timer.assert_not_called()
+
+### test_show_event_with_rect_schedules_timer
+_No description provided._
+
+- mock_timer.assert_called_once()
+
+### test_redraw_no_data_returns_early
+_No description provided._
+
+
+### test_redraw_with_data_calls_draw_template_preview
+_No description provided._
+
+- parent.draw_template_preview.assert_called_once()
+
+### test_load_template_file_valid
+_No description provided._
+
+- assert result == data
+
+### test_load_template_file_missing
+_No description provided._
+
+- assert result is None
+
+### test_load_template_file_invalid_json
+_No description provided._
+
+- assert result is None
+
+### test_save_template_file_success
+_No description provided._
+
+- assert result is True
+- assert json.loads(fp.read_text()) == data
+
+### test_save_template_file_oserror
+_No description provided._
+
+- assert result is False
+
+### test_draw_template_preview_no_atoms_adds_placeholder
+_No description provided._
+
+- assert sc.items()
+
+### test_draw_template_preview_single_bond
+_No description provided._
+
+- assert sc.items()
+
+### test_draw_template_preview_double_bond
+_No description provided._
+
+- assert sc.items()
+
+### test_draw_template_preview_triple_bond
+_No description provided._
+
+- assert sc.items()
+
+### test_draw_template_preview_non_carbon_atom
+_No description provided._
+
+- assert sc.items()
+
+### test_draw_template_preview_zero_size_mol
+_Single atom (mol_size=0) falls back to scale_factor=1.0 without crash._
+
+
+### test_convert_structure_to_template
+_No description provided._
+
+- assert result['name'] == 'TestMol'
+- assert len(result['atoms']) == 2
+- assert len(result['bonds']) == 1
+- assert result['bonds'][0]['order'] == 2
+- assert result['format'] == 'PME Template'
+
+### test_cleanup_template_mode_resets_selected
+_No description provided._
+
+- assert dlg.selected_template is None
+- assert dlg.delete_button.isEnabled() is False
+
+### test_cleanup_template_mode_calls_set_mode
+_No description provided._
+
+- mw.ui_manager.set_mode_and_update_toolbar.assert_called_once_with('atom_C')
+
+### test_cleanup_template_mode_no_ui_manager_no_crash
+_No description provided._
+
+
+### test_cleanup_template_mode_scene_reset
+_No description provided._
+
+- assert scene.mode == 'atom_C'
+- assert scene.user_template_data is None
+
+### test_select_template_sets_selected_and_enables_delete
+_No description provided._
+
+- assert dlg.selected_template == data
+- assert dlg.delete_button.isEnabled() is True
+
+### test_select_template_activates_template_mode
+_No description provided._
+
+- mock_act.assert_called_once_with(data)
+
+### test_use_template_calls_activate
+_No description provided._
+
+- mock_act.assert_called_once_with(data)
+- assert dlg.selected_template == data
+
+### test_fit_preview_view_safely_valid_rect
+_No description provided._
+
+- view.fitInView.assert_called_once()
+
+### test_fit_preview_view_safely_empty_rect
+_No description provided._
+
+- view.fitInView.assert_not_called()
+
+### test_fit_preview_view_safely_none_view
+_No description provided._
+
+
+### test_refit_all_previews_no_items_no_crash
+_No description provided._
+
+
+### test_refit_all_previews_calls_redraw
+_No description provided._
+
+- preview_view.redraw_with_current_size.assert_called_once()
+
+### test_delete_selected_no_selection_returns_early
+_No description provided._
+
+- mock_q.assert_not_called()
+
 ## tests/unit/test_translation_dialog.py
 
 ### TestTabSwitching.test_tab_change_clears_selection
@@ -5157,6 +6020,142 @@ _Test that run_calculation emits error on empty input._
 
 - assert error_handler.called
 - assert 'No atoms to convert' in str(args[0][1])
+
+## tests/unit/test_zoomable_view.py
+
+### test_init_panning_state
+_No description provided._
+
+- assert view._is_panning is False
+- assert view._pan_start_scroll_h == 0
+- assert view._pan_start_scroll_v == 0
+
+### test_init_drag_mode
+_No description provided._
+
+- assert view.dragMode() == ZoomableView.DragMode.NoDrag
+
+### test_init_scroll_bars_always_on
+_No description provided._
+
+- assert view.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+- assert view.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+
+### test_wheel_ctrl_zoom_in_scales_up
+_No description provided._
+
+- assert view.transform().m11() > before
+- ev.accept.assert_called_once()
+
+### test_wheel_ctrl_zoom_out_scales_down
+_No description provided._
+
+- assert view.transform().m11() < mid
+
+### test_wheel_no_ctrl_passes_to_super
+_No description provided._
+
+- assert view.transform().m11() == pytest.approx(before)
+
+### test_wheel_ctrl_does_not_exceed_max_scale
+_No description provided._
+
+- assert view.transform().m11() <= 20.0 * 1.1 + 0.1
+
+### test_wheel_ctrl_does_not_go_below_min_scale
+_No description provided._
+
+- assert view.transform().m11() >= 0.05 / 1.1 - 0.01
+
+### test_mouse_press_middle_button_starts_pan
+_No description provided._
+
+- assert view._is_panning is True
+- ev.accept.assert_called_once()
+
+### test_mouse_press_shift_left_starts_pan
+_No description provided._
+
+- assert view._is_panning is True
+- ev.accept.assert_called_once()
+
+### test_mouse_press_pan_sets_cursor_closed_hand
+_No description provided._
+
+- assert view.cursor().shape() == Qt.CursorShape.ClosedHandCursor
+
+### test_mouse_press_left_no_shift_passes_to_super
+_No description provided._
+
+- assert view._is_panning is False
+
+### test_mouse_press_none_event_returns_early
+_No description provided._
+
+- assert view._is_panning is False
+
+### test_mouse_move_while_panning_updates_scrollbars
+_No description provided._
+
+- move_ev.accept.assert_called_once()
+
+### test_mouse_move_not_panning_passes_to_super
+_No description provided._
+
+- assert view._is_panning is False
+
+### test_mouse_move_none_event_returns_early
+_No description provided._
+
+
+### test_mouse_release_ends_pan
+_No description provided._
+
+- assert view._is_panning is True
+- assert view._is_panning is False
+- rel_ev.accept.assert_called_once()
+
+### test_mouse_release_restores_arrow_cursor_in_select_mode
+_No description provided._
+
+- assert view.cursor().shape() == Qt.CursorShape.ArrowCursor
+
+### test_mouse_release_restores_cross_cursor_in_atom_mode
+_No description provided._
+
+- assert view.cursor().shape() == Qt.CursorShape.CrossCursor
+
+### test_mouse_release_restores_cross_cursor_in_bond_mode
+_No description provided._
+
+- assert view.cursor().shape() == Qt.CursorShape.CrossCursor
+
+### test_mouse_release_restores_cross_cursor_in_charge_mode
+_No description provided._
+
+- assert view.cursor().shape() == Qt.CursorShape.CrossCursor
+
+### test_mouse_release_restores_arrow_for_unknown_mode
+_No description provided._
+
+- assert view.cursor().shape() == Qt.CursorShape.ArrowCursor
+
+### test_mouse_release_not_panning_passes_to_super
+_No description provided._
+
+- assert view._is_panning is False
+- assert view._is_panning is False
+
+### test_viewport_event_non_native_gesture_passes_to_super
+_No description provided._
+
+- assert isinstance(result, bool)
+
+### test_viewport_event_zoom_native_gesture_scales
+_No description provided._
+
+- assert result is True
+- assert view.transform().m11() > before
 
 ## tests/integration/test_calculation_worker.py
 
@@ -5994,3 +6993,5 @@ _Test that pressing 1, 2, 3 bonds to an existing atom if it's nearby._
 - assert len(data.atoms) == 2
 - assert len(data.bonds) == 1
 - assert bond_key in data.bonds
+
+## tests/gui/test_plugin_manager_redundant.py
