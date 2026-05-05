@@ -128,7 +128,14 @@ class Dialog3DPickingMixin:
                                 if distances[closest_atom_idx] < click_threshold:
                                     if hasattr(self.main_window, "_picking_consumed"):
                                         self.main_window._picking_consumed = True
-                                    self.on_atom_picked(int(closest_atom_idx))
+                                    
+                                    def _deferred_pick(idx=int(closest_atom_idx), target=self):
+                                        try:
+                                            target.on_atom_picked(idx)
+                                        except (AttributeError, RuntimeError):
+                                            pass
+                                    from PyQt6.QtCore import QTimer
+                                    QTimer.singleShot(0, _deferred_pick)
 
                                     # We picked an atom, so stop tracking for background click
                                     self._mouse_press_pos = None
@@ -164,7 +171,13 @@ class Dialog3DPickingMixin:
                 if not self._mouse_moved:
                     # Pure click (no drag) on background -> Clear selection
                     if hasattr(self, "clear_selection"):
-                        self.clear_selection()
+                        def _deferred_clear(target=self):
+                            try:
+                                target.clear_selection()
+                            except (AttributeError, RuntimeError):
+                                pass
+                        from PyQt6.QtCore import QTimer
+                        QTimer.singleShot(0, _deferred_clear)
 
                 # Reset state
                 self._mouse_press_pos = None

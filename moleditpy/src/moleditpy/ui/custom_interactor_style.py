@@ -230,8 +230,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         move_group_dialog.group_atoms = visited.copy()
 
                     move_group_dialog.selected_atoms.add(clicked_atom_idx)
-                    move_group_dialog.show_atom_labels()
-                    move_group_dialog.update_display()
+
+                    def _deferred_move_group_update(dlg=move_group_dialog):
+                        try:
+                            dlg.show_atom_labels()
+                            dlg.update_display()
+                        except (AttributeError, RuntimeError):
+                            pass
+
+                    QTimer.singleShot(0, _deferred_move_group_update)
                     return
             else:
                 # Track mouse event to distinguish rotation from click
@@ -284,9 +291,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         click_threshold = self._get_click_threshold(vdw_radius)
 
                         if distances[closest_atom_idx] < click_threshold:
-                            mw.edit_3d_manager.handle_measurement_atom_selection(
-                                int(closest_atom_idx)
-                            )
+                            def _deferred_measure(idx=int(closest_atom_idx)):
+                                try:
+                                    mw.edit_3d_manager.handle_measurement_atom_selection(idx)
+                                except (AttributeError, RuntimeError):
+                                    pass
+
+                            QTimer.singleShot(0, _deferred_measure)
                             return  # Selection complete, disable camera rotation
 
             # Clear measurement if not dragging
