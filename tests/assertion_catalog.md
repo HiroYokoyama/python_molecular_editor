@@ -1193,6 +1193,28 @@ _If saved constraints haven't changed, has_unsaved_changes must NOT be set._
 
 - dlg.main_window.state_manager.update_window_title.assert_not_called()
 
+### TestOptimizationExecution.test_apply_optimization_starts_thread
+_No description provided._
+
+- assert not dlg.optimize_button.isEnabled()
+- mock_thread_class.assert_called_once()
+- mock_thread.start.assert_called_once()
+
+### TestOptimizationExecution.test_on_optimization_finished
+_No description provided._
+
+- assert dlg.optimize_button.isEnabled()
+- dlg.main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with(dlg.mol)
+- dlg.main_window.edit_actions_manager.push_undo_state.assert_called_once()
+- assert dlg.main_window.view_3d_manager.atom_positions_3d[0] == [1.0, 2.0, 3.0]
+
+### TestOptimizationExecution.test_on_optimization_error
+_No description provided._
+
+- assert dlg.optimize_button.isEnabled()
+- mock_mb.critical.assert_called_once()
+- assert 'Test Error' in mock_mb.critical.call_args[0][2]
+
 ## tests/unit/test_custom_interactor_style.py
 
 ### test_custom_interactor_style_left_click_atom_selection

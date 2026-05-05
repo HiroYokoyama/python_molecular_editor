@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **78.82%**
-- **Core Molecular Logic Coverage**: **81.30%**
+- **Overall Project Coverage (Full)**: **79.04%**
+- **Core Molecular Logic Coverage**: **81.31%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -26,7 +26,7 @@
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     70 |      5 |   92.9% |
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    301 |     71 |   76.4% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    211 |     14 |   93.4% |
-| moleditpy\src\moleditpy\ui\calculation_worker.py        |    549 |     92 |   83.2% |
+| moleditpy\src\moleditpy\ui\calculation_worker.py        |    549 |     91 |   83.4% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    199 |     32 |   83.9% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    399 |     96 |   75.9% |
 | moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    138 |     21 |   84.8% |
@@ -55,7 +55,7 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     31 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
-| **TOTAL** | **12715** | **2378** | **81.30%** |
+| **TOTAL** | **12715** | **2377** | **81.31%** |
 
 ### Full Application Breakdown
 
@@ -79,10 +79,10 @@
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     72 |      6 |   91.7% |
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    301 |     71 |   76.4% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    213 |     15 |   93.0% |
-| moleditpy\src\moleditpy\ui\calculation_worker.py        |    549 |     92 |   83.2% |
+| moleditpy\src\moleditpy\ui\calculation_worker.py        |    549 |     91 |   83.4% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    199 |     32 |   83.9% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    399 |     96 |   75.9% |
-| moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py |    442 |    144 |   67.4% |
+| moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py |    472 |    120 |   74.6% |
 | moleditpy\src\moleditpy\ui\custom_interactor_style.py   |    460 |    395 |   14.1% |
 | moleditpy\src\moleditpy\ui\custom_qt_interactor.py      |     44 |     35 |   20.5% |
 | moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    142 |     24 |   83.1% |
@@ -118,7 +118,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      2 |   94.4% |
-| **TOTAL** | **14435** | **3057** | **78.82%** |
+| **TOTAL** | **14465** | **3032** | **79.04%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
