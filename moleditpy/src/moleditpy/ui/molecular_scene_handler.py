@@ -63,7 +63,6 @@ class TemplateMixin:
                 except (RuntimeError, ValueError, TypeError) as e:
                     # Best-effort: ignore removal errors during teardown if underlying C++ object is already gone
                     logging.debug(f"Could not remove template preview item: {e}")
-                    pass
         self.template_context: Dict[str, Any] = {}
         if hasattr(self, "template_preview"):
             self.template_preview.hide()
@@ -869,7 +868,6 @@ class KeyboardMixin:
                             f"Error changing atom symbol via key {key}: {e}",
                             exc_info=True,
                         )
-                        pass
 
             # --- 2. Bond operations (change order/stereo) ---
             target_bonds = []

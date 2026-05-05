@@ -192,6 +192,9 @@ class Edit3DManager:
                 text_color="red",  # Always red for measurement
                 name="measurement_labels",
                 always_visible=True,
+                shape="rect",
+                shape_color="gray",
+                shape_opacity=0.5,
                 tolerance=0.01,
                 show_points=False,
             )

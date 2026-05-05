@@ -202,10 +202,14 @@ class Dialog3DPickingMixin:
             label_actor = plotter.add_point_labels(
                 [pos],
                 [label_text],
-                point_size=20,
+                point_size=0,
                 font_size=12,
                 text_color=color,
                 always_visible=True,
+                show_points=False,
+                shape="rect",
+                shape_color="gray",
+                shape_opacity=0.5,
             )
             self.selection_labels.append(label_actor)
 
@@ -236,10 +240,14 @@ class Dialog3DPickingMixin:
                 label_actor = plotter.add_point_labels(
                     [pos],
                     [label_text],
-                    point_size=20,
+                    point_size=0,
                     font_size=12,
                     text_color=color,
                     always_visible=True,
+                    show_points=False,
+                    shape="rect",
+                    shape_color="gray",
+                    shape_opacity=0.5,
                 )
                 self.selection_labels.append(label_actor)
 

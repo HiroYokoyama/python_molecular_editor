@@ -454,10 +454,14 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 label_actor = plotter.add_point_labels(
                     positions,
                     texts,
-                    point_size=20,
+                    point_size=0,
                     font_size=12,
                     text_color="cyan",
                     always_visible=True,
+                    show_points=False,
+                    shape="rect",
+                    shape_color="gray",
+                    shape_opacity=0.5,
                 )
                 self.constraint_labels.append(label_actor)
 
@@ -744,10 +748,14 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 label_actor = plotter.add_point_labels(
                     positions,
                     texts,
-                    point_size=20,
+                    point_size=0,
                     font_size=12,
                     text_color="yellow",
                     always_visible=True,
+                    show_points=False,
+                    shape="rect",
+                    shape_color="gray",
+                    shape_opacity=0.5,
                 )
                 # Consider case where add_point_labels returns a list
                 if isinstance(label_actor, list):
