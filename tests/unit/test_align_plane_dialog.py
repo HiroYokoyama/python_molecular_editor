@@ -261,8 +261,9 @@ class TestApplyPlaneAlignMath:
 
     def test_apply_calls_draw_molecule_3d(self, make_dialog):
         dlg, mol, mw = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "select_all_atoms"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "select_all_atoms"),
         ):
             dlg.selected_atoms = set(range(mol.GetNumAtoms()))
         dlg.apply_PlaneAlign()

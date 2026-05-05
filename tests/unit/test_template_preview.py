@@ -48,6 +48,7 @@ from moleditpy.ui.user_template_dialog import UserTemplateDialog
 # Helpers — QPainter on an offscreen image
 # ---------------------------------------------------------------------------
 
+
 def _painter() -> tuple:
     """Return (QImage, QPainter) ready for drawing; caller must call painter.end()."""
     img = QImage(200, 200, QImage.Format.Format_ARGB32)
@@ -58,9 +59,12 @@ def _painter() -> tuple:
 def _points(n: int = 6) -> list:
     """Return a regular polygon of n QPointFs."""
     import math
+
     return [
-        QPointF(50 + 30 * math.cos(2 * math.pi * i / n),
-                50 + 30 * math.sin(2 * math.pi * i / n))
+        QPointF(
+            50 + 30 * math.cos(2 * math.pi * i / n),
+            50 + 30 * math.sin(2 * math.pi * i / n),
+        )
         for i in range(n)
     ]
 
@@ -68,6 +72,7 @@ def _points(n: int = 6) -> list:
 # ---------------------------------------------------------------------------
 # TemplatePreviewItem — __init__ / geometry setters
 # ---------------------------------------------------------------------------
+
 
 def test_preview_item_init_defaults(app):
     item = TemplatePreviewItem()
@@ -110,6 +115,7 @@ def test_set_user_template_geometry(app):
 # TemplatePreviewItem — boundingRect
 # ---------------------------------------------------------------------------
 
+
 def test_bounding_rect_empty_polygon(app):
     item = TemplatePreviewItem()
     rect = item.boundingRect()
@@ -126,8 +132,7 @@ def test_bounding_rect_regular_polygon(app):
 def test_bounding_rect_user_template_with_points(app):
     item = TemplatePreviewItem()
     item.set_user_template_geometry(
-        [QPointF(0, 0), QPointF(100, 0), QPointF(50, 80)],
-        [], []
+        [QPointF(0, 0), QPointF(100, 0), QPointF(50, 80)], [], []
     )
     rect = item.boundingRect()
     assert rect.width() > 0
@@ -146,6 +151,7 @@ def test_bounding_rect_user_template_no_points(app):
 # TemplatePreviewItem — paint (None painter guard)
 # ---------------------------------------------------------------------------
 
+
 def test_paint_none_painter_returns_early(app):
     item = TemplatePreviewItem()
     item.set_geometry(_points(6))
@@ -156,6 +162,7 @@ def test_paint_none_painter_returns_early(app):
 # ---------------------------------------------------------------------------
 # TemplatePreviewItem — paint_regular_template
 # ---------------------------------------------------------------------------
+
 
 def test_paint_regular_template_non_aromatic(app):
     item = TemplatePreviewItem()
@@ -185,11 +192,12 @@ def test_paint_regular_template_empty_polygon(app):
 # TemplatePreviewItem — paint_user_template
 # ---------------------------------------------------------------------------
 
+
 def test_paint_user_template_no_points_returns_early(app):
     item = TemplatePreviewItem()
     item.user_template_points = []
     _, p = _painter()
-    item.paint_user_template(p)   # should not raise
+    item.paint_user_template(p)  # should not raise
     p.end()
 
 
@@ -241,7 +249,7 @@ def test_paint_user_template_bond_info_2_elements(app):
     """bond_info with only 2 elements (no order) defaults to single bond."""
     item = TemplatePreviewItem()
     pts = [QPointF(10, 10), QPointF(60, 10)]
-    bonds = [(0, 1)]   # no order field
+    bonds = [(0, 1)]  # no order field
     atoms = [{"symbol": "C"}, {"symbol": "C"}]
     item.set_user_template_geometry(pts, bonds, atoms)
     _, p = _painter()
@@ -253,7 +261,7 @@ def test_paint_user_template_out_of_range_indices(app):
     """Bond indices beyond point list should be skipped without error."""
     item = TemplatePreviewItem()
     pts = [QPointF(10, 10)]
-    bonds = [(0, 5, 1)]   # index 5 out of range
+    bonds = [(0, 5, 1)]  # index 5 out of range
     atoms = [{"symbol": "C"}]
     item.set_user_template_geometry(pts, bonds, atoms)
     _, p = _painter()
@@ -264,6 +272,7 @@ def test_paint_user_template_out_of_range_indices(app):
 # ---------------------------------------------------------------------------
 # TemplatePreviewView — __init__ / set_template_data
 # ---------------------------------------------------------------------------
+
 
 def test_preview_view_init_defaults(app):
     scene = QGraphicsScene()
@@ -286,6 +295,7 @@ def test_preview_view_set_template_data(app):
 # ---------------------------------------------------------------------------
 # TemplatePreviewView — resizeEvent
 # ---------------------------------------------------------------------------
+
 
 def test_preview_view_resize_no_scene_rect_no_timer(app):
     scene = QGraphicsScene()
@@ -311,30 +321,32 @@ def test_preview_view_resize_with_scene_rect_schedules_timer(app):
 # TemplatePreviewView — refit_view
 # ---------------------------------------------------------------------------
 
+
 def test_refit_view_no_rect_is_noop(app):
     scene = QGraphicsScene()
     view = TemplatePreviewView(scene)
     view.original_scene_rect = None
-    view.refit_view()   # should not raise
+    view.refit_view()  # should not raise
 
 
 def test_refit_view_empty_rect_is_noop(app):
     scene = QGraphicsScene()
     view = TemplatePreviewView(scene)
-    view.original_scene_rect = QRectF()   # empty
-    view.refit_view()   # should not raise
+    view.original_scene_rect = QRectF()  # empty
+    view.refit_view()  # should not raise
 
 
 def test_refit_view_valid_rect(app):
     scene = QGraphicsScene()
     view = TemplatePreviewView(scene)
     view.original_scene_rect = QRectF(0, 0, 100, 100)
-    view.refit_view()   # should not raise
+    view.refit_view()  # should not raise
 
 
 # ---------------------------------------------------------------------------
 # TemplatePreviewView — showEvent
 # ---------------------------------------------------------------------------
+
 
 def test_show_event_no_rect_no_timer(app):
     scene = QGraphicsScene()
@@ -360,12 +372,13 @@ def test_show_event_with_rect_schedules_timer(app):
 # TemplatePreviewView — redraw_with_current_size
 # ---------------------------------------------------------------------------
 
+
 def test_redraw_no_data_returns_early(app):
     scene = QGraphicsScene()
     view = TemplatePreviewView(scene)
     view.template_data = None
     view.parent_dialog = None
-    view.redraw_with_current_size()   # should not raise
+    view.redraw_with_current_size()  # should not raise
 
 
 def test_redraw_with_data_calls_draw_template_preview(app):
@@ -383,6 +396,7 @@ def test_redraw_with_data_calls_draw_template_preview(app):
 # Helpers — UserTemplateDialog
 # ---------------------------------------------------------------------------
 
+
 def _make_mw(tmp_path):
     mw = MagicMock()
     mw.init_manager.settings_dir = str(tmp_path)
@@ -399,6 +413,7 @@ def _make_dlg(app, tmp_path):
 # ---------------------------------------------------------------------------
 # UserTemplateDialog — load_template_file
 # ---------------------------------------------------------------------------
+
 
 def test_load_template_file_valid(app, tmp_path):
     dlg, _ = _make_dlg(app, tmp_path)
@@ -427,6 +442,7 @@ def test_load_template_file_invalid_json(app, tmp_path):
 # UserTemplateDialog — save_template_file
 # ---------------------------------------------------------------------------
 
+
 def test_save_template_file_success(app, tmp_path):
     dlg, _ = _make_dlg(app, tmp_path)
     data = {"name": "ethane"}
@@ -446,6 +462,7 @@ def test_save_template_file_oserror(app, tmp_path):
 # UserTemplateDialog — draw_template_preview
 # ---------------------------------------------------------------------------
 
+
 def _scene():
     return QGraphicsScene()
 
@@ -454,7 +471,7 @@ def test_draw_template_preview_no_atoms_adds_placeholder(app, tmp_path):
     dlg, _ = _make_dlg(app, tmp_path)
     sc = _scene()
     dlg.draw_template_preview(sc, {"atoms": [], "bonds": []})
-    assert sc.items()   # placeholder text item
+    assert sc.items()  # placeholder text item
 
 
 def test_draw_template_preview_single_bond(app, tmp_path):
@@ -528,6 +545,7 @@ def test_draw_template_preview_zero_size_mol(app, tmp_path):
 # UserTemplateDialog — convert_structure_to_template
 # ---------------------------------------------------------------------------
 
+
 def test_convert_structure_to_template(app, tmp_path):
     dlg, mw = _make_dlg(app, tmp_path)
     mw.state_manager.data.atoms = {
@@ -549,6 +567,7 @@ def test_convert_structure_to_template(app, tmp_path):
 # UserTemplateDialog — cleanup_template_mode
 # ---------------------------------------------------------------------------
 
+
 def test_cleanup_template_mode_resets_selected(app, tmp_path):
     dlg, mw = _make_dlg(app, tmp_path)
     dlg.selected_template = {"name": "foo"}
@@ -567,7 +586,7 @@ def test_cleanup_template_mode_calls_set_mode(app, tmp_path):
 def test_cleanup_template_mode_no_ui_manager_no_crash(app, tmp_path):
     dlg, mw = _make_dlg(app, tmp_path)
     del mw.ui_manager
-    dlg.cleanup_template_mode()   # should not raise
+    dlg.cleanup_template_mode()  # should not raise
 
 
 def test_cleanup_template_mode_scene_reset(app, tmp_path):
@@ -583,6 +602,7 @@ def test_cleanup_template_mode_scene_reset(app, tmp_path):
 # ---------------------------------------------------------------------------
 # UserTemplateDialog — select_template
 # ---------------------------------------------------------------------------
+
 
 def test_select_template_sets_selected_and_enables_delete(app, tmp_path):
     dlg, mw = _make_dlg(app, tmp_path)
@@ -607,6 +627,7 @@ def test_select_template_activates_template_mode(app, tmp_path):
 # UserTemplateDialog — use_template
 # ---------------------------------------------------------------------------
 
+
 def test_use_template_calls_activate(app, tmp_path):
     dlg, mw = _make_dlg(app, tmp_path)
     data = {"name": "methane", "atoms": [], "bonds": []}
@@ -620,6 +641,7 @@ def test_use_template_calls_activate(app, tmp_path):
 # UserTemplateDialog — fit_preview_view_safely
 # ---------------------------------------------------------------------------
 
+
 def test_fit_preview_view_safely_valid_rect(app, tmp_path):
     dlg, _ = _make_dlg(app, tmp_path)
     view = MagicMock()
@@ -631,7 +653,7 @@ def test_fit_preview_view_safely_valid_rect(app, tmp_path):
 def test_fit_preview_view_safely_empty_rect(app, tmp_path):
     dlg, _ = _make_dlg(app, tmp_path)
     view = MagicMock()
-    dlg.fit_preview_view_safely(view, QRectF())   # empty → no-op
+    dlg.fit_preview_view_safely(view, QRectF())  # empty → no-op
     view.fitInView.assert_not_called()
 
 
@@ -645,9 +667,10 @@ def test_fit_preview_view_safely_none_view(app, tmp_path):
 # UserTemplateDialog — refit_all_previews
 # ---------------------------------------------------------------------------
 
+
 def test_refit_all_previews_no_items_no_crash(app, tmp_path):
     dlg, _ = _make_dlg(app, tmp_path)
-    dlg.refit_all_previews()   # empty grid — should not raise
+    dlg.refit_all_previews()  # empty grid — should not raise
 
 
 def test_refit_all_previews_calls_redraw(app, tmp_path):
@@ -661,8 +684,10 @@ def test_refit_all_previews_calls_redraw(app, tmp_path):
     layout_item = MagicMock()
     layout_item.widget.return_value = child_widget
 
-    with patch.object(dlg.template_layout, "count", return_value=1), \
-         patch.object(dlg.template_layout, "itemAt", return_value=layout_item):
+    with (
+        patch.object(dlg.template_layout, "count", return_value=1),
+        patch.object(dlg.template_layout, "itemAt", return_value=layout_item),
+    ):
         dlg.refit_all_previews()
 
     preview_view.redraw_with_current_size.assert_called_once()
@@ -671,6 +696,7 @@ def test_refit_all_previews_calls_redraw(app, tmp_path):
 # ---------------------------------------------------------------------------
 # UserTemplateDialog — delete_selected_template (no selection)
 # ---------------------------------------------------------------------------
+
 
 def test_delete_selected_no_selection_returns_early(app, tmp_path):
     dlg, _ = _make_dlg(app, tmp_path)

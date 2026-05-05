@@ -93,7 +93,9 @@ class TestUpdateConnectedBonds:
         atom = MagicMock(spec=AtomItem)
         atom.bonds = [bond]
 
-        with patch("moleditpy.ui.molecule_scene.sip_isdeleted_safe", return_value=False):
+        with patch(
+            "moleditpy.ui.molecule_scene.sip_isdeleted_safe", return_value=False
+        ):
             scene.update_connected_bonds([atom])
 
         bond.update_position.assert_called_once()
@@ -120,7 +122,9 @@ class TestUpdateConnectedBonds:
         a2 = MagicMock(spec=AtomItem)
         a2.bonds = [bond]
 
-        with patch("moleditpy.ui.molecule_scene.sip_isdeleted_safe", return_value=False):
+        with patch(
+            "moleditpy.ui.molecule_scene.sip_isdeleted_safe", return_value=False
+        ):
             scene.update_connected_bonds([a1, a2])
 
         bond.update_position.assert_called_once()
@@ -183,7 +187,9 @@ class TestPurgeDeletedItems:
         obj.bonds = None
         scene._deleted_items = [obj]
 
-        with patch("moleditpy.ui.molecule_scene.sip_isdeleted_safe", return_value=False):
+        with patch(
+            "moleditpy.ui.molecule_scene.sip_isdeleted_safe", return_value=False
+        ):
             scene.purge_deleted_items()
 
         assert scene._deleted_items == []
@@ -195,7 +201,9 @@ class TestPurgeDeletedItems:
         obj.bonds = None
         scene._deleted_items = [obj]
 
-        with patch("moleditpy.ui.molecule_scene.sip_isdeleted_safe", return_value=False):
+        with patch(
+            "moleditpy.ui.molecule_scene.sip_isdeleted_safe", return_value=False
+        ):
             scene.purge_deleted_items()
 
         obj.hide.assert_called_once()
@@ -258,7 +266,10 @@ class TestEZStereoCycling:
         scene, bond_item = self._setup(mock_parser_host)
 
         with (
-            patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000),
+            patch(
+                "moleditpy.ui.molecule_scene.QApplication.startDragDistance",
+                return_value=1000,
+            ),
             patch.object(MoleculeScene, "itemAt", return_value=bond_item),
             patch.object(MoleculeScene, "update_bond_stereo") as mock_stereo,
             patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent"),
@@ -275,7 +286,10 @@ class TestEZStereoCycling:
         bond_item.stereo = 3  # already Z
 
         with (
-            patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000),
+            patch(
+                "moleditpy.ui.molecule_scene.QApplication.startDragDistance",
+                return_value=1000,
+            ),
             patch.object(MoleculeScene, "itemAt", return_value=bond_item),
             patch.object(MoleculeScene, "update_bond_stereo") as mock_stereo,
             patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent"),
@@ -292,7 +306,10 @@ class TestEZStereoCycling:
         bond_item.stereo = 4  # already E
 
         with (
-            patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000),
+            patch(
+                "moleditpy.ui.molecule_scene.QApplication.startDragDistance",
+                return_value=1000,
+            ),
             patch.object(MoleculeScene, "itemAt", return_value=bond_item),
             patch.object(MoleculeScene, "update_bond_stereo") as mock_stereo,
             patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent"),
@@ -333,7 +350,10 @@ class TestBondDirectionInversion:
         bond_item.update_position = MagicMock()
 
         with (
-            patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000),
+            patch(
+                "moleditpy.ui.molecule_scene.QApplication.startDragDistance",
+                return_value=1000,
+            ),
             patch.object(MoleculeScene, "itemAt", return_value=bond_item),
             patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent"),
             patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),

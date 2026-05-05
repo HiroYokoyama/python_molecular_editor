@@ -63,17 +63,26 @@ def test_get_settings_roundtrip(app):
     assert result["bond_cap_style_2d"] == DEFAULT_SETTINGS["bond_cap_style_2d"]
     assert result["bond_dash_count_2d"] == DEFAULT_SETTINGS["bond_dash_count_2d"]
     assert result["atom_font_size_2d"] == DEFAULT_SETTINGS["atom_font_size_2d"]
-    assert result["atom_use_bond_color_2d"] == DEFAULT_SETTINGS["atom_use_bond_color_2d"]
+    assert (
+        result["atom_use_bond_color_2d"] == DEFAULT_SETTINGS["atom_use_bond_color_2d"]
+    )
 
 
 def test_get_settings_returns_all_keys(app):
     tab = Settings2DTab(DEFAULT_SETTINGS)
     result = tab.get_settings()
     expected_keys = {
-        "background_color_2d", "bond_color_2d", "bond_width_2d",
-        "bond_spacing_double_2d", "bond_spacing_triple_2d", "bond_cap_style_2d",
-        "bond_wedge_width_2d", "bond_dash_count_2d", "atom_font_family_2d",
-        "atom_font_size_2d", "atom_use_bond_color_2d",
+        "background_color_2d",
+        "bond_color_2d",
+        "bond_width_2d",
+        "bond_spacing_double_2d",
+        "bond_spacing_triple_2d",
+        "bond_cap_style_2d",
+        "bond_wedge_width_2d",
+        "bond_dash_count_2d",
+        "atom_font_family_2d",
+        "atom_font_size_2d",
+        "atom_use_bond_color_2d",
     }
     assert expected_keys == set(result.keys())
 
@@ -121,4 +130,7 @@ def test_reset_to_defaults(app):
 
     tab.reset_to_defaults()
     assert tab.current_bg_color_2d == DEFAULT_SETTINGS["background_color_2d"]
-    assert tab.bond_cap_style_2d_combo.currentText() == DEFAULT_SETTINGS["bond_cap_style_2d"]
+    assert (
+        tab.bond_cap_style_2d_combo.currentText()
+        == DEFAULT_SETTINGS["bond_cap_style_2d"]
+    )

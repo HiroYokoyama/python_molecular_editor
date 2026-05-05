@@ -67,6 +67,7 @@ else:
 
 class WorkerHaltError(Exception):
     """Custom exception raised when a calculation worker is requested to halt."""
+
     pass
 
 

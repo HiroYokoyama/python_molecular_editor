@@ -6789,7 +6789,7 @@ _Project Load: Test for "Open Project..." (.pmeprj)._
 _3D Atom Info Display: Test for toggling ID, Coordinates, and Symbol display._
 
 - assert window.view_3d_manager.current_mol is not None
-- assert window.atom_info_display_mode == 'id'
+- assert window.atom_info_display_mode == 'original_id'
 - mock_add_labels.assert_called()
 - assert window.current_atom_info_labels is not None
 - assert window.atom_info_display_mode == 'coords'

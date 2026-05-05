@@ -34,6 +34,7 @@ def _make_parent():
 # pick_bs_bond_color
 # ---------------------------------------------------------------------------
 
+
 @patch("moleditpy.ui.color_settings_dialog.QColorDialog.getColor")
 def test_pick_bs_bond_color_valid_updates_changed_bs(mock_get, app):
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
@@ -61,6 +62,7 @@ def test_pick_bs_bond_color_invalid_no_change(mock_get, app):
 # ---------------------------------------------------------------------------
 # reset_all
 # ---------------------------------------------------------------------------
+
 
 def test_reset_all_with_parent_uses_default_bond_color(app):
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
@@ -99,10 +101,11 @@ def test_reset_all_restores_element_buttons(app):
 # apply_changes
 # ---------------------------------------------------------------------------
 
+
 def test_apply_changes_no_parent_returns_early(app):
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     dialog.parent_window = None
-    dialog.apply_changes()   # should not raise
+    dialog.apply_changes()  # should not raise
 
 
 def test_apply_changes_reset_flag_deletes_cpk_colors(app):
@@ -135,7 +138,7 @@ def test_apply_changes_reset_flag_resets_bond_color(app):
     parent = _make_parent()
     dialog.parent_window = parent
     dialog._reset_all_flag = True
-    dialog.changed_bs_color = None   # no explicit bs change
+    dialog.changed_bs_color = None  # no explicit bs change
 
     dialog.apply_changes()
 
@@ -149,9 +152,9 @@ def test_apply_changes_updates_2d_scene_items(app):
 
     item_with_style = MagicMock()
     item_with_style.update_style = MagicMock()
-    del item_with_style.update   # force update_style path
+    del item_with_style.update  # force update_style path
     item_plain = MagicMock()
-    del item_plain.update_style   # no update_style → falls back to update()
+    del item_plain.update_style  # no update_style → falls back to update()
 
     scene = MagicMock()
     scene.items.return_value = [item_with_style, item_plain]
@@ -187,12 +190,15 @@ def test_apply_changes_calls_save_settings_when_cpk_changed(app):
 # accept
 # ---------------------------------------------------------------------------
 
+
 def test_accept_calls_apply_then_super(app):
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     dialog.parent_window = None
 
-    with patch.object(dialog, "apply_changes") as mock_apply, \
-         patch("moleditpy.ui.color_settings_dialog.QDialog.accept") as mock_super:
+    with (
+        patch.object(dialog, "apply_changes") as mock_apply,
+        patch("moleditpy.ui.color_settings_dialog.QDialog.accept") as mock_super,
+    ):
         dialog.accept()
 
     mock_apply.assert_called_once()
@@ -202,6 +208,7 @@ def test_accept_calls_apply_then_super(app):
 # ---------------------------------------------------------------------------
 # on_element_clicked — invalid color
 # ---------------------------------------------------------------------------
+
 
 @patch("moleditpy.ui.color_settings_dialog.QColorDialog.getColor")
 def test_on_element_clicked_invalid_color_no_change(mock_get, app):
@@ -220,6 +227,7 @@ def test_on_element_clicked_invalid_color_no_change(mock_get, app):
 # ---------------------------------------------------------------------------
 # init — override color from settings
 # ---------------------------------------------------------------------------
+
 
 def test_init_cpk_override_applied_to_button(app):
     settings = {"cpk_colors": {"C": "#112233"}}

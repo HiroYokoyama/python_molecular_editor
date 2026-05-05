@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **79.04%**
-- **Core Molecular Logic Coverage**: **81.31%**
+- **Overall Project Coverage (Full)**: **79.01%**
+- **Core Molecular Logic Coverage**: **81.26%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -36,7 +36,7 @@
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    858 |    217 |   74.7% |
 | moleditpy\src\moleditpy\ui\export_logic.py              |    512 |    150 |   70.7% |
 | moleditpy\src\moleditpy\ui\io_logic.py                  |    637 |    131 |   79.4% |
-| moleditpy\src\moleditpy\ui\main_window_init.py          |   1227 |    169 |   86.2% |
+| moleditpy\src\moleditpy\ui\main_window_init.py          |   1247 |    169 |   86.4% |
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    857 |    176 |   79.5% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    502 |    147 |   70.7% |
 | moleditpy\src\moleditpy\ui\move_group_dialog.py         |    399 |    159 |   60.2% |
@@ -46,7 +46,7 @@
 | moleditpy\src\moleditpy\ui\template_preview_view.py     |     45 |      4 |   91.1% |
 | moleditpy\src\moleditpy\ui\ui_manager.py                |    382 |    116 |   69.6% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    365 |     85 |   76.7% |
-| moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1002 |    252 |   74.9% |
+| moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1022 |    266 |   74.0% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |     77 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py |     81 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py |    135 |      0 |  100.0% |
@@ -55,7 +55,7 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     31 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
-| **TOTAL** | **12714** | **2376** | **81.31%** |
+| **TOTAL** | **12754** | **2390** | **81.26%** |
 
 ### Full Application Breakdown
 
@@ -94,7 +94,7 @@
 | moleditpy\src\moleditpy\ui\geometry_base_dialog.py      |     61 |      8 |   86.9% |
 | moleditpy\src\moleditpy\ui\io_logic.py                  |    637 |    131 |   79.4% |
 | moleditpy\src\moleditpy\ui\main_window.py               |     76 |     19 |   75.0% |
-| moleditpy\src\moleditpy\ui\main_window_init.py          |   1227 |    169 |   86.2% |
+| moleditpy\src\moleditpy\ui\main_window_init.py          |   1247 |    169 |   86.4% |
 | moleditpy\src\moleditpy\ui\mirror_dialog.py             |     71 |      7 |   90.1% |
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    857 |    176 |   79.5% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    502 |    147 |   70.7% |
@@ -108,7 +108,7 @@
 | moleditpy\src\moleditpy\ui\translation_dialog.py        |    243 |     11 |   95.5% |
 | moleditpy\src\moleditpy\ui\ui_manager.py                |    382 |    116 |   69.6% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    365 |     85 |   76.7% |
-| moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1002 |    252 |   74.9% |
+| moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1022 |    266 |   74.0% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |     77 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py |     81 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py |    135 |      0 |  100.0% |
@@ -118,7 +118,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      2 |   94.4% |
-| **TOTAL** | **14464** | **3031** | **79.04%** |
+| **TOTAL** | **14504** | **3045** | **79.01%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
