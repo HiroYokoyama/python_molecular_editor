@@ -1221,7 +1221,7 @@ _No description provided._
 _Verify that left-clicking an atom in 3D edit mode successfully selects it._
 
 - assert interactor_style._is_dragging_atom is True
-- mock_parser_host.plotter.setCursor.assert_called_once_with(Qt.CursorShape.ClosedHandCursor)
+- mock_parser_host.plotter.setCursor.assert_called_with(Qt.CursorShape.ClosedHandCursor)
 - assert mock_parser_host.dragged_atom_info['id'] == 0
 
 ### test_custom_interactor_style_background_click

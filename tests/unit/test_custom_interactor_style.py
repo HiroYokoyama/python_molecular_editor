@@ -47,9 +47,12 @@ def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host
 
         interactor_style.on_left_button_down(None, None)
 
-        # Verify the atom was selected
+        # Verify the atom was selected.
+        # Note: reset_interactor_state() resets cursor to ArrowCursor at the start
+        # of every press, so setCursor is called twice. We verify the final call
+        # is ClosedHandCursor (the meaningful state after atom grab).
         assert interactor_style._is_dragging_atom is True
-        mock_parser_host.plotter.setCursor.assert_called_once_with(
+        mock_parser_host.plotter.setCursor.assert_called_with(
             Qt.CursorShape.ClosedHandCursor
         )
         assert mock_parser_host.dragged_atom_info["id"] == 0

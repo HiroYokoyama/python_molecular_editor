@@ -315,6 +315,15 @@ class UIManager(QObject):
             self.host.statusBar().showMessage("3D Drag Mode: ON.")
         else:
             self.host.statusBar().showMessage("3D Drag Mode: OFF.")
+            # Reset any stuck VTK interactor state when leaving 3D edit mode
+            try:
+                interactor_style = (
+                    self.host.view_3d_manager.plotter.interactor.GetInteractorStyle()
+                )
+                if hasattr(interactor_style, "reset_interactor_state"):
+                    interactor_style.reset_interactor_state()
+            except (AttributeError, RuntimeError):
+                pass
         self.host.init_manager.view_2d.setFocus()
 
     def _setup_3d_picker(self) -> None:

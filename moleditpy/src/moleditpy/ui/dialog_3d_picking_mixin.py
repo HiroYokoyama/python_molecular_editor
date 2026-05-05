@@ -41,6 +41,31 @@ class Dialog3DPickingMixin:
         self._mouse_moved = False
         self.selection_labels: list[Any] = []
 
+    def _get_click_threshold(self, vdw_radius: float) -> float:
+        """Return the click-selection radius matching the currently rendered atom size.
+
+        GetPickPosition() lands on the sphere surface, so distance to the
+        atom centre ≈ visual radius.  The 1.5× factor gives a numerical
+        buffer without permitting wrong-atom hits.
+        """
+        try:
+            style = getattr(
+                self.main_window.view_3d_manager, "current_3d_style", "ball_and_stick"
+            )
+            settings = self.main_window.init_manager.settings
+            if style == "cpk":
+                return float(vdw_radius * settings.get("cpk_atom_scale", 1.0) * 1.5)
+            elif style == "stick":
+                return float(settings.get("stick_bond_radius", 0.15) * 1.5)
+            elif style == "wireframe":
+                return float(settings.get("wireframe_bond_radius", 0.02) * 1.5)
+            else:  # ball_and_stick
+                return float(
+                    vdw_radius * 0.3 * settings.get("ball_stick_atom_scale", 1.0) * 1.5
+                )
+        except (AttributeError, TypeError, KeyError):
+            return float(vdw_radius * 0.45)
+
     def eventFilter(self, obj: Optional[QObject], event: Optional[QEvent]) -> bool:
         """Capture mouse clicks in the 3D view (reproducibly mimicking the original 3D edit logic)."""
         if event is None:
@@ -98,7 +123,7 @@ class Dialog3DPickingMixin:
                                         vdw_radius = 1.5
                                 except (AttributeError, RuntimeError, TypeError):
                                     vdw_radius = 1.5
-                                click_threshold = vdw_radius * 1.5
+                                click_threshold = self._get_click_threshold(vdw_radius)
 
                                 if distances[closest_atom_idx] < click_threshold:
                                     if hasattr(self.main_window, "_picking_consumed"):

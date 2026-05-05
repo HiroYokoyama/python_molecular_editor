@@ -103,6 +103,15 @@ class Edit3DManager:
 
         if not checked:
             self.clear_measurement_selection()
+            # Reset any stuck VTK interactor state when leaving measurement mode
+            try:
+                interactor_style = (
+                    self.host.view_3d_manager.plotter.interactor.GetInteractorStyle()
+                )
+                if hasattr(interactor_style, "reset_interactor_state"):
+                    interactor_style.reset_interactor_state()
+            except (AttributeError, RuntimeError):
+                pass
 
         # Update status message
         if checked:

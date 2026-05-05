@@ -262,7 +262,7 @@ class MoveGroupDialog(BasePickingDialog):
                                     TypeError,
                                 ):
                                     vdw_radius = 1.5
-                                click_threshold = vdw_radius * 1.5
+                                click_threshold = self._get_click_threshold(vdw_radius)
 
                                 if distances[closest_atom_idx] < click_threshold:
                                     clicked_atom_idx = int(closest_atom_idx)

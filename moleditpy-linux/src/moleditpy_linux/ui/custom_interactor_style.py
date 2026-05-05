@@ -16,7 +16,7 @@ import logging
 from typing import Any, Optional
 
 import numpy as np
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QApplication
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera  # pylint: disable=no-name-in-module
 
@@ -49,11 +49,73 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self.AddObserver("LeftButtonReleaseEvent", self.on_left_button_up)  # type: ignore[arg-type]
         self.AddObserver("RightButtonReleaseEvent", self.on_right_button_up)  # type: ignore[arg-type]
 
+    def reset_interactor_state(self) -> None:
+        """Force-reset all VTK and custom drag/selection state.
+
+        Called when 3D-edit or measurement mode is toggled off, and
+        defensively at the start of every new mouse-press, so that a
+        previously corrupted VTK state machine cannot cause a permanent lock.
+        """
+        # Reset VTK's internal state machine (clears ROTATE / PAN / etc.)
+        try:
+            self.StopState()
+        except (AttributeError, RuntimeError):
+            pass
+
+        # Reset all custom flags
+        self._is_dragging_atom = False
+        self.is_dragging = False
+        self._mouse_moved_during_drag = False
+        self._mouse_press_pos = None
+
+        # Clear dangling atom drag info on main window
+        mw = self.main_window
+        if mw is not None:
+            try:
+                mw.dragged_atom_info = None
+            except (AttributeError, RuntimeError):
+                pass
+            try:
+                mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ArrowCursor)
+            except (AttributeError, RuntimeError):
+                pass
+
+    def _get_click_threshold(self, vdw_radius: float) -> float:
+        """Return the click-selection radius that matches the currently rendered atom size.
+
+        GetPickPosition() returns a point on the sphere *surface*, so the
+        distance to the atom centre is always ≈ the visual radius.  The
+        threshold must therefore be slightly larger than the visual radius;
+        a 1.5× factor gives a small numerical buffer while staying much
+        tighter than the original 5× over-permissive threshold.
+        """
+        mw = self.main_window
+        try:
+            style = getattr(mw.view_3d_manager, "current_3d_style", "ball_and_stick")
+            settings = mw.init_manager.settings
+            if style == "cpk":
+                scale = settings.get("cpk_atom_scale", 1.0)
+                return float(vdw_radius * scale * 1.5)
+            elif style == "stick":
+                return float(settings.get("stick_bond_radius", 0.15) * 1.5)
+            elif style == "wireframe":
+                return float(settings.get("wireframe_bond_radius", 0.02) * 1.5)
+            else:  # ball_and_stick (default)
+                scale = settings.get("ball_stick_atom_scale", 1.0)
+                return float(vdw_radius * 0.3 * scale * 1.5)
+        except (AttributeError, TypeError, KeyError):
+            return float(vdw_radius * 0.45)
+
     def on_left_button_down(self, obj: Any, event: Any) -> None:
         """
         Dispatch click events.
         Use custom action if atom handles, else camera rotation.
         """
+        # Defensively reset VTK state at the start of every new press so that
+        # any previously stuck state (e.g. from a missed OnLeftButtonDown call)
+        # is cleared before we process the new event.
+        self.reset_interactor_state()
+
         mw = self.main_window
 
         # Clear previous drag state
@@ -100,7 +162,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 vdw_radius = 1.5
                         except (AttributeError, RuntimeError, TypeError, ValueError):
                             vdw_radius = 1.5
-                        click_threshold = vdw_radius * 1.5
+                        click_threshold = self._get_click_threshold(vdw_radius)
 
                         if distances[closest_atom_idx] < click_threshold:
                             clicked_atom_idx = int(closest_atom_idx)
@@ -219,7 +281,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 vdw_radius = 1.5
                         except (AttributeError, RuntimeError, TypeError, ValueError):
                             vdw_radius = 1.5
-                        click_threshold = vdw_radius * 1.5
+                        click_threshold = self._get_click_threshold(vdw_radius)
 
                         if distances[closest_atom_idx] < click_threshold:
                             mw.edit_3d_manager.handle_measurement_atom_selection(
@@ -262,17 +324,17 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 vdw_radius = 1.5
                         except (AttributeError, RuntimeError, TypeError, ValueError):
                             vdw_radius = 1.5
-                        click_threshold = vdw_radius * 1.5
+                        click_threshold = self._get_click_threshold(vdw_radius)
 
                         if distances[closest_atom_idx] < click_threshold:
                             # Successfully grabbed atom
                             self._is_dragging_atom = True
-                        self.is_dragging = False
-                        mw.dragged_atom_info = {"id": int(closest_atom_idx)}
-                        mw.view_3d_manager.plotter.setCursor(
-                            Qt.CursorShape.ClosedHandCursor
-                        )
-                        return  # Prevent camera rotation
+                            self.is_dragging = False
+                            mw.dragged_atom_info = {"id": int(closest_atom_idx)}
+                            mw.view_3d_manager.plotter.setCursor(
+                                Qt.CursorShape.ClosedHandCursor
+                            )
+                            return  # Prevent camera rotation
 
         self._is_dragging_atom = False
         super().OnLeftButtonDown()
@@ -323,7 +385,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 vdw_radius = 1.5
                         except (AttributeError, RuntimeError, TypeError, ValueError):
                             vdw_radius = 1.5
-                        click_threshold = vdw_radius * 1.5
+                        click_threshold = self._get_click_threshold(vdw_radius)
 
                         if distances[closest_atom_idx] < click_threshold:
                             clicked_atom_idx = int(closest_atom_idx)
@@ -534,11 +596,19 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         )
                         mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
-                    # Update 3D display
-                    mw.view_3d_manager.draw_molecule_3d(mw.view_3d_manager.current_mol)
-                    mw.view_3d_manager.update_chiral_labels()
-                    move_group_dialog.show_atom_labels()
-                    mw.edit_actions_manager.push_undo_state()
+                    # Defer the full redraw out of the VTK observer callback to
+                    # prevent re-entrant plotter.render() calls that can deadlock
+                    # the VTK render window on some OS/driver combinations.
+                    _grp_mol = mw.view_3d_manager.current_mol
+                    _grp_dlg = move_group_dialog
+
+                    def _deferred_group_redraw(mol=_grp_mol, dlg=_grp_dlg):
+                        mw.view_3d_manager.draw_molecule_3d(mol)
+                        mw.view_3d_manager.update_chiral_labels()
+                        dlg.show_atom_labels()
+                        mw.edit_actions_manager.push_undo_state()
+
+                    QTimer.singleShot(0, _deferred_group_redraw)
                 except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                     print(f"Error finalizing group drag: {e}")
             else:
@@ -661,26 +731,39 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         logging.error("Caught exception in " + __file__, exc_info=True)
 
-                    try:
-                        mw.view_3d_manager.draw_molecule_3d(
-                            mw.view_3d_manager.current_mol
-                        )
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        logging.error("Caught exception in " + __file__, exc_info=True)
+                    # Defer the redraw + undo push out of the VTK observer
+                    # callback to prevent re-entrant plotter.render() deadlock.
+                    _atom_mol = mw.view_3d_manager.current_mol
 
-                    mw.edit_actions_manager.push_undo_state()
+                    def _deferred_atom_redraw(mol=_atom_mol):
+                        try:
+                            mw.view_3d_manager.draw_molecule_3d(mol)
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
+                            logging.error(
+                                "Caught exception in " + __file__, exc_info=True
+                            )
+                        mw.edit_actions_manager.push_undo_state()
+
+                    QTimer.singleShot(0, _deferred_atom_redraw)
             mw.dragged_atom_info = None
-            # Update all relevant UI displays and labels
-            for update_call in [
+            # Defer all display-update calls that internally call plotter.render()
+            # out of the VTK LeftButtonReleaseEvent callback to avoid re-entrant
+            # rendering, which deadlocks the VTK render window on some platforms.
+            _update_calls = [
                 mw.edit_3d_manager.update_3d_selection_display,
                 mw.edit_3d_manager.update_measurement_labels_display,
                 mw.edit_3d_manager.update_2d_measurement_labels,
                 mw.view_3d_manager.show_all_atom_info,
-            ]:
-                try:
-                    update_call()
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    logging.error("Caught exception in " + __file__, exc_info=True)
+            ]
+
+            def _deferred_updates(calls=_update_calls):
+                for fn in calls:
+                    try:
+                        fn()
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        logging.error("Caught exception in " + __file__, exc_info=True)
+
+            QTimer.singleShot(0, _deferred_updates)
         else:
             # Delegate cleanup to parent
             super().OnLeftButtonUp()
