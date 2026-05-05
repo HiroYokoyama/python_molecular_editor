@@ -172,23 +172,42 @@ class DihedralDialog(GeometryBaseDialog):
 
     def on_atom_picked(self, atom_idx: int) -> None:
         """Handle atom picking event in the 3D view."""
-        if self.atom1_idx is None:
-            self.atom1_idx = atom_idx
-        elif self.atom2_idx is None:
-            self.atom2_idx = atom_idx
-        elif self.atom3_idx is None:
-            self.atom3_idx = atom_idx
-        elif self.atom4_idx is None:
-            self.atom4_idx = atom_idx
-            # Take a fresh snapshot immediately upon completing the selection
-            self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
-        else:
-            # Reset and start over
-            self.atom1_idx = atom_idx
-            self.atom2_idx = None
-            self.atom3_idx = None
+        if atom_idx == self.atom1_idx:
+            self.atom1_idx = self.atom2_idx
+            self.atom2_idx = self.atom3_idx
+            self.atom3_idx = self.atom4_idx
             self.atom4_idx = None
             self._snapshot_positions = None
+        elif atom_idx == self.atom2_idx:
+            self.atom2_idx = self.atom3_idx
+            self.atom3_idx = self.atom4_idx
+            self.atom4_idx = None
+            self._snapshot_positions = None
+        elif atom_idx == self.atom3_idx:
+            self.atom3_idx = self.atom4_idx
+            self.atom4_idx = None
+            self._snapshot_positions = None
+        elif atom_idx == self.atom4_idx:
+            self.atom4_idx = None
+            self._snapshot_positions = None
+        else:
+            if self.atom1_idx is None:
+                self.atom1_idx = atom_idx
+            elif self.atom2_idx is None:
+                self.atom2_idx = atom_idx
+            elif self.atom3_idx is None:
+                self.atom3_idx = atom_idx
+            elif self.atom4_idx is None:
+                self.atom4_idx = atom_idx
+                # Take a fresh snapshot immediately upon completing the selection
+                self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
+            else:
+                # Reset and start over
+                self.atom1_idx = atom_idx
+                self.atom2_idx = None
+                self.atom3_idx = None
+                self.atom4_idx = None
+                self._snapshot_positions = None
 
         self.update_display()
 

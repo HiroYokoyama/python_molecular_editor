@@ -30,6 +30,7 @@ from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
 # Minimal concrete class
 # ---------------------------------------------------------------------------
 
+
 class _PickingDialog(Dialog3DPickingMixin, QDialog):
     def __init__(self, main_window):
         QDialog.__init__(self)
@@ -46,12 +47,14 @@ class _PickingDialog(Dialog3DPickingMixin, QDialog):
 def _make_mw():
     mw = MagicMock()
     mw._picking_consumed = False
-    mw.view_3d_manager.atom_positions_3d = np.array([
-        [0.0, 0.0, 0.0],
-        [1.5, 0.0, 0.0],
-        [3.0, 0.0, 0.0],
-        [4.5, 0.0, 0.0],
-    ])
+    mw.view_3d_manager.atom_positions_3d = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [1.5, 0.0, 0.0],
+            [3.0, 0.0, 0.0],
+            [4.5, 0.0, 0.0],
+        ]
+    )
     plotter = MagicMock()
     plotter.interactor = MagicMock()
     mw.view_3d_manager.plotter = plotter
@@ -92,6 +95,7 @@ def _release_event():
 # __init__
 # ---------------------------------------------------------------------------
 
+
 def test_init_defaults(app):
     dlg, _ = _make_dlg(app)
     assert dlg.picking_enabled is False
@@ -103,6 +107,7 @@ def test_init_defaults(app):
 # ---------------------------------------------------------------------------
 # eventFilter — early-return paths
 # ---------------------------------------------------------------------------
+
 
 def test_eventfilter_none_event_returns_false(app):
     dlg, _ = _make_dlg(app)
@@ -131,6 +136,7 @@ def test_eventfilter_non_interactor_returns_false(app):
 # eventFilter — atom click hit
 # ---------------------------------------------------------------------------
 
+
 def test_eventfilter_atom_click_calls_on_atom_picked(app):
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
@@ -146,9 +152,34 @@ def test_eventfilter_atom_click_calls_on_atom_picked(app):
     atom.GetAtomicNum.return_value = 6
     dlg.mol.GetAtomWithIdx.return_value = atom
 
-    result = dlg.eventFilter(plotter.interactor, _left_press_event())
+    with patch(
+        "moleditpy.ui.dialog_3d_picking_mixin.pick_atom_index_from_screen",
+        return_value=0,
+    ):
+        result = dlg.eventFilter(plotter.interactor, _left_press_event())
     assert result is True
+    app.processEvents()
     assert 0 in dlg._picked
+
+
+def test_eventfilter_atom_click_consumes_matching_release(app):
+    dlg, mw = _make_dlg(app)
+    plotter = mw.view_3d_manager.plotter
+
+    mw.view_3d_manager.atom_actor = MagicMock()
+    plotter.picker.GetActor.return_value = mw.view_3d_manager.atom_actor
+    plotter.picker.GetPickPosition.return_value = (0.0, 0.0, 0.0)
+    plotter.interactor.GetEventPosition.return_value = (10, 10)
+    dlg.mol.GetAtomWithIdx.return_value = MagicMock()
+
+    with patch(
+        "moleditpy.ui.dialog_3d_picking_mixin.pick_atom_index_from_screen",
+        return_value=0,
+    ):
+        assert dlg.eventFilter(plotter.interactor, _left_press_event()) is True
+        assert dlg.eventFilter(plotter.interactor, _release_event()) is True
+    assert dlg._mouse_press_pos is None
+    assert dlg._mouse_moved is False
 
 
 def test_eventfilter_atom_click_miss_returns_false(app):
@@ -159,7 +190,11 @@ def test_eventfilter_atom_click_miss_returns_false(app):
     mw.view_3d_manager.atom_actor = MagicMock()
     plotter.picker.GetActor.return_value = MagicMock()  # different object
 
-    result = dlg.eventFilter(plotter.interactor, _left_press_event())
+    with patch(
+        "moleditpy.ui.dialog_3d_picking_mixin.pick_atom_index_from_screen",
+        return_value=None,
+    ):
+        result = dlg.eventFilter(plotter.interactor, _left_press_event())
     assert result is False
     assert dlg._picked == []
 
@@ -167,6 +202,7 @@ def test_eventfilter_atom_click_miss_returns_false(app):
 # ---------------------------------------------------------------------------
 # eventFilter — mouse move tracking
 # ---------------------------------------------------------------------------
+
 
 def test_eventfilter_mouse_move_sets_moved_flag(app):
     dlg, mw = _make_dlg(app)
@@ -186,7 +222,7 @@ def test_eventfilter_mouse_move_small_does_not_set_flag(app):
     dlg._mouse_press_pos = QPoint(0, 0)
     dlg._mouse_moved = False
 
-    ev = _move_event(QPoint(1, 1))   # manhattan = 2, below threshold of 3
+    ev = _move_event(QPoint(1, 1))  # manhattan = 2, below threshold of 3
     dlg.eventFilter(plotter.interactor, ev)
     assert dlg._mouse_moved is False
 
@@ -194,6 +230,7 @@ def test_eventfilter_mouse_move_small_does_not_set_flag(app):
 # ---------------------------------------------------------------------------
 # eventFilter — mouse release clears selection on pure click
 # ---------------------------------------------------------------------------
+
 
 def test_eventfilter_release_pure_click_calls_clear_selection(app):
     dlg, mw = _make_dlg(app)
@@ -203,6 +240,7 @@ def test_eventfilter_release_pure_click_calls_clear_selection(app):
     dlg.clear_selection = MagicMock()
 
     dlg.eventFilter(plotter.interactor, _release_event())
+    app.processEvents()
     dlg.clear_selection.assert_called_once()
     assert dlg._mouse_press_pos is None
 
@@ -223,6 +261,7 @@ def test_eventfilter_release_after_drag_no_clear_selection(app):
 # enable_picking / disable_picking
 # ---------------------------------------------------------------------------
 
+
 def test_enable_picking_installs_event_filter(app):
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
@@ -234,7 +273,7 @@ def test_enable_picking_installs_event_filter(app):
 def test_enable_picking_none_plotter_no_crash(app):
     dlg, mw = _make_dlg(app)
     mw.view_3d_manager.plotter = None
-    dlg.enable_picking()   # should not raise
+    dlg.enable_picking()  # should not raise
     assert dlg.picking_enabled is False
 
 
@@ -258,6 +297,7 @@ def test_disable_picking_when_not_enabled_is_noop(app):
 # ---------------------------------------------------------------------------
 # clear_atom_labels
 # ---------------------------------------------------------------------------
+
 
 def test_clear_atom_labels_removes_actors(app):
     dlg, mw = _make_dlg(app)
@@ -284,6 +324,7 @@ def test_clear_atom_labels_none_plotter_empties_list(app):
 # add_selection_label
 # ---------------------------------------------------------------------------
 
+
 def test_add_selection_label_calls_add_point_labels(app):
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
@@ -298,7 +339,7 @@ def test_add_selection_label_calls_add_point_labels(app):
 def test_add_selection_label_none_plotter_no_crash(app):
     dlg, mw = _make_dlg(app)
     mw.view_3d_manager.plotter = None
-    dlg.add_selection_label(0, "A1")   # should not raise
+    dlg.add_selection_label(0, "A1")  # should not raise
     assert dlg.selection_labels == []
 
 
@@ -312,6 +353,7 @@ def test_add_selection_label_none_positions_no_crash(app):
 # ---------------------------------------------------------------------------
 # show_atom_labels_for
 # ---------------------------------------------------------------------------
+
 
 def test_show_atom_labels_for_clears_then_adds(app):
     dlg, mw = _make_dlg(app)

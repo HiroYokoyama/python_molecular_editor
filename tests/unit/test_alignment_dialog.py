@@ -79,7 +79,9 @@ def make_dialog(qapp):
             patch.object(AlignmentDialog, "enable_picking"),
             patch.object(AlignmentDialog, "disable_picking"),
         ):
-            dlg = AlignmentDialog(_mol, mw, axis=axis, preselected_atoms=preselected_atoms)
+            dlg = AlignmentDialog(
+                _mol, mw, axis=axis, preselected_atoms=preselected_atoms
+            )
         created.append(dlg)
         return dlg, _mol, mw
 

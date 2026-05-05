@@ -116,8 +116,9 @@ class TestOnAtomPicked:
     def test_picks_entire_connected_component(self, make_dialog):
         """Picking any atom in ethane should BFS to all 8 atoms."""
         dlg, mol, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(0)
         assert len(dlg.group_atoms) == mol.GetNumAtoms()
@@ -125,8 +126,9 @@ class TestOnAtomPicked:
     def test_picking_again_toggles_deselect(self, make_dialog):
         """Re-picking any atom in the already-selected group deselects everything."""
         dlg, mol, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(0)
             dlg.on_atom_picked(1)  # still same group → deselect
@@ -147,8 +149,9 @@ class TestOnAtomPicked:
 
         # Pick any atom from fragment A
         seed = next(iter(frag_a))
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(seed)
 
@@ -159,8 +162,9 @@ class TestOnAtomPicked:
 
     def test_selected_atoms_records_clicked_atom(self, make_dialog):
         dlg, _, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(3)
         assert 3 in dlg.selected_atoms
@@ -189,8 +193,9 @@ class TestUpdateDisplay:
 
     def test_group_shows_count_and_symbols(self, make_dialog):
         dlg, mol, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(0)  # selects all 8 ethane atoms
 
@@ -201,8 +206,9 @@ class TestUpdateDisplay:
     def test_more_than_5_atoms_appended_with_ellipsis(self, make_dialog):
         """If >5 atoms selected, display must show '...' at the end."""
         dlg, mol, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(0)  # 8-atom ethane
 
@@ -217,8 +223,9 @@ class TestUpdateDisplay:
 
 class TestApplyTranslation:
     def _pick_all(self, dlg):
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(0)
 
@@ -245,8 +252,9 @@ class TestApplyTranslation:
         dlg.y_trans_input.setText("2.0")
         dlg.z_trans_input.setText("3.0")
 
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.apply_translation()
 
@@ -258,8 +266,9 @@ class TestApplyTranslation:
     def test_translation_pushes_undo(self, make_dialog):
         dlg, _, mw = make_dialog()
         self._pick_all(dlg)
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.apply_translation()
         mw.edit_actions_manager.push_undo_state.assert_called()
@@ -272,8 +281,9 @@ class TestApplyTranslation:
 
 class TestApplyRotation:
     def _pick_all(self, dlg):
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(0)
 
@@ -296,8 +306,9 @@ class TestApplyRotation:
         self._pick_all(dlg)
         before = mol.GetConformer().GetPositions().copy()
         # All rotation inputs default to "0.0"
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.apply_rotation()
         after = mol.GetConformer().GetPositions()
@@ -317,16 +328,20 @@ class TestApplyRotation:
         conf.SetAtomPosition(1, Geometry.Point3D(-1.0, 0.0, 0.0))
 
         dlg, mol, mw = make_dialog(mol=mol)
-        mw.view_3d_manager.atom_positions_3d = np.array([[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]])
+        mw.view_3d_manager.atom_positions_3d = np.array(
+            [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]
+        )
 
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(0)
 
         dlg.z_rot_input.setText("90.0")
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.apply_rotation()
 
@@ -338,8 +353,9 @@ class TestApplyRotation:
     def test_rotation_pushes_undo(self, make_dialog):
         dlg, _, mw = make_dialog()
         self._pick_all(dlg)
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.apply_rotation()
         mw.edit_actions_manager.push_undo_state.assert_called()
@@ -380,8 +396,9 @@ class TestResetInputs:
 class TestClearSelection:
     def test_clear_removes_group_and_selected_atoms(self, make_dialog):
         dlg, _, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(0)
 
@@ -402,8 +419,9 @@ class TestClearSelection:
 
     def test_clear_updates_display(self, make_dialog):
         dlg, _, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"), patch.object(
-            type(dlg), "clear_atom_labels"
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
         ):
             dlg.on_atom_picked(0)
         with patch.object(type(dlg), "clear_atom_labels"):

@@ -64,6 +64,7 @@ class View3DManager:
         self.axes_actor: Optional[vtk.vtkProp] = None
         self.axes_widget: Optional[vtk.vtkOrientationMarkerWidget] = None
         self.atom_info_display_mode: Optional[str] = None
+        self.atom_index_base: int = 0  # 0 = 0-based, 1 = 1-based
         self.show_chiral_labels: bool = False
         self.current_atom_info_labels: Optional[List[pv.Actor]] = None
         self.atom_label_legend_names: List[str] = []
@@ -1095,6 +1096,9 @@ class View3DManager:
                         text_color="blue",
                         name="chiral_labels",
                         always_visible=True,
+                        shape="rect",
+                        shape_color="gray",
+                        shape_opacity=0.5,
                         tolerance=0.01,
                         show_points=False,
                     )
@@ -1298,6 +1302,9 @@ class View3DManager:
                 text_color="darkgreen",  # Dark green color
                 name="ez_labels",
                 always_visible=True,
+                shape="rect",
+                shape_color="gray",
+                shape_opacity=0.5,
                 tolerance=0.01,
                 show_points=False,
             )
@@ -1386,79 +1393,77 @@ class View3DManager:
         # Clear current display
         self.clear_all_atom_info_labels()
 
+        # Index-type modes that make the Index Base submenu meaningful
+        _index_modes = {"rdkit_index", "xyz_index"}
+
         # Turn OFF if the same mode is selected
         if self.atom_info_display_mode == mode:
             self.atom_info_display_mode = None
             # Uncheck all actions
-            if hasattr(self.host.init_manager, "show_atom_id_action"):
-                self.host.init_manager.show_atom_id_action.setChecked(False)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
-                )
-            if hasattr(self.host.init_manager, "show_rdkit_id_action"):
-                self.host.init_manager.show_rdkit_id_action.setChecked(False)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'show_rdkit_id_action' on object"
-                )
-            if hasattr(self.host.init_manager, "show_atom_coords_action"):
-                self.host.init_manager.show_atom_coords_action.setChecked(False)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'show_atom_coords_action' on object"
-                )
-            if hasattr(self.host.init_manager, "show_atom_symbol_action"):
-                self.host.init_manager.show_atom_symbol_action.setChecked(False)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'show_atom_symbol_action' on object"
-                )
+            for attr in (
+                "show_index_action",
+                "show_original_id_action",
+                "show_xyz_index_action",
+                "show_atom_coords_action",
+                "show_atom_symbol_action",
+            ):
+                action = getattr(self.host.init_manager, attr, None)
+                if action is not None:
+                    action.setChecked(False)
+            # Disable Index Base submenu
+            base_menu = getattr(self.host.init_manager, "atom_index_base_menu", None)
+            if base_menu is not None:
+                base_menu.setEnabled(False)
             self.host.statusBar().showMessage("Atom info display disabled.")
         else:
             # Set new mode
             self.atom_info_display_mode = mode
-            # Check only the relevant action
-            if hasattr(self.host.init_manager, "show_atom_id_action"):
-                self.host.init_manager.show_atom_id_action.setChecked(mode == "id")
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
-                )
-            if hasattr(self.host.init_manager, "show_rdkit_id_action"):
-                self.host.init_manager.show_rdkit_id_action.setChecked(
-                    mode == "rdkit_id"
-                )
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'show_rdkit_id_action' on object"
-                )
-            if hasattr(self.host.init_manager, "show_atom_coords_action"):
-                self.host.init_manager.show_atom_coords_action.setChecked(
-                    mode == "coords"
-                )
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'show_atom_coords_action' on object"
-                )
-            if hasattr(self.host.init_manager, "show_atom_symbol_action"):
-                self.host.init_manager.show_atom_symbol_action.setChecked(
-                    mode == "symbol"
-                )
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'show_atom_symbol_action' on object"
-                )
+            # Update check states for each action
+            action_mode_map = {
+                "show_index_action": "rdkit_index",
+                "show_original_id_action": "original_id",
+                "show_xyz_index_action": "xyz_index",
+                "show_atom_coords_action": "coords",
+                "show_atom_symbol_action": "symbol",
+            }
+            for attr, m in action_mode_map.items():
+                action = getattr(self.host.init_manager, attr, None)
+                if action is not None:
+                    action.setChecked(mode == m)
+
+            # Enable Index Base submenu only for index-type modes
+            base_menu = getattr(self.host.init_manager, "atom_index_base_menu", None)
+            if base_menu is not None:
+                base_menu.setEnabled(mode in _index_modes)
 
             mode_names = {
-                "id": "Atom ID",
-                "rdkit_id": "RDKit Index",
+                "rdkit_index": "Index",
+                "original_id": "Original ID",
+                "xyz_index": "XYZ Index",
                 "coords": "Coordinates",
                 "symbol": "Element Symbol",
             }
-            self.host.statusBar().showMessage(f"Displaying: {mode_names[mode]}")
+            self.host.statusBar().showMessage(
+                f"Displaying: {mode_names.get(mode, mode)}"
+            )
 
             # Display info for all atoms
+            self.show_all_atom_info()
+            self.host.view_3d_manager.plotter.render()
+
+    def set_atom_index_base(self, base: int) -> None:
+        """Switch between 0-based and 1-based index display and refresh labels."""
+        self.atom_index_base = base
+        # Sync checkmarks
+        base0 = getattr(self.host.init_manager, "atom_index_base_0_action", None)
+        base1 = getattr(self.host.init_manager, "atom_index_base_1_action", None)
+        if base0 is not None:
+            base0.setChecked(base == 0)
+        if base1 is not None:
+            base1.setChecked(base == 1)
+        # Refresh labels if an index mode is active
+        if self.atom_info_display_mode in {"rdkit_index", "original_id", "xyz_index"}:
+            self.clear_all_atom_info_labels()
             self.show_all_atom_info()
             self.host.view_3d_manager.plotter.render()
 
@@ -1503,47 +1508,40 @@ class View3DManager:
         return False
 
     def update_atom_id_menu_text(self) -> None:
-        """Update Atom ID menu text based on molecule type"""
-        if hasattr(self.host.init_manager, "show_atom_id_action"):
-            if self.is_xyz_derived_molecule():
-                self.host.init_manager.show_atom_id_action.setText("Show XYZ Unique ID")
-            else:
-                self.host.init_manager.show_atom_id_action.setText(
-                    "Show Original ID / Index"
-                )
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(
-                "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
-            )
+        """Update Atom ID menu enabled/disabled state based on molecule type.
+        Text is now fixed; only availability (enabled/disabled) changes."""
+        self.update_atom_id_menu_state()
 
     def update_atom_id_menu_state(self) -> None:
-        """Update Atom ID menu enabled/disabled state"""
-        if hasattr(self.host.init_manager, "show_atom_id_action"):
-            has_original_ids = self.has_original_atom_ids()
-            has_xyz_ids = self.is_xyz_derived_molecule()
+        """Enable or disable Original ID / XYZ Index menu items based on availability."""
+        has_original_ids = self.has_original_atom_ids()
+        has_xyz_ids = self.is_xyz_derived_molecule()
 
-            # Enable only if Original ID or XYZ ID exists
-            self.host.init_manager.show_atom_id_action.setEnabled(
-                has_original_ids or has_xyz_ids
-            )
+        original_id_action = getattr(
+            self.host.init_manager, "show_original_id_action", None
+        )
+        xyz_index_action = getattr(
+            self.host.init_manager, "show_xyz_index_action", None
+        )
 
-            # Disable selection if the currently selected mode is no longer valid
-            if (
-                not (has_original_ids or has_xyz_ids)
-                and self.atom_info_display_mode == "id"
-            ):
-                self.atom_info_display_mode = None
-                if hasattr(self.host.init_manager, "show_atom_id_action"):
-                    self.host.init_manager.show_atom_id_action.setChecked(False)
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                    logging.error(
-                        "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
-                    )
-                self.clear_all_atom_info_labels()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-            logging.error(
-                "REPORT ERROR: Missing attribute 'show_atom_id_action' on object"
-            )
+        if original_id_action is not None:
+            original_id_action.setEnabled(has_original_ids)
+
+        if xyz_index_action is not None:
+            xyz_index_action.setEnabled(has_xyz_ids)
+
+        # If the currently active mode is no longer valid, clear it
+        if self.atom_info_display_mode == "original_id" and not has_original_ids:
+            self.atom_info_display_mode = None
+            if original_id_action is not None:
+                original_id_action.setChecked(False)
+            self.clear_all_atom_info_labels()
+
+        if self.atom_info_display_mode == "xyz_index" and not has_xyz_ids:
+            self.atom_info_display_mode = None
+            if xyz_index_action is not None:
+                xyz_index_action.setChecked(False)
+            self.clear_all_atom_info_labels()
 
     def show_all_atom_info(self) -> None:
         """Display info for all atoms"""
@@ -1572,8 +1570,15 @@ class View3DManager:
             if self.atom_info_display_mode is None:
                 continue
 
-            if self.atom_info_display_mode == "id":
-                # Display Original ID if available, otherwise XYZ unique ID, finally RDKit index
+            base = self.atom_index_base  # 0 or 1
+
+            if self.atom_info_display_mode == "rdkit_index":
+                # Always show RDKit 0-based atom index (+ base offset for display)
+                rdkit_positions.append(pos)
+                rdkit_texts.append(str(atom_idx + base))
+
+            elif self.atom_info_display_mode == "original_id":
+                # Show only _original_atom_id labels in original-ID mode.
                 try:
                     if self.host.view_3d_manager.current_mol:
                         atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
@@ -1581,26 +1586,31 @@ class View3DManager:
                         )
                         if atom.HasProp("_original_atom_id"):
                             original_id = atom.GetIntProp("_original_atom_id")
-                            # Remove prefix and display only the number
                             id_positions.append(pos)
                             id_texts.append(str(original_id))
-                        elif atom.HasProp("xyz_unique_id"):
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    continue
+
+            elif self.atom_info_display_mode == "xyz_index":
+                # Show xyz_unique_id property if present, else fall back to RDKit index
+                try:
+                    if self.host.view_3d_manager.current_mol:
+                        atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
+                            atom_idx
+                        )
+                        if atom.HasProp("xyz_unique_id"):
                             unique_id = atom.GetIntProp("xyz_unique_id")
                             xyz_positions.append(pos)
-                            xyz_texts.append(str(unique_id))
+                            xyz_texts.append(str(unique_id + base))
                         else:
                             rdkit_positions.append(pos)
-                            rdkit_texts.append(str(atom_idx))
+                            rdkit_texts.append(str(atom_idx + base))
                     else:
                         rdkit_positions.append(pos)
-                        rdkit_texts.append(str(atom_idx))
+                        rdkit_texts.append(str(atom_idx + base))
                 except (AttributeError, RuntimeError, TypeError, ValueError):
                     rdkit_positions.append(pos)
-                    rdkit_texts.append(str(atom_idx))
-
-            elif self.atom_info_display_mode == "rdkit_id":
-                rdkit_positions.append(pos)
-                rdkit_texts.append(str(atom_idx))
+                    rdkit_texts.append(str(atom_idx + base))
 
             elif self.atom_info_display_mode == "coords":
                 other_positions.append(pos)
@@ -1637,6 +1647,9 @@ class View3DManager:
                     font_size=18,
                     text_color=rdkit_color,
                     always_visible=True,
+                    shape="rect",
+                    shape_color="gray",
+                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_rdkit",
@@ -1651,6 +1664,9 @@ class View3DManager:
                     font_size=18,
                     text_color=id_color,
                     always_visible=True,
+                    shape="rect",
+                    shape_color="gray",
+                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_id",
@@ -1665,6 +1681,9 @@ class View3DManager:
                     font_size=18,
                     text_color=xyz_color,
                     always_visible=True,
+                    shape="rect",
+                    shape_color="gray",
+                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_xyz",
@@ -1679,6 +1698,9 @@ class View3DManager:
                     font_size=18,
                     text_color=other_color,
                     always_visible=True,
+                    shape="rect",
+                    shape_color="gray",
+                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_other",

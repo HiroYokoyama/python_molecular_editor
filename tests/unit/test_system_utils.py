@@ -26,6 +26,7 @@ from moleditpy.utils.system_utils import detect_system_theme, detect_system_dark
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _fake_winreg(val):
     """Return a fake winreg module that yields *val* for AppsUseLightTheme."""
     mod = types.ModuleType("winreg")
@@ -34,6 +35,7 @@ def _fake_winreg(val):
     class _Key:
         def __enter__(self):
             return self
+
         def __exit__(self, *a):
             pass
 

@@ -1116,20 +1116,20 @@ def test_toggle_3d_atom_info(window, qtbot, monkeypatch):
             (window.view_3d_manager.current_mol.GetNumAtoms(), 3)
         )
 
-    # 2. Trigger "Show Original ID / Index"
-    action_id = find_menu_action(window.menuBar(), "Show Original ID / Index")
+    # 2. Trigger "Show Original ID"
+    action_id = find_menu_action(window.menuBar(), "Show Original ID")
     if action_id is None:
-        pytest.skip("Show Original ID / Index action not found")
+        pytest.skip("Show Original ID action not found")
     # In some headless or mocked environments QAction.trigger() may not fire
     # the connected slot; call the toggle directly in that case for test
     # determinism.
     if getattr(action_id, "isEnabled", lambda: True)():
         action_id.trigger()
     else:
-        window.toggle_atom_info_display("id")
+        window.toggle_atom_info_display("original_id")
     qtbot.wait(50)
 
-    assert window.atom_info_display_mode == "id"
+    assert window.atom_info_display_mode == "original_id"
     mock_add_labels.assert_called()
     assert window.current_atom_info_labels is not None  # Actor created
 

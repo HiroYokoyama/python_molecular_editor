@@ -25,8 +25,10 @@ from moleditpy.ui.zoomable_view import ZoomableView
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class _ModeScene(QGraphicsScene):
     """Real QGraphicsScene with a .mode attribute for cursor-restore tests."""
+
     def __init__(self, mode="select"):
         super().__init__()
         self.mode = mode
@@ -39,14 +41,18 @@ def _make_view(app, mode="select"):
 
 
 def _wheel_event(delta_y: int, ctrl: bool = False) -> QWheelEvent:
-    modifiers = Qt.KeyboardModifier.ControlModifier if ctrl else Qt.KeyboardModifier.NoModifier
+    modifiers = (
+        Qt.KeyboardModifier.ControlModifier if ctrl else Qt.KeyboardModifier.NoModifier
+    )
     ev = MagicMock(spec=QWheelEvent)
     ev.modifiers.return_value = modifiers
     ev.angleDelta.return_value = QPoint(0, delta_y)
     return ev
 
 
-def _mouse_event(button, modifiers=Qt.KeyboardModifier.NoModifier, pos=None) -> QMouseEvent:
+def _mouse_event(
+    button, modifiers=Qt.KeyboardModifier.NoModifier, pos=None
+) -> QMouseEvent:
     ev = MagicMock(spec=QMouseEvent)
     ev.button.return_value = button
     ev.modifiers.return_value = modifiers
@@ -58,6 +64,7 @@ def _mouse_event(button, modifiers=Qt.KeyboardModifier.NoModifier, pos=None) -> 
 # ---------------------------------------------------------------------------
 # __init__
 # ---------------------------------------------------------------------------
+
 
 def test_init_panning_state(app):
     view, _ = _make_view(app)
@@ -80,6 +87,7 @@ def test_init_scroll_bars_always_on(app):
 # ---------------------------------------------------------------------------
 # wheelEvent
 # ---------------------------------------------------------------------------
+
 
 def test_wheel_ctrl_zoom_in_scales_up(app):
     view, _ = _make_view(app)
@@ -134,6 +142,7 @@ def test_wheel_ctrl_does_not_go_below_min_scale(app):
 # mousePressEvent
 # ---------------------------------------------------------------------------
 
+
 def test_mouse_press_middle_button_starts_pan(app):
     view, _ = _make_view(app)
     ev = _mouse_event(Qt.MouseButton.MiddleButton)
@@ -144,8 +153,9 @@ def test_mouse_press_middle_button_starts_pan(app):
 
 def test_mouse_press_shift_left_starts_pan(app):
     view, _ = _make_view(app)
-    ev = _mouse_event(Qt.MouseButton.LeftButton,
-                      modifiers=Qt.KeyboardModifier.ShiftModifier)
+    ev = _mouse_event(
+        Qt.MouseButton.LeftButton, modifiers=Qt.KeyboardModifier.ShiftModifier
+    )
     view.mousePressEvent(ev)
     assert view._is_panning is True
     ev.accept.assert_called_once()
@@ -161,9 +171,12 @@ def test_mouse_press_pan_sets_cursor_closed_hand(app):
 def test_mouse_press_left_no_shift_passes_to_super(app):
     view, _ = _make_view(app)
     from PyQt6.QtCore import QEvent, QPointF
+
     ev = QMouseEvent(
-        QEvent.Type.MouseButtonPress, QPointF(100, 100),
-        Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton,
+        QEvent.Type.MouseButtonPress,
+        QPointF(100, 100),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
         Qt.KeyboardModifier.NoModifier,
     )
     view.mousePressEvent(ev)
@@ -172,13 +185,14 @@ def test_mouse_press_left_no_shift_passes_to_super(app):
 
 def test_mouse_press_none_event_returns_early(app):
     view, _ = _make_view(app)
-    view.mousePressEvent(None)   # should not raise
+    view.mousePressEvent(None)  # should not raise
     assert view._is_panning is False
 
 
 # ---------------------------------------------------------------------------
 # mouseMoveEvent
 # ---------------------------------------------------------------------------
+
 
 def test_mouse_move_while_panning_updates_scrollbars(app):
     view, _ = _make_view(app)
@@ -197,9 +211,12 @@ def test_mouse_move_not_panning_passes_to_super(app):
     view, _ = _make_view(app)
     assert view._is_panning is False
     from PyQt6.QtCore import QEvent, QPointF
+
     move_ev = QMouseEvent(
-        QEvent.Type.MouseMove, QPointF(50, 50),
-        Qt.MouseButton.NoButton, Qt.MouseButton.NoButton,
+        QEvent.Type.MouseMove,
+        QPointF(50, 50),
+        Qt.MouseButton.NoButton,
+        Qt.MouseButton.NoButton,
         Qt.KeyboardModifier.NoModifier,
     )
     # Should not raise, super handles it; _is_panning stays False
@@ -208,12 +225,13 @@ def test_mouse_move_not_panning_passes_to_super(app):
 
 def test_mouse_move_none_event_returns_early(app):
     view, _ = _make_view(app)
-    view.mouseMoveEvent(None)   # should not raise
+    view.mouseMoveEvent(None)  # should not raise
 
 
 # ---------------------------------------------------------------------------
 # mouseReleaseEvent
 # ---------------------------------------------------------------------------
+
 
 def test_mouse_release_ends_pan(app):
     view, _ = _make_view(app)
@@ -272,9 +290,12 @@ def test_mouse_release_not_panning_passes_to_super(app):
     view, _ = _make_view(app)
     assert view._is_panning is False
     from PyQt6.QtCore import QEvent, QPointF
+
     rel_ev = QMouseEvent(
-        QEvent.Type.MouseButtonRelease, QPointF(100, 100),
-        Qt.MouseButton.LeftButton, Qt.MouseButton.LeftButton,
+        QEvent.Type.MouseButtonRelease,
+        QPointF(100, 100),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
         Qt.KeyboardModifier.NoModifier,
     )
     # Should not set panning state or raise
@@ -285,6 +306,7 @@ def test_mouse_release_not_panning_passes_to_super(app):
 # ---------------------------------------------------------------------------
 # viewportEvent (pinch zoom)
 # ---------------------------------------------------------------------------
+
 
 def test_viewport_event_non_native_gesture_passes_to_super(app):
     view, _ = _make_view(app)
@@ -301,7 +323,7 @@ def test_viewport_event_zoom_native_gesture_scales(app):
     ev = MagicMock()
     ev.type.return_value = QEvent.Type.NativeGesture
     ev.gestureType.return_value = Qt.NativeGestureType.ZoomNativeGesture
-    ev.value.return_value = 0.1   # scale factor delta → multiply by 1.1
+    ev.value.return_value = 0.1  # scale factor delta → multiply by 1.1
     result = view.viewportEvent(ev)
     assert result is True
     assert view.transform().m11() > before

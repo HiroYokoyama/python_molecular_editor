@@ -1110,8 +1110,10 @@ def window(app, qtbot, monkeypatch):
                                     mol.GetAtomWithIdx = lambda i: _FakeAtom(i)
                                 # Ensure menu action is enabled so test can trigger it
                                 try:
-                                    if hasattr(host, "show_atom_id_action"):
-                                        host.show_atom_id_action.setEnabled(True)
+                                    if hasattr(host, "show_original_id_action"):
+                                        host.show_original_id_action.setEnabled(True)
+                                    if hasattr(host, "show_xyz_index_action"):
+                                        host.show_xyz_index_action.setEnabled(True)
                                 except Exception:
                                     import traceback
 
@@ -1792,9 +1794,10 @@ def window(app, qtbot, monkeypatch):
         "3D MOL/SDF (3D View Only)...": "load_mol_file_for_3d_viewing",
         "Save Project &As...": "save_project_as",
         "&Open Project...": "open_project_file",
-        "Show Original ID / Index": "show_atom_id_action",
+        "Show Original ID": "show_original_id_action",
         "Show Coordinates (X,Y,Z)": "show_atom_coords_action",
-        "Show RDKit Index": "show_rdkit_id_action",
+        "Show Index": "show_index_action",
+        "Show XYZ Index": "show_xyz_index_action",
         "Show Element Symbol": "show_atom_symbol_action",
         "Save 2D as Template...": "save_2d_as_template",
     }
@@ -1822,9 +1825,10 @@ def window(app, qtbot, monkeypatch):
             # Prefer to connect auto-generated actions to the corresponding
             # toggle handlers if available so we can test UI state changes.
             toggle_map = {
-                "show_atom_id_action": "id",
+                "show_index_action": "rdkit_index",
+                "show_original_id_action": "original_id",
+                "show_xyz_index_action": "xyz_index",
                 "show_atom_coords_action": "coords",
-                "show_rdkit_id_action": "rdkit_id",
                 "show_atom_symbol_action": "symbol",
             }
             if attr_name in toggle_map and hasattr(

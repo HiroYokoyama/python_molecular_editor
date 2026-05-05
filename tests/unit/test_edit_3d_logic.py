@@ -91,9 +91,9 @@ def test_handle_measurement_atom_selection(mock_parser_host):
     edit3d.handle_measurement_atom_selection(10)
     assert 10 in edit3d.selected_atoms_for_measurement
 
-    # Second time should return (currently handle_measurement_atom_selection doesn't pop)
+    # Second time should toggle/remove the atom
     edit3d.handle_measurement_atom_selection(10)
-    assert len(edit3d.selected_atoms_for_measurement) == 1
+    assert len(edit3d.selected_atoms_for_measurement) == 0
 
 
 def test_clear_3d_selection(mock_parser_host):

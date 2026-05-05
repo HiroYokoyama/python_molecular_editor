@@ -258,9 +258,7 @@ class TestAddConstraint:
         dlg.force_const_input.setText("not_a_number")
         dlg.on_atom_picked(0)
         dlg.on_atom_picked(1)
-        with patch(
-            "moleditpy.ui.constrained_optimization_dialog.QMessageBox"
-        ):
+        with patch("moleditpy.ui.constrained_optimization_dialog.QMessageBox"):
             dlg.add_constraint()
         _, _, _, cforce = dlg.constraints[0]
         assert cforce == pytest.approx(1.0e5)
@@ -514,3 +512,66 @@ class TestReject:
 
         # state_manager.has_unsaved_changes must NOT have been written
         dlg.main_window.state_manager.update_window_title.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Optimization Execution (QThread)
+# ---------------------------------------------------------------------------
+
+
+class TestOptimizationExecution:
+    @patch("moleditpy.ui.constrained_optimization_dialog.ConstrainedOptimizationThread")
+    def test_apply_optimization_starts_thread(self, mock_thread_class, make_dialog):
+        dlg = make_dialog()
+        mock_thread = MagicMock()
+        mock_thread_class.return_value = mock_thread
+
+        dlg.apply_optimization()
+
+        # Check UI state
+        assert not dlg.optimize_button.isEnabled()
+
+        # Check thread was created and started
+        mock_thread_class.assert_called_once()
+        mock_thread.start.assert_called_once()
+
+    def test_on_optimization_finished(self, make_dialog):
+        dlg = make_dialog()
+        dlg.optimize_button.setEnabled(False)
+
+        # Mock conformer returning dummy coordinates
+        mock_conf = MagicMock()
+        pos_mock = MagicMock()
+        pos_mock.x = 1.0
+        pos_mock.y = 2.0
+        pos_mock.z = 3.0
+        mock_conf.GetAtomPosition.return_value = pos_mock
+
+        # Setup mock cache
+        dlg.main_window.view_3d_manager.atom_positions_3d = {
+            i: [0, 0, 0] for i in range(dlg.mol.GetNumAtoms())
+        }
+
+        dlg._on_optimization_finished("MMFF94s", mock_conf)
+
+        assert dlg.optimize_button.isEnabled()
+        dlg.main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with(
+            dlg.mol
+        )
+        dlg.main_window.edit_actions_manager.push_undo_state.assert_called_once()
+
+        # Check coordinates were cached
+        assert dlg.main_window.view_3d_manager.atom_positions_3d[0] == [1.0, 2.0, 3.0]
+
+    def test_on_optimization_error(self, make_dialog):
+        dlg = make_dialog()
+        dlg.optimize_button.setEnabled(False)
+
+        with patch(
+            "moleditpy.ui.constrained_optimization_dialog.QMessageBox"
+        ) as mock_mb:
+            dlg._on_optimization_error("Test Error")
+
+        assert dlg.optimize_button.isEnabled()
+        mock_mb.critical.assert_called_once()
+        assert "Test Error" in mock_mb.critical.call_args[0][2]

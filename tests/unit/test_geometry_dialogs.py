@@ -45,6 +45,7 @@ def _ethane():
     """Ethane with 3D coords: C0-C1, H2-H7."""
     from rdkit import Chem
     from rdkit.Chem import AllChem
+
     mol = Chem.MolFromSmiles("CC")
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
@@ -396,6 +397,7 @@ class TestAngleDialogGeometry:
         dlg.apply_geometry_update(120.0)
 
         from moleditpy.core.mol_geometry import calc_angle_deg
+
         conf = mol.GetConformer()
         new_angle = calc_angle_deg(
             conf.GetAtomPosition(2),
@@ -572,6 +574,7 @@ class TestDihedralDialogGeometry:
         dlg.apply_geometry_update(60.0)
 
         from moleditpy.core.mol_geometry import calculate_dihedral
+
         positions = mol.GetConformer().GetPositions()
         result = calculate_dihedral(positions, 2, 0, 1, 5)
         assert result == pytest.approx(60.0, abs=1.0)
@@ -588,6 +591,7 @@ class TestDihedralDialogGeometry:
         dlg.apply_geometry_update(60.0)
 
         from moleditpy.core.mol_geometry import calculate_dihedral
+
         positions = mol.GetConformer().GetPositions()
         result = calculate_dihedral(positions, 2, 0, 1, 5)
         assert result == pytest.approx(60.0, abs=1.0)

@@ -390,6 +390,18 @@ _Test boundingRect expansion for E/Z labels_
 - assert rect_stereo.width() >= rect_no_stereo.width()
 - assert rect_stereo.height() >= rect_no_stereo.height()
 
+## tests/unit/test_atom_picking.py
+
+### test_pick_atom_index_from_screen_hits_projected_atom_edge
+_No description provided._
+
+- assert pick_atom_index_from_screen(_view(), (111, 100), _Mol()) == 0
+
+### test_pick_atom_index_from_screen_returns_none_for_background
+_No description provided._
+
+- assert pick_atom_index_from_screen(_view(), (200, 200), _Mol()) is None
+
 ## tests/unit/test_atom_placement_logic.py
 
 ### test_placement_0_neighbors
@@ -1193,13 +1205,35 @@ _If saved constraints haven't changed, has_unsaved_changes must NOT be set._
 
 - dlg.main_window.state_manager.update_window_title.assert_not_called()
 
+### TestOptimizationExecution.test_apply_optimization_starts_thread
+_No description provided._
+
+- assert not dlg.optimize_button.isEnabled()
+- mock_thread_class.assert_called_once()
+- mock_thread.start.assert_called_once()
+
+### TestOptimizationExecution.test_on_optimization_finished
+_No description provided._
+
+- assert dlg.optimize_button.isEnabled()
+- dlg.main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with(dlg.mol)
+- dlg.main_window.edit_actions_manager.push_undo_state.assert_called_once()
+- assert dlg.main_window.view_3d_manager.atom_positions_3d[0] == [1.0, 2.0, 3.0]
+
+### TestOptimizationExecution.test_on_optimization_error
+_No description provided._
+
+- assert dlg.optimize_button.isEnabled()
+- mock_mb.critical.assert_called_once()
+- assert 'Test Error' in mock_mb.critical.call_args[0][2]
+
 ## tests/unit/test_custom_interactor_style.py
 
 ### test_custom_interactor_style_left_click_atom_selection
 _Verify that left-clicking an atom in 3D edit mode successfully selects it._
 
 - assert interactor_style._is_dragging_atom is True
-- mock_parser_host.plotter.setCursor.assert_called_once_with(Qt.CursorShape.ClosedHandCursor)
+- mock_parser_host.plotter.setCursor.assert_called_with(Qt.CursorShape.ClosedHandCursor)
 - assert mock_parser_host.dragged_atom_info['id'] == 0
 
 ### test_custom_interactor_style_background_click
@@ -1207,6 +1241,20 @@ _Verify that clicking the background (no atom selected) allows VTK trackball rot
 
 - assert interactor_style._is_dragging_atom is False
 - mock_super_down.assert_called_once()
+
+### test_measurement_atom_click_suppresses_vtk_release
+_Atom measurement clicks consume press and must not leak release to VTK._
+
+- mock_super_up.assert_not_called()
+
+### test_atom_click_without_drag_resets_without_render_updates
+_Simple atom clicks should not run drag redraw/update work._
+
+- interactor_style.StopState.assert_called()
+- mock_parser_host.edit_3d_manager.update_3d_selection_display.assert_not_called()
+- mock_parser_host.edit_3d_manager.update_measurement_labels_display.assert_not_called()
+- mock_parser_host.edit_3d_manager.update_2d_measurement_labels.assert_not_called()
+- mock_parser_host.view_3d_manager.show_all_atom_info.assert_not_called()
 
 ## tests/unit/test_dialog_3d_picking_mixin.py
 
@@ -1243,6 +1291,14 @@ _No description provided._
 
 - assert result is True
 - assert 0 in dlg._picked
+
+### test_eventfilter_atom_click_consumes_matching_release
+_No description provided._
+
+- assert dlg._mouse_press_pos is None
+- assert dlg._mouse_moved is False
+- assert dlg.eventFilter(plotter.interactor, _left_press_event()) is True
+- assert dlg.eventFilter(plotter.interactor, _release_event()) is True
 
 ### test_eventfilter_atom_click_miss_returns_false
 _No description provided._
@@ -1681,7 +1737,7 @@ _Verify calculation of dihedral angle between four 3D points._
 _Verify handling of atom selection for measurements._
 
 - assert 10 in edit3d.selected_atoms_for_measurement
-- assert len(edit3d.selected_atoms_for_measurement) == 1
+- assert len(edit3d.selected_atoms_for_measurement) == 0
 
 ### test_clear_3d_selection
 _Verify clearing of 3D selection highlights._
@@ -5934,6 +5990,14 @@ _Verify that calling draw with None safely clears the renderer._
 - mock_parser_host.view_3d_manager.plotter.render.assert_called()
 - assert mock_parser_host.view_3d_manager.current_mol is None
 
+### test_original_id_mode_hides_rdkit_id_labels
+_Original-ID labels should not fall back to RDKit index labels._
+
+- view3d.plotter.add_point_labels.assert_called_once()
+- assert label_texts == ['42']
+- view3d.plotter.add_text.assert_called_once()
+- assert view3d.plotter.add_text.call_args.args[0] == 'ID'
+
 ## tests/unit/test_view_3d_logic_extended.py
 
 ### test_add_3d_atom_glyphs_styles
@@ -6767,7 +6831,7 @@ _Project Load: Test for "Open Project..." (.pmeprj)._
 _3D Atom Info Display: Test for toggling ID, Coordinates, and Symbol display._
 
 - assert window.view_3d_manager.current_mol is not None
-- assert window.atom_info_display_mode == 'id'
+- assert window.atom_info_display_mode == 'original_id'
 - mock_add_labels.assert_called()
 - assert window.current_atom_info_labels is not None
 - assert window.atom_info_display_mode == 'coords'

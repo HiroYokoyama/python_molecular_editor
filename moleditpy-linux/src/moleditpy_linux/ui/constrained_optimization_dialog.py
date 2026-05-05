@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 import logging
 from typing import Any
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -31,6 +31,23 @@ from PyQt6.QtWidgets import (
 from rdkit.Chem import AllChem, rdMolTransforms
 
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
+
+
+class ConstrainedOptimizationThread(QThread):
+    optimization_finished = pyqtSignal()
+    error_occurred = pyqtSignal(str)
+
+    def __init__(self, ff: Any, max_iters: int = 20000, parent: Any = None) -> None:
+        super().__init__(parent)
+        self.ff = ff
+        self.max_iters = max_iters
+
+    def run(self) -> None:
+        try:
+            self.ff.Minimize(maxIts=self.max_iters)
+            self.optimization_finished.emit()
+        except Exception as e:
+            self.error_occurred.emit(str(e))
 
 
 class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
@@ -427,15 +444,33 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         if positions:
             plotter = self.main_window.view_3d_manager.plotter
             if plotter is not None:
+                # Save camera position to prevent reset
+                try:
+                    cam = plotter.camera_position
+                except (AttributeError, RuntimeError, TypeError) as e:
+                    logging.debug(f"Could not save camera position: {e}")
+                    cam = None
+
                 label_actor = plotter.add_point_labels(
                     positions,
                     texts,
-                    point_size=20,
+                    point_size=0,
                     font_size=12,
                     text_color="cyan",
                     always_visible=True,
+                    show_points=False,
+                    shape="rect",
+                    shape_color="gray",
+                    shape_opacity=0.5,
                 )
                 self.constraint_labels.append(label_actor)
+
+                # Restore camera position
+                if cam is not None:
+                    try:
+                        plotter.camera_position = cam
+                    except (AttributeError, RuntimeError, TypeError) as e:
+                        logging.debug(f"Could not restore camera position: {e}")
 
     def clear_constraint_labels(self) -> None:
         for label_actor in self.constraint_labels:
@@ -541,8 +576,30 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             status_bar = self.main_window.statusBar()
             if status_bar is not None:
                 status_bar.showMessage(f"Running constrained {ff_name} optimization...")
-            ff.Minimize(maxIts=20000)
 
+            self.optimize_button.setEnabled(False)
+
+            self._opt_thread = ConstrainedOptimizationThread(ff, 20000, self)
+            self._opt_thread.optimization_finished.connect(
+                lambda: self._on_optimization_finished(ff_name, conf)
+            )
+            self._opt_thread.error_occurred.connect(self._on_optimization_error)
+            self._opt_thread.start()
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to start optimization: {e}")
+            self.optimize_button.setEnabled(True)
+
+    def _on_optimization_error(self, err_msg: str) -> None:
+        self.optimize_button.setEnabled(True)
+        status_bar = self.main_window.statusBar()
+        if status_bar is not None:
+            status_bar.showMessage(f"Optimization failed: {err_msg}")
+        QMessageBox.critical(self, "Error", f"Optimization error: {err_msg}")
+
+    def _on_optimization_finished(self, ff_name: str, conf: Any) -> None:
+        self.optimize_button.setEnabled(True)
+        try:
             # Apply optimized coordinates to the main window's numpy array
             cache = self.main_window.view_3d_manager.atom_positions_3d
             for i in range(self.mol.GetNumAtoms()):
@@ -558,6 +615,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
             self.main_window.view_3d_manager.update_chiral_labels()
             self.main_window.edit_actions_manager.push_undo_state()
+            status_bar = self.main_window.statusBar()
             if status_bar is not None:
                 status_bar.showMessage("Constrained optimization finished.")
 
@@ -680,19 +738,37 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         if positions:
             plotter = self.main_window.view_3d_manager.plotter
             if plotter is not None:
+                # Save camera position to prevent reset
+                try:
+                    cam = plotter.camera_position
+                except (AttributeError, RuntimeError, TypeError) as e:
+                    logging.debug(f"Could not save camera position: {e}")
+                    cam = None
+
                 label_actor = plotter.add_point_labels(
                     positions,
                     texts,
-                    point_size=20,
+                    point_size=0,
                     font_size=12,
                     text_color="yellow",
                     always_visible=True,
+                    show_points=False,
+                    shape="rect",
+                    shape_color="gray",
+                    shape_opacity=0.5,
                 )
                 # Consider case where add_point_labels returns a list
                 if isinstance(label_actor, list):
                     self.selection_labels.extend(label_actor)
                 else:
                     self.selection_labels.append(label_actor)
+
+                # Restore camera position
+                if cam is not None:
+                    try:
+                        plotter.camera_position = cam
+                    except (AttributeError, RuntimeError, TypeError) as e:
+                        logging.debug(f"Could not restore camera position: {e}")
 
     def on_cell_changed(self, row: int, column: int) -> None:
         """Update internal data when a table cell is edited."""

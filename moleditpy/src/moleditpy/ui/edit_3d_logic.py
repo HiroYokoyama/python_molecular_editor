@@ -103,6 +103,15 @@ class Edit3DManager:
 
         if not checked:
             self.clear_measurement_selection()
+            # Reset any stuck VTK interactor state when leaving measurement mode
+            try:
+                interactor_style = (
+                    self.host.view_3d_manager.plotter.interactor.GetInteractorStyle()
+                )
+                if hasattr(interactor_style, "reset_interactor_state"):
+                    interactor_style.reset_interactor_state()
+            except (AttributeError, RuntimeError):
+                pass
 
         # Update status message
         if checked:
@@ -127,34 +136,25 @@ class Edit3DManager:
 
     def handle_measurement_atom_selection(self, atom_idx: int) -> None:
         """Handle atom selection for measurement."""
-        # Skip if already selected
+        # Toggle selection
         if atom_idx in self.selected_atoms_for_measurement:
-            return
+            self.selected_atoms_for_measurement.remove(atom_idx)
+        else:
+            self.selected_atoms_for_measurement.append(atom_idx)
 
-        self.selected_atoms_for_measurement.append(atom_idx)
-
-        # Add atom labels
-        self.add_measurement_label(atom_idx, len(self.selected_atoms_for_measurement))
-
-        # Calculate and display results
-        self.calculate_and_display_measurements()
-
-    def add_measurement_label(self, atom_idx: int, label_number: int) -> None:
-        """Add numeric labels to atoms."""
-        if (
-            not self.host.view_3d_manager.current_mol
-            or atom_idx >= self.host.view_3d_manager.current_mol.GetNumAtoms()
-        ):
-            return
-
-        # Update label list
-        self.measurement_labels.append((atom_idx, str(label_number)))
+        # Rebuild measurement labels list based on the new order
+        self.measurement_labels.clear()
+        for i, idx in enumerate(self.selected_atoms_for_measurement):
+            self.measurement_labels.append((idx, str(i + 1)))
 
         # Redraw 3D measurement labels
         self.update_measurement_labels_display()
 
         # Update 2D measurement labels
         self.update_2d_measurement_labels()
+
+        # Calculate and display results
+        self.calculate_and_display_measurements()
 
     def update_measurement_labels_display(self) -> None:
         """Draw measurement labels in 3D (atom centers)."""
@@ -192,6 +192,9 @@ class Edit3DManager:
                 text_color="red",  # Always red for measurement
                 name="measurement_labels",
                 always_visible=True,
+                shape="rect",
+                shape_color="gray",
+                shape_opacity=0.5,
                 tolerance=0.01,
                 show_points=False,
             )

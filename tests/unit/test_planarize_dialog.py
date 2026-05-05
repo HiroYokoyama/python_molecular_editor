@@ -249,12 +249,16 @@ class TestApplyPlanarizeGeometry:
             dlg = PlanarizeDialog(mol, mw)
 
         dlg.selected_atoms = {0, 1, 2, 3}
-        before_z_var = np.var([mol.GetConformer().GetAtomPosition(i).z for i in range(4)])
+        before_z_var = np.var(
+            [mol.GetConformer().GetAtomPosition(i).z for i in range(4)]
+        )
 
         with patch("moleditpy.ui.planarize_dialog.QMessageBox"):
             dlg.apply_planarize()
 
-        after_z_var = np.var([mol.GetConformer().GetAtomPosition(i).z for i in range(4)])
+        after_z_var = np.var(
+            [mol.GetConformer().GetAtomPosition(i).z for i in range(4)]
+        )
         assert after_z_var <= before_z_var + 1e-6
 
     def test_planarize_pushes_undo(self, make_dialog):

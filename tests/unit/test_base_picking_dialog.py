@@ -30,6 +30,7 @@ from moleditpy.ui.base_picking_dialog import BasePickingDialog
 # Minimal concrete subclass
 # ---------------------------------------------------------------------------
 
+
 class _ConcreteDialog(BasePickingDialog):
     def on_atom_picked(self, atom_idx: int) -> None:
         pass
@@ -65,6 +66,7 @@ def _make_dlg(app, mol=None):
 # keyPressEvent
 # ---------------------------------------------------------------------------
 
+
 def _key_event(key):
     ev = MagicMock(spec=QKeyEvent)
     ev.key.return_value = key
@@ -97,19 +99,22 @@ def test_key_enter_does_not_click_disabled_apply_button(app):
 def test_key_enter_no_apply_button_does_not_raise(app):
     dlg, _, _ = _make_dlg(app)
     ev = _key_event(Qt.Key.Key_Return)
-    dlg.keyPressEvent(ev)   # should not raise
+    dlg.keyPressEvent(ev)  # should not raise
 
 
 def test_key_none_event_returns_early(app):
     dlg, _, _ = _make_dlg(app)
-    dlg.keyPressEvent(None)   # should not raise
+    dlg.keyPressEvent(None)  # should not raise
 
 
 def test_key_other_key_passes_to_super(app):
     from PyQt6.QtGui import QKeyEvent
     from PyQt6.QtCore import QEvent
+
     dlg, _, _ = _make_dlg(app)
-    ev = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier)
+    ev = QKeyEvent(
+        QEvent.Type.KeyPress, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier
+    )
     # Should not raise; delegates to QDialog.keyPressEvent
     dlg.keyPressEvent(ev)
 
@@ -118,11 +123,15 @@ def test_key_other_key_passes_to_super(app):
 # closeEvent / reject / accept
 # ---------------------------------------------------------------------------
 
+
 def test_close_event_clears_labels_and_disables_picking(app):
     from PyQt6.QtGui import QCloseEvent
+
     dlg, _, _ = _make_dlg(app)
-    with patch.object(dlg, "clear_atom_labels") as mock_clear, \
-         patch.object(dlg, "disable_picking") as mock_disable:
+    with (
+        patch.object(dlg, "clear_atom_labels") as mock_clear,
+        patch.object(dlg, "disable_picking") as mock_disable,
+    ):
         dlg.closeEvent(QCloseEvent())
     mock_clear.assert_called_once()
     mock_disable.assert_called_once()
@@ -130,9 +139,11 @@ def test_close_event_clears_labels_and_disables_picking(app):
 
 def test_reject_clears_labels_and_disables_picking(app):
     dlg, _, _ = _make_dlg(app)
-    with patch.object(dlg, "clear_atom_labels") as mock_clear, \
-         patch.object(dlg, "disable_picking") as mock_disable, \
-         patch("moleditpy.ui.base_picking_dialog.QDialog.reject"):
+    with (
+        patch.object(dlg, "clear_atom_labels") as mock_clear,
+        patch.object(dlg, "disable_picking") as mock_disable,
+        patch("moleditpy.ui.base_picking_dialog.QDialog.reject"),
+    ):
         dlg.reject()
     mock_clear.assert_called_once()
     mock_disable.assert_called_once()
@@ -140,9 +151,11 @@ def test_reject_clears_labels_and_disables_picking(app):
 
 def test_accept_clears_labels_and_disables_picking(app):
     dlg, _, _ = _make_dlg(app)
-    with patch.object(dlg, "clear_atom_labels") as mock_clear, \
-         patch.object(dlg, "disable_picking") as mock_disable, \
-         patch("moleditpy.ui.base_picking_dialog.QDialog.accept"):
+    with (
+        patch.object(dlg, "clear_atom_labels") as mock_clear,
+        patch.object(dlg, "disable_picking") as mock_disable,
+        patch("moleditpy.ui.base_picking_dialog.QDialog.accept"),
+    ):
         dlg.accept()
     mock_clear.assert_called_once()
     mock_disable.assert_called_once()
@@ -151,6 +164,7 @@ def test_accept_clears_labels_and_disables_picking(app):
 # ---------------------------------------------------------------------------
 # _update_molecule_geometry
 # ---------------------------------------------------------------------------
+
 
 def test_update_molecule_geometry_array_updates_conformer(app):
     dlg, mol, mw = _make_dlg(app)
@@ -184,12 +198,15 @@ def test_update_molecule_geometry_updates_cache(app):
     positions = mol.GetConformer().GetPositions().copy()
     positions[1] = [99.0, 0.0, 0.0]
     dlg._update_molecule_geometry(positions)
-    assert mw.view_3d_manager.atom_positions_3d[1] == pytest.approx([99.0, 0.0, 0.0], abs=1e-4)
+    assert mw.view_3d_manager.atom_positions_3d[1] == pytest.approx(
+        [99.0, 0.0, 0.0], abs=1e-4
+    )
 
 
 # ---------------------------------------------------------------------------
 # _push_undo
 # ---------------------------------------------------------------------------
+
 
 def test_push_undo_calls_push_undo_state(app):
     dlg, _, mw = _make_dlg(app)
@@ -202,18 +219,21 @@ def test_push_undo_calls_push_undo_state(app):
 def test_push_undo_no_state_manager_no_crash(app):
     dlg, _, mw = _make_dlg(app)
     del mw.state_manager  # simulate missing attribute
-    dlg._push_undo()   # should not raise
+    dlg._push_undo()  # should not raise
 
 
 # ---------------------------------------------------------------------------
 # done
 # ---------------------------------------------------------------------------
 
+
 def test_done_pushes_undo_if_molecule_modified(app):
     dlg, _, mw = _make_dlg(app)
     dlg._molecule_modified = True
-    with patch.object(dlg, "_push_undo") as mock_undo, \
-         patch("moleditpy.ui.base_picking_dialog.QDialog.done"):
+    with (
+        patch.object(dlg, "_push_undo") as mock_undo,
+        patch("moleditpy.ui.base_picking_dialog.QDialog.done"),
+    ):
         dlg.done(0)
     mock_undo.assert_called_once()
 
@@ -221,7 +241,9 @@ def test_done_pushes_undo_if_molecule_modified(app):
 def test_done_skips_undo_if_not_modified(app):
     dlg, _, mw = _make_dlg(app)
     dlg._molecule_modified = False
-    with patch.object(dlg, "_push_undo") as mock_undo, \
-         patch("moleditpy.ui.base_picking_dialog.QDialog.done"):
+    with (
+        patch.object(dlg, "_push_undo") as mock_undo,
+        patch("moleditpy.ui.base_picking_dialog.QDialog.done"),
+    ):
         dlg.done(0)
     mock_undo.assert_not_called()

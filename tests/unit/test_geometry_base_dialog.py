@@ -47,6 +47,7 @@ def qapp():
 def _ethane():
     from rdkit import Chem
     from rdkit.Chem import AllChem
+
     mol = Chem.MolFromSmiles("CC")
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)

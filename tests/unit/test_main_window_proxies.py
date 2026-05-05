@@ -19,6 +19,7 @@ from unittest.mock import patch, MagicMock
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_window():
     """Instantiate MainWindow with all heavy managers patched."""
     patches = [
@@ -34,22 +35,25 @@ def _make_window():
         "moleditpy.ui.main_window.UIManager",
         "moleditpy.ui.main_window.MainInitManager",
     ]
-    with patch.multiple("moleditpy.ui.main_window", **{
-        p.split(".")[-1]: MagicMock() for p in patches
-    }):
+    with patch.multiple(
+        "moleditpy.ui.main_window", **{p.split(".")[-1]: MagicMock() for p in patches}
+    ):
         from moleditpy.ui.main_window import MainWindow
+
         # Patch all at module level
-        with patch("moleditpy.ui.main_window.ExportManager"), \
-             patch("moleditpy.ui.main_window.View3DManager"), \
-             patch("moleditpy.ui.main_window.Edit3DManager"), \
-             patch("moleditpy.ui.main_window.EditActionsManager"), \
-             patch("moleditpy.ui.main_window.ComputeManager"), \
-             patch("moleditpy.ui.main_window.DialogManager"), \
-             patch("moleditpy.ui.main_window.IOManager"), \
-             patch("moleditpy.ui.main_window.StateManager"), \
-             patch("moleditpy.ui.main_window.StringImporterManager"), \
-             patch("moleditpy.ui.main_window.UIManager"), \
-             patch("moleditpy.ui.main_window.MainInitManager"):
+        with (
+            patch("moleditpy.ui.main_window.ExportManager"),
+            patch("moleditpy.ui.main_window.View3DManager"),
+            patch("moleditpy.ui.main_window.Edit3DManager"),
+            patch("moleditpy.ui.main_window.EditActionsManager"),
+            patch("moleditpy.ui.main_window.ComputeManager"),
+            patch("moleditpy.ui.main_window.DialogManager"),
+            patch("moleditpy.ui.main_window.IOManager"),
+            patch("moleditpy.ui.main_window.StateManager"),
+            patch("moleditpy.ui.main_window.StringImporterManager"),
+            patch("moleditpy.ui.main_window.UIManager"),
+            patch("moleditpy.ui.main_window.MainInitManager"),
+        ):
             mw = MainWindow()
     return mw
 
@@ -57,6 +61,7 @@ def _make_window():
 # ---------------------------------------------------------------------------
 # Instantiation
 # ---------------------------------------------------------------------------
+
 
 def test_mainwindow_all_managers_assigned(app):
     mw = _make_window()
@@ -80,12 +85,14 @@ def test_mainwindow_is_restoring_state_default(app):
 
 def test_mainwindow_start_calculation_signal_exists(app):
     from moleditpy.ui.main_window import MainWindow
+
     assert hasattr(MainWindow, "start_calculation")
 
 
 # ---------------------------------------------------------------------------
 # Proxy properties
 # ---------------------------------------------------------------------------
+
 
 def test_current_mol_getter_delegates_to_view_3d_manager(app):
     mw = _make_window()
@@ -125,6 +132,7 @@ def test_scene_property_delegates_to_init_manager(app):
 # ---------------------------------------------------------------------------
 # draw_molecule_3d proxy
 # ---------------------------------------------------------------------------
+
 
 def test_draw_molecule_3d_sets_current_mol(app):
     mw = _make_window()

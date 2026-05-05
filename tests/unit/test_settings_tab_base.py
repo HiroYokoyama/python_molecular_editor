@@ -6,6 +6,7 @@ from moleditpy.utils.default_settings import DEFAULT_SETTINGS
 
 class ConcreteTab(SettingsTabBase):
     """Minimal concrete subclass for testing the base class."""
+
     def update_ui(self, settings_dict):
         pass
 
@@ -64,9 +65,11 @@ def test_reset_to_defaults_calls_update_ui(app):
 
 def test_update_ui_not_implemented(app):
     import pytest
+
     # The base class raises NotImplementedError; ConcreteTab overrides it
     class RawBase(SettingsTabBase):
         pass
+
     base = RawBase(DEFAULT_SETTINGS)
     with pytest.raises(NotImplementedError):
         base.update_ui({})
@@ -74,8 +77,10 @@ def test_update_ui_not_implemented(app):
 
 def test_get_settings_not_implemented(app):
     import pytest
+
     class RawBase(SettingsTabBase):
         pass
+
     base = RawBase(DEFAULT_SETTINGS)
     with pytest.raises(NotImplementedError):
         base.get_settings()

@@ -37,8 +37,10 @@ def test_get_settings_returns_correct_keys(app):
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     result = tab.get_settings()
     expected_keys = {
-        "skip_chemistry_checks", "always_ask_charge",
-        "display_kekule_3d", "display_aromatic_circles_3d",
+        "skip_chemistry_checks",
+        "always_ask_charge",
+        "display_kekule_3d",
+        "display_aromatic_circles_3d",
         "aromatic_torus_thickness_factor",
     }
     assert expected_keys == set(result.keys())
@@ -50,8 +52,17 @@ def test_get_settings_roundtrip_defaults(app):
     result = tab.get_settings()
     assert result["skip_chemistry_checks"] == DEFAULT_SETTINGS["skip_chemistry_checks"]
     assert result["display_kekule_3d"] == DEFAULT_SETTINGS["display_kekule_3d"]
-    assert result["display_aromatic_circles_3d"] == DEFAULT_SETTINGS["display_aromatic_circles_3d"]
-    assert abs(result["aromatic_torus_thickness_factor"] - DEFAULT_SETTINGS["aromatic_torus_thickness_factor"]) < 0.01
+    assert (
+        result["display_aromatic_circles_3d"]
+        == DEFAULT_SETTINGS["display_aromatic_circles_3d"]
+    )
+    assert (
+        abs(
+            result["aromatic_torus_thickness_factor"]
+            - DEFAULT_SETTINGS["aromatic_torus_thickness_factor"]
+        )
+        < 0.01
+    )
 
 
 def test_kekule_toggled_disables_aromatic_circle(app):
@@ -109,4 +120,10 @@ def test_reset_to_defaults(app):
     tab.reset_to_defaults()
     result = tab.get_settings()
     assert result["skip_chemistry_checks"] == DEFAULT_SETTINGS["skip_chemistry_checks"]
-    assert abs(result["aromatic_torus_thickness_factor"] - DEFAULT_SETTINGS["aromatic_torus_thickness_factor"]) < 0.01
+    assert (
+        abs(
+            result["aromatic_torus_thickness_factor"]
+            - DEFAULT_SETTINGS["aromatic_torus_thickness_factor"]
+        )
+        < 0.01
+    )

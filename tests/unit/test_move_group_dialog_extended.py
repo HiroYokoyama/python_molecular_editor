@@ -29,9 +29,11 @@ if os.path.isdir(_src) and _src not in sys.path:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _ethane():
     from rdkit import Chem
     from rdkit.Chem import AllChem
+
     mol = Chem.MolFromSmiles("CC")
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=42)
@@ -42,6 +44,7 @@ def _five_atom_mol():
     """Linear C5 with 3D coords; 5 heavy atoms so ellipsis boundary is exactly at 5."""
     from rdkit import Chem
     from rdkit.Chem import AllChem
+
     mol = Chem.MolFromSmiles("CCCCC")
     AllChem.EmbedMolecule(mol, randomSeed=42)
     return mol
@@ -68,6 +71,7 @@ def make_dialog(qapp):
 
     def _factory(mol=None):
         from moleditpy.ui.move_group_dialog import MoveGroupDialog
+
         _mol = mol if mol is not None else _ethane()
         mw = _make_main_window(_mol)
         with (
@@ -93,9 +97,11 @@ def make_dialog(qapp):
 # __init__ / preselected_atoms
 # ---------------------------------------------------------------------------
 
+
 class TestInit:
     def test_preselected_atoms_triggers_on_atom_picked(self, make_dialog, qapp):
         from moleditpy.ui.move_group_dialog import MoveGroupDialog
+
         mol = _ethane()
         mw = _make_main_window(mol)
         # update_display is called before init_ui creates selection_label, so patch it
@@ -129,6 +135,7 @@ class TestInit:
 # init_ui widgets
 # ---------------------------------------------------------------------------
 
+
 class TestInitUI:
     def test_translation_inputs_default_zero(self, make_dialog):
         dlg, _, _ = make_dialog()
@@ -151,13 +158,16 @@ class TestInitUI:
 # update_display boundary
 # ---------------------------------------------------------------------------
 
+
 class TestUpdateDisplayBoundary:
     def test_exactly_5_atoms_no_ellipsis(self, make_dialog):
         """Exactly 5 selected atoms must NOT show '...'."""
         mol = _five_atom_mol()
         dlg, mol, _ = make_dialog(mol=mol)
-        with patch.object(type(dlg), "show_atom_labels"), \
-             patch.object(type(dlg), "clear_atom_labels"):
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
+        ):
             dlg.on_atom_picked(0)  # selects all 5 heavy atoms
 
         dlg.update_display()
@@ -168,8 +178,10 @@ class TestUpdateDisplayBoundary:
     def test_more_than_5_atoms_has_ellipsis(self, make_dialog):
         """8-atom ethane (with H) must show '...' after 5th."""
         dlg, _, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"), \
-             patch.object(type(dlg), "clear_atom_labels"):
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
+        ):
             dlg.on_atom_picked(0)
         dlg.update_display()
         assert "..." in dlg.selection_label.text()
@@ -179,10 +191,13 @@ class TestUpdateDisplayBoundary:
 # apply_rotation — X and Y axes
 # ---------------------------------------------------------------------------
 
+
 class TestApplyRotationAxes:
     def _pick_all(self, dlg):
-        with patch.object(type(dlg), "show_atom_labels"), \
-             patch.object(type(dlg), "clear_atom_labels"):
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
+        ):
             dlg.on_atom_picked(0)
 
     def test_90deg_x_rotation_around_centroid(self, make_dialog):
@@ -198,12 +213,16 @@ class TestApplyRotationAxes:
         conf.SetAtomPosition(1, Geometry.Point3D(0.0, -1.0, 0.0))
 
         dlg, mol, mw = make_dialog(mol=mol)
-        mw.view_3d_manager.atom_positions_3d = np.array([[0.0, 1.0, 0.0], [0.0, -1.0, 0.0]])
+        mw.view_3d_manager.atom_positions_3d = np.array(
+            [[0.0, 1.0, 0.0], [0.0, -1.0, 0.0]]
+        )
 
         self._pick_all(dlg)
         dlg.x_rot_input.setText("90.0")
-        with patch.object(type(dlg), "show_atom_labels"), \
-             patch.object(type(dlg), "clear_atom_labels"):
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
+        ):
             dlg.apply_rotation()
 
         after = mol.GetConformer().GetPositions()
@@ -224,12 +243,16 @@ class TestApplyRotationAxes:
         conf.SetAtomPosition(1, Geometry.Point3D(-1.0, 0.0, 0.0))
 
         dlg, mol, mw = make_dialog(mol=mol)
-        mw.view_3d_manager.atom_positions_3d = np.array([[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]])
+        mw.view_3d_manager.atom_positions_3d = np.array(
+            [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]
+        )
 
         self._pick_all(dlg)
         dlg.y_rot_input.setText("90.0")
-        with patch.object(type(dlg), "show_atom_labels"), \
-             patch.object(type(dlg), "clear_atom_labels"):
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
+        ):
             dlg.apply_rotation()
 
         after = mol.GetConformer().GetPositions()
@@ -243,8 +266,10 @@ class TestApplyRotationAxes:
         dlg.x_rot_input.setText("30.0")
         dlg.y_rot_input.setText("45.0")
         dlg.z_rot_input.setText("60.0")
-        with patch.object(type(dlg), "show_atom_labels"), \
-             patch.object(type(dlg), "clear_atom_labels"):
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
+        ):
             dlg.apply_rotation()
         mw.edit_actions_manager.push_undo_state.assert_called()
 
@@ -253,14 +278,18 @@ class TestApplyRotationAxes:
 # show_atom_labels / clear_atom_labels
 # ---------------------------------------------------------------------------
 
+
 class TestAtomLabels:
     def _pick_all(self, dlg):
-        with patch.object(type(dlg), "show_atom_labels"), \
-             patch.object(type(dlg), "clear_atom_labels"):
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
+        ):
             dlg.on_atom_picked(0)
 
     def test_show_atom_labels_calls_plotter_add_mesh(self, make_dialog):
         import pyvista as pv
+
         dlg, mol, mw = make_dialog()
         self._pick_all(dlg)
         mw.view_3d_manager.atom_positions_3d = np.array(
@@ -288,7 +317,9 @@ class TestAtomLabels:
         mock_plotter = MagicMock()
         mw.view_3d_manager.plotter = mock_plotter
         # Patch base class clear_atom_labels to avoid label list complexity
-        with patch("moleditpy.ui.dialog_3d_picking_mixin.Dialog3DPickingMixin.clear_atom_labels"):
+        with patch(
+            "moleditpy.ui.dialog_3d_picking_mixin.Dialog3DPickingMixin.clear_atom_labels"
+        ):
             dlg.clear_atom_labels()
         mock_plotter.remove_actor.assert_called()
         assert dlg.highlight_actor is None
@@ -296,13 +327,16 @@ class TestAtomLabels:
     def test_clear_atom_labels_none_plotter_does_not_raise(self, make_dialog):
         dlg, _, mw = make_dialog()
         mw.view_3d_manager.plotter = None
-        with patch("moleditpy.ui.dialog_3d_picking_mixin.Dialog3DPickingMixin.clear_atom_labels"):
+        with patch(
+            "moleditpy.ui.dialog_3d_picking_mixin.Dialog3DPickingMixin.clear_atom_labels"
+        ):
             dlg.clear_atom_labels()  # should not raise
 
 
 # ---------------------------------------------------------------------------
 # eventFilter — early-return paths
 # ---------------------------------------------------------------------------
+
 
 class TestEventFilter:
     def _make_event(self, event_type):

@@ -20,7 +20,9 @@ def test_init_creates_seven_tabs(app):
 
 def test_init_tab_labels(app):
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
-    tab_titles = [dialog.tab_widget.tabText(i) for i in range(dialog.tab_widget.count())]
+    tab_titles = [
+        dialog.tab_widget.tabText(i) for i in range(dialog.tab_widget.count())
+    ]
     assert "2D Settings" in tab_titles
     assert "3D Scene" in tab_titles
     assert "Ball & Stick" in tab_titles
@@ -44,21 +46,23 @@ def test_get_settings_aggregates_all_tabs(app):
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     result = dialog.get_settings()
     # Should contain keys from every tab
-    assert "background_color_2d" in result        # 2D tab
-    assert "background_color" in result           # 3D scene tab
-    assert "ball_stick_atom_scale" in result      # Ball & Stick tab
-    assert "cpk_atom_scale" in result             # CPK tab
-    assert "wireframe_bond_radius" in result      # Wireframe tab
-    assert "stick_bond_radius" in result          # Stick tab
-    assert "skip_chemistry_checks" in result      # Other tab
+    assert "background_color_2d" in result  # 2D tab
+    assert "background_color" in result  # 3D scene tab
+    assert "ball_stick_atom_scale" in result  # Ball & Stick tab
+    assert "cpk_atom_scale" in result  # CPK tab
+    assert "wireframe_bond_radius" in result  # Wireframe tab
+    assert "stick_bond_radius" in result  # Stick tab
+    assert "skip_chemistry_checks" in result  # Other tab
 
 
 def test_reset_current_tab_calls_reset_on_active_tab(app):
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.tab_widget.setCurrentIndex(0)
 
-    with patch.object(dialog.tab_2d, "reset_to_defaults") as mock_reset, \
-         patch("moleditpy.ui.settings_dialog.QMessageBox.information"):
+    with (
+        patch.object(dialog.tab_2d, "reset_to_defaults") as mock_reset,
+        patch("moleditpy.ui.settings_dialog.QMessageBox.information"),
+    ):
         dialog.reset_current_tab()
         mock_reset.assert_called_once()
 
@@ -67,8 +71,10 @@ def test_reset_current_tab_shows_info_message(app):
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.tab_widget.setCurrentIndex(0)
 
-    with patch.object(dialog.tab_2d, "reset_to_defaults"), \
-         patch("moleditpy.ui.settings_dialog.QMessageBox.information") as mock_info:
+    with (
+        patch.object(dialog.tab_2d, "reset_to_defaults"),
+        patch("moleditpy.ui.settings_dialog.QMessageBox.information") as mock_info,
+    ):
         dialog.reset_current_tab()
         mock_info.assert_called_once()
         args = mock_info.call_args[0]
@@ -79,11 +85,16 @@ def test_reset_all_settings_yes_resets_and_applies(app):
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.parent_window = _make_parent()
 
-    with patch("moleditpy.ui.settings_dialog.QMessageBox.question",
-               return_value=MagicMock()) as mock_q, \
-         patch.object(dialog, "update_ui_from_settings") as mock_update, \
-         patch.object(dialog, "apply_settings") as mock_apply:
+    with (
+        patch(
+            "moleditpy.ui.settings_dialog.QMessageBox.question",
+            return_value=MagicMock(),
+        ) as mock_q,
+        patch.object(dialog, "update_ui_from_settings") as mock_update,
+        patch.object(dialog, "apply_settings") as mock_apply,
+    ):
         from PyQt6.QtWidgets import QMessageBox
+
         mock_q.return_value = QMessageBox.StandardButton.Yes
         dialog.reset_all_settings()
         mock_update.assert_called_once_with(dialog.default_settings)
@@ -94,9 +105,12 @@ def test_reset_all_settings_no_does_nothing(app):
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.parent_window = _make_parent()
 
-    with patch("moleditpy.ui.settings_dialog.QMessageBox.question") as mock_q, \
-         patch.object(dialog, "update_ui_from_settings") as mock_update:
+    with (
+        patch("moleditpy.ui.settings_dialog.QMessageBox.question") as mock_q,
+        patch.object(dialog, "update_ui_from_settings") as mock_update,
+    ):
         from PyQt6.QtWidgets import QMessageBox
+
         mock_q.return_value = QMessageBox.StandardButton.No
         dialog.reset_all_settings()
         mock_update.assert_not_called()
@@ -114,7 +128,9 @@ def test_apply_settings_updates_parent_settings(app):
     dialog.parent_window = _make_parent()
     dialog.tab_2d.current_bg_color_2d = "#123456"
     dialog.apply_settings()
-    assert dialog.parent_window.init_manager.settings["background_color_2d"] == "#123456"
+    assert (
+        dialog.parent_window.init_manager.settings["background_color_2d"] == "#123456"
+    )
 
 
 def test_apply_settings_calls_save_settings(app):
@@ -181,8 +197,10 @@ def test_accept_applies_then_closes(app):
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.parent_window = _make_parent()
 
-    with patch.object(dialog, "apply_settings") as mock_apply, \
-         patch("moleditpy.ui.settings_dialog.QDialog.accept") as mock_super_accept:
+    with (
+        patch.object(dialog, "apply_settings") as mock_apply,
+        patch("moleditpy.ui.settings_dialog.QDialog.accept") as mock_super_accept,
+    ):
         dialog.accept()
         mock_apply.assert_called_once()
         mock_super_accept.assert_called_once()
@@ -192,6 +210,9 @@ def test_get_settings_roundtrip_defaults(app):
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.update_ui_from_settings(DEFAULT_SETTINGS)
     result = dialog.get_settings()
-    assert abs(result["ball_stick_atom_scale"] - DEFAULT_SETTINGS["ball_stick_atom_scale"]) < 0.01
+    assert (
+        abs(result["ball_stick_atom_scale"] - DEFAULT_SETTINGS["ball_stick_atom_scale"])
+        < 0.01
+    )
     assert result["background_color"] == DEFAULT_SETTINGS["background_color"]
     assert result["skip_chemistry_checks"] == DEFAULT_SETTINGS["skip_chemistry_checks"]

@@ -1,9 +1,13 @@
 from unittest.mock import patch, MagicMock
-from moleditpy.ui.settings_tabs.settings_3d_tabs import Settings3DSceneTab, SettingsModelTab
+from moleditpy.ui.settings_tabs.settings_3d_tabs import (
+    Settings3DSceneTab,
+    SettingsModelTab,
+)
 from moleditpy.utils.default_settings import DEFAULT_SETTINGS
 
 
 # --- Settings3DSceneTab ---
+
 
 def test_scene_tab_init(app):
     tab = Settings3DSceneTab(DEFAULT_SETTINGS)
@@ -34,8 +38,13 @@ def test_scene_tab_get_settings_keys(app):
     tab = Settings3DSceneTab(DEFAULT_SETTINGS)
     result = tab.get_settings()
     expected_keys = {
-        "background_color", "show_3d_axes", "lighting_enabled",
-        "light_intensity", "specular", "specular_power", "projection_mode",
+        "background_color",
+        "show_3d_axes",
+        "lighting_enabled",
+        "light_intensity",
+        "specular",
+        "specular_power",
+        "projection_mode",
     }
     assert expected_keys == set(result.keys())
 
@@ -86,6 +95,7 @@ def test_scene_tab_reset_to_defaults(app):
 
 # --- SettingsModelTab (ball_stick) ---
 
+
 def test_model_tab_ball_stick_has_atom_scale(app):
     tab = SettingsModelTab("ball_stick", "info", DEFAULT_SETTINGS)
     assert hasattr(tab, "atom_scale_slider")
@@ -120,10 +130,15 @@ def test_model_tab_ball_stick_get_settings_keys(app):
     tab = SettingsModelTab("ball_stick", "info", DEFAULT_SETTINGS)
     result = tab.get_settings()
     expected_keys = {
-        "ball_stick_atom_scale", "ball_stick_bond_radius",
-        "ball_stick_double_bond_offset_factor", "ball_stick_triple_bond_offset_factor",
-        "ball_stick_double_bond_radius_factor", "ball_stick_triple_bond_radius_factor",
-        "ball_stick_resolution", "ball_stick_bond_color", "ball_stick_use_cpk_bond_color",
+        "ball_stick_atom_scale",
+        "ball_stick_bond_radius",
+        "ball_stick_double_bond_offset_factor",
+        "ball_stick_triple_bond_offset_factor",
+        "ball_stick_double_bond_radius_factor",
+        "ball_stick_triple_bond_radius_factor",
+        "ball_stick_resolution",
+        "ball_stick_bond_color",
+        "ball_stick_use_cpk_bond_color",
     }
     assert expected_keys == set(result.keys())
 
@@ -132,12 +147,22 @@ def test_model_tab_ball_stick_roundtrip(app):
     tab = SettingsModelTab("ball_stick", "info", DEFAULT_SETTINGS)
     tab.update_ui(DEFAULT_SETTINGS)
     result = tab.get_settings()
-    assert abs(result["ball_stick_atom_scale"] - DEFAULT_SETTINGS["ball_stick_atom_scale"]) < 0.01
-    assert abs(result["ball_stick_bond_radius"] - DEFAULT_SETTINGS["ball_stick_bond_radius"]) < 0.01
+    assert (
+        abs(result["ball_stick_atom_scale"] - DEFAULT_SETTINGS["ball_stick_atom_scale"])
+        < 0.01
+    )
+    assert (
+        abs(
+            result["ball_stick_bond_radius"]
+            - DEFAULT_SETTINGS["ball_stick_bond_radius"]
+        )
+        < 0.01
+    )
     assert result["ball_stick_resolution"] == DEFAULT_SETTINGS["ball_stick_resolution"]
 
 
 # --- SettingsModelTab (cpk) ---
+
 
 def test_model_tab_cpk_has_atom_scale_no_bond_radius(app):
     tab = SettingsModelTab("cpk", "info", DEFAULT_SETTINGS)
@@ -163,6 +188,7 @@ def test_model_tab_cpk_roundtrip(app):
 
 # --- SettingsModelTab (wireframe) ---
 
+
 def test_model_tab_wireframe_no_atom_scale(app):
     tab = SettingsModelTab("wireframe", "info", DEFAULT_SETTINGS)
     assert not hasattr(tab, "atom_scale_slider")
@@ -181,11 +207,15 @@ def test_model_tab_wireframe_roundtrip(app):
     tab = SettingsModelTab("wireframe", "info", DEFAULT_SETTINGS)
     tab.update_ui(DEFAULT_SETTINGS)
     result = tab.get_settings()
-    assert abs(result["wireframe_bond_radius"] - DEFAULT_SETTINGS["wireframe_bond_radius"]) < 0.01
+    assert (
+        abs(result["wireframe_bond_radius"] - DEFAULT_SETTINGS["wireframe_bond_radius"])
+        < 0.01
+    )
     assert result["wireframe_resolution"] == DEFAULT_SETTINGS["wireframe_resolution"]
 
 
 # --- SettingsModelTab (stick) ---
+
 
 def test_model_tab_stick_get_settings_keys(app):
     tab = SettingsModelTab("stick", "info", DEFAULT_SETTINGS)
@@ -199,7 +229,9 @@ def test_model_tab_stick_roundtrip(app):
     tab = SettingsModelTab("stick", "info", DEFAULT_SETTINGS)
     tab.update_ui(DEFAULT_SETTINGS)
     result = tab.get_settings()
-    assert abs(result["stick_bond_radius"] - DEFAULT_SETTINGS["stick_bond_radius"]) < 0.01
+    assert (
+        abs(result["stick_bond_radius"] - DEFAULT_SETTINGS["stick_bond_radius"]) < 0.01
+    )
     assert result["stick_resolution"] == DEFAULT_SETTINGS["stick_resolution"]
 
 
