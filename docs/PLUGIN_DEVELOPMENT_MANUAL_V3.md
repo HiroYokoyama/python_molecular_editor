@@ -290,26 +290,57 @@ Save a plugin-specific setting. These are saved to the user's disk when the appl
 > **Persistence Limit**: Settings saved via `set_setting` reside in the application's global `settings.json`. If the user triggers **"Reset All Settings"** via the main menu, these settings will be **REMOVED**.
 
 #### Isolated Storage (Companion JSON)
-If your plugin needs to persist data that must survive an application-wide reset, or if you have complex data structures, use a separate JSON file in your plugin's directory.
+If your plugin needs to persist data that must survive an application-wide reset, or if you have complex data structures, use a dedicated JSON file instead of `set_setting`.
+
+The correct file name and location depend on your plugin type:
+
+| Plugin type | File to use | Why it survives updates |
+|---|---|---|
+| **Single-file** (`my_plugin.py`) | `my_plugin.json` — same name, same folder | Installer only overwrites the `.py` file |
+| **Folder** (`MyPlugin/__init__.py`) | `MyPlugin/settings.json` | Plugin Installer plugin backs up and restores `settings.json` before/after replacing the folder |
+
+> [!IMPORTANT]
+> For folder plugins, the file **must** be named exactly `settings.json`. The Plugin Installer plugin only preserves this specific filename during updates — any other name will be wiped.
+
+**Single-file plugin** — name your JSON after the plugin file:
 
 ```python
 import os, json
 
-def get_config_path():
-    script_path = os.path.abspath(__file__)
-    plugin_dir = os.path.dirname(script_path)
-    base_name = os.path.splitext(os.path.basename(script_path))[0]
-    return os.path.join(plugin_dir, f"{base_name}.json")
+def _config_path():
+    base = os.path.splitext(os.path.abspath(__file__))[0]
+    return base + ".json"          # e.g. my_plugin.json next to my_plugin.py
 
 def load_config():
-    path = get_config_path()
+    path = _config_path()
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-    return {"my_prop": 42}
+    return {"my_prop": 42}         # defaults
 
 def save_config(data):
-    with open(get_config_path(), "w", encoding="utf-8") as f:
+    with open(_config_path(), "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+```
+
+**Folder plugin** — always use `settings.json` in the package directory:
+
+```python
+import os, json
+
+def _config_path():
+    plugin_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(plugin_dir, "settings.json")   # MyPlugin/settings.json
+
+def load_config():
+    path = _config_path()
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"my_prop": 42}         # defaults
+
+def save_config(data):
+    with open(_config_path(), "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 ```
 
@@ -799,7 +830,7 @@ def run_uff(mol):
 ```
 
 ### 10.7 Persistent User Preferences
-Use `get_setting` and `set_setting` to remember user choices across sessions.
+Use `get_setting` and `set_setting` to remember simple user choices across sessions. For preferences that must survive an application-wide settings reset or plugin updates, use the companion JSON pattern from [Section 2.7](#27-settings--persistence) instead.
 
 ```python
 PLUGIN_NAME = "Smart Labels"
