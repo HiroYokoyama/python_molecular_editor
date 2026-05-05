@@ -390,6 +390,18 @@ _Test boundingRect expansion for E/Z labels_
 - assert rect_stereo.width() >= rect_no_stereo.width()
 - assert rect_stereo.height() >= rect_no_stereo.height()
 
+## tests/unit/test_atom_picking.py
+
+### test_pick_atom_index_from_screen_hits_projected_atom_edge
+_No description provided._
+
+- assert pick_atom_index_from_screen(_view(), (111, 100), _Mol()) == 0
+
+### test_pick_atom_index_from_screen_returns_none_for_background
+_No description provided._
+
+- assert pick_atom_index_from_screen(_view(), (200, 200), _Mol()) is None
+
 ## tests/unit/test_atom_placement_logic.py
 
 ### test_placement_0_neighbors
@@ -1230,6 +1242,20 @@ _Verify that clicking the background (no atom selected) allows VTK trackball rot
 - assert interactor_style._is_dragging_atom is False
 - mock_super_down.assert_called_once()
 
+### test_measurement_atom_click_suppresses_vtk_release
+_Atom measurement clicks consume press and must not leak release to VTK._
+
+- mock_super_up.assert_not_called()
+
+### test_atom_click_without_drag_resets_without_render_updates
+_Simple atom clicks should not run drag redraw/update work._
+
+- interactor_style.StopState.assert_called()
+- mock_parser_host.edit_3d_manager.update_3d_selection_display.assert_not_called()
+- mock_parser_host.edit_3d_manager.update_measurement_labels_display.assert_not_called()
+- mock_parser_host.edit_3d_manager.update_2d_measurement_labels.assert_not_called()
+- mock_parser_host.view_3d_manager.show_all_atom_info.assert_not_called()
+
 ## tests/unit/test_dialog_3d_picking_mixin.py
 
 ### test_init_defaults
@@ -1265,6 +1291,14 @@ _No description provided._
 
 - assert result is True
 - assert 0 in dlg._picked
+
+### test_eventfilter_atom_click_consumes_matching_release
+_No description provided._
+
+- assert dlg._mouse_press_pos is None
+- assert dlg._mouse_moved is False
+- assert dlg.eventFilter(plotter.interactor, _left_press_event()) is True
+- assert dlg.eventFilter(plotter.interactor, _release_event()) is True
 
 ### test_eventfilter_atom_click_miss_returns_false
 _No description provided._

@@ -29,9 +29,11 @@ from PyQt6.QtWidgets import (
 )
 
 try:
+    from .atom_picking import pick_atom_index_from_screen
     from .base_picking_dialog import BasePickingDialog
     from ..utils.constants import VDW_RADII
 except ImportError:
+    from moleditpy_linux.ui.atom_picking import pick_atom_index_from_screen
     from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
     from moleditpy_linux.utils.constants import VDW_RADII
 
@@ -74,6 +76,7 @@ class MoveGroupDialog(BasePickingDialog):
         self.is_dragging_group: bool = False
         self.drag_start_pos: Optional[Any] = None
         self.mouse_moved_during_drag: bool = False
+        self._consume_next_left_release = False
         self.highlight_actor: Optional[pv.Actor] = None
 
         self.init_ui()
@@ -223,34 +226,11 @@ class MoveGroupDialog(BasePickingDialog):
                         return False
                     click_pos = interactor.GetEventPosition()
 
-                    # Pick via plotter
-                    picker = plotter.picker
-                    if picker is None:
-                        return False
-                    picker.Pick(
-                        click_pos[0],
-                        click_pos[1],
-                        0,
-                        plotter.renderer,
+                    clicked_atom_idx = pick_atom_index_from_screen(
+                        self.main_window.view_3d_manager,
+                        (int(click_pos[0]), int(click_pos[1])),
+                        self.mol,
                     )
-
-                    clicked_atom_idx = None
-                    if picker.GetActor() is self.main_window.view_3d_manager.atom_actor:
-                        picked_position = np.array(picker.GetPickPosition())
-                        if self.main_window.view_3d_manager.atom_positions_3d is None:
-                            return False
-                        distances = np.linalg.norm(
-                            self.main_window.view_3d_manager.atom_positions_3d
-                            - picked_position,
-                            axis=1,
-                        )
-                        closest_atom_idx = np.argmin(distances)
-
-                        # Threshold check
-                        if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
-                            atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
-                            if atom:
-                                clicked_atom_idx = int(closest_atom_idx)
 
                     # Handle clicked atom
                     if clicked_atom_idx is not None:
@@ -266,6 +246,7 @@ class MoveGroupDialog(BasePickingDialog):
                         else:
                             # Atom outside group - select new group
                             self.on_atom_picked(clicked_atom_idx)
+                            self._consume_next_left_release = True
                             return True
                     else:
                         # Clicked outside atoms
@@ -340,37 +321,14 @@ class MoveGroupDialog(BasePickingDialog):
                             return False
                         interactor = plotter_ref.interactor
                         current_pos = interactor.GetEventPosition()
-                        picker = plotter_ref.picker
-                        if picker is None:
-                            return False
-                        picker.Pick(
-                            current_pos[0],
-                            current_pos[1],
-                            0,
-                            plotter_ref.renderer,
+                        closest_atom_idx = pick_atom_index_from_screen(
+                            self.main_window.view_3d_manager,
+                            (int(current_pos[0]), int(current_pos[1])),
+                            self.mol,
                         )
 
-                        if (
-                            picker.GetActor()
-                            is self.main_window.view_3d_manager.atom_actor
-                        ):
-                            picked_position = np.array(picker.GetPickPosition())
-                            if (
-                                self.main_window.view_3d_manager.atom_positions_3d
-                                is None
-                            ):
-                                return False
-                            distances = np.linalg.norm(
-                                self.main_window.view_3d_manager.atom_positions_3d
-                                - picked_position,
-                                axis=1,
-                            )
-                            closest_atom_idx = np.argmin(distances)
-
-                            if closest_atom_idx in self.group_atoms:
-                                plotter_ref.setCursor(Qt.CursorShape.OpenHandCursor)
-                            else:
-                                plotter_ref.setCursor(Qt.CursorShape.ArrowCursor)
+                        if closest_atom_idx in self.group_atoms:
+                            plotter_ref.setCursor(Qt.CursorShape.OpenHandCursor)
                         else:
                             plotter_ref.setCursor(Qt.CursorShape.ArrowCursor)
                     except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -383,6 +341,10 @@ class MoveGroupDialog(BasePickingDialog):
                 and isinstance(event, QMouseEvent)
                 and event.button() == Qt.MouseButton.LeftButton
             ):
+                if self._consume_next_left_release:
+                    self._consume_next_left_release = False
+                    return True
+
                 if getattr(self, "potential_drag", False) or (
                     self.is_dragging_group and self.drag_start_pos
                 ):

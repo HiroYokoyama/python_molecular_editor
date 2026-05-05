@@ -23,8 +23,10 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera  # 
 
 try:
     from .move_group_dialog import MoveGroupDialog
+    from .atom_picking import pick_atom_index_from_screen
 except ImportError:
     from moleditpy_linux.ui.move_group_dialog import MoveGroupDialog
+    from moleditpy_linux.ui.atom_picking import pick_atom_index_from_screen
 
 from rdkit import Geometry
 
@@ -38,6 +40,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self.is_dragging = False
         self._mouse_moved_during_drag = False
         self._mouse_press_pos: Optional[tuple[int, int]] = None
+        self._suppress_next_left_button_up = False
 
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)  # type: ignore[arg-type]
         # self.AddObserver("LeftButtonDoubleClickEvent", self.on_left_button_down)
@@ -64,6 +67,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self.is_dragging = False
         self._mouse_moved_during_drag = False
         self._mouse_press_pos = None
+        self._suppress_next_left_button_up = False
 
         # Clear dangling atom drag info on main window
         mw = self.main_window
@@ -76,6 +80,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ArrowCursor)
             except (AttributeError, RuntimeError):
                 pass
+
+    def _stop_vtk_left_button_state(self) -> None:
+        """Clear VTK's button/drag state after a custom-handled left click."""
+        try:
+            self.StopState()
+        except (AttributeError, RuntimeError):
+            pass
 
     def on_left_button_down(self, obj: Any, event: Any) -> None:
         """
@@ -108,25 +119,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if move_group_dialog and move_group_dialog.group_atoms:
             # Group drag if selected
             click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.view_3d_manager.plotter.picker
-            picker.Pick(
-                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            clicked_atom_idx = pick_atom_index_from_screen(
+                mw.view_3d_manager,
+                (int(click_pos[0]), int(click_pos[1])),
+                mw.view_3d_manager.current_mol,
             )
-
-            clicked_atom_idx = None
-            if picker.GetActor() is mw.view_3d_manager.atom_actor:
-                picked_position = np.array(picker.GetPickPosition())
-                distances = np.linalg.norm(
-                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
-                )
-                closest_atom_idx = np.argmin(distances)
-
-                if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
-                    atom = mw.view_3d_manager.current_mol.GetAtomWithIdx(
-                        int(closest_atom_idx)
-                    )
-                    if atom:
-                        clicked_atom_idx = int(closest_atom_idx)
 
             # If an atom in the group is clicked
             if clicked_atom_idx is not None:
@@ -147,6 +144,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     mw.view_3d_manager.plotter.setCursor(
                         Qt.CursorShape.ClosedHandCursor
                     )
+                    self._suppress_next_left_button_up = True
                     return  # Disable camera rotation
                 else:
                     # Clicked outside group - Search connected component
@@ -220,21 +218,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             click_pos = self.GetInteractor().GetEventPosition()
             self._mouse_moved_during_drag = False
 
-            picker = mw.view_3d_manager.plotter.picker
-
-            # Run pick process
-            picker.Pick(
-                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            closest_atom_idx = pick_atom_index_from_screen(
+                mw.view_3d_manager,
+                (int(click_pos[0]), int(click_pos[1])),
+                mw.view_3d_manager.current_mol,
             )
 
             # Special handling if atom clicked
-            if picker.GetActor() is mw.view_3d_manager.atom_actor:
-                picked_position = np.array(picker.GetPickPosition())
-                distances = np.linalg.norm(
-                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
-                )
-                closest_atom_idx = np.argmin(distances)
-
+            if closest_atom_idx is not None:
                 # Add range check
                 if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
                     # Check click threshold
@@ -253,6 +244,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                     pass
 
                             QTimer.singleShot(0, _deferred_measure)
+                            self._suppress_next_left_button_up = True
                             return  # Selection complete, disable camera rotation
 
             # Clear measurement if not dragging
@@ -264,18 +256,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # Handle selection if 3D mol exists
         if is_edit_active and mw.view_3d_manager.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.view_3d_manager.plotter.picker
-            picker.Pick(
-                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            closest_atom_idx = pick_atom_index_from_screen(
+                mw.view_3d_manager,
+                (int(click_pos[0]), int(click_pos[1])),
+                mw.view_3d_manager.current_mol,
             )
 
-            if picker.GetActor() is mw.view_3d_manager.atom_actor:
-                picked_position = np.array(picker.GetPickPosition())
-                distances = np.linalg.norm(
-                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
-                )
-                closest_atom_idx = np.argmin(distances)
-
+            if closest_atom_idx is not None:
                 # Add range check
                 if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
                     # Get atom safely from RDKit Mol
@@ -291,6 +278,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             mw.view_3d_manager.plotter.setCursor(
                                 Qt.CursorShape.ClosedHandCursor
                             )
+                            self._suppress_next_left_button_up = True
                             return  # Prevent camera rotation
 
         # Track mouse event to distinguish rotation from click
@@ -320,25 +308,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if move_group_dialog and move_group_dialog.group_atoms:
             # Start rotation drag if group selected
             click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.view_3d_manager.plotter.picker
-            picker.Pick(
-                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            clicked_atom_idx = pick_atom_index_from_screen(
+                mw.view_3d_manager,
+                (int(click_pos[0]), int(click_pos[1])),
+                mw.view_3d_manager.current_mol,
             )
-
-            clicked_atom_idx = None
-            if picker.GetActor() is mw.view_3d_manager.atom_actor:
-                picked_position = np.array(picker.GetPickPosition())
-                distances = np.linalg.norm(
-                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
-                )
-                closest_atom_idx = np.argmin(distances)
-
-                if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
-                    atom = mw.view_3d_manager.current_mol.GetAtomWithIdx(
-                        int(closest_atom_idx)
-                    )
-                    if atom:
-                        clicked_atom_idx = int(closest_atom_idx)
 
             # Start rotation drag if atom inside group clicked
             if (
@@ -445,14 +419,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             )
             if is_edit_active:
                 # Hover check if edit active
-                atom_under_cursor = False
                 click_pos = interactor.GetEventPosition()
-                picker = mw.view_3d_manager.plotter.picker
-                picker.Pick(
-                    click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+                atom_under_cursor = (
+                    pick_atom_index_from_screen(
+                        mw.view_3d_manager,
+                        (int(click_pos[0]), int(click_pos[1])),
+                        mw.view_3d_manager.current_mol,
+                    )
+                    is not None
                 )
-                if picker.GetActor() is mw.view_3d_manager.atom_actor:
-                    atom_under_cursor = True
 
                 if atom_under_cursor:
                     mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.OpenHandCursor)
@@ -708,33 +683,42 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                     QTimer.singleShot(0, _deferred_atom_redraw)
             mw.dragged_atom_info = None
-            # Defer all display-update calls that internally call plotter.render()
-            # out of the VTK LeftButtonReleaseEvent callback to avoid re-entrant
-            # rendering, which deadlocks the VTK render window on some platforms.
-            _update_calls = [
-                mw.edit_3d_manager.update_3d_selection_display,
-                mw.edit_3d_manager.update_measurement_labels_display,
-                mw.edit_3d_manager.update_2d_measurement_labels,
-                mw.view_3d_manager.show_all_atom_info,
-            ]
+            self._stop_vtk_left_button_state()
 
-            def _deferred_updates(calls=_update_calls):
-                for fn in calls:
-                    try:
-                        fn()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        logging.error("Caught exception in " + __file__, exc_info=True)
+            if self.is_dragging:
+                # Defer all display-update calls that internally call plotter.render()
+                # out of the VTK LeftButtonReleaseEvent callback to avoid re-entrant
+                # rendering, which deadlocks the VTK render window on some platforms.
+                _update_calls = [
+                    mw.edit_3d_manager.update_3d_selection_display,
+                    mw.edit_3d_manager.update_measurement_labels_display,
+                    mw.edit_3d_manager.update_2d_measurement_labels,
+                    mw.view_3d_manager.show_all_atom_info,
+                ]
 
-            QTimer.singleShot(0, _deferred_updates)
+                def _deferred_updates(calls=_update_calls):
+                    for fn in calls:
+                        try:
+                            fn()
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
+                            logging.error(
+                                "Caught exception in " + __file__, exc_info=True
+                            )
+
+                QTimer.singleShot(0, _deferred_updates)
         else:
-            # Delegate cleanup to parent
-            super().OnLeftButtonUp()
+            if self._suppress_next_left_button_up:
+                self._stop_vtk_left_button_state()
+            else:
+                # Delegate cleanup to parent
+                super().OnLeftButtonUp()
 
         # Handle click release and reset state.
         self._is_dragging_atom = False
         self.is_dragging = False
         self._mouse_press_pos = None
         self._mouse_moved_during_drag = False
+        self._suppress_next_left_button_up = False
 
         # Clear Move Group state
         try:

@@ -12,10 +12,14 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-import numpy as np
 from PyQt6.QtCore import QEvent, Qt, QObject, QPoint
 from PyQt6.QtGui import QMouseEvent
 from typing import Any, Optional, TYPE_CHECKING
+
+try:
+    from .atom_picking import pick_atom_index_from_screen
+except ImportError:
+    from moleditpy_linux.ui.atom_picking import pick_atom_index_from_screen
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -33,6 +37,7 @@ class Dialog3DPickingMixin:
         self.picking_enabled = False
         self._mouse_press_pos: Optional[QPoint] = None
         self._mouse_moved = False
+        self._consume_next_left_release = False
         self.selection_labels: list[Any] = []
 
     def eventFilter(self, obj: Optional[QObject], event: Optional[QEvent]) -> bool:
@@ -60,48 +65,35 @@ class Dialog3DPickingMixin:
                 if interactor is None:
                     return False
                 click_pos = interactor.GetEventPosition()
-                picker = plotter.picker
-                if picker is None:
-                    return False
-                picker.Pick(
-                    click_pos[0],
-                    click_pos[1],
-                    0,
-                    plotter.renderer,
+                closest_atom_idx = pick_atom_index_from_screen(
+                    self.main_window.view_3d_manager,
+                    (int(click_pos[0]), int(click_pos[1])),
+                    self.mol,
                 )
 
-                if picker.GetActor() is self.main_window.view_3d_manager.atom_actor:
-                    picked_position = np.array(picker.GetPickPosition())
-                    if self.main_window.view_3d_manager.atom_positions_3d is not None:
-                        distances = np.linalg.norm(
-                            self.main_window.view_3d_manager.atom_positions_3d
-                            - picked_position,
-                            axis=1,
-                        )
-                        closest_atom_idx = np.argmin(distances)
+                if (
+                    closest_atom_idx is not None
+                    and 0 <= closest_atom_idx < self.mol.GetNumAtoms()
+                ):
+                    atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
+                    if atom:
+                        if hasattr(self.main_window, "_picking_consumed"):
+                            self.main_window._picking_consumed = True
 
-                        # Add range check
-                        if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
-                            atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
-                            if atom:
-                                if hasattr(self.main_window, "_picking_consumed"):
-                                    self.main_window._picking_consumed = True
+                        def _deferred_pick(idx=int(closest_atom_idx), target=self):
+                            try:
+                                target.on_atom_picked(idx)
+                            except (AttributeError, RuntimeError):
+                                pass
 
-                                def _deferred_pick(
-                                    idx=int(closest_atom_idx), target=self
-                                ):
-                                    try:
-                                        target.on_atom_picked(idx)
-                                    except (AttributeError, RuntimeError):
-                                        pass
+                        from PyQt6.QtCore import QTimer
 
-                                from PyQt6.QtCore import QTimer
+                        QTimer.singleShot(0, _deferred_pick)
 
-                                QTimer.singleShot(0, _deferred_pick)
-
-                                # We picked an atom, so stop tracking for background click
-                                self._mouse_press_pos = None
-                                return True
+                        # We picked an atom, so stop tracking for background click
+                        self._mouse_press_pos = None
+                        self._consume_next_left_release = True
+                        return True
 
                 # Clicked something other than an atom
                 return False
@@ -129,6 +121,12 @@ class Dialog3DPickingMixin:
             and isinstance(event, QMouseEvent)
             and event.button() == Qt.MouseButton.LeftButton
         ):
+            if self._consume_next_left_release:
+                self._consume_next_left_release = False
+                self._mouse_press_pos = None
+                self._mouse_moved = False
+                return True
+
             if self._mouse_press_pos is not None:
                 if not self._mouse_moved:
                     # Pure click (no drag) on background -> Clear selection
@@ -170,6 +168,7 @@ class Dialog3DPickingMixin:
             if plotter is not None and plotter.interactor is not None:
                 plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
+        self._consume_next_left_release = False
         if hasattr(self.main_window, "_picking_consumed"):
             self.main_window._picking_consumed = False
 

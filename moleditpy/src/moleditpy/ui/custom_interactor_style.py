@@ -81,6 +81,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             except (AttributeError, RuntimeError):
                 pass
 
+    def _stop_vtk_left_button_state(self) -> None:
+        """Clear VTK's button/drag state after a custom-handled left click."""
+        try:
+            self.StopState()
+        except (AttributeError, RuntimeError):
+            pass
+
     def on_left_button_down(self, obj: Any, event: Any) -> None:
         """
         Dispatch click events.
@@ -676,30 +683,32 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                     QTimer.singleShot(0, _deferred_atom_redraw)
             mw.dragged_atom_info = None
-            # Defer all display-update calls that internally call plotter.render()
-            # out of the VTK LeftButtonReleaseEvent callback to avoid re-entrant
-            # rendering, which deadlocks the VTK render window on some platforms.
-            _update_calls = [
-                mw.edit_3d_manager.update_3d_selection_display,
-                mw.edit_3d_manager.update_measurement_labels_display,
-                mw.edit_3d_manager.update_2d_measurement_labels,
-                mw.view_3d_manager.show_all_atom_info,
-            ]
+            self._stop_vtk_left_button_state()
 
-            def _deferred_updates(calls=_update_calls):
-                for fn in calls:
-                    try:
-                        fn()
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        logging.error("Caught exception in " + __file__, exc_info=True)
+            if self.is_dragging:
+                # Defer all display-update calls that internally call plotter.render()
+                # out of the VTK LeftButtonReleaseEvent callback to avoid re-entrant
+                # rendering, which deadlocks the VTK render window on some platforms.
+                _update_calls = [
+                    mw.edit_3d_manager.update_3d_selection_display,
+                    mw.edit_3d_manager.update_measurement_labels_display,
+                    mw.edit_3d_manager.update_2d_measurement_labels,
+                    mw.view_3d_manager.show_all_atom_info,
+                ]
 
-            QTimer.singleShot(0, _deferred_updates)
+                def _deferred_updates(calls=_update_calls):
+                    for fn in calls:
+                        try:
+                            fn()
+                        except (AttributeError, RuntimeError, ValueError, TypeError):
+                            logging.error(
+                                "Caught exception in " + __file__, exc_info=True
+                            )
+
+                QTimer.singleShot(0, _deferred_updates)
         else:
             if self._suppress_next_left_button_up:
-                try:
-                    self.StopState()
-                except (AttributeError, RuntimeError):
-                    pass
+                self._stop_vtk_left_button_state()
             else:
                 # Delegate cleanup to parent
                 super().OnLeftButtonUp()
