@@ -5990,6 +5990,14 @@ _Verify that calling draw with None safely clears the renderer._
 - mock_parser_host.view_3d_manager.plotter.render.assert_called()
 - assert mock_parser_host.view_3d_manager.current_mol is None
 
+### test_original_id_mode_hides_rdkit_id_labels
+_Original-ID labels should not fall back to RDKit index labels._
+
+- view3d.plotter.add_point_labels.assert_called_once()
+- assert label_texts == ['42']
+- view3d.plotter.add_text.assert_called_once()
+- assert view3d.plotter.add_text.call_args.args[0] == 'ID'
+
 ## tests/unit/test_view_3d_logic_extended.py
 
 ### test_add_3d_atom_glyphs_styles

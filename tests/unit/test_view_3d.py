@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+import numpy as np
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
@@ -66,3 +67,32 @@ def test_view_3d_draw_none(app, mock_parser_host):
     mock_parser_host.view_3d_manager.plotter.clear.assert_called()
     mock_parser_host.view_3d_manager.plotter.render.assert_called()
     assert mock_parser_host.view_3d_manager.current_mol is None
+
+
+def test_original_id_mode_hides_rdkit_id_labels(app, mock_parser_host):
+    """Original-ID labels should not fall back to RDKit index labels."""
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.view_3d_manager = view3d
+    view3d.plotter = MagicMock()
+    view3d.plotter.add_point_labels.return_value = MagicMock()
+    view3d.plotter.add_text.return_value = MagicMock()
+    view3d.plotter.remove_actor = MagicMock()
+    view3d.current_atom_info_labels = None
+    view3d.atom_label_legend_names = []
+    view3d.atom_info_display_mode = "original_id"
+    view3d.atom_index_base = 0
+    view3d.atom_positions_3d = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
+
+    mol = Chem.RWMol()
+    first_idx = mol.AddAtom(Chem.Atom("C"))
+    second_idx = mol.AddAtom(Chem.Atom("O"))
+    mol.GetAtomWithIdx(first_idx).SetIntProp("_original_atom_id", 42)
+    view3d.current_mol = mol
+
+    view3d.show_all_atom_info()
+
+    view3d.plotter.add_point_labels.assert_called_once()
+    _, label_texts = view3d.plotter.add_point_labels.call_args.args[:2]
+    assert label_texts == ["42"]
+    view3d.plotter.add_text.assert_called_once()
+    assert view3d.plotter.add_text.call_args.args[0] == "ID"

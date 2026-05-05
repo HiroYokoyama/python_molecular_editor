@@ -1394,7 +1394,7 @@ class View3DManager:
         self.clear_all_atom_info_labels()
 
         # Index-type modes that make the Index Base submenu meaningful
-        _index_modes = {"rdkit_index", "original_id", "xyz_index"}
+        _index_modes = {"rdkit_index", "xyz_index"}
 
         # Turn OFF if the same mode is selected
         if self.atom_info_display_mode == mode:
@@ -1578,7 +1578,7 @@ class View3DManager:
                 rdkit_texts.append(str(atom_idx + base))
 
             elif self.atom_info_display_mode == "original_id":
-                # Show _original_atom_id property if present, else fall back to RDKit index
+                # Show only _original_atom_id labels in original-ID mode.
                 try:
                     if self.host.view_3d_manager.current_mol:
                         atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
@@ -1587,16 +1587,9 @@ class View3DManager:
                         if atom.HasProp("_original_atom_id"):
                             original_id = atom.GetIntProp("_original_atom_id")
                             id_positions.append(pos)
-                            id_texts.append(str(original_id + base))
-                        else:
-                            rdkit_positions.append(pos)
-                            rdkit_texts.append(str(atom_idx + base))
-                    else:
-                        rdkit_positions.append(pos)
-                        rdkit_texts.append(str(atom_idx + base))
+                            id_texts.append(str(original_id))
                 except (AttributeError, RuntimeError, TypeError, ValueError):
-                    rdkit_positions.append(pos)
-                    rdkit_texts.append(str(atom_idx + base))
+                    continue
 
             elif self.atom_info_display_mode == "xyz_index":
                 # Show xyz_unique_id property if present, else fall back to RDKit index
