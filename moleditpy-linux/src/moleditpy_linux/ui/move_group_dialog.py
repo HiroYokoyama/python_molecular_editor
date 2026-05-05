@@ -30,10 +30,10 @@ from PyQt6.QtWidgets import (
 
 try:
     from .base_picking_dialog import BasePickingDialog
-    from ..utils.constants import VDW_RADII, pt
+    from ..utils.constants import VDW_RADII
 except ImportError:
     from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
-    from moleditpy_linux.utils.constants import VDW_RADII, pt
+    from moleditpy_linux.utils.constants import VDW_RADII
 
 
 class MoveGroupDialog(BasePickingDialog):
@@ -250,22 +250,7 @@ class MoveGroupDialog(BasePickingDialog):
                         if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
                             atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
                             if atom:
-                                try:
-                                    atomic_num = atom.GetAtomicNum()
-                                    vdw_radius = pt.GetRvdw(atomic_num)
-                                    if vdw_radius < 0.1:
-                                        vdw_radius = 1.5
-                                except (
-                                    AttributeError,
-                                    RuntimeError,
-                                    ValueError,
-                                    TypeError,
-                                ):
-                                    vdw_radius = 1.5
-                                click_threshold = self._get_click_threshold(vdw_radius)
-
-                                if distances[closest_atom_idx] < click_threshold:
-                                    clicked_atom_idx = int(closest_atom_idx)
+                                clicked_atom_idx = int(closest_atom_idx)
 
                     # Handle clicked atom
                     if clicked_atom_idx is not None:

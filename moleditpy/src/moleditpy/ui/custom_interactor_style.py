@@ -20,10 +20,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QApplication
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera  # pylint: disable=no-name-in-module
 
-try:
-    from ..utils.constants import pt
-except ImportError:
-    from moleditpy.utils.constants import pt
+
 try:
     from .move_group_dialog import MoveGroupDialog
 except ImportError:
@@ -80,32 +77,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             except (AttributeError, RuntimeError):
                 pass
 
-    def _get_click_threshold(self, vdw_radius: float) -> float:
-        """Return the click-selection radius that matches the currently rendered atom size.
-
-        GetPickPosition() returns a point on the sphere *surface*, so the
-        distance to the atom centre is always ≈ the visual radius.  The
-        threshold must therefore be slightly larger than the visual radius;
-        a 1.5× factor gives a small numerical buffer while staying much
-        tighter than the original 5× over-permissive threshold.
-        """
-        mw = self.main_window
-        try:
-            style = getattr(mw.view_3d_manager, "current_3d_style", "ball_and_stick")
-            settings = mw.init_manager.settings
-            if style == "cpk":
-                scale = settings.get("cpk_atom_scale", 1.0)
-                return float(vdw_radius * scale * 1.5)
-            elif style == "stick":
-                return float(settings.get("stick_bond_radius", 0.15) * 1.5)
-            elif style == "wireframe":
-                return float(settings.get("wireframe_bond_radius", 0.02) * 1.5)
-            else:  # ball_and_stick (default)
-                scale = settings.get("ball_stick_atom_scale", 1.0)
-                return float(vdw_radius * 0.3 * scale * 1.5)
-        except (AttributeError, TypeError, KeyError):
-            return float(vdw_radius * 0.45)
-
     def on_left_button_down(self, obj: Any, event: Any) -> None:
         """
         Dispatch click events.
@@ -155,17 +126,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         int(closest_atom_idx)
                     )
                     if atom:
-                        try:
-                            atomic_num = atom.GetAtomicNum()
-                            vdw_radius = pt.GetRvdw(atomic_num)
-                            if vdw_radius < 0.1:
-                                vdw_radius = 1.5
-                        except (AttributeError, RuntimeError, TypeError, ValueError):
-                            vdw_radius = 1.5
-                        click_threshold = self._get_click_threshold(vdw_radius)
-
-                        if distances[closest_atom_idx] < click_threshold:
-                            clicked_atom_idx = int(closest_atom_idx)
+                        clicked_atom_idx = int(closest_atom_idx)
 
             # If an atom in the group is clicked
             if clicked_atom_idx is not None:
@@ -281,16 +242,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         int(closest_atom_idx)
                     )
                     if atom:
-                        try:
-                            atomic_num = atom.GetAtomicNum()
-                            vdw_radius = pt.GetRvdw(atomic_num)
-                            if vdw_radius < 0.1:
-                                vdw_radius = 1.5
-                        except (AttributeError, RuntimeError, TypeError, ValueError):
-                            vdw_radius = 1.5
-                        click_threshold = self._get_click_threshold(vdw_radius)
-
-                        if distances[closest_atom_idx] < click_threshold:
+                        if True:
 
                             def _deferred_measure(idx=int(closest_atom_idx)):
                                 try:
@@ -331,16 +283,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         int(closest_atom_idx)
                     )
                     if atom:
-                        try:
-                            atomic_num = atom.GetAtomicNum()
-                            vdw_radius = pt.GetRvdw(atomic_num)
-                            if vdw_radius < 0.1:
-                                vdw_radius = 1.5
-                        except (AttributeError, RuntimeError, TypeError, ValueError):
-                            vdw_radius = 1.5
-                        click_threshold = self._get_click_threshold(vdw_radius)
-
-                        if distances[closest_atom_idx] < click_threshold:
+                        if True:
                             # Successfully grabbed atom
                             self._is_dragging_atom = True
                             self.is_dragging = False
@@ -395,17 +338,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         int(closest_atom_idx)
                     )
                     if atom:
-                        try:
-                            atomic_num = atom.GetAtomicNum()
-                            vdw_radius = pt.GetRvdw(atomic_num)
-                            if vdw_radius < 0.1:
-                                vdw_radius = 1.5
-                        except (AttributeError, RuntimeError, TypeError, ValueError):
-                            vdw_radius = 1.5
-                        click_threshold = self._get_click_threshold(vdw_radius)
-
-                        if distances[closest_atom_idx] < click_threshold:
-                            clicked_atom_idx = int(closest_atom_idx)
+                        clicked_atom_idx = int(closest_atom_idx)
 
             # Start rotation drag if atom inside group clicked
             if (

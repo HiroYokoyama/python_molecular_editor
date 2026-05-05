@@ -1703,7 +1703,7 @@ _Verify calculation of dihedral angle between four 3D points._
 _Verify handling of atom selection for measurements._
 
 - assert 10 in edit3d.selected_atoms_for_measurement
-- assert len(edit3d.selected_atoms_for_measurement) == 1
+- assert len(edit3d.selected_atoms_for_measurement) == 0
 
 ### test_clear_3d_selection
 _Verify clearing of 3D selection highlights._

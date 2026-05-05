@@ -12,7 +12,6 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-import logging
 import numpy as np
 from PyQt6.QtCore import QEvent, Qt, QObject, QPoint
 from PyQt6.QtGui import QMouseEvent
@@ -21,11 +20,6 @@ from typing import Any, Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from .main_window import MainWindow
     from rdkit import Chem
-
-try:
-    from ..utils.constants import pt
-except ImportError:
-    from moleditpy.utils.constants import pt
 
 
 class Dialog3DPickingMixin:
@@ -40,31 +34,6 @@ class Dialog3DPickingMixin:
         self._mouse_press_pos: Optional[QPoint] = None
         self._mouse_moved = False
         self.selection_labels: list[Any] = []
-
-    def _get_click_threshold(self, vdw_radius: float) -> float:
-        """Return the click-selection radius matching the currently rendered atom size.
-
-        GetPickPosition() lands on the sphere surface, so distance to the
-        atom centre ≈ visual radius.  The 1.5× factor gives a numerical
-        buffer without permitting wrong-atom hits.
-        """
-        try:
-            style = getattr(
-                self.main_window.view_3d_manager, "current_3d_style", "ball_and_stick"
-            )
-            settings = self.main_window.init_manager.settings
-            if style == "cpk":
-                return float(vdw_radius * settings.get("cpk_atom_scale", 1.0) * 1.5)
-            elif style == "stick":
-                return float(settings.get("stick_bond_radius", 0.15) * 1.5)
-            elif style == "wireframe":
-                return float(settings.get("wireframe_bond_radius", 0.02) * 1.5)
-            else:  # ball_and_stick
-                return float(
-                    vdw_radius * 0.3 * settings.get("ball_stick_atom_scale", 1.0) * 1.5
-                )
-        except (AttributeError, TypeError, KeyError):
-            return float(vdw_radius * 0.45)
 
     def eventFilter(self, obj: Optional[QObject], event: Optional[QEvent]) -> bool:
         """Capture mouse clicks in the 3D view (reproducibly mimicking the original 3D edit logic)."""
@@ -113,37 +82,26 @@ class Dialog3DPickingMixin:
 
                         # Add range check
                         if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
-                            # Click threshold check (matches original logic)
                             atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
                             if atom:
-                                try:
-                                    atomic_num = atom.GetAtomicNum()
-                                    vdw_radius = pt.GetRvdw(atomic_num)
-                                    if vdw_radius < 0.1:
-                                        vdw_radius = 1.5
-                                except (AttributeError, RuntimeError, TypeError):
-                                    vdw_radius = 1.5
-                                click_threshold = self._get_click_threshold(vdw_radius)
+                                if hasattr(self.main_window, "_picking_consumed"):
+                                    self.main_window._picking_consumed = True
 
-                                if distances[closest_atom_idx] < click_threshold:
-                                    if hasattr(self.main_window, "_picking_consumed"):
-                                        self.main_window._picking_consumed = True
+                                def _deferred_pick(
+                                    idx=int(closest_atom_idx), target=self
+                                ):
+                                    try:
+                                        target.on_atom_picked(idx)
+                                    except (AttributeError, RuntimeError):
+                                        pass
 
-                                    def _deferred_pick(
-                                        idx=int(closest_atom_idx), target=self
-                                    ):
-                                        try:
-                                            target.on_atom_picked(idx)
-                                        except (AttributeError, RuntimeError):
-                                            pass
+                                from PyQt6.QtCore import QTimer
 
-                                    from PyQt6.QtCore import QTimer
+                                QTimer.singleShot(0, _deferred_pick)
 
-                                    QTimer.singleShot(0, _deferred_pick)
-
-                                    # We picked an atom, so stop tracking for background click
-                                    self._mouse_press_pos = None
-                                    return True
+                                # We picked an atom, so stop tracking for background click
+                                self._mouse_press_pos = None
+                                return True
 
                 # Clicked something other than an atom
                 return False
