@@ -336,6 +336,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             )
                             return  # Prevent camera rotation
 
+        # Track mouse event to distinguish rotation from click
+        self._mouse_press_pos = self.GetInteractor().GetEventPosition()
+        self._mouse_moved_during_drag = False
         self._is_dragging_atom = False
         super().OnLeftButtonDown()
 
@@ -620,16 +623,22 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                         print(f"Error in toggle: {e}")
 
-        # Background click: deselect
+        # Background click: deselect Move Group
         if move_group_dialog and not getattr(
             move_group_dialog, "_is_dragging_group_vtk", False
         ):
             if not self._mouse_moved_during_drag and self._mouse_press_pos is not None:
                 # Background click: deselect
-                move_group_dialog.group_atoms.clear()
-                move_group_dialog.selected_atoms.clear()
-                move_group_dialog.clear_atom_labels()
-                move_group_dialog.update_display()
+                def _deferred_clear_move_group(dlg=move_group_dialog):
+                    try:
+                        dlg.group_atoms.clear()
+                        dlg.selected_atoms.clear()
+                        dlg.clear_atom_labels()
+                        dlg.update_display()
+                    except (AttributeError, RuntimeError):
+                        pass
+
+                QTimer.singleShot(0, _deferred_clear_move_group)
 
         # Measurement mode click handling
         if (
@@ -638,7 +647,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             and self._mouse_press_pos is not None
         ):
             # Background click -> clear selection
-            mw.edit_3d_manager.clear_measurement_selection()
+            def _deferred_clear_measurement():
+                try:
+                    mw.edit_3d_manager.clear_measurement_selection()
+                except (AttributeError, RuntimeError):
+                    pass
+
+            QTimer.singleShot(0, _deferred_clear_measurement)
 
         if self._is_dragging_atom:
             # Finalize custom drag
