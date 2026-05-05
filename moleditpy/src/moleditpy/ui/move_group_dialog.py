@@ -29,9 +29,11 @@ from PyQt6.QtWidgets import (
 )
 
 try:
+    from .atom_picking import pick_atom_index_from_screen
     from .base_picking_dialog import BasePickingDialog
     from ..utils.constants import VDW_RADII
 except ImportError:
+    from moleditpy.ui.atom_picking import pick_atom_index_from_screen
     from moleditpy.ui.base_picking_dialog import BasePickingDialog
     from moleditpy.utils.constants import VDW_RADII
 
@@ -224,34 +226,11 @@ class MoveGroupDialog(BasePickingDialog):
                         return False
                     click_pos = interactor.GetEventPosition()
 
-                    # Pick via plotter
-                    picker = plotter.picker
-                    if picker is None:
-                        return False
-                    picker.Pick(
-                        click_pos[0],
-                        click_pos[1],
-                        0,
-                        plotter.renderer,
+                    clicked_atom_idx = pick_atom_index_from_screen(
+                        self.main_window.view_3d_manager,
+                        (int(click_pos[0]), int(click_pos[1])),
+                        self.mol,
                     )
-
-                    clicked_atom_idx = None
-                    if picker.GetActor() is self.main_window.view_3d_manager.atom_actor:
-                        picked_position = np.array(picker.GetPickPosition())
-                        if self.main_window.view_3d_manager.atom_positions_3d is None:
-                            return False
-                        distances = np.linalg.norm(
-                            self.main_window.view_3d_manager.atom_positions_3d
-                            - picked_position,
-                            axis=1,
-                        )
-                        closest_atom_idx = np.argmin(distances)
-
-                        # Threshold check
-                        if 0 <= closest_atom_idx < self.mol.GetNumAtoms():
-                            atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
-                            if atom:
-                                clicked_atom_idx = int(closest_atom_idx)
 
                     # Handle clicked atom
                     if clicked_atom_idx is not None:
@@ -342,37 +321,14 @@ class MoveGroupDialog(BasePickingDialog):
                             return False
                         interactor = plotter_ref.interactor
                         current_pos = interactor.GetEventPosition()
-                        picker = plotter_ref.picker
-                        if picker is None:
-                            return False
-                        picker.Pick(
-                            current_pos[0],
-                            current_pos[1],
-                            0,
-                            plotter_ref.renderer,
+                        closest_atom_idx = pick_atom_index_from_screen(
+                            self.main_window.view_3d_manager,
+                            (int(current_pos[0]), int(current_pos[1])),
+                            self.mol,
                         )
 
-                        if (
-                            picker.GetActor()
-                            is self.main_window.view_3d_manager.atom_actor
-                        ):
-                            picked_position = np.array(picker.GetPickPosition())
-                            if (
-                                self.main_window.view_3d_manager.atom_positions_3d
-                                is None
-                            ):
-                                return False
-                            distances = np.linalg.norm(
-                                self.main_window.view_3d_manager.atom_positions_3d
-                                - picked_position,
-                                axis=1,
-                            )
-                            closest_atom_idx = np.argmin(distances)
-
-                            if closest_atom_idx in self.group_atoms:
-                                plotter_ref.setCursor(Qt.CursorShape.OpenHandCursor)
-                            else:
-                                plotter_ref.setCursor(Qt.CursorShape.ArrowCursor)
+                        if closest_atom_idx in self.group_atoms:
+                            plotter_ref.setCursor(Qt.CursorShape.OpenHandCursor)
                         else:
                             plotter_ref.setCursor(Qt.CursorShape.ArrowCursor)
                     except (AttributeError, RuntimeError, ValueError, TypeError):

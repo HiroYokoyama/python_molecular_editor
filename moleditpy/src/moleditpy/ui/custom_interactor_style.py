@@ -23,8 +23,10 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera  # 
 
 try:
     from .move_group_dialog import MoveGroupDialog
+    from .atom_picking import pick_atom_index_from_screen
 except ImportError:
     from moleditpy.ui.move_group_dialog import MoveGroupDialog
+    from moleditpy.ui.atom_picking import pick_atom_index_from_screen
 
 from rdkit import Geometry
 
@@ -110,25 +112,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if move_group_dialog and move_group_dialog.group_atoms:
             # Group drag if selected
             click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.view_3d_manager.plotter.picker
-            picker.Pick(
-                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            clicked_atom_idx = pick_atom_index_from_screen(
+                mw.view_3d_manager,
+                (int(click_pos[0]), int(click_pos[1])),
+                mw.view_3d_manager.current_mol,
             )
-
-            clicked_atom_idx = None
-            if picker.GetActor() is mw.view_3d_manager.atom_actor:
-                picked_position = np.array(picker.GetPickPosition())
-                distances = np.linalg.norm(
-                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
-                )
-                closest_atom_idx = np.argmin(distances)
-
-                if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
-                    atom = mw.view_3d_manager.current_mol.GetAtomWithIdx(
-                        int(closest_atom_idx)
-                    )
-                    if atom:
-                        clicked_atom_idx = int(closest_atom_idx)
 
             # If an atom in the group is clicked
             if clicked_atom_idx is not None:
@@ -223,21 +211,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             click_pos = self.GetInteractor().GetEventPosition()
             self._mouse_moved_during_drag = False
 
-            picker = mw.view_3d_manager.plotter.picker
-
-            # Run pick process
-            picker.Pick(
-                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            closest_atom_idx = pick_atom_index_from_screen(
+                mw.view_3d_manager,
+                (int(click_pos[0]), int(click_pos[1])),
+                mw.view_3d_manager.current_mol,
             )
 
             # Special handling if atom clicked
-            if picker.GetActor() is mw.view_3d_manager.atom_actor:
-                picked_position = np.array(picker.GetPickPosition())
-                distances = np.linalg.norm(
-                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
-                )
-                closest_atom_idx = np.argmin(distances)
-
+            if closest_atom_idx is not None:
                 # Add range check
                 if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
                     # Check click threshold
@@ -268,18 +249,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # Handle selection if 3D mol exists
         if is_edit_active and mw.view_3d_manager.current_mol:
             click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.view_3d_manager.plotter.picker
-            picker.Pick(
-                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            closest_atom_idx = pick_atom_index_from_screen(
+                mw.view_3d_manager,
+                (int(click_pos[0]), int(click_pos[1])),
+                mw.view_3d_manager.current_mol,
             )
 
-            if picker.GetActor() is mw.view_3d_manager.atom_actor:
-                picked_position = np.array(picker.GetPickPosition())
-                distances = np.linalg.norm(
-                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
-                )
-                closest_atom_idx = np.argmin(distances)
-
+            if closest_atom_idx is not None:
                 # Add range check
                 if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
                     # Get atom safely from RDKit Mol
@@ -325,25 +301,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if move_group_dialog and move_group_dialog.group_atoms:
             # Start rotation drag if group selected
             click_pos = self.GetInteractor().GetEventPosition()
-            picker = mw.view_3d_manager.plotter.picker
-            picker.Pick(
-                click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+            clicked_atom_idx = pick_atom_index_from_screen(
+                mw.view_3d_manager,
+                (int(click_pos[0]), int(click_pos[1])),
+                mw.view_3d_manager.current_mol,
             )
-
-            clicked_atom_idx = None
-            if picker.GetActor() is mw.view_3d_manager.atom_actor:
-                picked_position = np.array(picker.GetPickPosition())
-                distances = np.linalg.norm(
-                    mw.view_3d_manager.atom_positions_3d - picked_position, axis=1
-                )
-                closest_atom_idx = np.argmin(distances)
-
-                if 0 <= closest_atom_idx < mw.view_3d_manager.current_mol.GetNumAtoms():
-                    atom = mw.view_3d_manager.current_mol.GetAtomWithIdx(
-                        int(closest_atom_idx)
-                    )
-                    if atom:
-                        clicked_atom_idx = int(closest_atom_idx)
 
             # Start rotation drag if atom inside group clicked
             if (
@@ -450,14 +412,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             )
             if is_edit_active:
                 # Hover check if edit active
-                atom_under_cursor = False
                 click_pos = interactor.GetEventPosition()
-                picker = mw.view_3d_manager.plotter.picker
-                picker.Pick(
-                    click_pos[0], click_pos[1], 0, mw.view_3d_manager.plotter.renderer
+                atom_under_cursor = (
+                    pick_atom_index_from_screen(
+                        mw.view_3d_manager,
+                        (int(click_pos[0]), int(click_pos[1])),
+                        mw.view_3d_manager.current_mol,
+                    )
+                    is not None
                 )
-                if picker.GetActor() is mw.view_3d_manager.atom_actor:
-                    atom_under_cursor = True
 
                 if atom_under_cursor:
                     mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.OpenHandCursor)

@@ -39,6 +39,10 @@ def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host
     with (
         patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
         patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=0,
+        ),
+        patch(
             "vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera.OnLeftButtonDown"
         ),
     ):
@@ -116,6 +120,10 @@ def test_measurement_atom_click_suppresses_vtk_release(app, mock_parser_host):
 
     with (
         patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=0,
+        ),
         patch(
             "vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera.OnLeftButtonUp"
         ) as mock_super_up,

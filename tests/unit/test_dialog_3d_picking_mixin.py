@@ -152,7 +152,11 @@ def test_eventfilter_atom_click_calls_on_atom_picked(app):
     atom.GetAtomicNum.return_value = 6
     dlg.mol.GetAtomWithIdx.return_value = atom
 
-    result = dlg.eventFilter(plotter.interactor, _left_press_event())
+    with patch(
+        "moleditpy.ui.dialog_3d_picking_mixin.pick_atom_index_from_screen",
+        return_value=0,
+    ):
+        result = dlg.eventFilter(plotter.interactor, _left_press_event())
     assert result is True
     app.processEvents()
     assert 0 in dlg._picked
@@ -168,8 +172,12 @@ def test_eventfilter_atom_click_consumes_matching_release(app):
     plotter.interactor.GetEventPosition.return_value = (10, 10)
     dlg.mol.GetAtomWithIdx.return_value = MagicMock()
 
-    assert dlg.eventFilter(plotter.interactor, _left_press_event()) is True
-    assert dlg.eventFilter(plotter.interactor, _release_event()) is True
+    with patch(
+        "moleditpy.ui.dialog_3d_picking_mixin.pick_atom_index_from_screen",
+        return_value=0,
+    ):
+        assert dlg.eventFilter(plotter.interactor, _left_press_event()) is True
+        assert dlg.eventFilter(plotter.interactor, _release_event()) is True
     assert dlg._mouse_press_pos is None
     assert dlg._mouse_moved is False
 
@@ -182,7 +190,11 @@ def test_eventfilter_atom_click_miss_returns_false(app):
     mw.view_3d_manager.atom_actor = MagicMock()
     plotter.picker.GetActor.return_value = MagicMock()  # different object
 
-    result = dlg.eventFilter(plotter.interactor, _left_press_event())
+    with patch(
+        "moleditpy.ui.dialog_3d_picking_mixin.pick_atom_index_from_screen",
+        return_value=None,
+    ):
+        result = dlg.eventFilter(plotter.interactor, _left_press_event())
     assert result is False
     assert dlg._picked == []
 
