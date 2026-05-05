@@ -291,9 +291,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         click_threshold = self._get_click_threshold(vdw_radius)
 
                         if distances[closest_atom_idx] < click_threshold:
+
                             def _deferred_measure(idx=int(closest_atom_idx)):
                                 try:
-                                    mw.edit_3d_manager.handle_measurement_atom_selection(idx)
+                                    mw.edit_3d_manager.handle_measurement_atom_selection(
+                                        idx
+                                    )
                                 except (AttributeError, RuntimeError):
                                     pass
 

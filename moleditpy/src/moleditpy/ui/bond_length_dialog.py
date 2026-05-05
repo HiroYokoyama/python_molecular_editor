@@ -160,14 +160,20 @@ class BondLengthDialog(GeometryBaseDialog):
 
     def on_atom_picked(self, atom_idx: int) -> None:
         """Handle atom picking event in the 3D view."""
-        if self.atom1_idx is None:
-            self.atom1_idx = atom_idx
-        elif self.atom2_idx is None:
-            self.atom2_idx = atom_idx
-        else:
-            # Reset and start over
-            self.atom1_idx = atom_idx
+        if atom_idx == self.atom1_idx:
+            self.atom1_idx = self.atom2_idx
             self.atom2_idx = None
+        elif atom_idx == self.atom2_idx:
+            self.atom2_idx = None
+        else:
+            if self.atom1_idx is None:
+                self.atom1_idx = atom_idx
+            elif self.atom2_idx is None:
+                self.atom2_idx = atom_idx
+            else:
+                # Reset and start over
+                self.atom1_idx = atom_idx
+                self.atom2_idx = None
 
         self.update_display()
 

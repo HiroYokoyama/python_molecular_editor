@@ -154,6 +154,7 @@ def test_eventfilter_atom_click_calls_on_atom_picked(app):
 
     result = dlg.eventFilter(plotter.interactor, _left_press_event())
     assert result is True
+    app.processEvents()
     assert 0 in dlg._picked
 
 
@@ -211,6 +212,7 @@ def test_eventfilter_release_pure_click_calls_clear_selection(app):
     dlg.clear_selection = MagicMock()
 
     dlg.eventFilter(plotter.interactor, _release_event())
+    app.processEvents()
     dlg.clear_selection.assert_called_once()
     assert dlg._mouse_press_pos is None
 
