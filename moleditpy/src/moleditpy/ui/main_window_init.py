@@ -1778,19 +1778,27 @@ class MainInitManager:
 
         view_menu.addSeparator()
         atom_info_menu = view_menu.addMenu("3D Atom Info Display")
-        self.show_atom_id_action = QAction("Show Original ID / Index", self.host)
-        self.show_atom_id_action.setCheckable(True)
-        self.show_atom_id_action.triggered.connect(
-            lambda: self.host.view_3d_manager.toggle_atom_info_display("id")
-        )
-        atom_info_menu.addAction(self.show_atom_id_action)
 
-        self.show_rdkit_id_action = QAction("Show RDKit Index", self.host)
-        self.show_rdkit_id_action.setCheckable(True)
-        self.show_rdkit_id_action.triggered.connect(
-            lambda: self.host.view_3d_manager.toggle_atom_info_display("rdkit_id")
+        self.show_index_action = QAction("Show Index", self.host)
+        self.show_index_action.setCheckable(True)
+        self.show_index_action.triggered.connect(
+            lambda: self.host.view_3d_manager.toggle_atom_info_display("rdkit_index")
         )
-        atom_info_menu.addAction(self.show_rdkit_id_action)
+        atom_info_menu.addAction(self.show_index_action)
+
+        self.show_original_id_action = QAction("Show Original ID", self.host)
+        self.show_original_id_action.setCheckable(True)
+        self.show_original_id_action.triggered.connect(
+            lambda: self.host.view_3d_manager.toggle_atom_info_display("original_id")
+        )
+        atom_info_menu.addAction(self.show_original_id_action)
+
+        self.show_xyz_index_action = QAction("Show XYZ Index", self.host)
+        self.show_xyz_index_action.setCheckable(True)
+        self.show_xyz_index_action.triggered.connect(
+            lambda: self.host.view_3d_manager.toggle_atom_info_display("xyz_index")
+        )
+        atom_info_menu.addAction(self.show_xyz_index_action)
 
         self.show_atom_coords_action = QAction("Show Coordinates (X,Y,Z)", self.host)
         self.show_atom_coords_action.setCheckable(True)
@@ -1805,6 +1813,31 @@ class MainInitManager:
             lambda: self.host.view_3d_manager.toggle_atom_info_display("symbol")
         )
         atom_info_menu.addAction(self.show_atom_symbol_action)
+
+        atom_info_menu.addSeparator()
+        self.atom_index_base_menu = atom_info_menu.addMenu("Index Base")
+        index_base_group = QActionGroup(self.host)
+        index_base_group.setExclusive(True)
+
+        self.atom_index_base_0_action = QAction("0-based", self.host)
+        self.atom_index_base_0_action.setCheckable(True)
+        self.atom_index_base_0_action.setChecked(True)
+        self.atom_index_base_0_action.triggered.connect(
+            lambda: self.host.view_3d_manager.set_atom_index_base(0)
+        )
+        self.atom_index_base_menu.addAction(self.atom_index_base_0_action)
+        index_base_group.addAction(self.atom_index_base_0_action)
+
+        self.atom_index_base_1_action = QAction("1-based", self.host)
+        self.atom_index_base_1_action.setCheckable(True)
+        self.atom_index_base_1_action.triggered.connect(
+            lambda: self.host.view_3d_manager.set_atom_index_base(1)
+        )
+        self.atom_index_base_menu.addAction(self.atom_index_base_1_action)
+        index_base_group.addAction(self.atom_index_base_1_action)
+
+        # Index Base is only meaningful when an index-type mode is active
+        self.atom_index_base_menu.setEnabled(False)
 
     def _init_analysis_menu(self, menu_bar: Any) -> None:
         """Initialize the Analysis menu."""
