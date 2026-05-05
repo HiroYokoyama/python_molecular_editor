@@ -308,43 +308,41 @@ class ExportManager:
                     mesh = None
 
                     # Method 1: Get from mapper input
-                    mapper = None
-                    if hasattr(actor, "mapper") and actor.mapper is not None:
-                        mapper = actor.mapper
-                    elif hasattr(actor, "GetMapper"):
+                    mapper = getattr(actor, "mapper", None)
+                    if mapper is None and hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
-                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(
-                            "REPORT ERROR: Missing attribute 'GetMapper' on actor"
-                        )
 
                     if mapper is not None:
-                        if hasattr(mapper, "input") and mapper.input is not None:
-                            mesh = mapper.input
-                        elif (
-                            hasattr(mapper, "GetInput")
-                            and mapper.GetInput() is not None
-                        ):
-                            mesh = mapper.GetInput()
-                        elif hasattr(mapper, "GetInputAsDataSet"):
-                            mesh = mapper.GetInputAsDataSet()
-                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                            logging.error(
-                                "REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper"
-                            )
+                        # Try PyVista attributes first (test mocks usually set 'input')
+                        for attr in ["input", "dataset"]:
+                            m = getattr(mapper, attr, None)
+                            try:
+                                if m is not None and int(getattr(m, "n_points", 0)) > 0:
+                                    mesh = m
+                                    break
+                            except (AttributeError, TypeError, ValueError):
+                                continue
 
-                    # Method 2: Get from PyVista plotter internal data
-                    if (
-                        mesh is None
-                        and actor_name in self.host.view_3d_manager.plotter.mesh
-                    ):
-                        mesh = self.host.view_3d_manager.plotter.mesh[actor_name]
+                        # Try VTK methods if PyVista attributes failed
+                        if mesh is None:
+                            for method in ["GetInput", "GetInputAsDataSet"]:
+                                if hasattr(mapper, method):
+                                    try:
+                                        m = getattr(mapper, method)()
+                                        if (
+                                            m is not None
+                                            and int(getattr(m, "n_points", 0)) > 0
+                                        ):
+                                            mesh = m
+                                            break
+                                    except (AttributeError, TypeError, ValueError):
+                                        continue
 
-                    if (
-                        mesh is not None
-                        and hasattr(mesh, "n_points")
-                        and mesh.n_points > 0
-                    ):
+                    # Skip actors without a valid mesh
+                    if mesh is None:
+                        continue
+
+                    if mesh is not None:
                         # Convert to PyVista mesh (if necessary)
                         if not isinstance(mesh, pv.PolyData):
                             if hasattr(mesh, "extract_surface"):
@@ -419,45 +417,39 @@ class ExportManager:
                     mesh = None
 
                     # Method 1: Get from mapper input
-                    mapper = None
-                    if hasattr(actor, "mapper") and actor.mapper is not None:
-                        mapper = actor.mapper
-                    elif hasattr(actor, "GetMapper"):
+                    mapper = getattr(actor, "mapper", None)
+                    if mapper is None and hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
-                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(
-                            "REPORT ERROR: Missing attribute 'GetMapper' on actor"
-                        )
 
                     if mapper is not None:
-                        if hasattr(mapper, "input") and mapper.input is not None:
-                            mesh = mapper.input
-                        elif (
-                            hasattr(mapper, "GetInput")
-                            and mapper.GetInput() is not None
-                        ):
-                            mesh = mapper.GetInput()
-                        elif hasattr(mapper, "GetInputAsDataSet"):
-                            mesh = mapper.GetInputAsDataSet()
-                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                            logging.error(
-                                "REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper"
-                            )
+                        for attr in ["input", "dataset"]:
+                            m = getattr(mapper, attr, None)
+                            try:
+                                if m is not None and int(getattr(m, "n_points", 0)) > 0:
+                                    mesh = m
+                                    break
+                            except (AttributeError, TypeError, ValueError):
+                                continue
 
-                    # Method 2: Get from PyVista plotter internal data
-                    if (
-                        mesh is None
-                        and actor_name in self.host.view_3d_manager.plotter.mesh
-                    ):
-                        mesh = self.host.view_3d_manager.plotter.mesh[actor_name]
+                        if mesh is None:
+                            for method in ["GetInput", "GetInputAsDataSet"]:
+                                if hasattr(mapper, method):
+                                    try:
+                                        m = getattr(mapper, method)()
+                                        if (
+                                            m is not None
+                                            and int(getattr(m, "n_points", 0)) > 0
+                                        ):
+                                            mesh = m
+                                            break
+                                    except (AttributeError, TypeError, ValueError):
+                                        continue
 
-                    # Method 3: Removed unsafe fallback
+                    # Skip actors without a valid mesh
+                    if mesh is None:
+                        continue
 
-                    if (
-                        mesh is not None
-                        and hasattr(mesh, "n_points")
-                        and mesh.n_points > 0
-                    ):
+                    if mesh is not None:
                         # Convert to PyVista mesh if necessary
                         if not isinstance(mesh, pv.PolyData):
                             if hasattr(mesh, "extract_surface"):
@@ -495,47 +487,43 @@ class ExportManager:
 
             for actor_name, actor in actors.items():
                 try:
-                    # Get polydata from VTK actor
+                    # Reset mesh for each actor
                     mesh = None
 
-                    # Method 1: Get from mapper input (Improved)
-                    mapper = None
-                    if hasattr(actor, "mapper") and actor.mapper is not None:
-                        mapper = actor.mapper
-                    elif hasattr(actor, "GetMapper"):
+                    # Method 1: Get from mapper input
+                    mapper = getattr(actor, "mapper", None)
+                    if mapper is None and hasattr(actor, "GetMapper"):
                         mapper = actor.GetMapper()
-                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                        logging.error(
-                            "REPORT ERROR: Missing attribute 'GetMapper' on actor"
-                        )
 
                     if mapper is not None:
-                        if hasattr(mapper, "input") and mapper.input is not None:
-                            mesh = mapper.input
-                        elif (
-                            hasattr(mapper, "GetInput")
-                            and mapper.GetInput() is not None
-                        ):
-                            mesh = mapper.GetInput()
-                        elif hasattr(mapper, "GetInputAsDataSet"):
-                            mesh = mapper.GetInputAsDataSet()
-                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
-                            logging.error(
-                                "REPORT ERROR: Missing attribute 'GetInputAsDataSet' on mapper"
-                            )
+                        for attr in ["input", "dataset"]:
+                            m = getattr(mapper, attr, None)
+                            try:
+                                if m is not None and int(getattr(m, "n_points", 0)) > 0:
+                                    mesh = m
+                                    break
+                            except (AttributeError, TypeError, ValueError):
+                                continue
 
-                    # Method 2: Get from PyVista plotter internal data
-                    if (
-                        mesh is None
-                        and actor_name in self.host.view_3d_manager.plotter.mesh
-                    ):
-                        mesh = self.host.view_3d_manager.plotter.mesh[actor_name]
+                        if mesh is None:
+                            for method in ["GetInput", "GetInputAsDataSet"]:
+                                if hasattr(mapper, method):
+                                    try:
+                                        m = getattr(mapper, method)()
+                                        if (
+                                            m is not None
+                                            and int(getattr(m, "n_points", 0)) > 0
+                                        ):
+                                            mesh = m
+                                            break
+                                    except (AttributeError, TypeError, ValueError):
+                                        continue
 
-                    if (
-                        mesh is not None
-                        and hasattr(mesh, "n_points")
-                        and mesh.n_points > 0
-                    ):
+                    # Skip actors without a valid mesh
+                    if mesh is None:
+                        continue
+
+                    if mesh is not None:
                         # Convert to PyVista mesh if necessary
                         if not isinstance(mesh, pv.PolyData):
                             if hasattr(mesh, "extract_surface"):
@@ -548,17 +536,22 @@ class ExportManager:
 
                         try:
                             # Get color from properties
-                            if hasattr(actor, "prop") and actor.prop is not None:
-                                vtk_color = actor.prop.GetColor()
+                            if hasattr(actor, "prop") and hasattr(actor.prop, "color"):
+                                vtk_color = actor.prop.color
                                 color = [int(c * 255) for c in vtk_color]
                             elif hasattr(actor, "GetProperty"):
                                 prop = actor.GetProperty()
-                                if prop is not None:
+                                if prop is not None and hasattr(prop, "GetColor"):
                                     vtk_color = prop.GetColor()
                                     color = [int(c * 255) for c in vtk_color]
+                            elif hasattr(actor, "prop") and hasattr(
+                                actor.prop, "GetColor"
+                            ):
+                                vtk_color = actor.prop.GetColor()
+                                color = [int(c * 255) for c in vtk_color]
                             else:  # [REPORT ERROR MISSING ATTRIBUTE]
                                 logging.error(
-                                    "REPORT ERROR: Missing attribute 'GetProperty' on actor"
+                                    "REPORT ERROR: Missing color attribute on actor/property"
                                 )
                         except (AttributeError, RuntimeError, TypeError):
                             # Use default color on failure to avoid console noise during complex mesh export
