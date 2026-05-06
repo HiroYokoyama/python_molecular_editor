@@ -9,8 +9,9 @@
 ![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage->80%25-green)
 ![Overall Coverage](https://img.shields.io/badge/coverage->75%25-green)
 ![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
-![Pylint Score](https://img.shields.io/badge/pylint-9%2F10-brightgreen)
+![Pylint Score](https://img.shields.io/badge/pylint->9%2F10-brightgreen)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/moleditpy)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=monthly&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=monthly+downloads)](https://pepy.tech/projects/moleditpy)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HiroYokoyama/python_molecular_editor)
 
 [🇯🇵 日本語 (Japanese)](#japanese)
