@@ -18,3 +18,5 @@ try:
     OBABEL_AVAILABLE = False
 except ImportError:
     OBABEL_AVAILABLE = False
+
+from .utils.constants import VERSION as __version__

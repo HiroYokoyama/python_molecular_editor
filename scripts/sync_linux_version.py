@@ -14,17 +14,10 @@ def sync_linux():
         print(f"Error: Main source directory not found at {SRC_MAIN}")
         return
 
-    # 1. Clean destination (preserve __pycache__ if desired, but here we clean all)
-    if os.path.exists(SRC_LINUX):
-        # We preserve the directory itself but clear its contents
-        for item in os.listdir(SRC_LINUX):
-            item_path = os.path.join(SRC_LINUX, item)
-            if os.path.isdir(item_path):
-                shutil.rmtree(item_path)
-            else:
-                os.remove(item_path)
-    else:
-        os.makedirs(SRC_LINUX, exist_ok=True)
+    os.makedirs(SRC_LINUX, exist_ok=True)
+
+    synced_files_count = 0
+    valid_dest_files = set()
 
     # 2. Copy all files from main to linux
     for root, dirs, files in os.walk(SRC_MAIN):
@@ -43,6 +36,7 @@ def sync_linux():
             
             src_file = os.path.join(root, file)
             dest_file = os.path.join(dest_dir, file)
+            valid_dest_files.add(os.path.abspath(dest_file))
             
             # For Python files, perform transformation
             if file.endswith(".py"):
@@ -55,7 +49,10 @@ def sync_linux():
                     content = content.replace("from moleditpy import", "from moleditpy_linux import")
                     content = content.replace("import moleditpy", "import moleditpy_linux")
                     
-                    # Transformation 2: Explicit Open Babel disablement
+                    # Transformation 2: Fix package name for version checking
+                    content = content.replace('version("MoleditPy")', 'version("MoleditPy-linux")')
+                    
+                    # Transformation 3: Explicit Open Babel disablement
                     if file == "__init__.py" and rel_path == ".":
                         content = re.sub(
                             r"OBABEL_AVAILABLE = (True|False|importlib.*None)",
@@ -64,19 +61,69 @@ def sync_linux():
                             flags=re.DOTALL
                         )
 
-                    # Transformation 3: Fix double mentions
+                    # Transformation 4: Fix double mentions
                     content = content.replace("moleditpy_linux_linux", "moleditpy_linux")
 
-                    with open(dest_file, "w", encoding="utf-8") as f:
-                        f.write(content)
+                    # Check if file needs to be updated
+                    needs_update = True
+                    if os.path.exists(dest_file):
+                        with open(dest_file, "r", encoding="utf-8") as f:
+                            existing_content = f.read()
+                        if existing_content == content:
+                            needs_update = False
+                            
+                    if needs_update:
+                        with open(dest_file, "w", encoding="utf-8") as f:
+                            f.write(content)
+                        synced_files_count += 1
+                        
                 except UnicodeDecodeError:
                     print(f"Warning: Could not decode {src_file} as UTF-8. Copying as binary.")
-                    shutil.copy2(src_file, dest_file)
+                    import filecmp
+                    if not os.path.exists(dest_file) or not filecmp.cmp(src_file, dest_file, shallow=False):
+                        shutil.copy2(src_file, dest_file)
+                        synced_files_count += 1
             else:
                 # Binary files (icons, assets, etc.)
-                shutil.copy2(src_file, dest_file)
+                import filecmp
+                if not os.path.exists(dest_file) or not filecmp.cmp(src_file, dest_file, shallow=False):
+                    shutil.copy2(src_file, dest_file)
+                    synced_files_count += 1
+            
+    # Cleanup orphan files in destination
+    for root, dirs, files in os.walk(SRC_LINUX, topdown=False):
+        for file in files:
+            dest_file = os.path.abspath(os.path.join(root, file))
+            if dest_file not in valid_dest_files:
+                os.remove(dest_file)
+        # remove empty directories
+        if not os.listdir(root):
+            os.rmdir(root)
 
-    print("Synchronization complete!")
+    # 3. Synchronize version in pyproject.toml
+    main_toml_path = os.path.join(BASE_DIR, "moleditpy", "pyproject.toml")
+    linux_toml_path = os.path.join(BASE_DIR, "moleditpy-linux", "pyproject.toml")
+    
+    if os.path.exists(main_toml_path) and os.path.exists(linux_toml_path):
+        with open(main_toml_path, "r", encoding="utf-8") as f:
+            main_toml = f.read()
+        
+        # Extract version
+        version_match = re.search(r'^version\s*=\s*["\']([^"\']+)["\']', main_toml, re.MULTILINE)
+        if version_match:
+            new_version = version_match.group(1)
+            
+            with open(linux_toml_path, "r", encoding="utf-8") as f:
+                linux_toml = f.read()
+            
+            new_linux_toml = re.sub(r'^version\s*=\s*["\'][^"\']+["\']', f'version = "{new_version}"', linux_toml, flags=re.MULTILINE)
+            
+            if new_linux_toml != linux_toml:
+                with open(linux_toml_path, "w", encoding="utf-8") as f:
+                    f.write(new_linux_toml)
+                print(f"Synchronized pyproject.toml version to {new_version}")
+
+    print(f"Synchronization complete! {synced_files_count} files synced.")
 
 if __name__ == "__main__":
     sync_linux()

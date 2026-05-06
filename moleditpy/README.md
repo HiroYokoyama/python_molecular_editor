@@ -9,8 +9,10 @@
 ![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage->80%25-green)
 ![Overall Coverage](https://img.shields.io/badge/coverage->75%25-green)
 ![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
-![Pylint Score](https://img.shields.io/badge/pylint-9%2F10-brightgreen)
+![Pylint Score](https://img.shields.io/badge/pylint->9%2F10-brightgreen)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/moleditpy)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=monthly&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=monthly+downloads)](https://pepy.tech/projects/moleditpy)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HiroYokoyama/python_molecular_editor)
 
 [🇯🇵 日本語 (Japanese)](#japanese)
 
@@ -136,6 +138,14 @@ moleditpy
 
 This project is licensed under the **GNU General Public License v3.0 (GPL-v3)**. See the `LICENSE` file for details.
 
+## Citation
+
+If you use this software in your work, please cite it as follows:
+
+```
+Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Zenodo. https://doi.org/10.5281/zenodo.17268532
+```
+
 -----
 
 <div id="japanese"></div>
@@ -259,3 +269,11 @@ moleditpy
 ## ライセンス
 
 このプロジェクトは **GNU General Public License v3.0 (GPL-v3)** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
+
+## 引用
+
+本ソフトウェアを研究で使用される場合は、以下の通り引用を明記してください。
+
+```
+Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Zenodo. https://doi.org/10.5281/zenodo.17268532
+```
