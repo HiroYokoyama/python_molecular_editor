@@ -12,11 +12,41 @@ DOI: 10.5281/zenodo.17268532
 
 # --- Constants ---
 
+import os
 from PyQt6.QtGui import QColor, QFont
 from rdkit import Chem
 
+
+def _get_version():
+    try:
+        from importlib.metadata import version, PackageNotFoundError
+
+        try:
+            return version("MoleditPy")
+        except PackageNotFoundError:
+            pass
+    except ImportError:
+        pass
+
+    try:
+        # Fallback: Parse pyproject.toml directly
+        current_dir = os.path.abspath(os.path.dirname(__file__))
+        for _ in range(5):
+            pyproject_path = os.path.join(current_dir, "pyproject.toml")
+            if os.path.exists(pyproject_path):
+                with open(pyproject_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip().startswith("version ="):
+                            return line.split("=")[1].strip().strip('"').strip("'")
+            current_dir = os.path.dirname(current_dir)
+    except Exception:
+        pass
+
+    return "Unknown"
+
+
 # Version
-VERSION = "3.3.0"
+VERSION = _get_version()
 
 ATOM_RADIUS = 18
 BOND_OFFSET = 3.5

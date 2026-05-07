@@ -18,3 +18,5 @@ try:
     OBABEL_AVAILABLE = importlib.util.find_spec("openbabel") is not None
 except ImportError:
     OBABEL_AVAILABLE = False
+
+from .utils.constants import VERSION as __version__
