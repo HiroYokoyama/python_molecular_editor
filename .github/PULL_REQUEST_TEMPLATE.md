@@ -25,11 +25,8 @@
 <!-- How did you verify the change works? -->
 
 - [ ] Ran `python tests/run_all_tests.py` — all pass
-- [ ] Manually tested in the GUI (describe what you tested below)
+- [ ] Manually tested in the GUI with the check list
 - [ ] Added new unit tests
-
-**Manual test notes:**
-<!-- Optional: describe what you clicked/drew/exported to verify -->
 
 ## Checklist
 
