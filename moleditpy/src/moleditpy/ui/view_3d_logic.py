@@ -1632,7 +1632,7 @@ class View3DManager:
 
         # Color definitions (dark blue/green/red)
         rdkit_color = "#003366"  # Dark blue
-        id_color = "#00B000"  # Green
+        id_color = "#009000"  # Green
         xyz_color = "#8B0000"  # Dark red
         other_color = "black"
 
