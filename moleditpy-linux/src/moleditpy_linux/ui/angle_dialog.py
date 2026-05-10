@@ -189,8 +189,10 @@ class AngleDialog(GeometryBaseDialog):
                 self.atom2_idx = atom_idx
             elif self.atom3_idx is None:
                 self.atom3_idx = atom_idx
-                # Take a fresh snapshot immediately upon completing the triad selection
-                self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
+                # Capture the ABSOLUTE baseline for this selection session.
+                # This prevents 'direction change' drift during multiple slider drags.
+                self._baseline_positions = self.mol.GetConformer().GetPositions().copy()
+                self._snapshot_positions = self._baseline_positions.copy()
             else:
                 # Reset and start over
                 self.atom1_idx = atom_idx
@@ -205,6 +207,7 @@ class AngleDialog(GeometryBaseDialog):
         self.atom1_idx = None
         self.atom2_idx = None  # vertex atom
         self.atom3_idx = None
+        self._baseline_positions = None
         self._snapshot_positions = None
         self.clear_selection_labels()
         self.update_display()
@@ -297,24 +300,27 @@ class AngleDialog(GeometryBaseDialog):
             self.apply_button.setEnabled(True)
             # Update angle input box and slider
             try:
-                # Update input box only if not dragging
+                # Update input box and slider only if not dragging
                 if not self._slider_dragging:
                     self.angle_input.blockSignals(True)
                     self.angle_input.setText(f"{current_angle:.2f}")
                     self.angle_input.blockSignals(False)
 
-                # UPDATE SLIDER: Logic to prevent 'jumping' to positive value
-                slider_val = int(round(current_angle))
-                current_slider_val = self.angle_slider.value()
+                    # UPDATE SLIDER: Logic to prevent 'jumping' to positive value
+                    slider_val = int(round(current_angle))
+                    current_slider_val = self.angle_slider.value()
 
-                if current_slider_val != slider_val:
-                    self.angle_slider.blockSignals(True)
-                    self.angle_slider.setValue(slider_val)
+                    # If the user is on the negative side of the slider, keep the sign
+                    if current_slider_val < 0:
+                        slider_val = -slider_val
+
+                    if current_slider_val != slider_val:
+                        self.angle_slider.blockSignals(True)
+                        self.angle_slider.setValue(slider_val)
+                        self.angle_slider.blockSignals(False)
                     self.angle_slider.setEnabled(True)
-                    self.angle_slider.blockSignals(False)
                 else:
                     self.angle_slider.setEnabled(True)
-
             except (AttributeError, RuntimeError, TypeError):
                 pass
 
@@ -375,19 +381,27 @@ class AngleDialog(GeometryBaseDialog):
         """Adjust the bond angle."""
         conf = self.mol.GetConformer()
 
-        # Use snapshot if available (slider dragging) to keep the rotation axis stable
-        snapshot = self._snapshot_positions
-        if snapshot is not None:
-            positions = snapshot.copy()
+        # Use baseline positions (fixed for dialog session) to keep the rotation axis stable.
+        if (
+            hasattr(self, "_baseline_positions")
+            and self._baseline_positions is not None
+        ):
+            positions = self._baseline_positions.copy()
+        elif self._snapshot_positions is not None:
+            positions = self._snapshot_positions.copy()
         else:
             positions = conf.GetPositions()
 
         if self.atom1_idx is None or self.atom2_idx is None or self.atom3_idx is None:
             return
-        idx_a, idx_b, idx_c = self.atom1_idx, self.atom2_idx, self.atom3_idx
+        idx_a: int = self.atom1_idx
+        idx_b: int = self.atom2_idx  # vertex
+        idx_c: int = self.atom3_idx
 
         # Calculate baseline angle from the POSITIONS we are working on (important for snapshot stability)
         p_a, p_b, p_c = positions[idx_a], positions[idx_b], positions[idx_c]
+        from moleditpy_linux.core.mol_geometry import calc_angle_deg
+
         baseline_angle = calc_angle_deg(p_a, p_b, p_c)
 
         if self.both_groups_radio.isChecked():

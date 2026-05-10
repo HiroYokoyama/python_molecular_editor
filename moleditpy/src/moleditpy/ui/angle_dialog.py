@@ -305,15 +305,15 @@ class AngleDialog(GeometryBaseDialog):
                     self.angle_input.blockSignals(True)
                     self.angle_input.setText(f"{current_angle:.2f}")
                     self.angle_input.blockSignals(False)
-                    
+
                     # UPDATE SLIDER: Logic to prevent 'jumping' to positive value
                     slider_val = int(round(current_angle))
                     current_slider_val = self.angle_slider.value()
-                    
+
                     # If the user is on the negative side of the slider, keep the sign
                     if current_slider_val < 0:
                         slider_val = -slider_val
-                        
+
                     if current_slider_val != slider_val:
                         self.angle_slider.blockSignals(True)
                         self.angle_slider.setValue(slider_val)
@@ -382,7 +382,10 @@ class AngleDialog(GeometryBaseDialog):
         conf = self.mol.GetConformer()
 
         # Use baseline positions (fixed for dialog session) to keep the rotation axis stable.
-        if hasattr(self, "_baseline_positions") and self._baseline_positions is not None:
+        if (
+            hasattr(self, "_baseline_positions")
+            and self._baseline_positions is not None
+        ):
             positions = self._baseline_positions.copy()
         elif self._snapshot_positions is not None:
             positions = self._snapshot_positions.copy()
@@ -398,6 +401,7 @@ class AngleDialog(GeometryBaseDialog):
         # Calculate baseline angle from the POSITIONS we are working on (important for snapshot stability)
         p_a, p_b, p_c = positions[idx_a], positions[idx_b], positions[idx_c]
         from moleditpy.core.mol_geometry import calc_angle_deg
+
         baseline_angle = calc_angle_deg(p_a, p_b, p_c)
 
         if self.both_groups_radio.isChecked():

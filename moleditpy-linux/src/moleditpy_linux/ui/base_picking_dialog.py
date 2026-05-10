@@ -118,15 +118,19 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
         self._molecule_modified = True
 
-        # 4. Refresh dialog display and force render (deferred to ensure stability)
-        if hasattr(self, "update_display"):
-            QTimer.singleShot(120, self.update_display)
+        # 4. Refresh display (deferred to ensure stability)
+        is_dragging = getattr(self, "_slider_dragging", False)
+
+        if is_dragging and hasattr(self, "show_atom_labels"):
+            QTimer.singleShot(200, self.show_atom_labels)
+        elif hasattr(self, "update_display"):
+            QTimer.singleShot(200, self.update_display)
 
         if (
             hasattr(self.main_window.view_3d_manager, "plotter")
             and self.main_window.view_3d_manager.plotter
         ):
-            QTimer.singleShot(120, self.main_window.view_3d_manager.plotter.render)
+            QTimer.singleShot(200, self.main_window.view_3d_manager.plotter.render)
 
         # 5. Refresh chiral/cis-trans labels if applicable
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):

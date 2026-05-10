@@ -120,13 +120,16 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
 
         # 4. Refresh display (deferred to ensure stability)
         is_dragging = getattr(self, "_slider_dragging", False)
-        
+
         if is_dragging and hasattr(self, "show_atom_labels"):
             QTimer.singleShot(200, self.show_atom_labels)
         elif hasattr(self, "update_display"):
             QTimer.singleShot(200, self.update_display)
-            
-        if hasattr(self.main_window.view_3d_manager, "plotter") and self.main_window.view_3d_manager.plotter:
+
+        if (
+            hasattr(self.main_window.view_3d_manager, "plotter")
+            and self.main_window.view_3d_manager.plotter
+        ):
             QTimer.singleShot(200, self.main_window.view_3d_manager.plotter.render)
 
         # 5. Refresh chiral/cis-trans labels if applicable

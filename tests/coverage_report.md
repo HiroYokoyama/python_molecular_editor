@@ -20,19 +20,19 @@
 | moleditpy\src\moleditpy\ui\about_dialog.py              |     66 |     15 |   77.3% |
 | moleditpy\src\moleditpy\ui\align_plane_dialog.py        |    123 |     17 |   86.2% |
 | moleditpy\src\moleditpy\ui\alignment_dialog.py          |    140 |     13 |   90.7% |
-| moleditpy\src\moleditpy\ui\angle_dialog.py              |    245 |     29 |   88.2% |
+| moleditpy\src\moleditpy\ui\angle_dialog.py              |    255 |     31 |   87.8% |
 | moleditpy\src\moleditpy\ui\app_state.py                 |    423 |     99 |   76.6% |
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    311 |     44 |   85.9% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |     93 |     28 |   69.9% |
-| moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     70 |      5 |   92.9% |
+| moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     77 |      6 |   92.2% |
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    350 |     79 |   77.4% |
-| moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    216 |     17 |   92.1% |
+| moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    229 |     20 |   91.3% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    550 |     90 |   83.6% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    199 |     32 |   83.9% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    399 |     96 |   75.9% |
 | moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    139 |     21 |   84.9% |
 | moleditpy\src\moleditpy\ui\dialog_logic.py              |    228 |     31 |   86.4% |
-| moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    249 |     33 |   86.7% |
+| moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    259 |     35 |   86.5% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    247 |     41 |   83.4% |
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    858 |    217 |   74.7% |
 | moleditpy\src\moleditpy\ui\export_logic.py              |    546 |    167 |   69.4% |
@@ -56,7 +56,7 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     54 |     17 |   68.5% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
-| **TOTAL** | **13013** | **2467** | **81.04%** |
+| **TOTAL** | **13053** | **2475** | **81.04%** |
 
 ### Full Application Breakdown
 
@@ -74,13 +74,13 @@
 | moleditpy\src\moleditpy\ui\align_plane_dialog.py        |    125 |     18 |   85.6% |
 | moleditpy\src\moleditpy\ui\alignment_dialog.py          |    142 |     14 |   90.1% |
 | moleditpy\src\moleditpy\ui\analysis_window.py           |    116 |     25 |   78.4% |
-| moleditpy\src\moleditpy\ui\angle_dialog.py              |    247 |     30 |   87.9% |
+| moleditpy\src\moleditpy\ui\angle_dialog.py              |    257 |     32 |   87.5% |
 | moleditpy\src\moleditpy\ui\app_state.py                 |    425 |    100 |   76.5% |
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    311 |     44 |   85.9% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |     93 |     28 |   69.9% |
-| moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     72 |      6 |   91.7% |
+| moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     79 |      7 |   91.1% |
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    350 |     79 |   77.4% |
-| moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    218 |     18 |   91.7% |
+| moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    231 |     21 |   90.9% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    550 |     90 |   83.6% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    199 |     32 |   83.9% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    399 |     96 |   75.9% |
@@ -89,7 +89,7 @@
 | moleditpy\src\moleditpy\ui\custom_qt_interactor.py      |     44 |     35 |   20.5% |
 | moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    143 |     24 |   83.2% |
 | moleditpy\src\moleditpy\ui\dialog_logic.py              |    228 |     31 |   86.4% |
-| moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    251 |     34 |   86.5% |
+| moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    261 |     36 |   86.2% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    247 |     41 |   83.4% |
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    858 |    217 |   74.7% |
 | moleditpy\src\moleditpy\ui\export_logic.py              |    546 |    167 |   69.4% |
@@ -102,7 +102,7 @@
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    502 |    147 |   70.7% |
 | moleditpy\src\moleditpy\ui\move_group_dialog.py         |    373 |    131 |   64.9% |
 | moleditpy\src\moleditpy\ui\periodic_table_dialog.py     |     34 |      7 |   79.4% |
-| moleditpy\src\moleditpy\ui\planarize_dialog.py          |    110 |     13 |   88.2% |
+| moleditpy\src\moleditpy\ui\planarize_dialog.py          |    111 |     13 |   88.3% |
 | moleditpy\src\moleditpy\ui\settings_dialog.py           |    107 |     11 |   89.7% |
 | moleditpy\src\moleditpy\ui\string_importers.py          |    128 |     27 |   78.9% |
 | moleditpy\src\moleditpy\ui\template_preview_item.py     |    105 |      5 |   95.2% |
@@ -120,7 +120,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      2 |   94.4% |
-| **TOTAL** | **14762** | **3065** | **79.24%** |
+| **TOTAL** | **14803** | **3073** | **79.24%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

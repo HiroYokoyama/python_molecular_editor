@@ -393,7 +393,10 @@ class DihedralDialog(GeometryBaseDialog):
         conf = self.mol.GetConformer()
 
         # Use baseline positions (fixed for dialog session) to keep the rotation axis stable.
-        if hasattr(self, "_baseline_positions") and self._baseline_positions is not None:
+        if (
+            hasattr(self, "_baseline_positions")
+            and self._baseline_positions is not None
+        ):
             positions = self._baseline_positions.copy()
         elif self._snapshot_positions is not None:
             positions = self._snapshot_positions.copy()

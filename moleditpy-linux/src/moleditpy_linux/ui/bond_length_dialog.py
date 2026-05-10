@@ -173,12 +173,14 @@ class BondLengthDialog(GeometryBaseDialog):
                 self._snapshot_positions = None
             elif self.atom2_idx is None:
                 self.atom2_idx = atom_idx
-                # Take a fresh snapshot immediately upon completing the selection
-                self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
+                # Capture the ABSOLUTE baseline for this selection session.
+                self._baseline_positions = self.mol.GetConformer().GetPositions().copy()
+                self._snapshot_positions = self._baseline_positions.copy()
             else:
                 # Reset and start over
                 self.atom1_idx = atom_idx
                 self.atom2_idx = None
+                self._baseline_positions = None
                 self._snapshot_positions = None
 
         self.update_display()
@@ -260,15 +262,18 @@ class BondLengthDialog(GeometryBaseDialog):
             self.apply_button.setEnabled(True)
             # Update the distance input box and slider
             try:
-                self.distance_input.blockSignals(True)
-                self.distance_input.setText(f"{current_distance:.3f}")
-                self.distance_input.blockSignals(False)
-                self.distance_slider.blockSignals(True)
-                slider_val = int(current_distance * 100)
-                slider_val = max(10, min(1000, slider_val))
-                self.distance_slider.setValue(slider_val)
-                self.distance_slider.setEnabled(True)
-                self.distance_slider.blockSignals(False)
+                if not self._slider_dragging:
+                    self.distance_input.blockSignals(True)
+                    self.distance_input.setText(f"{current_distance:.3f}")
+                    self.distance_input.blockSignals(False)
+                    self.distance_slider.blockSignals(True)
+                    slider_val = int(current_distance * 100)
+                    slider_val = max(10, min(1000, slider_val))
+                    self.distance_slider.setValue(slider_val)
+                    self.distance_slider.setEnabled(True)
+                    self.distance_slider.blockSignals(False)
+                else:
+                    self.distance_slider.setEnabled(True)
             except (AttributeError, RuntimeError, TypeError):
                 pass
 
