@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QPointF, QRectF
+from PyQt6.QtGui import QPainterPath
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
 
@@ -252,12 +253,16 @@ class MockableBondItem(BondItem):
 class TestBondItem:
     @pytest.fixture
     def bond_item(self, mock_main_window):
-        atom1 = AtomItem(1, "C", QPointF(0.0, 0.0))
-        atom2 = AtomItem(2, "C", QPointF(10.0, 10.0))
+        with patch(
+            "moleditpy.ui.atom_item.AtomItem.get_bg_ellipse_path",
+            return_value=QPainterPath(),
+        ):
+            atom1 = AtomItem(1, "C", QPointF(0.0, 0.0))
+            atom2 = AtomItem(2, "C", QPointF(10.0, 10.0))
 
-        # Use MockableBondItem to allow scene() mocking
-        bond = MockableBondItem(atom1, atom2)
-        return bond
+            # Use MockableBondItem to allow scene() mocking
+            bond = MockableBondItem(atom1, atom2)
+            yield bond
 
     def test_init(self, bond_item):
         """Verify BondItem initialization with atom partners and default order."""
@@ -276,6 +281,28 @@ class TestBondItem:
         assert line.p1() == QPointF(0.0, 0.0)
         # p2 (10,10) - p1 (5,5) = (5,5)
         assert line.p2() == QPointF(5.0, 5.0)
+
+    def test_geometric_shortening(self, bond_item):
+        """Verify that bonds are geometrically shortened to not cross atom labels."""
+        bond_item.atom1.setPos(0.0, 0.0)
+        bond_item.atom2.setPos(20.0, 0.0)
+
+        # Create a mock path of radius 5 for both atoms
+        mock_path = QPainterPath()
+        mock_path.addEllipse(QRectF(-5.0, -5.0, 10.0, 10.0))
+
+        bond_item.atom1.get_bg_ellipse_path = MagicMock(return_value=mock_path)
+        bond_item.atom2.get_bg_ellipse_path = MagicMock(return_value=mock_path)
+
+        line = bond_item.get_line_in_local_coords()
+
+        # Original line length is 20. Atom 1 eats 5. Atom 2 eats 5.
+        # Shortened line should be roughly from X=5 to X=15.
+        # Allow small tolerance due to binary search precision (1/4096 = ~0.005)
+        assert line.p1().x() == pytest.approx(5.0, abs=0.1)
+        assert line.p2().x() == pytest.approx(15.0, abs=0.1)
+        assert line.p1().y() == pytest.approx(0.0, abs=0.1)
+        assert line.p2().y() == pytest.approx(0.0, abs=0.1)
 
     def test_set_bond_order(self, bond_item):
         """Verify that the bond order can be changed and is reflected in the item state."""

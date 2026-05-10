@@ -175,7 +175,7 @@ class View3DManager:
         # Clear measurement selection (molecule changed)
         if hasattr(self.host.edit_3d_manager, "measurement_mode"):
             self.host.edit_3d_manager.clear_measurement_selection()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'measurement_mode' on object"
             )
@@ -1766,7 +1766,7 @@ class View3DManager:
                                 tp.SetBold(True)
                             except (AttributeError, RuntimeError, TypeError) as e:
                                 logging.debug(f"Failed to set bold font: {e}")
-                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        else:
                             logging.error(
                                 "REPORT ERROR: Missing attribute 'GetTextProperty' on actor"
                             )
@@ -2029,7 +2029,7 @@ class View3DManager:
             self.host.view_3d_manager.plotter.render()
             if hasattr(self.host.view_3d_manager.plotter, "update"):
                 self.host.view_3d_manager.plotter.update()
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error("REPORT ERROR: Missing attribute 'update' on object")
         except (AttributeError, RuntimeError, TypeError) as e:
             logging.debug(

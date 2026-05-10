@@ -460,7 +460,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog._is_dragging_group_vtk = False
                 move_group_dialog._drag_start_pos = None
                 move_group_dialog._mouse_moved = False
-                if hasattr(move_group_dialog, "_initial_positions"):  # [SAFE]
+                if hasattr(move_group_dialog, "_initial_positions"):  # Safe
                     delattr(move_group_dialog, "_initial_positions")
 
         if move_group_dialog and getattr(
@@ -726,9 +726,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog._is_dragging_group_vtk = False
                 move_group_dialog._drag_start_pos = None
                 move_group_dialog._mouse_moved = False
-                if hasattr(move_group_dialog, "_initial_positions"):  # [SAFE]
+                if hasattr(move_group_dialog, "_initial_positions"):  # Safe
                     delattr(move_group_dialog, "_initial_positions")
-                if hasattr(move_group_dialog, "_drag_atom_idx"):  # [SAFE]
+                if hasattr(move_group_dialog, "_drag_atom_idx"):  # Safe
                     delattr(move_group_dialog, "_drag_atom_idx")
         except (AttributeError, RuntimeError, ValueError, TypeError):
             logging.error("Caught exception in " + __file__, exc_info=True)
@@ -878,11 +878,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             move_group_dialog._is_rotating_group_vtk = False
             move_group_dialog._rotation_start_pos = None
             move_group_dialog._rotation_mouse_moved = False
-            if hasattr(move_group_dialog, "_initial_positions"):  # [SAFE]
+            if hasattr(move_group_dialog, "_initial_positions"):  # Safe
                 delattr(move_group_dialog, "_initial_positions")
-            if hasattr(move_group_dialog, "_group_centroid"):  # [SAFE]
+            if hasattr(move_group_dialog, "_group_centroid"):  # Safe
                 delattr(move_group_dialog, "_group_centroid")
-            if hasattr(move_group_dialog, "_rotation_atom_idx"):  # [SAFE]
+            if hasattr(move_group_dialog, "_rotation_atom_idx"):  # Safe
                 delattr(move_group_dialog, "_rotation_atom_idx")
 
             return

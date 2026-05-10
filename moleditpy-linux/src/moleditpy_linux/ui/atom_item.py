@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+import logging
 from typing import Any, List, Optional
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
@@ -92,7 +92,7 @@ class AtomItem(QGraphicsItem):
             if hasattr(scene, "get_setting"):
                 font_size = scene.get_setting("atom_font_size_2d", 20)
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )
@@ -119,7 +119,7 @@ class AtomItem(QGraphicsItem):
             if hasattr(scene, "get_setting"):
                 font_size = scene.get_setting("atom_font_size_2d", 20)
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )
@@ -224,6 +224,77 @@ class AtomItem(QGraphicsItem):
 
         # 3. Add final margins for selection highlights, etc.
         return full_visual_rect.adjusted(-3, -3, 3, 3)
+
+    def get_bg_ellipse_path(self) -> QPainterPath:
+        path = QPainterPath()
+        if not self.is_visible:
+            return path
+
+        font_size = 20
+        font_family = FONT_FAMILY
+        scene = self.scene()
+        if scene is not None:
+            if hasattr(scene, "get_setting"):
+                font_size = scene.get_setting("atom_font_size_2d", 20)
+                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+
+        font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
+        fm = QFontMetricsF(font)
+
+        hydrogen_part = ""
+        if self.implicit_h_count > 0:
+            is_skeletal_carbon = (
+                self.symbol == "C"
+                and self.charge == 0
+                and self.radical == 0
+                and len(self.bonds) > 0
+            )
+            if not is_skeletal_carbon:
+                hydrogen_part = "H"
+                if self.implicit_h_count > 1:
+                    subscript_map = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+                    hydrogen_part += str(self.implicit_h_count).translate(subscript_map)
+
+        flip_text = False
+        if hydrogen_part and self.bonds:
+            my_pos_x = self.pos().x()
+            total_dx = 0.0
+            for b in self.bonds:
+                partner = b.atom2 if b.atom1 is self else b.atom1
+                try:
+                    if partner is None or sip_isdeleted_safe(partner):
+                        continue
+                    partner_pos = partner.pos()
+                    if partner_pos is None:
+                        continue
+                    total_dx += partner_pos.x() - my_pos_x
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    # Suppress non-critical UI sync errors during atom position retrieval
+                    continue
+            if total_dx > 0:
+                flip_text = True
+
+        if flip_text:
+            display_text = hydrogen_part + self.symbol
+        else:
+            display_text = self.symbol + hydrogen_part
+
+        text_rect = fm.boundingRect(display_text)
+        text_rect.adjust(-2, -2, 2, 2)
+        if hydrogen_part:
+            symbol_rect = fm.boundingRect(self.symbol)
+            if flip_text:
+                offset_x = symbol_rect.width() // 2
+                text_rect.moveTo(offset_x - text_rect.width(), -text_rect.height() / 2)
+            else:
+                offset_x = -symbol_rect.width() // 2
+                text_rect.moveTo(offset_x, -text_rect.height() / 2)
+        else:
+            text_rect.moveCenter(QPointF(0, 0))
+
+        bg_rect = text_rect.adjusted(-5, -8, 5, 8)
+        path.addEllipse(bg_rect)
+        return path
 
     def shape(self) -> QPainterPath:
         """Define the shape of the atom item for collision detection."""
@@ -360,29 +431,6 @@ class AtomItem(QGraphicsItem):
                 offset_x = -symbol_rect.width() // 2
                 text_rect.moveTo(offset_x, -text_rect.height() // 2)
 
-            # 2. Handle background (fill with white or clear if transparent)
-            if self.scene():
-                bg_brush = self.scene().backgroundBrush()
-                bg_rect = text_rect.adjusted(-5, -8, 5, 8)
-
-                if bg_brush.style() == Qt.BrushStyle.NoBrush:
-                    # Use CompositionMode_Clear to erase overlapping bond lines
-                    painter.save()
-                    painter.setCompositionMode(
-                        QPainter.CompositionMode.CompositionMode_Clear
-                    )
-                    painter.setBrush(
-                        QColor(0, 0, 0, 255)
-                    )  # Color doesn't matter (alpha is key)
-                    painter.setPen(Qt.PenStyle.NoPen)
-                    painter.drawEllipse(bg_rect)
-                    painter.restore()
-                else:
-                    # Fill with background color if it exists
-                    painter.setBrush(bg_brush)
-                    painter.setPen(Qt.PenStyle.NoPen)
-                    painter.drawEllipse(bg_rect)
-
             # 3. Draw the atom symbol itself
             # Color is already determined above
             painter.setPen(QPen(color))
@@ -454,7 +502,9 @@ class AtomItem(QGraphicsItem):
                 for bond in self.bonds:
                     if bond.scene():
                         bond.update_position()
-
+        elif change == QGraphicsItem.GraphicsItemChange.ItemSceneHasChanged:
+            if self.scene() is not None:
+                self.update_style()
         return res
 
     def hoverEnterEvent(self, event: Any) -> None:

@@ -87,7 +87,7 @@ class ComputeManager:
                 self.optimize_3d_structure
             )
             self.host.init_manager.optimize_3d_button.setEnabled(True)
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
             )
@@ -99,7 +99,7 @@ class ComputeManager:
 
             if hasattr(self.host.init_manager, "cleanup_button"):
                 self.host.init_manager.cleanup_button.setEnabled(True)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'cleanup_button' on object"
                 )
@@ -108,13 +108,13 @@ class ComputeManager:
 
             if hasattr(self.host.init_manager, "optimize_3d_button"):
                 self.host.init_manager.optimize_3d_button.setEnabled(has_mol)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
                 )
             if hasattr(self.host.init_manager, "export_button"):
                 self.host.init_manager.export_button.setEnabled(has_mol)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'export_button' on object"
                 )
@@ -125,13 +125,13 @@ class ComputeManager:
 
             if hasattr(self.host.init_manager, "analysis_action"):
                 self.host.init_manager.analysis_action.setEnabled(has_mol)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'analysis_action' on object"
                 )
             if hasattr(self.host.init_manager, "edit_3d_action"):
                 self.host.init_manager.edit_3d_action.setEnabled(has_mol)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'edit_3d_action' on object"
                 )
@@ -389,7 +389,7 @@ class ComputeManager:
             self.host.init_manager.optimize_3d_button.clicked.connect(
                 self.halt_conversion
             )
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
             )
@@ -398,7 +398,7 @@ class ComputeManager:
         # Re-enable the button so it can be clicked to Halt
         if hasattr(self.host.init_manager, "optimize_3d_button"):
             self.host.init_manager.optimize_3d_button.setEnabled(True)
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
             )
@@ -652,7 +652,7 @@ class ComputeManager:
         for item in selected_items:
             if hasattr(item, "atom_id"):
                 atom_ids.add(item.atom_id)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error("REPORT ERROR: Missing attribute 'atom_id' on item")
 
         if not atom_ids:

@@ -68,7 +68,8 @@ def main() -> None:
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     parser = argparse.ArgumentParser(
-        prog="moleditpy", description="MoleditPy molecular editor"
+        prog="moleditpy",
+        description="MoleditPy — A Python-based molecular editing software",
     )
     parser.add_argument("file", nargs="?", default=None, help="File to open on startup")
     _variant = " (Linux)" if "moleditpy_linux" in (__file__ or "") else ""

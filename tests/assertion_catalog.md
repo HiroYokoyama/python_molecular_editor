@@ -367,6 +367,14 @@ _Verify that the bond line updates correctly when atom positions change._
 - assert line.p1() == QPointF(0.0, 0.0)
 - assert line.p2() == QPointF(5.0, 5.0)
 
+### TestBondItem.test_geometric_shortening
+_Verify that bonds are geometrically shortened to not cross atom labels._
+
+- assert line.p1().x() == pytest.approx(5.0, abs=0.1)
+- assert line.p2().x() == pytest.approx(15.0, abs=0.1)
+- assert line.p1().y() == pytest.approx(0.0, abs=0.1)
+- assert line.p2().y() == pytest.approx(0.0, abs=0.1)
+
 ### TestBondItem.test_set_bond_order
 _Verify that the bond order can be changed and is reflected in the item state._
 
@@ -1047,7 +1055,7 @@ _No description provided._
 _No description provided._
 
 - assert dlg.add_button.isEnabled()
-- assert 'Torsion' in dlg.selection_label.text()
+- assert 'Dihedral' in dlg.selection_label.text()
 
 ### TestAddConstraint.test_distance_constraint_added
 _No description provided._
@@ -1071,11 +1079,11 @@ _No description provided._
 - assert cidx == (2, 0, 1)
 - assert 90.0 <= cval <= 130.0
 
-### TestAddConstraint.test_torsion_constraint_added
+### TestAddConstraint.test_dihedral_constraint_added
 _No description provided._
 
 - assert len(dlg.constraints) == 1
-- assert ctype == 'Torsion'
+- assert ctype == 'Dihedral'
 - assert cidx == (2, 0, 1, 5)
 
 ### TestAddConstraint.test_duplicate_constraint_rejected
@@ -2768,12 +2776,6 @@ _Test BondItem ring rendering logic by mocking RDKit mol integration._
 _Test that moving an atom triggers bond position updates._
 
 - assert bond.update_position.called
-
-### test_atom_item_paint_transparent_bg
-_Test AtomItem paint with transparent background uses CompositionMode_Clear._
-
-- assert painter.setCompositionMode.called
-- assert painter.drawEllipse.called
 
 ### test_atom_item_paint_resilience_to_deleted_bond
 _Test AtomItem paint doesn't crash when a C++ bond object is deleted._

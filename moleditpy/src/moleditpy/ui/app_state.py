@@ -17,7 +17,8 @@ import binascii
 import copy
 import logging
 import os
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, Optional, Tuple
+
 
 import numpy as np
 
@@ -44,9 +45,6 @@ try:
     from .molecular_data import MolecularData
 except (AttributeError, RuntimeError, TypeError, ImportError):
     from moleditpy.core.molecular_data import MolecularData
-
-if TYPE_CHECKING:
-    from .main_window import MainWindow
 
 
 # --- Class Definition ---
@@ -634,7 +632,7 @@ class StateManager:
             method = json_data.get("last_successful_optimization_method", None)
             if hasattr(self.host, "compute_manager"):
                 self.host.compute_manager.last_successful_optimization_method = method
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'compute_manager' on self.host"
                 )
@@ -808,7 +806,7 @@ class StateManager:
                                         "update_atom_id_menu_text",
                                     ):
                                         self.host.view_3d_manager.update_atom_id_menu_text()
-                                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                                    else:
                                         logging.error(
                                             "REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object"
                                         )
@@ -817,13 +815,13 @@ class StateManager:
                                         "update_atom_id_menu_state",
                                     ):
                                         self.host.view_3d_manager.update_atom_id_menu_state()
-                                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                                    else:
                                         logging.error(
                                             "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
                                         )
                                 except (RuntimeError, TypeError, AttributeError):
                                     pass
-                            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            else:
                                 logging.error(
                                     "REPORT ERROR: Missing attribute 'create_atom_id_mapping' on object"
                                 )
@@ -833,7 +831,7 @@ class StateManager:
                             self.host.view_3d_manager.draw_molecule_3d(
                                 self.host.view_3d_manager.current_mol
                             )
-                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        else:
                             logging.error(
                                 "REPORT ERROR: Missing attribute 'draw_molecule_3d' on object"
                             )

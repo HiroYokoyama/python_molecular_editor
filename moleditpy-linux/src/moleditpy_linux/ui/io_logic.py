@@ -761,20 +761,20 @@ class IOManager:
 
             if hasattr(self.host.ui_manager, "_enable_3d_features"):
                 self.host.ui_manager._enable_3d_features(True)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute '_enable_3d_features' on object"
                 )
 
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
                 self.host.view_3d_manager.update_atom_id_menu_text()
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object"
                 )
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
                 self.host.view_3d_manager.update_atom_id_menu_state()
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
                 )
@@ -838,19 +838,19 @@ class IOManager:
             self.host.ui_manager._enter_3d_viewer_ui_mode()
             if hasattr(self.host.ui_manager, "_enable_3d_features"):
                 self.host.ui_manager._enable_3d_features(True)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute '_enable_3d_features' on object"
                 )
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
                 self.host.view_3d_manager.update_atom_id_menu_text()
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object"
                 )
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
                 self.host.view_3d_manager.update_atom_id_menu_state()
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
                 )

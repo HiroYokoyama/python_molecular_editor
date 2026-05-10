@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+import logging
 from typing import Any, Optional, Tuple, Union
 
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
@@ -138,7 +138,48 @@ class BondItem(QGraphicsItem):
             # This is robust and efficient.
             p1 = self.atom1.pos()
             p2 = self.atom2.pos()
-            return QLineF(QPointF(0, 0), p2 - p1)
+            line = QLineF(QPointF(0, 0), p2 - p1)
+
+            if line.length() == 0:
+                return line
+
+            # Shorten from atom1 side
+            t1 = 0.0
+            if getattr(self.atom1, "is_visible", True) and hasattr(
+                self.atom1, "get_bg_ellipse_path"
+            ):
+                path1 = self.atom1.get_bg_ellipse_path()
+                if not path1.isEmpty():
+                    low, high = 0.0, 1.0
+                    for _ in range(12):
+                        mid = (low + high) / 2
+                        if path1.contains(line.pointAt(mid)):
+                            low = mid
+                        else:
+                            high = mid
+                    t1 = low
+
+            # Shorten from atom2 side
+            t2 = 1.0
+            if getattr(self.atom2, "is_visible", True) and hasattr(
+                self.atom2, "get_bg_ellipse_path"
+            ):
+                path2 = self.atom2.get_bg_ellipse_path()
+                if not path2.isEmpty():
+                    line2 = QLineF(QPointF(0, 0), p1 - p2)
+                    low, high = 0.0, 1.0
+                    for _ in range(12):
+                        mid = (low + high) / 2
+                        if path2.contains(line2.pointAt(mid)):
+                            low = mid
+                        else:
+                            high = mid
+                    t2 = 1.0 - low
+
+            if t1 < t2:
+                return QLineF(line.pointAt(t1), line.pointAt(t2))
+            else:
+                return QLineF(line.center(), line.center())
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Fallback for inconsistent/deleted atom references
             # return zero line to prevent downstream crashes.
@@ -164,7 +205,7 @@ class BondItem(QGraphicsItem):
                 )
                 bond_offset = scene.get_setting(key, 3.5)
                 wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )
@@ -184,7 +225,7 @@ class BondItem(QGraphicsItem):
                 if hasattr(scene, "get_setting"):
                     font_size = scene.get_setting("atom_font_size_2d", 20)
                     font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                else:
                     logging.error(
                         f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                     )
@@ -298,7 +339,7 @@ class BondItem(QGraphicsItem):
                     pen.setCapStyle(cap_style)
                     painter.setPen(pen)
                     painter.setBrush(QBrush(bond_color))
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                else:
                     logging.error(
                         f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                     )
@@ -310,16 +351,48 @@ class BondItem(QGraphicsItem):
             wedge_width_half = 6.0
             num_dashes = 8
 
+        painter.save()
+
         # --- Draw Stereochemistry (Wedge/Dash) ---
         if self.order == 1 and self.stereo in [1, 2]:
-            vec = line.unitVector()
+            try:
+                orig_line = QLineF(QPointF(0, 0), self.atom2.pos() - self.atom1.pos())
+                orig_len = orig_line.length()
+                if orig_len > 0:
+                    d1 = QLineF(orig_line.p1(), line.p1()).length()
+                    t1 = max(d1, 5.0) / orig_len
+                    d2 = QLineF(orig_line.p1(), line.p2()).length()
+                    t2 = min(d2, orig_len - 5.0) / orig_len
+                    if t1 > t2:
+                        t1, t2 = 0.5, 0.5
+                else:
+                    t1, t2 = 0.0, 1.0
+            except (AttributeError, TypeError, ValueError):
+                orig_line = line
+                orig_len = line.length()
+                t1, t2 = 0.0, 1.0
+
+            vec = orig_line.unitVector()
             normal = vec.normalVector()
-            p1 = line.p1() + vec.p2() * 5
-            p2 = line.p2() - vec.p2() * 5
 
             if self.stereo == 1:  # Wedge
-                offset = QPointF(normal.dx(), normal.dy()) * wedge_width_half
-                poly = QPolygonF([p1, p2 + offset, p2 - offset])
+                p_start = orig_line.pointAt(t1)
+                p_end = orig_line.pointAt(t2)
+
+                width_start = wedge_width_half * t1
+                width_end = wedge_width_half * t2
+
+                offset_start = QPointF(normal.dx(), normal.dy()) * width_start
+                offset_end = QPointF(normal.dx(), normal.dy()) * width_end
+
+                poly = QPolygonF(
+                    [
+                        p_start - offset_start,
+                        p_start + offset_start,
+                        p_end + offset_end,
+                        p_end - offset_end,
+                    ]
+                )
                 painter.drawPolygon(poly)
 
             elif self.stereo == 2:  # Dash
@@ -329,13 +402,15 @@ class BondItem(QGraphicsItem):
                     pen.setWidthF(2.5)
                     painter.setPen(pen)
 
-                # Use configured number of dashes (default 8)
+                # Draw dashes evenly spaced along the original length,
+                # but only draw the ones that fall within the visible shortened segment.
                 for i in range(num_dashes + 1):
                     t = i / num_dashes
-                    start_pt = p1 * (1 - t) + p2 * t
-                    width = (wedge_width_half * 2.0) * t
-                    offset = QPointF(normal.dx(), normal.dy()) * width / 2.0
-                    painter.drawLine(start_pt - offset, start_pt + offset)
+                    if t1 <= t <= t2:
+                        start_pt = orig_line.pointAt(t)
+                        width = wedge_width_half * t
+                        offset = QPointF(normal.dx(), normal.dy()) * width
+                        painter.drawLine(start_pt - offset, start_pt + offset)
                 painter.restore()
 
         # --- Draw Regular Bonds (Single/Double/Triple) ---
@@ -355,7 +430,7 @@ class BondItem(QGraphicsItem):
                             else "bond_spacing_double_2d"
                         )
                         bond_offset = scene.get_setting(key, 3.5)
-                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    else:
                         logging.error(
                             f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                         )
@@ -494,6 +569,8 @@ class BondItem(QGraphicsItem):
                 # Silent failure for non-critical hover highlight drawing.
                 # If highlight fails, it's just a visual artifact.
                 pass
+
+        painter.restore()
 
     def update_position(self, notify: bool = True) -> None:
         try:

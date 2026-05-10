@@ -17,7 +17,7 @@ import numpy as np
 import sys
 import subprocess
 import time
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Set, Tuple
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 

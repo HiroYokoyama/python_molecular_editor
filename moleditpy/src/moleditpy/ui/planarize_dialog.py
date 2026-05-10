@@ -196,6 +196,7 @@ class PlanarizeDialog(BasePickingDialog):
 
             # Write updated positions back using inherited helper
             self._update_molecule_geometry(positions)
+            self.show_atom_labels()
 
             # Push Undo state AFTER modification
             self._push_undo()

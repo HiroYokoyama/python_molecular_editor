@@ -19,4 +19,4 @@ try:
 except ImportError:
     OBABEL_AVAILABLE = False
 
-from .utils.constants import VERSION as __version__
+from .utils.constants import VERSION as __version__  # noqa: F401

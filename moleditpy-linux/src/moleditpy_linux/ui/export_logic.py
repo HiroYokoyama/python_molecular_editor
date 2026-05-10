@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+import logging
 import math
 import os
 from typing import Any, Dict, List, Optional
@@ -549,7 +549,7 @@ class ExportManager:
                             ):
                                 vtk_color = actor.prop.GetColor()
                                 color = [int(c * 255) for c in vtk_color]
-                            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                            else:
                                 logging.error(
                                     "REPORT ERROR: Missing color attribute on actor/property"
                                 )
@@ -918,6 +918,13 @@ class ExportManager:
             generator.setSize(QSize(width, height))
             generator.setViewBox(rect_to_render)
             generator.setTitle("MoleditPy Molecule")
+            dpi = 96
+            if hasattr(self.host, "logicalDpiX"):
+                try:
+                    dpi = int(self.host.logicalDpiX())
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    pass
+            generator.setResolution(dpi)
 
             # 4. Render
             painter = QPainter()
