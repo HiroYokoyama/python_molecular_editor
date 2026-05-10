@@ -269,7 +269,8 @@ class AtomItem(QGraphicsItem):
                     if partner_pos is None:
                         continue
                     total_dx += partner_pos.x() - my_pos_x
-                except:
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    # Suppress non-critical UI sync errors during atom position retrieval
                     continue
             if total_dx > 0:
                 flip_text = True

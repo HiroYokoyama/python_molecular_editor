@@ -253,7 +253,10 @@ class MockableBondItem(BondItem):
 class TestBondItem:
     @pytest.fixture
     def bond_item(self, mock_main_window):
-        with patch("moleditpy.ui.atom_item.AtomItem.get_bg_ellipse_path", return_value=QPainterPath()):
+        with patch(
+            "moleditpy.ui.atom_item.AtomItem.get_bg_ellipse_path",
+            return_value=QPainterPath(),
+        ):
             atom1 = AtomItem(1, "C", QPointF(0.0, 0.0))
             atom2 = AtomItem(2, "C", QPointF(10.0, 10.0))
 
@@ -283,16 +286,16 @@ class TestBondItem:
         """Verify that bonds are geometrically shortened to not cross atom labels."""
         bond_item.atom1.setPos(0.0, 0.0)
         bond_item.atom2.setPos(20.0, 0.0)
-        
+
         # Create a mock path of radius 5 for both atoms
         mock_path = QPainterPath()
         mock_path.addEllipse(QRectF(-5.0, -5.0, 10.0, 10.0))
-        
+
         bond_item.atom1.get_bg_ellipse_path = MagicMock(return_value=mock_path)
         bond_item.atom2.get_bg_ellipse_path = MagicMock(return_value=mock_path)
-        
+
         line = bond_item.get_line_in_local_coords()
-        
+
         # Original line length is 20. Atom 1 eats 5. Atom 2 eats 5.
         # Shortened line should be roughly from X=5 to X=15.
         # Allow small tolerance due to binary search precision (1/4096 = ~0.005)

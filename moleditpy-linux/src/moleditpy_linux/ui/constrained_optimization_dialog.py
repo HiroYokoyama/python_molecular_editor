@@ -274,7 +274,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             prefix = "Selected atoms: <b>Angle</b> "
             can_add = True
         elif n == 4:
-            prefix = "Selected atoms: <b>Torsion</b> "
+            prefix = "Selected atoms: <b>Dihedral</b> "
             can_add = True
         else:  # n > 4
             prefix = "Selected atoms (max 4): "
@@ -314,7 +314,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             value = rdMolTransforms.GetAngleDeg(conf, *self.selected_atoms)
             value_str = f"{value:.2f}"
         elif n == 4:
-            constraint_type = "Torsion"
+            constraint_type = "Dihedral"
             value = rdMolTransforms.GetDihedralDeg(conf, *self.selected_atoms)
             value_str = f"{value:.2f}"
         else:
@@ -428,7 +428,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             labels = ["A1", "A2"]
         elif constraint_type == "Angle":
             labels = ["A1", "A2 (V)", "A3"]
-        elif constraint_type == "Torsion":
+        elif constraint_type == "Dihedral":
             labels = ["A1", "A2", "A3", "A4"]
 
         positions = []
@@ -553,7 +553,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                         float(value),
                         float(force_const),
                     )
-                elif const_type == "Torsion":
+                elif const_type == "Dihedral":
                     # C++ signature: (self, idx1, idx2, idx3, idx4, bool relative, minDeg, maxDeg, forceConst)
                     add_torsion_constraint(
                         int(atoms[0]),

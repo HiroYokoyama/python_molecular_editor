@@ -1055,7 +1055,7 @@ _No description provided._
 _No description provided._
 
 - assert dlg.add_button.isEnabled()
-- assert 'Torsion' in dlg.selection_label.text()
+- assert 'Dihedral' in dlg.selection_label.text()
 
 ### TestAddConstraint.test_distance_constraint_added
 _No description provided._
@@ -1079,11 +1079,11 @@ _No description provided._
 - assert cidx == (2, 0, 1)
 - assert 90.0 <= cval <= 130.0
 
-### TestAddConstraint.test_torsion_constraint_added
+### TestAddConstraint.test_dihedral_constraint_added
 _No description provided._
 
 - assert len(dlg.constraints) == 1
-- assert ctype == 'Torsion'
+- assert ctype == 'Dihedral'
 - assert cidx == (2, 0, 1, 5)
 
 ### TestAddConstraint.test_duplicate_constraint_rejected

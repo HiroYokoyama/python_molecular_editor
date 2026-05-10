@@ -14,8 +14,12 @@ from unittest.mock import MagicMock, patch
 
 @pytest.fixture(autouse=True)
 def mock_get_bg_ellipse_path():
-    with patch("moleditpy.ui.atom_item.AtomItem.get_bg_ellipse_path", return_value=QPainterPath()):
+    with patch(
+        "moleditpy.ui.atom_item.AtomItem.get_bg_ellipse_path",
+        return_value=QPainterPath(),
+    ):
         yield
+
 
 def test_atom_item_visual_states(mock_parser_host):
     """Test AtomItem paint and boundingRect with different states."""
@@ -147,7 +151,6 @@ def test_atom_item_item_change_updates_bonds(mock_parser_host):
 
     # Bond update should be called
     assert bond.update_position.called
-
 
 
 def test_atom_item_paint_resilience_to_deleted_bond(mock_parser_host):
