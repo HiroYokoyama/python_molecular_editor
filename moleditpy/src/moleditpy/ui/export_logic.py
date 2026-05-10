@@ -923,6 +923,9 @@ class ExportManager:
             painter = QPainter()
             painter.begin(generator)
             try:
+                painter.setCompositionMode(
+                    QPainter.CompositionMode.CompositionMode_SourceOver
+                )
                 self.host.init_manager.scene.render(
                     painter, rect_to_render, rect_to_render
                 )
