@@ -22,7 +22,6 @@ from PyQt6.QtGui import (
     QFontMetricsF,
     QPainter,
     QPainterPath,
-    QPaintEngine,
     QPen,
 )
 from PyQt6.QtWidgets import QGraphicsItem, QWidget

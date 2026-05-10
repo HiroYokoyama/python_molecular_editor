@@ -17,7 +17,8 @@ import binascii
 import copy
 import logging
 import os
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, Optional, Tuple
+
 
 import numpy as np
 
@@ -44,9 +45,6 @@ try:
     from .molecular_data import MolecularData
 except (AttributeError, RuntimeError, TypeError, ImportError):
     from moleditpy_linux.core.molecular_data import MolecularData
-
-if TYPE_CHECKING:
-    from .main_window import MainWindow
 
 
 # --- Class Definition ---

@@ -10,14 +10,13 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import TYPE_CHECKING, Optional, Union, Any
+from typing import Optional, Any
 import logging
 import numpy as np
 import pyvista as pv
-from PyQt6.QtCore import QEvent, Qt, QObject
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import (
-    QApplication,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -25,7 +24,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QVBoxLayout,
-    QWidget,
 )
 
 try:
