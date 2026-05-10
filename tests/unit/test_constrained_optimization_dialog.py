@@ -4,7 +4,7 @@ Unit tests for ConstrainedOptimizationDialog.
 Covers:
   - Atom selection logic: on_atom_picked (toggle, max-4 FIFO eviction)
   - update_selection_display: label text and add-button state for 0-4 atoms
-  - add_constraint: Distance / Angle / Torsion type detection, duplicate guard
+  - add_constraint: Distance / Angle / Dihedral type detection, duplicate guard
   - remove_constraint / remove_all_constraints: internal list + table sync
   - on_cell_changed: valid value edit, invalid input reverts to original
   - __init__ constraint loading: backward-compat 3-element (default force) and 4-element
@@ -159,7 +159,7 @@ class TestAtomSelection:
         for i in range(4):
             dlg.on_atom_picked(i)
         assert dlg.add_button.isEnabled()
-        assert "Torsion" in dlg.selection_label.text()
+        assert "Dihedral" in dlg.selection_label.text()
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +203,7 @@ class TestAddConstraint:
         assert cidx == (2, 0, 1)
         assert 90.0 <= cval <= 130.0  # tetrahedral angle ~109.5°
 
-    def test_torsion_constraint_added(self, make_dialog):
+    def test_dihedral_constraint_added(self, make_dialog):
         dlg = make_dialog()
         # H2–C0–C1–H5: dihedral in ethane
         dlg.on_atom_picked(2)
@@ -214,7 +214,7 @@ class TestAddConstraint:
 
         assert len(dlg.constraints) == 1
         ctype, cidx, cval, _ = dlg.constraints[0]
-        assert ctype == "Torsion"
+        assert ctype == "Dihedral"
         assert cidx == (2, 0, 1, 5)
 
     def test_duplicate_constraint_rejected(self, make_dialog):
@@ -414,7 +414,7 @@ class TestConstraintLoading:
         existing = [
             ["Distance", [0, 1], 1.54, 1.0e5],
             ["Angle", [2, 0, 1], 109.5, 5.0e4],
-            ["Torsion", [2, 0, 1, 5], 60.0, 1.0e5],
+            ["Dihedral", [2, 0, 1, 5], 60.0, 1.0e5],
         ]
         dlg = make_dialog(constraints=existing)
         assert len(dlg.constraints) == 3
