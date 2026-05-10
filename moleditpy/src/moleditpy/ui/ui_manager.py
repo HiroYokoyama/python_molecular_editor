@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+import logging
 from typing import Any, Optional
 
 import vtk
@@ -71,7 +71,7 @@ class UIManager(QObject):
         # Trigger immediate scene refresh to show/update template previews
         if hasattr(self.host.init_manager.scene, "refresh_mode_state"):
             self.host.init_manager.scene.refresh_mode_state()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'refresh_mode_state' on object"
             )
@@ -282,11 +282,11 @@ class UIManager(QObject):
                 try:
                     if hasattr(thr, "quit"):
                         thr.quit()
-                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    else:
                         logging.error("REPORT ERROR: Missing attribute 'quit' on thr")
                     if hasattr(thr, "wait"):
                         thr.wait(200)
-                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    else:
                         logging.error("REPORT ERROR: Missing attribute 'wait' on thr")
                 except (RuntimeError, TypeError):
                     pass
@@ -404,7 +404,7 @@ class UIManager(QObject):
                     target_widget
                 ):
                     is_on_3d = True
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error("REPORT ERROR: Missing attribute 'plotter' on object")
 
             if is_on_3d:
@@ -454,7 +454,7 @@ class UIManager(QObject):
         for action_name in actions:
             if hasattr(self.host, action_name):
                 getattr(self.host, action_name).setEnabled(enabled)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     f"REPORT ERROR: Missing attribute {action_name} on self.host"
                 )
@@ -462,7 +462,7 @@ class UIManager(QObject):
         for menu_name in menus:
             if hasattr(self.host, menu_name):
                 getattr(self.host, menu_name).setEnabled(enabled)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     f"REPORT ERROR: Missing attribute {menu_name} on self.host"
                 )
@@ -514,7 +514,7 @@ class UIManager(QObject):
             action.setEnabled(False)
         if hasattr(self.host.init_manager, "other_atom_action"):
             self.host.init_manager.other_atom_action.setEnabled(False)
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'other_atom_action' on object"
             )
@@ -640,7 +640,7 @@ class UIManager(QObject):
                             )
                         except (AttributeError, RuntimeError, TypeError):
                             return
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                else:
                     logging.error("REPORT ERROR: Missing attribute 'handle' on object")
 
     def setup_splitter_tooltip(self) -> None:

@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+import logging
 from typing import Any
 
 from PyQt6.QtGui import QColor
@@ -155,27 +155,27 @@ class SettingsDialog(QDialog):
 
         if hasattr(self.parent_window.init_manager, "settings_dirty"):
             self.parent_window.init_manager.settings_dirty = True
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error("REPORT ERROR: Missing attribute 'settings_dirty' on object")
 
         # Persist to disk immediately
         if hasattr(self.parent_window, "init_manager"):
             self.parent_window.init_manager.save_settings()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'init_manager' on self.parent_window"
             )
 
         if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
             self.parent_window.view_3d_manager.apply_3d_settings()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'apply_3d_settings' on object"
             )
 
         if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
             self.parent_window.init_manager.update_cpk_colors_from_settings()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'update_cpk_colors_from_settings' on object"
             )
@@ -197,7 +197,7 @@ class SettingsDialog(QDialog):
                     item.update_style()
                 elif hasattr(item, "update"):
                     item.update()
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                else:
                     logging.error("REPORT ERROR: Missing attribute 'update' on item")
 
         if hasattr(self.parent_window, "statusBar") and self.parent_window.statusBar():

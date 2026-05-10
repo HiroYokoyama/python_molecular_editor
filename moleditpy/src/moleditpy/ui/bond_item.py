@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+import logging
 from typing import Any, Optional, Tuple, Union
 
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
@@ -205,7 +205,7 @@ class BondItem(QGraphicsItem):
                 )
                 bond_offset = scene.get_setting(key, 3.5)
                 wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )
@@ -225,7 +225,7 @@ class BondItem(QGraphicsItem):
                 if hasattr(scene, "get_setting"):
                     font_size = scene.get_setting("atom_font_size_2d", 20)
                     font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                else:
                     logging.error(
                         f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                     )
@@ -339,7 +339,7 @@ class BondItem(QGraphicsItem):
                     pen.setCapStyle(cap_style)
                     painter.setPen(pen)
                     painter.setBrush(QBrush(bond_color))
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                else:
                     logging.error(
                         f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                     )
@@ -430,7 +430,7 @@ class BondItem(QGraphicsItem):
                             else "bond_spacing_double_2d"
                         )
                         bond_offset = scene.get_setting(key, 3.5)
-                    else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                    else:
                         logging.error(
                             f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                         )

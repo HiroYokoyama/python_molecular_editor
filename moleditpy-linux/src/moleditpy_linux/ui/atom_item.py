@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+import logging
 from typing import Any, List, Optional
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
@@ -93,7 +93,7 @@ class AtomItem(QGraphicsItem):
             if hasattr(scene, "get_setting"):
                 font_size = scene.get_setting("atom_font_size_2d", 20)
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )
@@ -120,7 +120,7 @@ class AtomItem(QGraphicsItem):
             if hasattr(scene, "get_setting"):
                 font_size = scene.get_setting("atom_font_size_2d", 20)
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )

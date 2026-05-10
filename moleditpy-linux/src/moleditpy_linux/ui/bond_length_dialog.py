@@ -163,17 +163,23 @@ class BondLengthDialog(GeometryBaseDialog):
         if atom_idx == self.atom1_idx:
             self.atom1_idx = self.atom2_idx
             self.atom2_idx = None
+            self._snapshot_positions = None
         elif atom_idx == self.atom2_idx:
             self.atom2_idx = None
+            self._snapshot_positions = None
         else:
             if self.atom1_idx is None:
                 self.atom1_idx = atom_idx
+                self._snapshot_positions = None
             elif self.atom2_idx is None:
                 self.atom2_idx = atom_idx
+                # Take a fresh snapshot immediately upon completing the selection
+                self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
             else:
                 # Reset and start over
                 self.atom1_idx = atom_idx
                 self.atom2_idx = None
+                self._snapshot_positions = None
 
         self.update_display()
 
@@ -181,13 +187,14 @@ class BondLengthDialog(GeometryBaseDialog):
         """Clear the current atom selection."""
         self.atom1_idx = None
         self.atom2_idx = None
+        self._snapshot_positions = None
         self.clear_selection_labels()
         self.update_display()
 
     def show_atom_labels(self) -> None:
         """Display labels on the selected atoms."""
         selected_atoms = [self.atom1_idx, self.atom2_idx]
-        labels = ["1st", "2nd"]
+        labels = ["1", "2"]
         pairs = [
             (idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None
         ]
@@ -202,6 +209,7 @@ class BondLengthDialog(GeometryBaseDialog):
             self.selection_label.setText("No atoms selected")
             self.distance_label.setText("")
             self.apply_button.setEnabled(False)
+            self._snapshot_positions = None
             # Clear distance input when no selection
             try:
                 self.distance_input.blockSignals(True)
@@ -221,6 +229,7 @@ class BondLengthDialog(GeometryBaseDialog):
             )
             self.distance_label.setText("")
             self.apply_button.setEnabled(False)
+            self._snapshot_positions = None
             # Add label
             self.add_selection_label(self.atom1_idx, "1")
             # Clear distance input while selection is incomplete
@@ -283,6 +292,7 @@ class BondLengthDialog(GeometryBaseDialog):
             if new_distance <= 0:
                 QMessageBox.warning(self, "Invalid Input", "Distance must be positive.")
                 return
+            self._snapshot_positions = None
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return

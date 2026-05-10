@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+import logging
 
 import json
 import os
@@ -81,7 +81,7 @@ class DialogManager:
                 preselected_atoms = list(
                     self.host.edit_3d_manager.selected_atoms_for_measurement
                 )
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host"
             )

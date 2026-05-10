@@ -14,7 +14,7 @@ import logging
 from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QCloseEvent, QKeyEvent
 from PyQt6.QtWidgets import QDialog, QWidget
 from rdkit import Chem, Geometry
@@ -114,14 +114,25 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
             # If for some reason the cache is incompatible, draw_molecule_3d below will rebuild it
             pass
 
-        # 3. Redraw
+        # 3. Redraw molecule
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
         self._molecule_modified = True
 
-        # 4. Refresh chiral/cis-trans labels if applicable
+        # 4. Refresh display (deferred to ensure stability)
+        is_dragging = getattr(self, "_slider_dragging", False)
+        
+        if is_dragging and hasattr(self, "show_atom_labels"):
+            QTimer.singleShot(200, self.show_atom_labels)
+        elif hasattr(self, "update_display"):
+            QTimer.singleShot(200, self.update_display)
+            
+        if hasattr(self.main_window.view_3d_manager, "plotter") and self.main_window.view_3d_manager.plotter:
+            QTimer.singleShot(200, self.main_window.view_3d_manager.plotter.render)
+
+        # 5. Refresh chiral/cis-trans labels if applicable
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
             self.main_window.view_3d_manager.update_chiral_labels()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
             )
@@ -131,7 +142,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         if hasattr(self.main_window, "state_manager"):
             self.main_window.edit_actions_manager.push_undo_state()
             self._molecule_modified = False
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'state_manager' on self.main_window"
             )

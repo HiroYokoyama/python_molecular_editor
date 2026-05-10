@@ -199,14 +199,16 @@ class DihedralDialog(GeometryBaseDialog):
                 self.atom3_idx = atom_idx
             elif self.atom4_idx is None:
                 self.atom4_idx = atom_idx
-                # Take a fresh snapshot immediately upon completing the selection
-                self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
+                # Capture the ABSOLUTE baseline for this selection session.
+                self._baseline_positions = self.mol.GetConformer().GetPositions().copy()
+                self._snapshot_positions = self._baseline_positions.copy()
             else:
                 # Reset and start over
                 self.atom1_idx = atom_idx
                 self.atom2_idx = None
                 self.atom3_idx = None
                 self.atom4_idx = None
+                self._baseline_positions = None
                 self._snapshot_positions = None
 
         self.update_display()
@@ -217,6 +219,7 @@ class DihedralDialog(GeometryBaseDialog):
         self.atom2_idx = None
         self.atom3_idx = None
         self.atom4_idx = None
+        self._baseline_positions = None
         self._snapshot_positions = None
         self.clear_selection_labels()
         self.update_display()
@@ -229,7 +232,7 @@ class DihedralDialog(GeometryBaseDialog):
             self.atom3_idx,
             self.atom4_idx,
         ]
-        labels = ["1st", "2nd", "3rd", "4th"]
+        labels = ["1", "2", "3", "4"]
         pairs = [
             (idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None
         ]
@@ -261,6 +264,7 @@ class DihedralDialog(GeometryBaseDialog):
             self.selection_label.setText(f"Selected: {symbol1}({self.atom1_idx}) - ?")
             self.dihedral_label.setText("")
             self.apply_button.setEnabled(False)
+            self._snapshot_positions = None
             self.add_selection_label(self.atom1_idx, "1")
         elif self.atom3_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -270,6 +274,7 @@ class DihedralDialog(GeometryBaseDialog):
             )
             self.dihedral_label.setText("")
             self.apply_button.setEnabled(False)
+            self._snapshot_positions = None
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2")
         elif self.atom4_idx is None:
@@ -281,6 +286,7 @@ class DihedralDialog(GeometryBaseDialog):
             )
             self.dihedral_label.setText("")
             self.apply_button.setEnabled(False)
+            self._snapshot_positions = None
             self.add_selection_label(self.atom1_idx, "1")
             self.add_selection_label(self.atom2_idx, "2")
             self.add_selection_label(self.atom3_idx, "3")
@@ -297,17 +303,20 @@ class DihedralDialog(GeometryBaseDialog):
             current_dihedral = self.calculate_dihedral()
             self.dihedral_label.setText(f"Current dihedral: {current_dihedral:.2f}°")
             self.apply_button.setEnabled(True)
-            # Update input box and slider
+            # Update input box and slider (skip while dragging to prevent snap-back)
             try:
-                self.dihedral_input.blockSignals(True)
-                self.dihedral_input.setText(f"{current_dihedral:.2f}")
-                self.dihedral_input.blockSignals(False)
-                self.dihedral_slider.blockSignals(True)
-                slider_val = int(round(current_dihedral))
-                slider_val = max(-180, min(180, slider_val))
-                self.dihedral_slider.setValue(slider_val)
-                self.dihedral_slider.setEnabled(True)
-                self.dihedral_slider.blockSignals(False)
+                if not self._slider_dragging:
+                    self.dihedral_input.blockSignals(True)
+                    self.dihedral_input.setText(f"{current_dihedral:.2f}")
+                    self.dihedral_input.blockSignals(False)
+                    self.dihedral_slider.blockSignals(True)
+                    slider_val = int(round(current_dihedral))
+                    slider_val = max(-180, min(180, slider_val))
+                    self.dihedral_slider.setValue(slider_val)
+                    self.dihedral_slider.setEnabled(True)
+                    self.dihedral_slider.blockSignals(False)
+                else:
+                    self.dihedral_slider.setEnabled(True)
             except (AttributeError, RuntimeError, TypeError):
                 pass
 
@@ -365,6 +374,7 @@ class DihedralDialog(GeometryBaseDialog):
             self.dihedral_input.blockSignals(True)
             self.dihedral_input.setText(f"{new_dihedral:.2f}")
             self.dihedral_input.blockSignals(False)
+            self._snapshot_positions = None
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid number.")
             return
@@ -382,10 +392,11 @@ class DihedralDialog(GeometryBaseDialog):
 
         conf = self.mol.GetConformer()
 
-        # Use snapshot if available (slider dragging) to keep the rotation axis stable
-        snapshot = self._snapshot_positions
-        if snapshot is not None:
-            positions = snapshot.copy()
+        # Use baseline positions (fixed for dialog session) to keep the rotation axis stable.
+        if hasattr(self, "_baseline_positions") and self._baseline_positions is not None:
+            positions = self._baseline_positions.copy()
+        elif self._snapshot_positions is not None:
+            positions = self._snapshot_positions.copy()
         else:
             positions = conf.GetPositions()
 

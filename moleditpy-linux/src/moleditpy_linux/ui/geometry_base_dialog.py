@@ -78,7 +78,7 @@ class GeometryBaseDialog(BasePickingDialog):
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
             self.main_window.view_3d_manager.update_chiral_labels()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
             )
@@ -108,7 +108,7 @@ class GeometryBaseDialog(BasePickingDialog):
 
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
             self.main_window.view_3d_manager.update_chiral_labels()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
             )

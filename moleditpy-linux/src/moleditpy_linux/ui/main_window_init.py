@@ -428,7 +428,7 @@ class MainInitManager:
                             c.greenF(),
                             c.blueF(),
                         ]
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                else:
                     logging.error(
                         "REPORT ERROR: Missing attribute 'CPK_COLORS_PV' on constants module"
                     )
@@ -511,7 +511,7 @@ class MainInitManager:
                 for key, action in self.opt3d_actions.items():
                     # Use case-insensitive comparison for robustness
                     action.setChecked(key.upper() == current_method)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error("REPORT ERROR: Missing attribute 'opt3d_actions' on self")
 
             # Conversion actions
@@ -524,7 +524,7 @@ class MainInitManager:
                 ).lower()
                 for key, action in self.conv_actions.items():
                     action.setChecked(key.lower() == mode)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error("REPORT ERROR: Missing attribute 'conv_actions' on self")
 
             # Intermolecular interaction
@@ -534,7 +534,7 @@ class MainInitManager:
                         "optimize_intermolecular_interaction_rdkit", True
                     )
                 )
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'intermolecular_rdkit_action' on self"
                 )
@@ -567,7 +567,7 @@ class MainInitManager:
                             continue
                         if hasattr(item, "update_style"):
                             item.update_style()
-                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        else:
                             logging.error(
                                 "REPORT ERROR: Missing attribute 'update_style' on item"
                             )
@@ -1037,7 +1037,7 @@ class MainInitManager:
         if hasattr(self, "plugin_toolbar"):
             self.plugin_toolbar.clear()
             self.plugin_toolbar.hide()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error("REPORT ERROR: Missing attribute 'plugin_toolbar' on self")
 
     def _init_left_panel(self, left_layout: Any) -> None:

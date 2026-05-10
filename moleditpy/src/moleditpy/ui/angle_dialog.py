@@ -189,8 +189,10 @@ class AngleDialog(GeometryBaseDialog):
                 self.atom2_idx = atom_idx
             elif self.atom3_idx is None:
                 self.atom3_idx = atom_idx
-                # Take a fresh snapshot immediately upon completing the triad selection
-                self._snapshot_positions = self.mol.GetConformer().GetPositions().copy()
+                # Capture the ABSOLUTE baseline for this selection session.
+                # This prevents 'direction change' drift during multiple slider drags.
+                self._baseline_positions = self.mol.GetConformer().GetPositions().copy()
+                self._snapshot_positions = self._baseline_positions.copy()
             else:
                 # Reset and start over
                 self.atom1_idx = atom_idx
@@ -205,6 +207,7 @@ class AngleDialog(GeometryBaseDialog):
         self.atom1_idx = None
         self.atom2_idx = None  # vertex atom
         self.atom3_idx = None
+        self._baseline_positions = None
         self._snapshot_positions = None
         self.clear_selection_labels()
         self.update_display()
@@ -212,7 +215,7 @@ class AngleDialog(GeometryBaseDialog):
     def show_atom_labels(self) -> None:
         """Display labels on the selected atoms."""
         selected_atoms = [self.atom1_idx, self.atom2_idx, self.atom3_idx]
-        labels = ["1st", "2nd (vertex)", "3rd"]
+        labels = ["1", "2", "3"]
         pairs = [
             (idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None
         ]
@@ -271,7 +274,7 @@ class AngleDialog(GeometryBaseDialog):
             self._snapshot_positions = None
             # Add labels
             self.add_selection_label(self.atom1_idx, "1")
-            self.add_selection_label(self.atom2_idx, "2(vertex)")
+            self.add_selection_label(self.atom2_idx, "2")
             # Clear angle input while selection is incomplete
             try:
                 self.angle_input.blockSignals(True)
@@ -295,23 +298,35 @@ class AngleDialog(GeometryBaseDialog):
             current_angle = self.calculate_angle()
             self.angle_label.setText(f"Current angle: {current_angle:.2f}°")
             self.apply_button.setEnabled(True)
-            # Update angle input box with current angle
+            # Update angle input box and slider
             try:
-                self.angle_input.blockSignals(True)
-                self.angle_input.setText(f"{current_angle:.2f}")
-                self.angle_input.blockSignals(False)
-                self.angle_slider.blockSignals(True)
-                slider_val = int(round(current_angle))
-                slider_val = max(-180, min(180, slider_val))
-                self.angle_slider.setValue(slider_val)
-                self.angle_slider.setEnabled(True)
-                self.angle_slider.blockSignals(False)
+                # Update input box and slider only if not dragging
+                if not self._slider_dragging:
+                    self.angle_input.blockSignals(True)
+                    self.angle_input.setText(f"{current_angle:.2f}")
+                    self.angle_input.blockSignals(False)
+                    
+                    # UPDATE SLIDER: Logic to prevent 'jumping' to positive value
+                    slider_val = int(round(current_angle))
+                    current_slider_val = self.angle_slider.value()
+                    
+                    # If the user is on the negative side of the slider, keep the sign
+                    if current_slider_val < 0:
+                        slider_val = -slider_val
+                        
+                    if current_slider_val != slider_val:
+                        self.angle_slider.blockSignals(True)
+                        self.angle_slider.setValue(slider_val)
+                        self.angle_slider.blockSignals(False)
+                    self.angle_slider.setEnabled(True)
+                else:
+                    self.angle_slider.setEnabled(True)
             except (AttributeError, RuntimeError, TypeError):
                 pass
 
             # Add labels
             self.add_selection_label(self.atom1_idx, "1")
-            self.add_selection_label(self.atom2_idx, "2(vertex)")
+            self.add_selection_label(self.atom2_idx, "2")
             self.add_selection_label(self.atom3_idx, "3")
 
     def calculate_angle(self) -> float:
@@ -366,10 +381,11 @@ class AngleDialog(GeometryBaseDialog):
         """Adjust the bond angle."""
         conf = self.mol.GetConformer()
 
-        # Use snapshot if available (slider dragging) to keep the rotation axis stable
-        snapshot = self._snapshot_positions
-        if snapshot is not None:
-            positions = snapshot.copy()
+        # Use baseline positions (fixed for dialog session) to keep the rotation axis stable.
+        if hasattr(self, "_baseline_positions") and self._baseline_positions is not None:
+            positions = self._baseline_positions.copy()
+        elif self._snapshot_positions is not None:
+            positions = self._snapshot_positions.copy()
         else:
             positions = conf.GetPositions()
 
@@ -379,10 +395,15 @@ class AngleDialog(GeometryBaseDialog):
         idx_b: int = self.atom2_idx  # vertex
         idx_c: int = self.atom3_idx
 
+        # Calculate baseline angle from the POSITIONS we are working on (important for snapshot stability)
+        p_a, p_b, p_c = positions[idx_a], positions[idx_b], positions[idx_c]
+        from moleditpy.core.mol_geometry import calc_angle_deg
+        baseline_angle = calc_angle_deg(p_a, p_b, p_c)
+
         if self.both_groups_radio.isChecked():
             # Both arms rotate equally (half angle each)
-            current_angle = self.calculate_angle()
-            half_delta_deg = (new_angle_deg - current_angle) / 2.0
+            # Use baseline_angle from snapshot to avoid drift/jumps
+            half_delta_deg = (new_angle_deg - baseline_angle) / 2.0
 
             group1 = get_connected_group(self.mol, idx_a, exclude=idx_b)
             group3 = get_connected_group(self.mol, idx_c, exclude=idx_b)
@@ -393,7 +414,7 @@ class AngleDialog(GeometryBaseDialog):
                 idx_c,
                 idx_b,
                 idx_a,
-                current_angle + half_delta_deg,
+                baseline_angle + half_delta_deg,
                 group1,
             )
             # Arm 3 rotates to the FINAL angle (relative to the now-moved Arm 1)

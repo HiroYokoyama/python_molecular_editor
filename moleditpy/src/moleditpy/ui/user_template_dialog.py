@@ -113,7 +113,7 @@ class UserTemplateDialog(QDialog):
         self.selected_template = None
         if hasattr(self, "delete_button"):
             self.delete_button.setEnabled(False)
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error("REPORT ERROR: Missing attribute 'delete_button' on self")
 
         # 2. Reset Main Window Mode (UI/Toolbar)
@@ -144,7 +144,7 @@ class UserTemplateDialog(QDialog):
                 # C. Clear/Hide Preview Item
                 if hasattr(scene, "clear_template_preview"):
                     scene.clear_template_preview()
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                else:
                     logging.error(
                         "REPORT ERROR: Missing attribute 'clear_template_preview' on scene"
                     )
@@ -182,7 +182,7 @@ class UserTemplateDialog(QDialog):
                             child.redraw_with_current_size()
                         elif hasattr(child, "refit_view"):
                             child.refit_view()
-                        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                        else:
                             logging.error(
                                 "REPORT ERROR: Missing attribute 'refit_view' on child"
                             )

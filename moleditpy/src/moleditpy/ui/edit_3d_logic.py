@@ -17,7 +17,7 @@ main_window_edit_3d.py
 Mixin class separated from main_window.py
 """
 
-import logging  # [REPORT ERROR MISSING ATTRIBUTE]
+import logging
 from typing import Any, List, Optional
 
 import numpy as np
@@ -91,7 +91,7 @@ class Edit3DManager:
                 self.host.init_manager.edit_3d_action.setChecked(False)
                 if hasattr(self.host, "ui_manager"):
                     self.host.ui_manager.toggle_3d_edit_mode(False)
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                else:
                     logging.error(
                         "REPORT ERROR: Missing attribute 'ui_manager' on self.host"
                     )
@@ -253,7 +253,7 @@ class Edit3DManager:
                     rdkit_idx = self.find_rdkit_atom_index(item)
                     if rdkit_idx is not None:
                         atom_idx_to_item[rdkit_idx] = item
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error("REPORT ERROR: Missing attribute 'scene' on object")
 
         # Add to 2D view
@@ -311,7 +311,7 @@ class Edit3DManager:
                         # Best-effort removal failed after sip check failed; skip.
                         continue
             self.measurement_label_items_2d.clear()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'measurement_label_items_2d' on self"
             )

@@ -207,7 +207,7 @@ class EditActionsManager:
         self.update_implicit_hydrogens()
         if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'update_realtime_info' on object"
             )
@@ -236,7 +236,7 @@ class EditActionsManager:
         self.update_undo_redo_actions()
         if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'update_realtime_info' on object"
             )
@@ -269,7 +269,7 @@ class EditActionsManager:
         self.update_undo_redo_actions()
         if hasattr(self.host.state_manager, "update_realtime_info"):
             self.host.state_manager.update_realtime_info()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'update_realtime_info' on object"
             )
@@ -283,11 +283,11 @@ class EditActionsManager:
         """Enable or disable Undo/Redo UI actions based on stack counts."""
         if hasattr(self.host.init_manager, "undo_action"):
             self.host.init_manager.undo_action.setEnabled(len(self.undo_stack) > 1)
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error("REPORT ERROR: Missing attribute 'undo_action' on object")
         if hasattr(self.host.init_manager, "redo_action"):
             self.host.init_manager.redo_action.setEnabled(len(self.redo_stack) > 0)
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error("REPORT ERROR: Missing attribute 'redo_action' on object")
 
     def copy_selection(self) -> None:
@@ -952,7 +952,7 @@ class EditActionsManager:
         # Also clear measurement labels
         if hasattr(self.host, "edit_3d_manager"):
             self.host.edit_3d_manager.clear_2d_measurement_labels()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host"
             )
@@ -1109,7 +1109,7 @@ class EditActionsManager:
                     with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                         # Suppress transient errors during item update.
                         it.update()
-                else:  # [REPORT ERROR MISSING ATTRIBUTE]
+                else:
                     logging.error("REPORT ERROR: Missing attribute 'update' on it")
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Ignore any unexpected errors when touching the item
@@ -1226,7 +1226,7 @@ class EditActionsManager:
             # Update measurement labels
             if hasattr(self.host.edit_3d_manager, "update_2d_measurement_labels"):
                 self.host.edit_3d_manager.update_2d_measurement_labels()
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object"
                 )
@@ -1324,7 +1324,7 @@ class EditActionsManager:
         # Update labels after resolution
         if hasattr(self.host.edit_3d_manager, "update_2d_measurement_labels"):
             self.host.edit_3d_manager.update_2d_measurement_labels()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object"
             )
@@ -1517,7 +1517,7 @@ class EditActionsManager:
             if hasattr(self.host.init_manager, "optimize_3d_button"):
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.host.init_manager.optimize_3d_button.setEnabled(False)
-            else:  # [REPORT ERROR MISSING ATTRIBUTE]
+            else:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
                 )
@@ -1551,7 +1551,7 @@ class EditActionsManager:
 
         if hasattr(self.host.view_3d_manager, "reset_zoom"):
             self.host.view_3d_manager.reset_zoom()
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error("REPORT ERROR: Missing attribute 'reset_zoom' on object")
 
         self.host.is_xyz_derived = False
@@ -1563,7 +1563,7 @@ class EditActionsManager:
                 self.host.init_manager.optimize_3d_button.setEnabled(
                     not getattr(self.host, "chem_check_failed", False)
                 )
-        else:  # [REPORT ERROR MISSING ATTRIBUTE]
+        else:
             logging.error(
                 "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
             )
