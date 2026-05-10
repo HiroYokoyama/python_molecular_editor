@@ -370,7 +370,7 @@ class MainInitManager:
                 )
 
                 for it in list(self.host.init_manager.scene.items()):
-                    if hasattr(it, "update_style"):  # [SAFE]
+                    if hasattr(it, "update_style"):  # Safe
                         it.update_style()
                 self.host.init_manager.scene.update()
                 for v in list(self.host.init_manager.scene.views()):
