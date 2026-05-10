@@ -54,7 +54,7 @@ class SettingsDialog(QDialog):
         self.tab_scene = Settings3DSceneTab(self.default_settings, self)
         self.tab_bs = SettingsModelTab(
             "ball_stick",
-            "Ball & Stick model shows atoms as spheres and bonds as cylinders.",
+            "Ball & Stick model shows atoms as spheres and bonds as cylinders. (Defaults: Atom Size is 30% of CPK)",
             self.default_settings,
             self,
         )

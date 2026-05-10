@@ -367,6 +367,14 @@ _Verify that the bond line updates correctly when atom positions change._
 - assert line.p1() == QPointF(0.0, 0.0)
 - assert line.p2() == QPointF(5.0, 5.0)
 
+### TestBondItem.test_geometric_shortening
+_Verify that bonds are geometrically shortened to not cross atom labels._
+
+- assert line.p1().x() == pytest.approx(5.0, abs=0.1)
+- assert line.p2().x() == pytest.approx(15.0, abs=0.1)
+- assert line.p1().y() == pytest.approx(0.0, abs=0.1)
+- assert line.p2().y() == pytest.approx(0.0, abs=0.1)
+
 ### TestBondItem.test_set_bond_order
 _Verify that the bond order can be changed and is reflected in the item state._
 

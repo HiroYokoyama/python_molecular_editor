@@ -355,14 +355,44 @@ class BondItem(QGraphicsItem):
 
         # --- Draw Stereochemistry (Wedge/Dash) ---
         if self.order == 1 and self.stereo in [1, 2]:
-            vec = line.unitVector()
+            try:
+                orig_line = QLineF(QPointF(0, 0), self.atom2.pos() - self.atom1.pos())
+                orig_len = orig_line.length()
+                if orig_len > 0:
+                    d1 = QLineF(orig_line.p1(), line.p1()).length()
+                    t1 = max(d1, 5.0) / orig_len
+                    d2 = QLineF(orig_line.p1(), line.p2()).length()
+                    t2 = min(d2, orig_len - 5.0) / orig_len
+                    if t1 > t2:
+                        t1, t2 = 0.5, 0.5
+                else:
+                    t1, t2 = 0.0, 1.0
+            except (AttributeError, TypeError, ValueError):
+                orig_line = line
+                orig_len = line.length()
+                t1, t2 = 0.0, 1.0
+
+            vec = orig_line.unitVector()
             normal = vec.normalVector()
-            p1 = line.p1() + vec.p2() * 5
-            p2 = line.p2() - vec.p2() * 5
 
             if self.stereo == 1:  # Wedge
-                offset = QPointF(normal.dx(), normal.dy()) * wedge_width_half
-                poly = QPolygonF([p1, p2 + offset, p2 - offset])
+                p_start = orig_line.pointAt(t1)
+                p_end = orig_line.pointAt(t2)
+
+                width_start = wedge_width_half * t1
+                width_end = wedge_width_half * t2
+
+                offset_start = QPointF(normal.dx(), normal.dy()) * width_start
+                offset_end = QPointF(normal.dx(), normal.dy()) * width_end
+
+                poly = QPolygonF(
+                    [
+                        p_start - offset_start,
+                        p_start + offset_start,
+                        p_end + offset_end,
+                        p_end - offset_end,
+                    ]
+                )
                 painter.drawPolygon(poly)
 
             elif self.stereo == 2:  # Dash
@@ -372,13 +402,15 @@ class BondItem(QGraphicsItem):
                     pen.setWidthF(2.5)
                     painter.setPen(pen)
 
-                # Use configured number of dashes (default 8)
+                # Draw dashes evenly spaced along the original length,
+                # but only draw the ones that fall within the visible shortened segment.
                 for i in range(num_dashes + 1):
                     t = i / num_dashes
-                    start_pt = p1 * (1 - t) + p2 * t
-                    width = (wedge_width_half * 2.0) * t
-                    offset = QPointF(normal.dx(), normal.dy()) * width / 2.0
-                    painter.drawLine(start_pt - offset, start_pt + offset)
+                    if t1 <= t <= t2:
+                        start_pt = orig_line.pointAt(t)
+                        width = wedge_width_half * t
+                        offset = QPointF(normal.dx(), normal.dy()) * width
+                        painter.drawLine(start_pt - offset, start_pt + offset)
                 painter.restore()
 
         # --- Draw Regular Bonds (Single/Double/Triple) ---

@@ -279,6 +279,28 @@ class TestBondItem:
         # p2 (10,10) - p1 (5,5) = (5,5)
         assert line.p2() == QPointF(5.0, 5.0)
 
+    def test_geometric_shortening(self, bond_item):
+        """Verify that bonds are geometrically shortened to not cross atom labels."""
+        bond_item.atom1.setPos(0.0, 0.0)
+        bond_item.atom2.setPos(20.0, 0.0)
+        
+        # Create a mock path of radius 5 for both atoms
+        mock_path = QPainterPath()
+        mock_path.addEllipse(QRectF(-5.0, -5.0, 10.0, 10.0))
+        
+        bond_item.atom1.get_bg_ellipse_path = MagicMock(return_value=mock_path)
+        bond_item.atom2.get_bg_ellipse_path = MagicMock(return_value=mock_path)
+        
+        line = bond_item.get_line_in_local_coords()
+        
+        # Original line length is 20. Atom 1 eats 5. Atom 2 eats 5.
+        # Shortened line should be roughly from X=5 to X=15.
+        # Allow small tolerance due to binary search precision (1/4096 = ~0.005)
+        assert line.p1().x() == pytest.approx(5.0, abs=0.1)
+        assert line.p2().x() == pytest.approx(15.0, abs=0.1)
+        assert line.p1().y() == pytest.approx(0.0, abs=0.1)
+        assert line.p2().y() == pytest.approx(0.0, abs=0.1)
+
     def test_set_bond_order(self, bond_item):
         """Verify that the bond order can be changed and is reflected in the item state."""
         bond_item.set_order(2)  # method name is set_order

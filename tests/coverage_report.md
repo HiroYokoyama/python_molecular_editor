@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **79.25%**
-- **Core Molecular Logic Coverage**: **81.06%**
+- **Overall Project Coverage (Full)**: **79.24%**
+- **Core Molecular Logic Coverage**: **81.04%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -22,10 +22,10 @@
 | moleditpy\src\moleditpy\ui\alignment_dialog.py          |    140 |     13 |   90.7% |
 | moleditpy\src\moleditpy\ui\angle_dialog.py              |    245 |     29 |   88.2% |
 | moleditpy\src\moleditpy\ui\app_state.py                 |    423 |     99 |   76.6% |
-| moleditpy\src\moleditpy\ui\atom_item.py                 |    308 |     44 |   85.7% |
+| moleditpy\src\moleditpy\ui\atom_item.py                 |    311 |     44 |   85.9% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |     93 |     28 |   69.9% |
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     70 |      5 |   92.9% |
-| moleditpy\src\moleditpy\ui\bond_item.py                 |    331 |     73 |   77.9% |
+| moleditpy\src\moleditpy\ui\bond_item.py                 |    350 |     79 |   77.4% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    216 |     17 |   92.1% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    550 |     90 |   83.6% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    199 |     32 |   83.9% |
@@ -56,7 +56,7 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     54 |     17 |   68.5% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
-| **TOTAL** | **12991** | **2461** | **81.06%** |
+| **TOTAL** | **13013** | **2467** | **81.04%** |
 
 ### Full Application Breakdown
 
@@ -76,10 +76,10 @@
 | moleditpy\src\moleditpy\ui\analysis_window.py           |    116 |     25 |   78.4% |
 | moleditpy\src\moleditpy\ui\angle_dialog.py              |    247 |     30 |   87.9% |
 | moleditpy\src\moleditpy\ui\app_state.py                 |    425 |    100 |   76.5% |
-| moleditpy\src\moleditpy\ui\atom_item.py                 |    308 |     44 |   85.7% |
+| moleditpy\src\moleditpy\ui\atom_item.py                 |    311 |     44 |   85.9% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |     93 |     28 |   69.9% |
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     72 |      6 |   91.7% |
-| moleditpy\src\moleditpy\ui\bond_item.py                 |    331 |     73 |   77.9% |
+| moleditpy\src\moleditpy\ui\bond_item.py                 |    350 |     79 |   77.4% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    218 |     18 |   91.7% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    550 |     90 |   83.6% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    199 |     32 |   83.9% |
@@ -120,7 +120,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      2 |   94.4% |
-| **TOTAL** | **14740** | **3059** | **79.25%** |
+| **TOTAL** | **14762** | **3065** | **79.24%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

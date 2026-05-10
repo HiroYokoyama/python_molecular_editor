@@ -502,7 +502,9 @@ class AtomItem(QGraphicsItem):
                 for bond in self.bonds:
                     if bond.scene():
                         bond.update_position()
-
+        elif change == QGraphicsItem.GraphicsItemChange.ItemSceneHasChanged:
+            if self.scene() is not None:
+                self.update_style()
         return res
 
     def hoverEnterEvent(self, event: Any) -> None:
