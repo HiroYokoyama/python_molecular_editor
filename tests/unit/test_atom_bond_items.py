@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QPointF, QRectF
+from PyQt6.QtGui import QPainterPath
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
 
@@ -252,12 +253,13 @@ class MockableBondItem(BondItem):
 class TestBondItem:
     @pytest.fixture
     def bond_item(self, mock_main_window):
-        atom1 = AtomItem(1, "C", QPointF(0.0, 0.0))
-        atom2 = AtomItem(2, "C", QPointF(10.0, 10.0))
+        with patch("moleditpy.ui.atom_item.AtomItem.get_bg_ellipse_path", return_value=QPainterPath()):
+            atom1 = AtomItem(1, "C", QPointF(0.0, 0.0))
+            atom2 = AtomItem(2, "C", QPointF(10.0, 10.0))
 
-        # Use MockableBondItem to allow scene() mocking
-        bond = MockableBondItem(atom1, atom2)
-        return bond
+            # Use MockableBondItem to allow scene() mocking
+            bond = MockableBondItem(atom1, atom2)
+            yield bond
 
     def test_init(self, bond_item):
         """Verify BondItem initialization with atom partners and default order."""

@@ -2769,12 +2769,6 @@ _Test that moving an atom triggers bond position updates._
 
 - assert bond.update_position.called
 
-### test_atom_item_paint_transparent_bg
-_Test AtomItem paint with transparent background uses CompositionMode_Clear._
-
-- assert painter.setCompositionMode.called
-- assert painter.drawEllipse.called
-
 ### test_atom_item_paint_resilience_to_deleted_bond
 _Test AtomItem paint doesn't crash when a C++ bond object is deleted._
 

@@ -1,3 +1,4 @@
+import pytest
 from PyQt6.QtCore import Qt, QPointF, QRectF
 from PyQt6.QtGui import QPainter, QPainterPath
 from PyQt6.QtWidgets import (
@@ -8,7 +9,13 @@ from PyQt6.QtWidgets import (
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
 from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch
 
+
+@pytest.fixture(autouse=True)
+def mock_get_bg_ellipse_path():
+    with patch("moleditpy.ui.atom_item.AtomItem.get_bg_ellipse_path", return_value=QPainterPath()):
+        yield
 
 def test_atom_item_visual_states(mock_parser_host):
     """Test AtomItem paint and boundingRect with different states."""
@@ -141,26 +148,6 @@ def test_atom_item_item_change_updates_bonds(mock_parser_host):
     # Bond update should be called
     assert bond.update_position.called
 
-
-def test_atom_item_paint_transparent_bg(mock_parser_host):
-    """Test AtomItem paint with transparent background uses CompositionMode_Clear."""
-    atom = AtomItem(0, "O", QPointF(0, 0))
-
-    painter = MagicMock(spec=QPainter)
-
-    # Mock scene with transparent background
-    scene = MagicMock()
-    scene.backgroundBrush.return_value.style.return_value = Qt.BrushStyle.NoBrush
-    scene.views.return_value = [MagicMock()]
-    scene.views()[0].window.return_value.settings = {"background_color_2d": "#00000000"}
-    atom.scene = MagicMock(return_value=scene)
-
-    option = QStyleOptionGraphicsItem()
-    atom.paint(painter, option, None)
-
-    # Should set composition mode to clear for background subtraction
-    assert painter.setCompositionMode.called
-    assert painter.drawEllipse.called
 
 
 def test_atom_item_paint_resilience_to_deleted_bond(mock_parser_host):

@@ -918,14 +918,18 @@ class ExportManager:
             generator.setSize(QSize(width, height))
             generator.setViewBox(rect_to_render)
             generator.setTitle("MoleditPy Molecule")
+            dpi = 96
+            if hasattr(self.host, "logicalDpiX"):
+                try:
+                    dpi = int(self.host.logicalDpiX())
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    pass
+            generator.setResolution(dpi)
 
             # 4. Render
             painter = QPainter()
             painter.begin(generator)
             try:
-                painter.setCompositionMode(
-                    QPainter.CompositionMode.CompositionMode_SourceOver
-                )
                 self.host.init_manager.scene.render(
                     painter, rect_to_render, rect_to_render
                 )

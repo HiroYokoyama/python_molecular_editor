@@ -138,7 +138,48 @@ class BondItem(QGraphicsItem):
             # This is robust and efficient.
             p1 = self.atom1.pos()
             p2 = self.atom2.pos()
-            return QLineF(QPointF(0, 0), p2 - p1)
+            line = QLineF(QPointF(0, 0), p2 - p1)
+
+            if line.length() == 0:
+                return line
+
+            # Shorten from atom1 side
+            t1 = 0.0
+            if getattr(self.atom1, "is_visible", True) and hasattr(
+                self.atom1, "get_bg_ellipse_path"
+            ):
+                path1 = self.atom1.get_bg_ellipse_path()
+                if not path1.isEmpty():
+                    low, high = 0.0, 1.0
+                    for _ in range(12):
+                        mid = (low + high) / 2
+                        if path1.contains(line.pointAt(mid)):
+                            low = mid
+                        else:
+                            high = mid
+                    t1 = low
+
+            # Shorten from atom2 side
+            t2 = 1.0
+            if getattr(self.atom2, "is_visible", True) and hasattr(
+                self.atom2, "get_bg_ellipse_path"
+            ):
+                path2 = self.atom2.get_bg_ellipse_path()
+                if not path2.isEmpty():
+                    line2 = QLineF(QPointF(0, 0), p1 - p2)
+                    low, high = 0.0, 1.0
+                    for _ in range(12):
+                        mid = (low + high) / 2
+                        if path2.contains(line2.pointAt(mid)):
+                            low = mid
+                        else:
+                            high = mid
+                    t2 = 1.0 - low
+
+            if t1 < t2:
+                return QLineF(line.pointAt(t1), line.pointAt(t2))
+            else:
+                return QLineF(line.center(), line.center())
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Fallback for inconsistent/deleted atom references
             # return zero line to prevent downstream crashes.
@@ -309,6 +350,8 @@ class BondItem(QGraphicsItem):
             # Default fallback width for wedge
             wedge_width_half = 6.0
             num_dashes = 8
+
+        painter.save()
 
         # --- Draw Stereochemistry (Wedge/Dash) ---
         if self.order == 1 and self.stereo in [1, 2]:
@@ -494,6 +537,8 @@ class BondItem(QGraphicsItem):
                 # Silent failure for non-critical hover highlight drawing.
                 # If highlight fails, it's just a visual artifact.
                 pass
+
+        painter.restore()
 
     def update_position(self, notify: bool = True) -> None:
         try:
