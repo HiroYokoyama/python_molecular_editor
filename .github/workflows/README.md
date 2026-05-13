@@ -46,7 +46,8 @@ This workflow:
 8. Creates `MoleditPy_<version>_win64_portable.zip`.
 9. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
 10. Uploads all built artifacts to the workflow run.
-11. Publishes both Python packages to TestPyPI.
+11. Starts a separate `ubuntu-latest` publishing job.
+12. Publishes both Python packages to TestPyPI.
 
 It does not commit, tag, push, or create a GitHub Release.
 
@@ -76,8 +77,9 @@ This workflow:
 10. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
 11. Commits the version and Linux sync changes.
 12. Creates and pushes the release tag.
-13. Publishes both Python packages to PyPI.
-14. Creates a GitHub Release and attaches the distributions, installer, and portable ZIP.
+13. Starts a separate `ubuntu-latest` publishing job.
+14. Publishes both Python packages to PyPI.
+15. Creates a GitHub Release and attaches the distributions, installer, and portable ZIP.
 
 ## Required PyPI Setup
 
@@ -134,6 +136,7 @@ The release workflows generate:
 ## Windows Packaging Chain
 
 Windows packaging uses the Linux package variant because Open Babel is disabled there.
+PyPI publishing runs in a separate Linux job because `pypa/gh-action-pypi-publish` only supports GNU/Linux runners.
 
 Build order:
 
