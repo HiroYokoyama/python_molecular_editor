@@ -38,7 +38,7 @@ dependencies = [
   "pyqt6 < 6.11; sys_platform != 'darwin'",
   "pyvista < 0.48",
   "pyvistaqt < 0.12",
-  "rdkit < 2025.10",
+  "rdkit < 2026.4",
   "openbabel-wheel < 3.2"
 ]
 
