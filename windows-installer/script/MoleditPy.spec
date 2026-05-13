@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 spec_dir = Path(SPECPATH).resolve()
-repo_root = spec_dir.parent.parent.parent
+repo_root = spec_dir.parent.parent
 linux_package_dir = repo_root / 'moleditpy-linux' / 'src' / 'moleditpy_linux'
 
 a = Analysis(
