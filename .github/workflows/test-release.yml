@@ -85,6 +85,26 @@ jobs:
               raise SystemExit("Could not update moleditpy/pyproject.toml")
           path.write_text(text, encoding="utf-8")
 
+      - name: Update Windows Installer Download URLs
+        shell: python
+        run: |
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["APP_VERSION"]
+          for path in [
+              Path("windows-installer/windows_installer.md"),
+              Path("windows-installer/windows_installer-jp.md"),
+          ]:
+              text = path.read_text(encoding="utf-8")
+              text = re.sub(
+                  r'releases/download/[^/]+/MoleditPy_[^_]+_win64_',
+                  f'releases/download/{version}/MoleditPy_{version}_win64_',
+                  text,
+              )
+              path.write_text(text, encoding="utf-8")
+
       - name: Sync Linux Package
         run: |
           python scripts/sync_linux_version.py
