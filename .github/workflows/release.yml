@@ -111,12 +111,12 @@ jobs:
 
       - name: Build Windows Executable
         run: |
-          pyinstaller --clean --noconfirm windows-installer/script/MoleditPy.spec
+          pyinstaller --clean --noconfirm --distpath dist/pyinstaller windows-installer/script/MoleditPy.spec
 
       - name: Verify Windows Executable
         shell: pwsh
         run: |
-          $exePath = "dist/MoleditPy/MoleditPy.exe"
+          $exePath = "dist/pyinstaller/MoleditPy/MoleditPy.exe"
           if (-not (Test-Path $exePath)) {
             Write-Error "PyInstaller did not create $exePath"
             exit 1
@@ -127,7 +127,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path "dist/windows" | Out-Null
           Compress-Archive `
-            -Path "dist/MoleditPy/*" `
+            -Path "dist/pyinstaller/MoleditPy/*" `
             -DestinationPath "dist/windows/${env:WINDOWS_PORTABLE_NAME}" `
             -Force
 
@@ -136,7 +136,7 @@ jobs:
         env:
           MOLEDITPY_APP_VERSION: ${{ env.APP_VERSION }}
         run: |
-          $buildDir = (Resolve-Path "dist/MoleditPy").Path
+          $buildDir = (Resolve-Path "dist/pyinstaller/MoleditPy").Path
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
             "/DMyAppVersion=${env:APP_VERSION}" `
             "/DBuildDir=$buildDir" `
