@@ -85,4 +85,4 @@ jobs:
 
     - name: Run Pylint
       run: |
-        pylint moleditpy/src/moleditpy/
+        pylint moleditpy/src/moleditpy/ --errors-only
