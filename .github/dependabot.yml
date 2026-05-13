@@ -5,7 +5,12 @@
 
 version: 2
 updates:
-  - package-ecosystem: "pip" # See documentation for possible values
-    directory: "/moleditpy/" # Location of package manifests
+  - package-ecosystem: "pip"
+    directory: "/moleditpy/"
+    schedule:
+      interval: "monthly"
+      
+  - package-ecosystem: "pip"
+    directory: "/moleditpy-linux/"
     schedule:
       interval: "monthly"
