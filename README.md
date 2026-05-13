@@ -13,6 +13,7 @@
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/moleditpy)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=monthly&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=monthly+downloads)](https://pepy.tech/projects/moleditpy)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/HiroYokoyama/python_molecular_editor)
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/HiroYokoyama)
 
 [🇯🇵 日本語 (Japanese)](#japanese)
 
