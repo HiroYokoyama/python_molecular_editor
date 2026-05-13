@@ -724,7 +724,7 @@ class CalculationWorker(QObject):
 
     def __init__(self, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
-        self.halt_ids: Optional[Set[int]] = None
+        self.halt_ids: Optional[Set[Any]] = None
         self.start_work.connect(self.run_calculation)
 
     @pyqtSlot(str, object)
@@ -739,13 +739,15 @@ class CalculationWorker(QObject):
             h_ids = getattr(self, "halt_ids", None)
             if getattr(self, "halt_all", False):
                 return True  # type: ignore[return-value]
-            if h_ids is None:
+            if not isinstance(h_ids, set):
                 return False
+            # pylint: disable=unsupported-membership-test
             return bool(
                 ("ALL" in h_ids)
                 or (None in h_ids)
                 or (w_id is not None and w_id in h_ids)
             )
+            # pylint: enable=unsupported-membership-test
 
         def _safe_status(msg: str) -> None:
             if _check_halted():
