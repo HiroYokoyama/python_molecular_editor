@@ -1,9 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from pathlib import Path
+
+
+spec_dir = Path(SPECPATH).resolve()
+repo_root = spec_dir.parent.parent.parent
+linux_package_dir = repo_root / 'moleditpy-linux' / 'src' / 'moleditpy_linux'
 
 a = Analysis(
-    ['__main__.py'],
-    pathex=['.'],
+    [str(linux_package_dir / '__main__.py')],
+    pathex=[str(linux_package_dir)],
     binaries=[],
     hiddenimports=[],
     hookspath=[],
@@ -13,7 +19,7 @@ a = Analysis(
     noarchive=False,
     optimize=0,
     datas=[
-        ('assets', 'moleditpy_linux/assets'), 
+        (str(linux_package_dir / 'assets'), 'moleditpy_linux/assets'),
     ],
 )
 pyz = PYZ(a.pure)
@@ -34,7 +40,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['./assets/icon.ico'],
+    icon=[str(linux_package_dir / 'assets' / 'icon.ico')],
 )
 coll = COLLECT(
     exe,

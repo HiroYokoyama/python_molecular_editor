@@ -1,0 +1,164 @@
+name: Test Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Test release version without a leading v, for example 1.2.3.dev1"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: test-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-test-release:
+    runs-on: windows-latest
+    env:
+      APP_VERSION: ${{ inputs.version }}
+      WINDOWS_PORTABLE_NAME: MoleditPy_${{ inputs.version }}_win64_portable.zip
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Test Release Version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_NAME -ne "main") {
+            Write-Error "Test releases must be run from the main branch."
+            exit 1
+          }
+
+          VERSION="${env:APP_VERSION}"
+          if ($VERSION -notmatch '^[0-9]+(\.[0-9]+){2}([a-zA-Z0-9.-]+)?$') {
+            Write-Error "Invalid version: $VERSION. Use a version without a leading v, for example 1.2.3.dev1"
+            exit 1
+          }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup -y
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build pyinstaller pytest pytest-qt pytest-mock pytest-timeout
+          python -m pip install -e moleditpy/
+
+      - name: Run Tests
+        env:
+          MOLEDITPY_HEADLESS: "1"
+          QT_QPA_PLATFORM: "offscreen"
+        run: |
+          python tests/run_all_tests.py --no-cov --no-report --unit --integration
+
+      - name: Update Main Package Version
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          import re
+
+          version = os.environ["APP_VERSION"]
+          path = Path("moleditpy/pyproject.toml")
+          text = path.read_text(encoding="utf-8")
+          text, count = re.subn(
+              r'(?m)^version\s*=\s*["\'][^"\']+["\']',
+              f'version = "{version}"',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("Could not update moleditpy/pyproject.toml")
+          path.write_text(text, encoding="utf-8")
+
+      - name: Sync Linux Package
+        run: |
+          python scripts/sync_linux_version.py
+
+      - name: Install Linux Package for Installer Build
+        run: |
+          python -m pip install -e moleditpy-linux/
+
+      - name: Build Main Package
+        working-directory: moleditpy
+        run: |
+          python -m build --outdir ../dist/moleditpy
+
+      - name: Build Linux Package
+        working-directory: moleditpy-linux
+        run: |
+          python -m build --outdir ../dist/moleditpy-linux
+
+      - name: Build Windows Executable
+        run: |
+          pyinstaller --clean --noconfirm windows-installer/script/MoleditPy.spec
+
+      - name: Verify Windows Executable
+        shell: pwsh
+        run: |
+          $exePath = "dist/MoleditPy/MoleditPy.exe"
+          if (-not (Test-Path $exePath)) {
+            Write-Error "PyInstaller did not create $exePath"
+            exit 1
+          }
+
+      - name: Create Portable Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "dist/windows" | Out-Null
+          Compress-Archive `
+            -Path "dist/MoleditPy/*" `
+            -DestinationPath "dist/windows/${env:WINDOWS_PORTABLE_NAME}" `
+            -Force
+
+      - name: Build Windows Installer
+        shell: pwsh
+        env:
+          MOLEDITPY_APP_VERSION: ${{ env.APP_VERSION }}
+        run: |
+          $buildDir = (Resolve-Path "dist/MoleditPy").Path
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+            "/DMyAppVersion=${env:APP_VERSION}" `
+            "/DBuildDir=$buildDir" `
+            "windows-installer/script/script.iss"
+          Move-Item `
+            -Path "windows-installer/script/Output/MoleditPy_${env:APP_VERSION}_win64_setup.exe" `
+            -Destination "dist/windows/MoleditPy_${env:APP_VERSION}_win64_setup.exe" `
+            -Force
+
+      - name: Upload Test Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-release-${{ env.APP_VERSION }}
+          path: |
+            dist/moleditpy/*
+            dist/moleditpy-linux/*
+            dist/windows/*
+
+      - name: Publish Main Package to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/moleditpy
+          skip-existing: true
+
+      - name: Publish Linux Package to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/moleditpy-linux
+          skip-existing: true

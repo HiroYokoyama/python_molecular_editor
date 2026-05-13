@@ -3,7 +3,15 @@
 ; Non-commercial use only
 
 #define MyAppName "MoleditPy"
-#define MyAppVersion "3.2.0"
+#ifndef MyAppVersion
+#define MyAppVersion GetEnv("MOLEDITPY_APP_VERSION")
+#endif
+#if MyAppVersion == ""
+  #error MyAppVersion must be provided with /DMyAppVersion=<version> or MOLEDITPY_APP_VERSION.
+#endif
+#ifndef BuildDir
+#define BuildDir "C:\Users\hiro2\py3env\moleditpy-installer\Lib\site-packages\moleditpy_linux\dist\MoleditPy"
+#endif
 #define MyAppPublisher "HiroYokoyama"
 #define MyAppURL "https://github.com/HiroYokoyama/python_molecular_editor"
 #define MyAppExeName "MoleditPy.exe"
@@ -36,7 +44,7 @@ ChangesAssociations=yes
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
-OutputBaseFilename=MoleditPy_3.2.0_win64_setup
+OutputBaseFilename=MoleditPy_{#MyAppVersion}_win64_setup
 SolidCompression=yes
 WizardStyle=modern
 
@@ -48,8 +56,8 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\hiro2\py3env\moleditpy-installer\Lib\site-packages\moleditpy_linux\dist\MoleditPy\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\hiro2\py3env\moleditpy-installer\Lib\site-packages\moleditpy_linux\dist\MoleditPy\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#BuildDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#BuildDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Registry]
