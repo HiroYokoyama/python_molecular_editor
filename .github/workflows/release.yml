@@ -44,8 +44,8 @@ jobs:
             exit 1
           }
 
-          git rev-parse "$VERSION" *> $null
-          if ($LASTEXITCODE -eq 0) {
+          $existingTag = git tag -l "$VERSION"
+          if ($existingTag -eq $VERSION) {
             Write-Error "Tag already exists: $VERSION"
             exit 1
           }
