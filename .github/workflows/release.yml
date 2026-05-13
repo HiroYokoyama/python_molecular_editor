@@ -9,8 +9,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -19,6 +18,8 @@ concurrency:
 jobs:
   build-and-release:
     runs-on: windows-latest
+    permissions:
+      contents: write
     env:
       APP_VERSION: ${{ inputs.version }}
       WINDOWS_PORTABLE_NAME: MoleditPy_${{ inputs.version }}_win64_portable.zip
@@ -198,6 +199,9 @@ jobs:
   publish-and-create-release:
     runs-on: ubuntu-latest
     needs: build-and-release
+    permissions:
+      id-token: write
+      contents: write
     env:
       APP_VERSION: ${{ inputs.version }}
 

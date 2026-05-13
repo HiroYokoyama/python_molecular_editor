@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: test-release-${{ github.ref }}
@@ -19,6 +18,8 @@ concurrency:
 jobs:
   build-and-test-release:
     runs-on: windows-latest
+    permissions:
+      contents: read
     env:
       APP_VERSION: ${{ inputs.version }}
       WINDOWS_PORTABLE_NAME: MoleditPy_${{ inputs.version }}_win64_portable.zip
@@ -181,6 +182,8 @@ jobs:
   publish-to-testpypi:
     runs-on: ubuntu-latest
     needs: build-and-test-release
+    permissions:
+      id-token: write
 
     steps:
       - name: Download Main Package Artifacts
