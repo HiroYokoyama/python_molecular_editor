@@ -44,7 +44,7 @@ python tests/run_all_tests.py --catalog-only   # Update only the assertion catal
 
 To maintain high performance and prevent crashes in headless environments, we use a multi-layered mocking strategy:
 
-### 1. Global "Nuclear Mock" (`tests/conftest.py`)
+### 1. Global "Sledgehammer Mock" (`tests/conftest.py`)
 Applied at the very start of the `pytest` lifecycle. It pre-fills `sys.modules` with mock objects for heavy C++ extensions like **VTK** and **PyVista**. This prevents the real libraries from ever loading in test environments, eliminating GPU-related segmentation faults in CI.
 
 ### 2. Standardized App Teardown
