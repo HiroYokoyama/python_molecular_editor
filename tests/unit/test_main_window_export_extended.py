@@ -136,12 +136,18 @@ def test_export_stl_cancel(window, mock_file_dialog):
     assert not any("STL exported" in str(args) for args, _ in call_args_list)
 
 
-def test_export_stl_no_molecule(window):
-    """Test export_stl with no molecule."""
+def test_export_stl_without_current_mol_reaches_dialog(window, mock_file_dialog):
+    """Test export_stl does not require current_mol before choosing a file."""
     window.view_3d_manager.current_mol = None
+    mock_file_dialog.getSaveFileName.return_value = ("", "")
+
     window.export_stl()
-    window.statusBar().showMessage.assert_called_with(
-        "Error: Please generate a 3D structure first."
+
+    assert mock_file_dialog.getSaveFileName.called
+    old_error = "Error: Please generate a 3D structure first."
+    assert not any(
+        old_error in str(args)
+        for args, _ in window.statusBar().showMessage.call_args_list
     )
 
 

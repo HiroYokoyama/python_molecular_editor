@@ -101,23 +101,39 @@ def test_export_2d_svg_trigger(mock_parser_host, tmp_path):
         assert "<svg" in f.read().lower()
 
 
-def test_export_stl_error_no_mol(mock_parser_host):
-    """Verify that export_stl shows an error message when no molecule is present."""
+def test_export_stl_allows_missing_current_mol(mock_parser_host):
+    """Verify that export_stl can proceed when plugins do not set current_mol."""
     exporter = DummyExport(mock_parser_host)
     exporter.host.view_3d_manager.current_mol = None
-    exporter.export_stl()
-    exporter.statusBar().showMessage.assert_any_call(
-        "Error: Please generate a 3D structure first."
+
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ) as mock_file_dialog:
+        exporter.export_stl()
+
+    assert mock_file_dialog.called
+    old_error = "Error: Please generate a 3D structure first."
+    assert not any(
+        old_error in str(args)
+        for args, _ in exporter.statusBar().showMessage.call_args_list
     )
 
 
-def test_export_obj_mtl_error_no_mol(mock_parser_host):
-    """Verify that export_obj_mtl shows an error message when no molecule is present."""
+def test_export_obj_mtl_allows_missing_current_mol(mock_parser_host):
+    """Verify that export_obj_mtl can proceed when plugins do not set current_mol."""
     exporter = DummyExport(mock_parser_host)
     exporter.host.view_3d_manager.current_mol = None
-    exporter.export_obj_mtl()
-    exporter.statusBar().showMessage.assert_any_call(
-        "Error: Please generate a 3D structure first."
+
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ) as mock_file_dialog:
+        exporter.export_obj_mtl()
+
+    assert mock_file_dialog.called
+    old_error = "Error: Please generate a 3D structure first."
+    assert not any(
+        old_error in str(args)
+        for args, _ in exporter.statusBar().showMessage.call_args_list
     )
 
 
@@ -189,6 +205,24 @@ def test_export_3d_png_logic(mock_parser_host, tmp_path):
             assert mock_plotter.screenshot.called
 
 
+def test_export_3d_png_allows_missing_current_mol(mock_parser_host):
+    """Verify that export_3d_png can proceed when plugins do not set current_mol."""
+    exporter = DummyExport(mock_parser_host)
+    exporter.host.view_3d_manager.current_mol = None
+
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ) as mock_file_dialog:
+        exporter.export_3d_png()
+
+    assert mock_file_dialog.called
+    old_error = "No 3D molecule to export."
+    assert not any(
+        old_error in str(args)
+        for args, _ in exporter.statusBar().showMessage.call_args_list
+    )
+
+
 def test_export_color_stl_logic(mock_parser_host, tmp_path):
     """Verify that export_color_stl triggers the status bar message (success indicator)."""
     exporter = DummyExport(mock_parser_host)
@@ -211,6 +245,24 @@ def test_export_color_stl_logic(mock_parser_host, tmp_path):
     ):
         exporter.export_color_stl()
         assert exporter.statusBar().showMessage.called
+
+
+def test_export_color_stl_allows_missing_current_mol(mock_parser_host):
+    """Verify that export_color_stl can proceed when plugins do not set current_mol."""
+    exporter = DummyExport(mock_parser_host)
+    exporter.host.view_3d_manager.current_mol = None
+
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ) as mock_file_dialog:
+        exporter.export_color_stl()
+
+    assert mock_file_dialog.called
+    old_error = "Error: Please generate a 3D structure first."
+    assert not any(
+        old_error in str(args)
+        for args, _ in exporter.statusBar().showMessage.call_args_list
+    )
 
 
 def test_export_from_3d_view_with_colors_complex_splitting(mock_parser_host):

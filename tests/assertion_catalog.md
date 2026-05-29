@@ -2126,15 +2126,17 @@ _Verify that export_2d_svg successfully creates an SVG file._
 - assert os.path.getsize(save_path) > 0
 - assert '<svg' in f.read().lower()
 
-### test_export_stl_error_no_mol
-_Verify that export_stl shows an error message when no molecule is present._
+### test_export_stl_allows_missing_current_mol
+_Verify that export_stl can proceed when plugins do not set current_mol._
 
-- exporter.statusBar().showMessage.assert_any_call('Error: Please generate a 3D structure first.')
+- assert mock_file_dialog.called
+- assert not any((old_error in str(args) for args, _ in exporter.statusBar().showMessage.call_args_list))
 
-### test_export_obj_mtl_error_no_mol
-_Verify that export_obj_mtl shows an error message when no molecule is present._
+### test_export_obj_mtl_allows_missing_current_mol
+_Verify that export_obj_mtl can proceed when plugins do not set current_mol._
 
-- exporter.statusBar().showMessage.assert_any_call('Error: Please generate a 3D structure first.')
+- assert mock_file_dialog.called
+- assert not any((old_error in str(args) for args, _ in exporter.statusBar().showMessage.call_args_list))
 
 ### test_export_stl_success_trigger
 _Verify that export_stl triggers the mesh save logic for a valid 3D molecule._
@@ -2154,10 +2156,22 @@ _Verify that export_3d_png triggers the plotter screenshot logic._
 
 - assert mock_plotter.screenshot.called
 
+### test_export_3d_png_allows_missing_current_mol
+_Verify that export_3d_png can proceed when plugins do not set current_mol._
+
+- assert mock_file_dialog.called
+- assert not any((old_error in str(args) for args, _ in exporter.statusBar().showMessage.call_args_list))
+
 ### test_export_color_stl_logic
 _Verify that export_color_stl triggers the status bar message (success indicator)._
 
 - assert exporter.statusBar().showMessage.called
+
+### test_export_color_stl_allows_missing_current_mol
+_Verify that export_color_stl can proceed when plugins do not set current_mol._
+
+- assert mock_file_dialog.called
+- assert not any((old_error in str(args) for args, _ in exporter.statusBar().showMessage.call_args_list))
 
 ### test_export_from_3d_view_with_colors_complex_splitting
 _Test the complex logic of splitting a mesh by per-vertex colors._
@@ -2847,10 +2861,11 @@ _Test export_stl cancellation._
 
 - assert not any(('STL exported' in str(args) for args, _ in call_args_list))
 
-### test_export_stl_no_molecule
-_Test export_stl with no molecule._
+### test_export_stl_without_current_mol_reaches_dialog
+_Test export_stl does not require current_mol before choosing a file._
 
-- window.statusBar().showMessage.assert_called_with('Error: Please generate a 3D structure first.')
+- assert mock_file_dialog.getSaveFileName.called
+- assert not any((old_error in str(args) for args, _ in window.statusBar().showMessage.call_args_list))
 
 ### test_export_obj_mtl_success
 _Test export_obj_mtl success path._
