@@ -79,12 +79,6 @@ class ExportManager:
         return basename
 
     def export_stl(self) -> None:
-        if not self.host.view_3d_manager.current_mol:
-            self.host.statusBar().showMessage(
-                "Error: Please generate a 3D structure first."
-            )
-            return
-
         default_path = self._get_default_path()
 
         file_path, _ = QFileDialog.getSaveFileName(
@@ -113,12 +107,6 @@ class ExportManager:
 
     def export_obj_mtl(self) -> None:
         """Export as OBJ/MTL (with colors)."""
-        if not self.host.view_3d_manager.current_mol:
-            self.host.statusBar().showMessage(
-                "Error: Please generate a 3D structure first."
-            )
-            return
-
         default_path = self._get_default_path()
 
         file_path, _ = QFileDialog.getSaveFileName(
@@ -257,12 +245,6 @@ class ExportManager:
 
     def export_color_stl(self) -> None:
         """Export as Color STL."""
-        if not self.host.view_3d_manager.current_mol:
-            self.host.statusBar().showMessage(
-                "Error: Please generate a 3D structure first."
-            )
-            return
-
         default_path = self._get_default_path()
 
         file_path, _ = QFileDialog.getSaveFileName(
@@ -954,10 +936,6 @@ class ExportManager:
 
     def export_3d_png(self) -> None:
         """Export 3D view as PNG."""
-        if not self.host.view_3d_manager.current_mol:
-            self.host.statusBar().showMessage("No 3D molecule to export.", 2000)
-            return
-
         # Default filename: {name}.png
         default_path = self._get_default_path()
 

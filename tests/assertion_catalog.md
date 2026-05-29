@@ -392,6 +392,16 @@ _Test painting logic for double bond in a ring_
 
 - assert mock_painter.drawLine.call_count >= 2
 
+### TestBondItem.test_ring_inner_double_bond_shortening_preserves_benzene
+_Benzene-like 60 degree ring bonds keep the established inner-line length._
+
+- assert factor == pytest.approx(0.8)
+
+### TestBondItem.test_ring_inner_double_bond_shortening_handles_small_rings
+_Small rings with sharper spans shorten the inner double bond more._
+
+- assert factor == pytest.approx(0.55)
+
 ### TestBondItem.test_bounding_rect_ez_label
 _Test boundingRect expansion for E/Z labels_
 
@@ -2126,15 +2136,17 @@ _Verify that export_2d_svg successfully creates an SVG file._
 - assert os.path.getsize(save_path) > 0
 - assert '<svg' in f.read().lower()
 
-### test_export_stl_error_no_mol
-_Verify that export_stl shows an error message when no molecule is present._
+### test_export_stl_allows_missing_current_mol
+_Verify that export_stl can proceed when plugins do not set current_mol._
 
-- exporter.statusBar().showMessage.assert_any_call('Error: Please generate a 3D structure first.')
+- assert mock_file_dialog.called
+- assert not any((old_error in str(args) for args, _ in exporter.statusBar().showMessage.call_args_list))
 
-### test_export_obj_mtl_error_no_mol
-_Verify that export_obj_mtl shows an error message when no molecule is present._
+### test_export_obj_mtl_allows_missing_current_mol
+_Verify that export_obj_mtl can proceed when plugins do not set current_mol._
 
-- exporter.statusBar().showMessage.assert_any_call('Error: Please generate a 3D structure first.')
+- assert mock_file_dialog.called
+- assert not any((old_error in str(args) for args, _ in exporter.statusBar().showMessage.call_args_list))
 
 ### test_export_stl_success_trigger
 _Verify that export_stl triggers the mesh save logic for a valid 3D molecule._
@@ -2154,10 +2166,22 @@ _Verify that export_3d_png triggers the plotter screenshot logic._
 
 - assert mock_plotter.screenshot.called
 
+### test_export_3d_png_allows_missing_current_mol
+_Verify that export_3d_png can proceed when plugins do not set current_mol._
+
+- assert mock_file_dialog.called
+- assert not any((old_error in str(args) for args, _ in exporter.statusBar().showMessage.call_args_list))
+
 ### test_export_color_stl_logic
 _Verify that export_color_stl triggers the status bar message (success indicator)._
 
 - assert exporter.statusBar().showMessage.called
+
+### test_export_color_stl_allows_missing_current_mol
+_Verify that export_color_stl can proceed when plugins do not set current_mol._
+
+- assert mock_file_dialog.called
+- assert not any((old_error in str(args) for args, _ in exporter.statusBar().showMessage.call_args_list))
 
 ### test_export_from_3d_view_with_colors_complex_splitting
 _Test the complex logic of splitting a mesh by per-vertex colors._
@@ -2847,10 +2871,11 @@ _Test export_stl cancellation._
 
 - assert not any(('STL exported' in str(args) for args, _ in call_args_list))
 
-### test_export_stl_no_molecule
-_Test export_stl with no molecule._
+### test_export_stl_without_current_mol_reaches_dialog
+_Test export_stl does not require current_mol before choosing a file._
 
-- window.statusBar().showMessage.assert_called_with('Error: Please generate a 3D structure first.')
+- assert mock_file_dialog.getSaveFileName.called
+- assert not any((old_error in str(args) for args, _ in window.statusBar().showMessage.call_args_list))
 
 ### test_export_obj_mtl_success
 _Test export_obj_mtl success path._
@@ -4656,6 +4681,30 @@ _Test undo/redo integration via scene modifications._
 - assert len(window.edit_actions_manager.undo_stack) == 0
 - assert len(window.edit_actions_manager.undo_stack) == initial_len + 1
 
+### test_atom_fusing_enabled
+_Test that drawing a bond near an existing atom snaps/fuses to it when enabled._
+
+- assert len(data.atoms) == 2
+- assert len(data.bonds) == 1
+
+### test_atom_fusing_disabled
+_Test that drawing a bond near an existing atom does not snap/fuse when disabled._
+
+- assert len(data.atoms) == 3
+- assert len(data.bonds) == 1
+
+### test_atom_mode_short_click_near_atom_does_not_fuse
+_Atom-mode short clicks near an atom should create a new atom, not edit the nearby one._
+
+- assert data.atoms[existing_id]['symbol'] == 'C'
+- assert len(data.atoms) == 2
+
+### test_benzene_terminal_120_deg_alignment
+_Test that pressing 4 at a terminal atom aligns the benzene ring at 120 degrees._
+
+- assert len(data.atoms) == 7
+- assert found_expected_pos
+
 ## tests/unit/test_scene_extended.py
 
 ### test_scene_keypress_modes
@@ -4849,6 +4898,8 @@ _No description provided._
 - assert tab.bond_wedge_width_2d_slider.value() == 80
 - assert tab.bond_dash_count_2d_slider.value() == 12
 - assert tab.atom_font_size_2d_slider.value() == 24
+- assert tab.atom_fusing_distance_2d_slider.value() == 18
+- assert tab.template_snapping_distance_2d_slider.value() == 20
 
 ### test_update_ui_sets_cap_style
 _No description provided._
@@ -4870,6 +4921,9 @@ _No description provided._
 - assert result['bond_dash_count_2d'] == DEFAULT_SETTINGS['bond_dash_count_2d']
 - assert result['atom_font_size_2d'] == DEFAULT_SETTINGS['atom_font_size_2d']
 - assert result['atom_use_bond_color_2d'] == DEFAULT_SETTINGS['atom_use_bond_color_2d']
+- assert result['atom_fusing_enabled_2d'] == DEFAULT_SETTINGS['atom_fusing_enabled_2d']
+- assert abs(result['atom_fusing_distance_2d'] - DEFAULT_SETTINGS['atom_fusing_distance_2d']) < 0.05
+- assert abs(result['template_snapping_distance_2d'] - DEFAULT_SETTINGS['template_snapping_distance_2d']) < 0.05
 
 ### test_get_settings_returns_all_keys
 _No description provided._
@@ -4895,8 +4949,12 @@ _No description provided._
 _No description provided._
 
 - assert tab.current_bg_color_2d == '#123456'
+- assert tab.atom_fusing_enabled_2d_checkbox.isChecked() is False
 - assert tab.current_bg_color_2d == DEFAULT_SETTINGS['background_color_2d']
 - assert tab.bond_cap_style_2d_combo.currentText() == DEFAULT_SETTINGS['bond_cap_style_2d']
+- assert tab.atom_fusing_enabled_2d_checkbox.isChecked() == DEFAULT_SETTINGS['atom_fusing_enabled_2d']
+- assert tab.atom_fusing_distance_2d_slider.value() == int(DEFAULT_SETTINGS['atom_fusing_distance_2d'])
+- assert tab.template_snapping_distance_2d_slider.value() == int(DEFAULT_SETTINGS['template_snapping_distance_2d'])
 
 ## tests/unit/test_settings_3d_tabs.py
 
@@ -5783,6 +5841,38 @@ _No description provided._
 _No description provided._
 
 - mock_q.assert_not_called()
+
+## tests/unit/test_template_snapping_logic.py
+
+### test_update_template_preview_uses_template_snapping_distance
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert tol == 25.0
+
+### test_update_user_template_preview_uses_template_snapping_distance
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert tol == 30.0
+
+### test_keyboard_key_4_uses_template_snapping_distance
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert tol == 22.0
+
+### test_keyboard_key_4_uses_template_snapping_when_fusing_disabled
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert tol == 22.0
+
+### test_keyboard_other_keys_use_atom_fusing_distance
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert tol == 8.0
 
 ## tests/unit/test_translation_dialog.py
 

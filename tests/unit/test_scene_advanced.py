@@ -72,6 +72,7 @@ def scene_setup(qapp):
             self.edit_3d_manager = MagicMock()
             self.ui_manager = MagicMock()
             self.init_manager = MagicMock()
+            self.init_manager.settings = {}
             self.view_3d_manager = MagicMock()
 
             self.edit_actions_manager.undo_stack = []
@@ -228,3 +229,124 @@ def test_undo_redo(scene_setup, monkeypatch):
     initial_len = len(window.edit_actions_manager.undo_stack)
     window.edit_actions_manager.push_undo_state()
     assert len(window.edit_actions_manager.undo_stack) == initial_len + 1
+
+
+def test_atom_fusing_enabled(scene_setup, monkeypatch):
+    """Test that drawing a bond near an existing atom snaps/fuses to it when enabled."""
+    scene, window, view, data = scene_setup
+
+    # Create existing atom at (0, 0)
+    a1_id = scene.create_atom("C", QPointF(0, 0))
+
+    # Enable fusing
+    window.init_manager.settings = {
+        "atom_fusing_enabled_2d": True,
+        "atom_fusing_distance_2d": 14.0,
+    }
+
+    start_pos = QPointF(100, 0)
+    release_pos = QPointF(10, 0)
+
+    scene.mode = "bond_1_0"
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: None)
+
+    mouse_press(scene, start_pos, Qt.MouseButton.LeftButton)
+    mouse_release(scene, release_pos, Qt.MouseButton.LeftButton)
+
+    # Since fusing is enabled, the new bond is connected to the existing atom (2 atoms total)
+    assert len(data.atoms) == 2
+    assert len(data.bonds) == 1
+
+
+def test_atom_fusing_disabled(scene_setup, monkeypatch):
+    """Test that drawing a bond near an existing atom does not snap/fuse when disabled."""
+    scene, window, view, data = scene_setup
+
+    # Create existing atom at (0, 0)
+    a1_id = scene.create_atom("C", QPointF(0, 0))
+
+    # Disable fusing
+    window.init_manager.settings = {
+        "atom_fusing_enabled_2d": False,
+        "atom_fusing_distance_2d": 14.0,
+    }
+
+    start_pos = QPointF(100, 0)
+    release_pos = QPointF(10, 0)
+
+    scene.mode = "bond_1_0"
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: None)
+
+    mouse_press(scene, start_pos, Qt.MouseButton.LeftButton)
+    mouse_release(scene, release_pos, Qt.MouseButton.LeftButton)
+
+    # Since fusing is disabled, a third atom is created (3 atoms total)
+    assert len(data.atoms) == 3
+    assert len(data.bonds) == 1
+
+
+def test_atom_mode_short_click_near_atom_does_not_fuse(scene_setup, monkeypatch):
+    """Atom-mode short clicks near an atom should create a new atom, not edit the nearby one."""
+    scene, window, view, data = scene_setup
+
+    existing_id = scene.create_atom("C", QPointF(0, 0))
+    window.init_manager.settings = {
+        "atom_fusing_enabled_2d": True,
+        "atom_fusing_distance_2d": 14.0,
+    }
+
+    scene.mode = "atom_O"
+    scene.current_atom_symbol = "O"
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: None)
+
+    click_pos = QPointF(10, 0)
+    mouse_press(scene, click_pos, Qt.MouseButton.LeftButton)
+    mouse_release(scene, click_pos, Qt.MouseButton.LeftButton)
+
+    assert data.atoms[existing_id]["symbol"] == "C"
+    assert len(data.atoms) == 2
+
+
+def test_benzene_terminal_120_deg_alignment(scene_setup, monkeypatch):
+    """Test that pressing 4 at a terminal atom aligns the benzene ring at 120 degrees."""
+    scene, window, view, data = scene_setup
+
+    # Create terminal bond: a1 (0, 0) -> a2 (0, 50)
+    a1_id = scene.create_atom("C", QPointF(0, 0))
+    a2_id = scene.create_atom("C", QPointF(0, 50))
+    a1_item = data.atoms[a1_id]["item"]
+    a2_item = data.atoms[a2_id]["item"]
+    scene.create_bond(a1_item, a2_item)
+
+    # Hover cursor slightly to the right
+    cursor_pos = QPointF(10, 0)
+
+    monkeypatch.setattr(view, "mapToScene", lambda *args: cursor_pos)
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: a1_item)
+
+    # Trigger key press '4'
+    event = MagicMock()
+    event.key.return_value = Qt.Key.Key_4
+    event.modifiers.return_value = Qt.KeyboardModifier.NoModifier
+    scene.keyPressEvent(event)
+
+    # Verify benzene ring placed
+    assert len(data.atoms) == 7
+
+    # One of the new atoms should align at exactly -30 degrees (120 relative to terminal bond)
+    import math
+    from moleditpy.utils.constants import DEFAULT_BOND_LENGTH
+
+    expected_x = DEFAULT_BOND_LENGTH * math.cos(math.radians(-30))
+    expected_y = DEFAULT_BOND_LENGTH * math.sin(math.radians(-30))
+
+    found_expected_pos = False
+    for atom_data in data.atoms.values():
+        pos = atom_data["pos"]
+        if abs(pos[0] - expected_x) < 1e-1 and abs(pos[1] - expected_y) < 1e-1:
+            found_expected_pos = True
+            break
+
+    assert found_expected_pos, (
+        "Benzene was not aligned at 120 degrees relative to terminal bond"
+    )

@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
+import math
 import logging
 from typing import Any, Optional, Tuple, Union
 
@@ -108,6 +109,44 @@ class BondItem(QGraphicsItem):
         """Force internal state refresh and redraw (primarily from settings)."""
         self.prepareGeometryChange()
         self.update()
+
+    @staticmethod
+    def _ring_inner_double_bond_shorten_factor(
+        line: QLineF, local_ring_center: QPointF
+    ) -> float:
+        """Shorten inner ring double bonds based on the ring angle at both atoms."""
+
+        def angle_between(v1: QPointF, v2: QPointF) -> Optional[float]:
+            len1 = math.hypot(v1.x(), v1.y())
+            len2 = math.hypot(v2.x(), v2.y())
+            if len1 <= 1e-6 or len2 <= 1e-6:
+                return None
+            dot = v1.x() * v2.x() + v1.y() * v2.y()
+            cos_angle = max(-1.0, min(1.0, dot / (len1 * len2)))
+            return math.acos(cos_angle)
+
+        p1 = line.p1()
+        p2 = line.p2()
+        half_angles = [
+            angle_between(p2 - p1, local_ring_center - p1),
+            angle_between(p1 - p2, local_ring_center - p2),
+        ]
+        interior_angles = [2 * a for a in half_angles if a is not None]
+        if not interior_angles:
+            return 0.8
+
+        ring_angle = sum(interior_angles) / len(interior_angles)
+        benzene_angle = 2 * math.pi / 3
+        cyclopropene_angle = math.pi / 3
+
+        if ring_angle <= benzene_angle:
+            angle_range = benzene_angle - cyclopropene_angle
+            sharpness = min(1.0, max(0.0, (benzene_angle - ring_angle) / angle_range))
+            return max(0.55, 0.8 - 0.25 * sharpness)
+
+        wide_angle_range = math.pi - benzene_angle
+        openness = min(1.0, max(0.0, (ring_angle - benzene_angle) / wide_angle_range))
+        return min(0.9, 0.8 + 0.1 * openness)
 
     def __init__(
         self, atom1_item: Any, atom2_item: Any, order: int = 1, stereo: int = 0
@@ -473,7 +512,9 @@ class BondItem(QGraphicsItem):
 
                         # Draw short inner line (80% length)
                         inner_line = line.translated(inner_offset)
-                        shorten_factor = 0.8
+                        shorten_factor = self._ring_inner_double_bond_shorten_factor(
+                            line, local_ring_center
+                        )
                         p1 = inner_line.p1()
                         p2 = inner_line.p2()
                         center = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2)

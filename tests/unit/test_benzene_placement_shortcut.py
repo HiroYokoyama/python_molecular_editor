@@ -30,6 +30,12 @@ class MockScene(KeyboardMixin):
     def itemAt(self, pos, transform):
         return self._item_at_cursor
 
+    def get_setting(self, key, default=None):
+        return default
+
+    def find_atom_near(self, pos, tol=14.0):
+        return None
+
 
 @pytest.fixture
 def scene():

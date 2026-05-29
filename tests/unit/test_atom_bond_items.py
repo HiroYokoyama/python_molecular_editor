@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import QPointF, QRectF
+from PyQt6.QtCore import QPointF, QRectF, QLineF
 from PyQt6.QtGui import QPainterPath
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
@@ -415,6 +415,24 @@ class TestBondItem:
         bond_item.paint(mock_painter, option, widget)
 
         assert mock_painter.drawLine.call_count >= 2
+
+    def test_ring_inner_double_bond_shortening_preserves_benzene(self):
+        """Benzene-like 60 degree ring bonds keep the established inner-line length."""
+        line = QLineF(QPointF(50.0, 0.0), QPointF(25.0, 43.3012701892))
+        factor = BondItem._ring_inner_double_bond_shorten_factor(
+            line, QPointF(0.0, 0.0)
+        )
+
+        assert factor == pytest.approx(0.8)
+
+    def test_ring_inner_double_bond_shortening_handles_small_rings(self):
+        """Small rings with sharper spans shorten the inner double bond more."""
+        line = QLineF(QPointF(50.0, 0.0), QPointF(-25.0, 43.3012701892))
+        factor = BondItem._ring_inner_double_bond_shorten_factor(
+            line, QPointF(0.0, 0.0)
+        )
+
+        assert factor == pytest.approx(0.55)
 
     def test_bounding_rect_ez_label(self, bond_item, qapp):
         """Test boundingRect expansion for E/Z labels"""
