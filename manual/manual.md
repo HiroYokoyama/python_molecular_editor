@@ -208,9 +208,9 @@ Perform various file operations from the `File` menu in the menu bar.
 
 ### 5.2. Import
 
-  * **Import \> MOL/SDF File...:** Loads a MOL or SDF file and displays it as a 2D structure. Even if the file contains 3D coordinates, 2D coordinates will be recalculated (stereochemistry is preserved). You can choose to overwrite the current canvas or append to the existing scene.
-  * **Import \> SMILES...:** Opens a dialog to input a SMILES string and displays the input molecule as a 2D structure. You can choose to overwrite or append.
-  * **Import \> InChI...:** Opens a dialog to input an InChI string and displays the input molecule as a 2D structure. You can choose to overwrite or append.
+  * **Import \> MOL/SDF File...:** Loads a MOL or SDF file and displays it as a 2D structure. Even if the file contains 3D coordinates, 2D coordinates will be recalculated (stereochemistry is preserved). The imported molecule is automatically appended to the current canvas without overwriting existing structures.
+  * **Import \> SMILES...:** Opens a dialog to input a SMILES string and displays the input molecule as a 2D structure. The imported molecule is automatically appended to the current canvas.
+  * **Import \> InChI...:** Opens a dialog to input an InChI string and displays the input molecule as a 2D structure. The imported molecule is automatically appended to the current canvas.
   * **Import \> 3D MOL/SDF (3D View Only)...:** Loads a MOL/SDF file with 3D coordinates and displays it **in the 3D view only** (the 2D editor is cleared). This enters 3D viewer mode.
   * **Import \> 3D XYZ (3D View Only)...:** Loads an XYZ file and displays it **in the 3D view only** (the 2D editor is cleared). Bonds are estimated based on interatomic distances. This enters 3D viewer mode.
 
@@ -414,6 +414,10 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
     * **Atom Settings:**
         * Atom label font size
         * Use Bond Color for Atoms (unified color)
+    * **Template Settings:**
+        * Template Snapping Distance
+        * Enable/Disable Atom Fusing
+        * Enable/Disable Bond Fusing
 
 * **Scene (3D) Tab:**
     * Background color
