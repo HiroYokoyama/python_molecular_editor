@@ -240,8 +240,8 @@ def test_atom_fusing_enabled(scene_setup, monkeypatch):
 
     # Enable fusing
     window.init_manager.settings = {
-        "atom_fusing_enabled_2d": True,
-        "atom_fusing_distance_2d": 14.0,
+        "template_fusing_enabled_2d": True,
+        "template_fusing_distance_2d": 14.0,
     }
 
     start_pos = QPointF(100, 0)
@@ -267,8 +267,8 @@ def test_atom_fusing_disabled(scene_setup, monkeypatch):
 
     # Disable fusing
     window.init_manager.settings = {
-        "atom_fusing_enabled_2d": False,
-        "atom_fusing_distance_2d": 14.0,
+        "template_fusing_enabled_2d": False,
+        "template_fusing_distance_2d": 14.0,
     }
 
     start_pos = QPointF(100, 0)
@@ -291,8 +291,8 @@ def test_atom_mode_short_click_near_atom_does_not_fuse(scene_setup, monkeypatch)
 
     existing_id = scene.create_atom("C", QPointF(0, 0))
     window.init_manager.settings = {
-        "atom_fusing_enabled_2d": True,
-        "atom_fusing_distance_2d": 14.0,
+        "template_fusing_enabled_2d": True,
+        "template_fusing_distance_2d": 14.0,
     }
 
     scene.mode = "atom_O"

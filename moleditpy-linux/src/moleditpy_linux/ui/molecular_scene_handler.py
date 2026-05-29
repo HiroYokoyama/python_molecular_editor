@@ -258,8 +258,8 @@ class TemplateMixin:
 
         # --- 2) Enumerate existing atoms in the scene from self.data.atoms and map them ---
         mapped_atoms = {it for it in atom_items if it is not None}
-        if self.get_setting("atom_fusing_enabled_2d", True):
-            map_threshold = self.get_setting("atom_fusing_distance_2d", 14.0)
+        if self.get_setting("template_fusing_enabled_2d", True):
+            map_threshold = self.get_setting("template_fusing_distance_2d", 14.0)
             for i, p in enumerate(points):
                 if atom_items[i] is not None:
                     continue
@@ -739,8 +739,8 @@ class KeyboardMixin:
         if key == Qt.Key.Key_4:
             snap_dist = self.get_setting("template_snapping_distance_2d", 14.0)
             item_at_cursor = self.find_atom_near(cursor_pos, tol=snap_dist)
-        elif self.get_setting("atom_fusing_enabled_2d", True):
-            fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
+        elif self.get_setting("template_fusing_enabled_2d", True):
+            fuse_dist = self.get_setting("template_fusing_distance_2d", 14.0)
             item_at_cursor = self.find_atom_near(cursor_pos, tol=fuse_dist)
         if item_at_cursor is None:
             item_at_cursor = self.itemAt(cursor_pos, transform)
@@ -1084,9 +1084,9 @@ class KeyboardMixin:
 
                     # Find nearby atom
                     near_atom = None
-                    if self.get_setting("atom_fusing_enabled_2d", True):
+                    if self.get_setting("template_fusing_enabled_2d", True):
                         fuse_dist = self.get_setting(
-                            "atom_fusing_distance_2d", SNAP_DISTANCE
+                            "template_fusing_distance_2d", SNAP_DISTANCE
                         )
                         near_atom = self.find_atom_near(target_pos, tol=fuse_dist)
 

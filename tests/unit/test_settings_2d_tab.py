@@ -28,7 +28,7 @@ def test_update_ui_sets_sliders(app):
     settings["bond_wedge_width_2d"] = 8.0
     settings["bond_dash_count_2d"] = 12
     settings["atom_font_size_2d"] = 24
-    settings["atom_fusing_distance_2d"] = 18.0
+    settings["template_fusing_distance_2d"] = 18.0
     settings["template_snapping_distance_2d"] = 20.0
     tab.update_ui(settings)
     assert tab.bond_width_2d_slider.value() == 30
@@ -37,7 +37,7 @@ def test_update_ui_sets_sliders(app):
     assert tab.bond_wedge_width_2d_slider.value() == 80
     assert tab.bond_dash_count_2d_slider.value() == 12
     assert tab.atom_font_size_2d_slider.value() == 24
-    assert tab.atom_fusing_distance_2d_slider.value() == 18
+    assert tab.template_fusing_distance_2d_slider.value() == 18
     assert tab.template_snapping_distance_2d_slider.value() == 20
 
 
@@ -71,12 +71,13 @@ def test_get_settings_roundtrip(app):
         result["atom_use_bond_color_2d"] == DEFAULT_SETTINGS["atom_use_bond_color_2d"]
     )
     assert (
-        result["atom_fusing_enabled_2d"] == DEFAULT_SETTINGS["atom_fusing_enabled_2d"]
+        result["template_fusing_enabled_2d"]
+        == DEFAULT_SETTINGS["template_fusing_enabled_2d"]
     )
     assert (
         abs(
-            result["atom_fusing_distance_2d"]
-            - DEFAULT_SETTINGS["atom_fusing_distance_2d"]
+            result["template_fusing_distance_2d"]
+            - DEFAULT_SETTINGS["template_fusing_distance_2d"]
         )
         < 0.05
     )
@@ -104,8 +105,8 @@ def test_get_settings_returns_all_keys(app):
         "atom_font_family_2d",
         "atom_font_size_2d",
         "atom_use_bond_color_2d",
-        "atom_fusing_enabled_2d",
-        "atom_fusing_distance_2d",
+        "template_fusing_enabled_2d",
+        "template_fusing_distance_2d",
         "template_snapping_distance_2d",
     }
     assert expected_keys == set(result.keys())
@@ -149,12 +150,12 @@ def test_reset_to_defaults(app):
     custom = dict(DEFAULT_SETTINGS)
     custom["background_color_2d"] = "#123456"
     custom["bond_cap_style_2d"] = "Square"
-    custom["atom_fusing_enabled_2d"] = False
-    custom["atom_fusing_distance_2d"] = 25.0
+    custom["template_fusing_enabled_2d"] = False
+    custom["template_fusing_distance_2d"] = 25.0
     custom["template_snapping_distance_2d"] = 25.0
     tab.update_ui(custom)
     assert tab.current_bg_color_2d == "#123456"
-    assert tab.atom_fusing_enabled_2d_checkbox.isChecked() is False
+    assert tab.template_fusing_enabled_2d_checkbox.isChecked() is False
 
     tab.reset_to_defaults()
     assert tab.current_bg_color_2d == DEFAULT_SETTINGS["background_color_2d"]
@@ -163,12 +164,26 @@ def test_reset_to_defaults(app):
         == DEFAULT_SETTINGS["bond_cap_style_2d"]
     )
     assert (
-        tab.atom_fusing_enabled_2d_checkbox.isChecked()
-        == DEFAULT_SETTINGS["atom_fusing_enabled_2d"]
+        tab.template_fusing_enabled_2d_checkbox.isChecked()
+        == DEFAULT_SETTINGS["template_fusing_enabled_2d"]
     )
-    assert tab.atom_fusing_distance_2d_slider.value() == int(
-        DEFAULT_SETTINGS["atom_fusing_distance_2d"]
+    assert tab.template_fusing_distance_2d_slider.value() == int(
+        DEFAULT_SETTINGS["template_fusing_distance_2d"]
     )
     assert tab.template_snapping_distance_2d_slider.value() == int(
         DEFAULT_SETTINGS["template_snapping_distance_2d"]
     )
+
+
+def test_template_fusing_checkbox_disables_slider(app):
+    tab = Settings2DTab(DEFAULT_SETTINGS)
+
+    # Enable fusing -> slider and label should be enabled
+    tab.template_fusing_enabled_2d_checkbox.setChecked(True)
+    assert tab.template_fusing_distance_2d_slider.isEnabled() is True
+    assert tab.template_fusing_distance_2d_label.isEnabled() is True
+
+    # Disable fusing -> slider and label should be disabled
+    tab.template_fusing_enabled_2d_checkbox.setChecked(False)
+    assert tab.template_fusing_distance_2d_slider.isEnabled() is False
+    assert tab.template_fusing_distance_2d_label.isEnabled() is False
