@@ -415,9 +415,9 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
         * Atom label font size
         * Use Bond Color for Atoms (unified color)
     * **Template Settings:**
-        * Template Snapping Distance: Sets the distance threshold for snapping a template to an existing atom or bond.
-        * Enable/Disable Atom Fusing: Toggles whether templates can merge with existing atoms when snapped.
-        * Enable/Disable Bond Fusing: Toggles whether templates can merge with existing bonds when snapped.
+        * Snapping Distance (px): The distance within which a template will snap to existing atoms or bonds.
+        * Enable Atom Fusing: Toggles whether templates connect to existing atoms when placed nearby.
+        * Fusing Distance (px): The distance within which a template atom will be fused with an existing atom.
 
 * **Scene (3D) Tab:**
     * Background color
