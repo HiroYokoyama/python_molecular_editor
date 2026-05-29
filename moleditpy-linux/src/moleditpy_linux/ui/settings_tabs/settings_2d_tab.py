@@ -147,43 +147,57 @@ class Settings2DTab(SettingsTabBase):
 
         form_layout.addRow(self._create_separator())
 
-        # --- Atom Fusing Settings ---
-        form_layout.addRow(QLabel("<b>Atom Fusing Settings</b>"))
-
-        self.template_fusing_enabled_2d_checkbox = QCheckBox()
-        self.template_fusing_enabled_2d_checkbox.setToolTip(
-            "If checked, drawing or placing templates near an existing atom "
-            "will connect to it rather than creating a new one."
-        )
-        form_layout.addRow("Enable Atom Fusing:", self.template_fusing_enabled_2d_checkbox)
-
-        # Fusing Distance
-        self.template_fusing_distance_2d_slider, self.template_fusing_distance_2d_label = (
-            self._create_slider(5, 50, 1.0, is_int=True)
-        )
-        form_layout.addRow(
-            "Fusing Distance (px):",
-            self._wrap_layout(
-                self.template_fusing_distance_2d_slider, self.template_fusing_distance_2d_label
-            ),
-        )
-
-        form_layout.addRow(self._create_separator())
-
-        # --- Template Snapping Settings ---
-        form_layout.addRow(QLabel("<b>Template Snapping Settings</b>"))
+        # --- Template Settings ---
+        form_layout.addRow(QLabel("<b>Template Settings</b>"))
 
         # Template Snapping Distance
         (
             self.template_snapping_distance_2d_slider,
             self.template_snapping_distance_2d_label,
         ) = self._create_slider(5, 50, 1.0, is_int=True)
+        self.template_snapping_distance_2d_slider.setToolTip(
+            "The distance in pixels within which a template will snap to existing atoms or bonds."
+        )
         form_layout.addRow(
             "Snapping Distance (px):",
             self._wrap_layout(
                 self.template_snapping_distance_2d_slider,
                 self.template_snapping_distance_2d_label,
             ),
+        )
+
+        self.template_fusing_enabled_2d_checkbox = QCheckBox()
+        self.template_fusing_enabled_2d_checkbox.setToolTip(
+            "If checked, drawing or placing templates near an existing atom "
+            "will connect to it rather than creating a new one."
+        )
+        form_layout.addRow(
+            "Enable Atom Fusing:", self.template_fusing_enabled_2d_checkbox
+        )
+
+        # Fusing Distance
+        (
+            self.template_fusing_distance_2d_slider,
+            self.template_fusing_distance_2d_label,
+        ) = self._create_slider(5, 50, 1.0, is_int=True)
+        self.template_fusing_distance_2d_slider.setToolTip(
+            "The distance in pixels within which a template atom "
+            "will be fused with an existing atom."
+        )
+        form_layout.addRow(
+            "Fusing Distance (px):",
+            self._wrap_layout(
+                self.template_fusing_distance_2d_slider,
+                self.template_fusing_distance_2d_label,
+            ),
+        )
+
+        # Connect checkbox toggled to enable/disable fusing distance components
+        self.template_fusing_enabled_2d_checkbox.toggled.connect(
+            self.template_fusing_distance_2d_slider.setEnabled
+        )
+        self.template_fusing_enabled_2d_checkbox.toggled.connect(
+            self.template_fusing_distance_2d_label.setEnabled
         )
 
     def _pick_bg_color_2d(self) -> None:
@@ -250,9 +264,12 @@ class Settings2DTab(SettingsTabBase):
         self.atom_use_bond_color_2d_checkbox.setChecked(
             settings_dict.get("atom_use_bond_color_2d", False)
         )
-        self.template_fusing_enabled_2d_checkbox.setChecked(
-            settings_dict.get("template_fusing_enabled_2d", True)
-        )
+
+        fusing_enabled = settings_dict.get("template_fusing_enabled_2d", True)
+        self.template_fusing_enabled_2d_checkbox.setChecked(fusing_enabled)
+        self.template_fusing_distance_2d_slider.setEnabled(fusing_enabled)
+        self.template_fusing_distance_2d_label.setEnabled(fusing_enabled)
+
         self.template_fusing_distance_2d_slider.setValue(
             int(settings_dict.get("template_fusing_distance_2d", 14.0))
         )
