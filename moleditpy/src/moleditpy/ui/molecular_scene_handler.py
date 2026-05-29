@@ -41,14 +41,6 @@ except ImportError:
     )
 
 
-def _get_setting(obj: Any, key: str, default: Any = None) -> Any:
-    """Safely get setting from obj, falling back to default if get_setting method is missing."""
-    get_setting_fn = getattr(obj, "get_setting", None)
-    if get_setting_fn is not None:
-        return get_setting_fn(key, default)
-    return default
-
-
 class TemplateMixin:
     """
     Mixin class that handles all template and fragment insertion logic for MoleculeScene.
@@ -266,8 +258,8 @@ class TemplateMixin:
 
         # --- 2) Enumerate existing atoms in the scene from self.data.atoms and map them ---
         mapped_atoms = {it for it in atom_items if it is not None}
-        if _get_setting(self, "atom_fusing_enabled_2d", True):
-            map_threshold = _get_setting(self, "atom_fusing_distance_2d", 14.0)
+        if self.get_setting("atom_fusing_enabled_2d", True):
+            map_threshold = self.get_setting("atom_fusing_distance_2d", 14.0)
             for i, p in enumerate(points):
                 if atom_items[i] is not None:
                     continue
@@ -380,10 +372,9 @@ class TemplateMixin:
                 return
 
         item = None
-        find_atom_near_fn = getattr(self, "find_atom_near", None)
-        if find_atom_near_fn is not None and pos:
-            snap_dist = _get_setting(self, "template_snapping_distance_2d", 14.0)
-            item = find_atom_near_fn(pos, tol=snap_dist)  # pylint: disable=not-callable
+        if pos:
+            snap_dist = self.get_setting("template_snapping_distance_2d", 14.0)
+            item = self.find_atom_near(pos, tol=snap_dist)
         if item is None:
             items_under = self.items(pos)  # top-most first
             for it in items_under:
@@ -581,11 +572,10 @@ class TemplateMixin:
             return
 
         # Find attachment point (first atom or clicked item)
-        find_atom_near_fn = getattr(self, "find_atom_near", None)
         attachment_atom = None
-        if find_atom_near_fn is not None:
-            snap_dist = _get_setting(self, "template_snapping_distance_2d", 14.0)
-            attachment_atom = find_atom_near_fn(pos, tol=snap_dist)
+        if pos:
+            snap_dist = self.get_setting("template_snapping_distance_2d", 14.0)
+            attachment_atom = self.find_atom_near(pos, tol=snap_dist)
         if attachment_atom is None:
             items_under = self.items(pos)
             for item in items_under:
@@ -746,15 +736,12 @@ class KeyboardMixin:
         key = event.key()
         modifiers = event.modifiers()
         item_at_cursor = None
-        find_atom_near_fn = getattr(self, "find_atom_near", None)
-        if find_atom_near_fn is not None and _get_setting(
-            self, "atom_fusing_enabled_2d", True
-        ):
-            if key == Qt.Key.Key_4:
-                fuse_dist = _get_setting(self, "template_snapping_distance_2d", 14.0)
-            else:
-                fuse_dist = _get_setting(self, "atom_fusing_distance_2d", 14.0)
-            item_at_cursor = find_atom_near_fn(cursor_pos, tol=fuse_dist)  # pylint: disable=not-callable
+        if key == Qt.Key.Key_4:
+            snap_dist = self.get_setting("template_snapping_distance_2d", 14.0)
+            item_at_cursor = self.find_atom_near(cursor_pos, tol=snap_dist)
+        elif self.get_setting("atom_fusing_enabled_2d", True):
+            fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
+            item_at_cursor = self.find_atom_near(cursor_pos, tol=fuse_dist)
         if item_at_cursor is None:
             item_at_cursor = self.itemAt(cursor_pos, transform)
 
@@ -1097,14 +1084,11 @@ class KeyboardMixin:
 
                     # Find nearby atom
                     near_atom = None
-                    find_atom_near_fn = getattr(self, "find_atom_near", None)
-                    if find_atom_near_fn is not None and _get_setting(
-                        self, "atom_fusing_enabled_2d", True
-                    ):
-                        fuse_dist = _get_setting(
-                            self, "atom_fusing_distance_2d", SNAP_DISTANCE
+                    if self.get_setting("atom_fusing_enabled_2d", True):
+                        fuse_dist = self.get_setting(
+                            "atom_fusing_distance_2d", SNAP_DISTANCE
                         )
-                        near_atom = find_atom_near_fn(target_pos, tol=fuse_dist)  # pylint: disable=not-callable
+                        near_atom = self.find_atom_near(target_pos, tol=fuse_dist)
 
                     if near_atom and near_atom is not start_atom:
                         # Bond if exists

@@ -4668,6 +4668,12 @@ _Test that drawing a bond near an existing atom does not snap/fuse when disabled
 - assert len(data.atoms) == 3
 - assert len(data.bonds) == 1
 
+### test_atom_mode_short_click_near_atom_does_not_fuse
+_Atom-mode short clicks near an atom should create a new atom, not edit the nearby one._
+
+- assert data.atoms[existing_id]['symbol'] == 'C'
+- assert len(data.atoms) == 2
+
 ### test_benzene_terminal_120_deg_alignment
 _Test that pressing 4 at a terminal atom aligns the benzene ring at 120 degrees._
 
@@ -5826,6 +5832,12 @@ _No description provided._
 - assert tol == 30.0
 
 ### test_keyboard_key_4_uses_template_snapping_distance
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert tol == 22.0
+
+### test_keyboard_key_4_uses_template_snapping_when_fusing_disabled
 _No description provided._
 
 - assert len(scene.find_atom_near_args) == 1

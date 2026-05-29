@@ -106,6 +106,25 @@ def test_keyboard_key_4_uses_template_snapping_distance(app):
     assert tol == 22.0
 
 
+def test_keyboard_key_4_uses_template_snapping_when_fusing_disabled(app):
+    scene = MockKeyboardScene()
+    scene.settings["atom_fusing_enabled_2d"] = False
+    scene.settings["template_snapping_distance_2d"] = 22.0
+    scene.settings["atom_fusing_distance_2d"] = 5.0
+
+    event = MagicMock(spec=QKeyEvent)
+    event.key.return_value = Qt.Key.Key_4
+    event.modifiers.return_value = Qt.KeyboardModifier.NoModifier
+
+    with patch("moleditpy.ui.molecular_scene_handler.QCursor.pos") as mock_cursor:
+        mock_cursor.return_value = QPointF(0, 0)
+        scene.keyPressEvent(event)
+
+    assert len(scene.find_atom_near_args) == 1
+    pos, tol = scene.find_atom_near_args[0]
+    assert tol == 22.0
+
+
 def test_keyboard_other_keys_use_atom_fusing_distance(app):
     scene = MockKeyboardScene()
     scene.settings["template_snapping_distance_2d"] = 22.0

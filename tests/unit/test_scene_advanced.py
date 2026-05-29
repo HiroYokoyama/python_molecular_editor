@@ -285,6 +285,28 @@ def test_atom_fusing_disabled(scene_setup, monkeypatch):
     assert len(data.bonds) == 1
 
 
+def test_atom_mode_short_click_near_atom_does_not_fuse(scene_setup, monkeypatch):
+    """Atom-mode short clicks near an atom should create a new atom, not edit the nearby one."""
+    scene, window, view, data = scene_setup
+
+    existing_id = scene.create_atom("C", QPointF(0, 0))
+    window.init_manager.settings = {
+        "atom_fusing_enabled_2d": True,
+        "atom_fusing_distance_2d": 14.0,
+    }
+
+    scene.mode = "atom_O"
+    scene.current_atom_symbol = "O"
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: None)
+
+    click_pos = QPointF(10, 0)
+    mouse_press(scene, click_pos, Qt.MouseButton.LeftButton)
+    mouse_release(scene, click_pos, Qt.MouseButton.LeftButton)
+
+    assert data.atoms[existing_id]["symbol"] == "C"
+    assert len(data.atoms) == 2
+
+
 def test_benzene_terminal_120_deg_alignment(scene_setup, monkeypatch):
     """Test that pressing 4 at a terminal atom aligns the benzene ring at 120 degrees."""
     scene, window, view, data = scene_setup
