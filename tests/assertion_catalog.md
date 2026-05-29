@@ -392,6 +392,16 @@ _Test painting logic for double bond in a ring_
 
 - assert mock_painter.drawLine.call_count >= 2
 
+### TestBondItem.test_ring_inner_double_bond_shortening_preserves_benzene
+_Benzene-like 60 degree ring bonds keep the established inner-line length._
+
+- assert factor == pytest.approx(0.8)
+
+### TestBondItem.test_ring_inner_double_bond_shortening_handles_small_rings
+_Small rings with sharper spans shorten the inner double bond more._
+
+- assert factor == pytest.approx(0.55)
+
 ### TestBondItem.test_bounding_rect_ez_label
 _Test boundingRect expansion for E/Z labels_
 

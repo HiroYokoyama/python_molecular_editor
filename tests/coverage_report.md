@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **79.60%**
-- **Core Molecular Logic Coverage**: **81.43%**
+- **Overall Project Coverage (Full)**: **79.61%**
+- **Core Molecular Logic Coverage**: **81.44%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -25,7 +25,7 @@
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    311 |     46 |   85.2% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |     93 |     28 |   69.9% |
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     77 |      6 |   92.2% |
-| moleditpy\src\moleditpy\ui\bond_item.py                 |    350 |     62 |   82.3% |
+| moleditpy\src\moleditpy\ui\bond_item.py                 |    377 |     64 |   83.0% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    229 |     20 |   91.3% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    550 |     90 |   83.6% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    199 |     32 |   83.9% |
@@ -45,7 +45,7 @@
 | moleditpy\src\moleditpy\ui\string_importers.py          |    128 |     27 |   78.9% |
 | moleditpy\src\moleditpy\ui\template_preview_item.py     |    105 |      5 |   95.2% |
 | moleditpy\src\moleditpy\ui\template_preview_view.py     |     45 |      4 |   91.1% |
-| moleditpy\src\moleditpy\ui\ui_manager.py                |    388 |    116 |   70.1% |
+| moleditpy\src\moleditpy\ui\ui_manager.py                |    388 |    118 |   69.6% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    365 |     85 |   76.7% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1017 |    267 |   73.7% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |     77 |      0 |  100.0% |
@@ -56,7 +56,7 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     54 |     17 |   68.5% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
-| **TOTAL** | **13119** | **2436** | **81.43%** |
+| **TOTAL** | **13146** | **2440** | **81.44%** |
 
 ### Full Application Breakdown
 
@@ -79,7 +79,7 @@
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    311 |     46 |   85.2% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |     93 |     28 |   69.9% |
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     79 |      7 |   91.1% |
-| moleditpy\src\moleditpy\ui\bond_item.py                 |    350 |     62 |   82.3% |
+| moleditpy\src\moleditpy\ui\bond_item.py                 |    377 |     64 |   83.0% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    231 |     21 |   90.9% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    550 |     90 |   83.6% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    199 |     32 |   83.9% |
@@ -108,7 +108,7 @@
 | moleditpy\src\moleditpy\ui\template_preview_item.py     |    105 |      5 |   95.2% |
 | moleditpy\src\moleditpy\ui\template_preview_view.py     |     45 |      4 |   91.1% |
 | moleditpy\src\moleditpy\ui\translation_dialog.py        |    243 |     11 |   95.5% |
-| moleditpy\src\moleditpy\ui\ui_manager.py                |    388 |    116 |   70.1% |
+| moleditpy\src\moleditpy\ui\ui_manager.py                |    388 |    118 |   69.6% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    365 |     85 |   76.7% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1017 |    267 |   73.7% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |     77 |      0 |  100.0% |
@@ -120,7 +120,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      2 |   94.4% |
-| **TOTAL** | **14867** | **3033** | **79.60%** |
+| **TOTAL** | **14894** | **3037** | **79.61%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
