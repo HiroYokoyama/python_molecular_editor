@@ -11,6 +11,8 @@ def setup_scene_with_view(mock_parser_host):
     scene = MoleculeScene(mock_parser_host.data, mock_parser_host)
     mock_view = MagicMock()
     mock_view.transform.return_value = QTransform()
+    mock_view.mapToScene.return_value = QPointF(0, 0)
+    mock_view.mapFromGlobal.return_value = QPointF(0, 0)
     scene.views = MagicMock(return_value=[mock_view])
     return scene
 

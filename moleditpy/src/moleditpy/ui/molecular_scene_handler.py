@@ -14,7 +14,6 @@ from __future__ import annotations
 import math
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
-from unittest.mock import Mock
 
 from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
 from PyQt6.QtGui import QCursor
@@ -381,10 +380,8 @@ class TemplateMixin:
                 return
 
         item = None
-        if isinstance(pos, Mock):
-            pos = QPointF(0, 0)
         find_atom_near_fn = getattr(self, "find_atom_near", None)
-        if find_atom_near_fn is not None:
+        if find_atom_near_fn is not None and pos:
             snap_dist = _get_setting(self, "template_snapping_distance_2d", 14.0)
             item = find_atom_near_fn(pos, tol=snap_dist)  # pylint: disable=not-callable
         if item is None:
@@ -745,13 +742,7 @@ class KeyboardMixin:
     def keyPressEvent(self, event: Any) -> None:
         view = self.views()[0]
         cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
-        if isinstance(cursor_pos, Mock):
-            cursor_pos = QPointF(0, 0)
         transform = view.transform()
-        if isinstance(transform, Mock):
-            from PyQt6.QtGui import QTransform
-
-            transform = QTransform()
         key = event.key()
         modifiers = event.modifiers()
         item_at_cursor = None
@@ -1106,8 +1097,6 @@ class KeyboardMixin:
 
                     # Find nearby atom
                     near_atom = None
-                    if isinstance(target_pos, Mock):
-                        target_pos = QPointF(0, 0)
                     find_atom_near_fn = getattr(self, "find_atom_near", None)
                     if find_atom_near_fn is not None and _get_setting(
                         self, "atom_fusing_enabled_2d", True
@@ -1484,7 +1473,7 @@ class SceneQueryMixin:
             return False
 
     def find_atom_near(self, pos: Any, tol: float = 14.0) -> Any:
-        if isinstance(pos, Mock):
+        if pos is None:
             return None
         # Create a small search rectangle around the position
         search_rect = QRectF(pos.x() - tol, pos.y() - tol, 2 * tol, 2 * tol)

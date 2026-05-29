@@ -72,6 +72,7 @@ def scene_setup(qapp):
             self.edit_3d_manager = MagicMock()
             self.ui_manager = MagicMock()
             self.init_manager = MagicMock()
+            self.init_manager.settings = {}
             self.view_3d_manager = MagicMock()
 
             self.edit_actions_manager.undo_stack = []

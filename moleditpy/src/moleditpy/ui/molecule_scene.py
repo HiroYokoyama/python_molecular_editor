@@ -13,7 +13,6 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
-from unittest.mock import Mock
 
 from PyQt6.QtCore import QLineF, Qt, QPointF
 from PyQt6.QtGui import QPen
@@ -109,12 +108,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             and hasattr(self.window, "init_manager")
         ):
             settings = self.window.init_manager.settings
-            if isinstance(settings, Mock):
-                return default
-            val = settings.get(key, default)
-            if isinstance(val, Mock):
-                return default
-            return val
+            return settings.get(key, default)
         return default
 
     def update_connected_bonds(self, atoms: List[AtomItem]) -> None:
@@ -312,9 +306,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             event.accept()
 
         item = None
-        if self.get_setting("atom_fusing_enabled_2d", True) and not isinstance(
-            self.press_pos, Mock
-        ):
+        if self.get_setting("atom_fusing_enabled_2d", True) and self.press_pos:
             fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
             item = self.find_atom_near(self.press_pos, tol=fuse_dist)
         if item is None:
@@ -364,9 +356,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             end_point = current_pos
 
             target_atom = None
-            if self.get_setting("atom_fusing_enabled_2d", True) and not isinstance(
-                current_pos, Mock
-            ):
+            if self.get_setting("atom_fusing_enabled_2d", True) and current_pos:
                 fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
                 target_atom = self.find_atom_near(current_pos, tol=fuse_dist)
             else:
@@ -563,9 +553,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         ):
             line = QLineF(self.start_atom.pos(), end_pos)
             end_item = None
-            if self.get_setting("atom_fusing_enabled_2d", True) and not isinstance(
-                end_pos, Mock
-            ):
+            if self.get_setting("atom_fusing_enabled_2d", True) and end_pos:
                 fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
                 end_item = self.find_atom_near(end_pos, tol=fuse_dist)
             if end_item is None:
@@ -619,9 +607,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 self.data_changed_in_event = True
             else:
                 end_item = None
-                if self.get_setting("atom_fusing_enabled_2d", True) and not isinstance(
-                    end_pos, Mock
-                ):
+                if self.get_setting("atom_fusing_enabled_2d", True) and end_pos:
                     fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
                     end_item = self.find_atom_near(end_pos, tol=fuse_dist)
                 if end_item is None:
