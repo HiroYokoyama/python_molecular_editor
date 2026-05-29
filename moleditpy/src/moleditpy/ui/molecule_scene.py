@@ -308,10 +308,10 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         item = None
         if (
             self.mode.startswith("bond")
-            and self.get_setting("atom_fusing_enabled_2d", True)
+            and self.get_setting("template_fusing_enabled_2d", True)
             and self.press_pos
         ):
-            fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
+            fuse_dist = self.get_setting("template_fusing_distance_2d", 14.0)
             item = self.find_atom_near(self.press_pos, tol=fuse_dist)
         if item is None:
             item = self.itemAt(self.press_pos, self.views()[0].transform())
@@ -360,8 +360,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             end_point = current_pos
 
             target_atom = None
-            if self.get_setting("atom_fusing_enabled_2d", True) and current_pos:
-                fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
+            if self.get_setting("template_fusing_enabled_2d", True) and current_pos:
+                fuse_dist = self.get_setting("template_fusing_distance_2d", 14.0)
                 target_atom = self.find_atom_near(current_pos, tol=fuse_dist)
             else:
                 for item in self.items(current_pos):
@@ -557,8 +557,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         ):
             line = QLineF(self.start_atom.pos(), end_pos)
             end_item = None
-            if self.get_setting("atom_fusing_enabled_2d", True) and end_pos:
-                fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
+            if self.get_setting("template_fusing_enabled_2d", True) and end_pos:
+                fuse_dist = self.get_setting("template_fusing_distance_2d", 14.0)
                 end_item = self.find_atom_near(end_pos, tol=fuse_dist)
             if end_item is None:
                 end_item = self.itemAt(end_pos, self.views()[0].transform())
@@ -611,8 +611,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 self.data_changed_in_event = True
             else:
                 end_item = None
-                if self.get_setting("atom_fusing_enabled_2d", True) and end_pos:
-                    fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
+                if self.get_setting("template_fusing_enabled_2d", True) and end_pos:
+                    fuse_dist = self.get_setting("template_fusing_distance_2d", 14.0)
                     end_item = self.find_atom_near(end_pos, tol=fuse_dist)
                 if end_item is None:
                     end_item = self.itemAt(end_pos, self.views()[0].transform())

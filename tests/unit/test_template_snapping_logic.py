@@ -63,7 +63,7 @@ class MockKeyboardScene(KeyboardMixin):
 def test_update_template_preview_uses_template_snapping_distance(app):
     scene = MockTemplateScene()
     scene.settings["template_snapping_distance_2d"] = 25.0
-    scene.settings["atom_fusing_distance_2d"] = 5.0
+    scene.settings["template_fusing_distance_2d"] = 5.0
 
     scene.update_template_preview(QPointF(50, 50))
 
@@ -76,7 +76,7 @@ def test_update_template_preview_uses_template_snapping_distance(app):
 def test_update_user_template_preview_uses_template_snapping_distance(app):
     scene = MockTemplateScene()
     scene.settings["template_snapping_distance_2d"] = 30.0
-    scene.settings["atom_fusing_distance_2d"] = 5.0
+    scene.settings["template_fusing_distance_2d"] = 5.0
     scene.user_template_data = {"atoms": [{"id": 0, "x": 0.0, "y": 0.0}], "bonds": []}
 
     scene.update_user_template_preview(QPointF(50, 50))
@@ -90,7 +90,7 @@ def test_update_user_template_preview_uses_template_snapping_distance(app):
 def test_keyboard_key_4_uses_template_snapping_distance(app):
     scene = MockKeyboardScene()
     scene.settings["template_snapping_distance_2d"] = 22.0
-    scene.settings["atom_fusing_distance_2d"] = 5.0
+    scene.settings["template_fusing_distance_2d"] = 5.0
 
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_4
@@ -108,9 +108,9 @@ def test_keyboard_key_4_uses_template_snapping_distance(app):
 
 def test_keyboard_key_4_uses_template_snapping_when_fusing_disabled(app):
     scene = MockKeyboardScene()
-    scene.settings["atom_fusing_enabled_2d"] = False
+    scene.settings["template_fusing_enabled_2d"] = False
     scene.settings["template_snapping_distance_2d"] = 22.0
-    scene.settings["atom_fusing_distance_2d"] = 5.0
+    scene.settings["template_fusing_distance_2d"] = 5.0
 
     event = MagicMock(spec=QKeyEvent)
     event.key.return_value = Qt.Key.Key_4
@@ -125,10 +125,10 @@ def test_keyboard_key_4_uses_template_snapping_when_fusing_disabled(app):
     assert tol == 22.0
 
 
-def test_keyboard_other_keys_use_atom_fusing_distance(app):
+def test_keyboard_other_keys_use_template_fusing_distance(app):
     scene = MockKeyboardScene()
     scene.settings["template_snapping_distance_2d"] = 22.0
-    scene.settings["atom_fusing_distance_2d"] = 8.0
+    scene.settings["template_fusing_distance_2d"] = 8.0
 
     event = MagicMock(spec=QKeyEvent)
     # Qt.Key.Key_C or similar to trigger atomic action

@@ -4898,7 +4898,7 @@ _No description provided._
 - assert tab.bond_wedge_width_2d_slider.value() == 80
 - assert tab.bond_dash_count_2d_slider.value() == 12
 - assert tab.atom_font_size_2d_slider.value() == 24
-- assert tab.atom_fusing_distance_2d_slider.value() == 18
+- assert tab.template_fusing_distance_2d_slider.value() == 18
 - assert tab.template_snapping_distance_2d_slider.value() == 20
 
 ### test_update_ui_sets_cap_style
@@ -4921,8 +4921,8 @@ _No description provided._
 - assert result['bond_dash_count_2d'] == DEFAULT_SETTINGS['bond_dash_count_2d']
 - assert result['atom_font_size_2d'] == DEFAULT_SETTINGS['atom_font_size_2d']
 - assert result['atom_use_bond_color_2d'] == DEFAULT_SETTINGS['atom_use_bond_color_2d']
-- assert result['atom_fusing_enabled_2d'] == DEFAULT_SETTINGS['atom_fusing_enabled_2d']
-- assert abs(result['atom_fusing_distance_2d'] - DEFAULT_SETTINGS['atom_fusing_distance_2d']) < 0.05
+- assert result['template_fusing_enabled_2d'] == DEFAULT_SETTINGS['template_fusing_enabled_2d']
+- assert abs(result['template_fusing_distance_2d'] - DEFAULT_SETTINGS['template_fusing_distance_2d']) < 0.05
 - assert abs(result['template_snapping_distance_2d'] - DEFAULT_SETTINGS['template_snapping_distance_2d']) < 0.05
 
 ### test_get_settings_returns_all_keys
@@ -4949,12 +4949,20 @@ _No description provided._
 _No description provided._
 
 - assert tab.current_bg_color_2d == '#123456'
-- assert tab.atom_fusing_enabled_2d_checkbox.isChecked() is False
+- assert tab.template_fusing_enabled_2d_checkbox.isChecked() is False
 - assert tab.current_bg_color_2d == DEFAULT_SETTINGS['background_color_2d']
 - assert tab.bond_cap_style_2d_combo.currentText() == DEFAULT_SETTINGS['bond_cap_style_2d']
-- assert tab.atom_fusing_enabled_2d_checkbox.isChecked() == DEFAULT_SETTINGS['atom_fusing_enabled_2d']
-- assert tab.atom_fusing_distance_2d_slider.value() == int(DEFAULT_SETTINGS['atom_fusing_distance_2d'])
+- assert tab.template_fusing_enabled_2d_checkbox.isChecked() == DEFAULT_SETTINGS['template_fusing_enabled_2d']
+- assert tab.template_fusing_distance_2d_slider.value() == int(DEFAULT_SETTINGS['template_fusing_distance_2d'])
 - assert tab.template_snapping_distance_2d_slider.value() == int(DEFAULT_SETTINGS['template_snapping_distance_2d'])
+
+### test_template_fusing_checkbox_disables_slider
+_No description provided._
+
+- assert tab.template_fusing_distance_2d_slider.isEnabled() is True
+- assert tab.template_fusing_distance_2d_label.isEnabled() is True
+- assert tab.template_fusing_distance_2d_slider.isEnabled() is False
+- assert tab.template_fusing_distance_2d_label.isEnabled() is False
 
 ## tests/unit/test_settings_3d_tabs.py
 
@@ -5868,7 +5876,7 @@ _No description provided._
 - assert len(scene.find_atom_near_args) == 1
 - assert tol == 22.0
 
-### test_keyboard_other_keys_use_atom_fusing_distance
+### test_keyboard_other_keys_use_template_fusing_distance
 _No description provided._
 
 - assert len(scene.find_atom_near_args) == 1
