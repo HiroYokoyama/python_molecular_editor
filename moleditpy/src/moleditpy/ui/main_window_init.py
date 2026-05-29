@@ -613,12 +613,18 @@ class MainInitManager:
             )
 
     def save_settings(self) -> None:
+        if (
+            not self.host.init_manager.settings_dirty
+            or self.host.init_manager.settings == self.host.initial_settings
+        ):
+            return
         try:
             if not os.path.exists(self.host.init_manager.settings_dir):
                 os.makedirs(self.host.init_manager.settings_dir)
             with open(self.host.init_manager.settings_file, "w", encoding="utf-8") as f:
                 json.dump(self.host.init_manager.settings, f, indent=4)
             self.host.init_manager.settings_dirty = False
+            self.host.initial_settings = self.host.init_manager.settings.copy()
         except (AttributeError, RuntimeError, ValueError) as e:
             print(f"Error saving settings: {e}")
 

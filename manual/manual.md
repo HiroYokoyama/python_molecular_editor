@@ -1,5 +1,38 @@
 # MoleditPy User Manual
 
+## Table of Contents
+
+- [1. Introduction](#1-introduction)
+- [2. Installation and Launch](#2-installation-and-launch)
+- [3. Screen Layout](#3-screen-layout)
+- [4. Basic Operations (2D Edit View)](#4-basic-operations-2d-edit-view)
+  - [4.1. Selecting a Drawing Mode](#41-selecting-a-drawing-mode)
+  - [4.2. Atom and Bond Operations](#42-atom-and-bond-operations)
+  - [4.3. Using Templates](#43-using-templates)
+  - [4.4. Undo/Redo](#44-undoredo)
+  - [4.5. Copy/Cut/Paste](#45-copycutpaste)
+  - [4.6. Other Edit/View Functions](#46-other-editview-functions)
+- [5. File Operations](#5-file-operations)
+  - [5.1. Project Files (.pmeprj (Python Molecular Editor Project File))](#51-project-files-pmeprj-python-molecular-editor-project-file)
+  - [5.2. Import](#52-import)
+  - [5.3. Export](#53-export)
+- [6. 3D Functions](#6-3d-functions)
+  - [6.1. 2D to 3D Conversion](#61-2d-to-3d-conversion)
+  - [6.2. 3D Structure Optimization](#62-3d-structure-optimization)
+  - [6.3. Changing 3D Display Style](#63-changing-3d-display-style)
+  - [6.4. 3D View Operations](#64-3d-view-operations)
+  - [6.5. Official Plugin Repository](#65-official-plugin-repository)
+  - [6.6. 3D Measurement Function ("3D Select" Mode)](#66-3d-measurement-function-3d-select-mode)
+  - [6.7. 3D Editing Function ("3D Drag" Mode / Alt Key)](#67-3d-editing-function-3d-drag-mode-alt-key)
+  - [6.8. Other 3D Editing Functions (Menu `3D Edit`)](#68-other-3d-editing-functions-menu-3d-edit)
+  - [6.9. Constrained Optimization](#69-constrained-optimization)
+  - [6.10. Displaying Atom Information](#610-displaying-atom-information)
+- [7. Molecular Analysis](#7-molecular-analysis)
+- [8. Settings](#8-settings)
+- [9. Keyboard Shortcuts](#9-keyboard-shortcuts)
+- [10. Version / License](#10-version-license)
+
+
 ## 1\. Introduction
 
 MoleditPy is a molecular editing software developed in Python. Through an intuitive interface, it allows for the drawing and editing of molecular structures in 2D, as well as the generation, display, and editing of 3D structures.
@@ -132,7 +165,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
 
 ### 4.3. Using Templates
 
-  * **Standard Templates:** Click a button on the template toolbar (benzene ring, cyclohexane ring, etc.) to select the mode, then click on the canvas to place it. Clicking on an existing atom or bond allows you to merge the structures.
+  * **Standard Templates:** Click a button on the template toolbar (benzene ring, cyclohexane ring, etc.) to select the mode, then click on the canvas to place it. Clicking on an existing atom or bond allows you to merge the structures. Template snapping distance and fusing settings can be adjusted in the `Settings` menu.
 
   * **User Templates:**
 
@@ -175,9 +208,9 @@ Perform various file operations from the `File` menu in the menu bar.
 
 ### 5.2. Import
 
-  * **Import \> MOL/SDF File...:** Loads a MOL or SDF file and displays it as a 2D structure. Even if the file contains 3D coordinates, 2D coordinates will be recalculated (stereochemistry is preserved).
-  * **Import \> SMILES...:** Opens a dialog to input a SMILES string and displays the input molecule as a 2D structure.
-  * **Import \> InChI...:** Opens a dialog to input an InChI string and displays the input molecule as a 2D structure.
+  * **Import \> MOL/SDF File...:** Loads a MOL or SDF file and displays it as a 2D structure. Even if the file contains 3D coordinates, 2D coordinates will be recalculated (stereochemistry is preserved). You can choose to overwrite the current canvas or append to the existing scene.
+  * **Import \> SMILES...:** Opens a dialog to input a SMILES string and displays the input molecule as a 2D structure. You can choose to overwrite or append.
+  * **Import \> InChI...:** Opens a dialog to input an InChI string and displays the input molecule as a 2D structure. You can choose to overwrite or append.
   * **Import \> 3D MOL/SDF (3D View Only)...:** Loads a MOL/SDF file with 3D coordinates and displays it **in the 3D view only** (the 2D editor is cleared). This enters 3D viewer mode.
   * **Import \> 3D XYZ (3D View Only)...:** Loads an XYZ file and displays it **in the 3D view only** (the 2D editor is cleared). Bonds are estimated based on interatomic distances. This enters 3D viewer mode.
 
@@ -280,7 +313,7 @@ You can directly edit the atomic coordinates of the 3D structure. Turn on the **
 
 These functions are available from the menu when a 3D structure is displayed. Many open a dedicated dialog where you can select atoms or input parameters.
 
-  * **Translation...:** Translates the entire molecule or a selected group of atoms by specified coordinates. **An option to translate only the selected atoms is also available.**
+  * **Translation...:** Translates the entire molecule or a selected group of atoms. You can specify translation using relative coordinates (shift amount) or absolute coordinate mode to move the selection to an exact position in 3D space. **An option to translate only the selected atoms is also available.**
 
   * **Move Group...:** Allows for the selection and manipulation of connected molecular fragments (groups).
 
@@ -331,7 +364,7 @@ This is an advanced feature that performs a molecular structure optimization (fo
 
 From the menu `View` \> `3D Atom Info Display`, you can select the information to be displayed above each atom in the 3D view.
 
-  * **Show Original ID / Index (or Show XYZ Unique ID):** Displays the original ID if from the 2D editor, or the index within the XYZ file if from an XYZ file.
+  * **Show Original ID / Index (or Show XYZ Unique ID):** Displays the original ID if from the 2D editor, or the index within the XYZ file if from an XYZ file. Also includes a 0/1-base submenu to switch the starting index.
   * **Show RDKit Index:** Displays the internal RDKit atom index.
   * **Show Coordinates (X,Y,Z):** Displays the 3D coordinates of each atom.
   * **Show Element Symbol:** Displays the element symbol for each atom.
@@ -463,7 +496,7 @@ You can also reset all settings to defaults via `Settings` \> `Reset All Setting
 
 ## 10\. Version / License
 
-  * **Version:** 3.0
+  * **Version:** 3.5
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
