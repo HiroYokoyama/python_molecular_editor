@@ -19,7 +19,6 @@ DEFAULT_SETTINGS = {
     "specular_power": 20,
     "light_intensity": 1.0,
     "show_3d_axes": True,
-    "show_chiral_labels": False,
     # --- 3D Model Parameters (Ball and Stick) ---
     "ball_stick_atom_scale": 1.0,
     "ball_stick_bond_radius": 0.1,
@@ -33,7 +32,6 @@ DEFAULT_SETTINGS = {
     # --- 3D Model Parameters (CPK) ---
     "cpk_atom_scale": 1.0,
     "cpk_resolution": 32,
-    "cpk_colors": {},
     # --- 3D Model Parameters (Wireframe) ---
     "wireframe_bond_radius": 0.02,
     "wireframe_resolution": 6,
@@ -58,12 +56,9 @@ DEFAULT_SETTINGS = {
     "optimize_intermolecular_interaction_rdkit": True,
     "skip_chemistry_checks": False,
     "always_ask_charge": False,
-    # --- Interaction and Selection ---
-    "use_high_fidelity_selection": True,
-    "selection_color": "#FFD700",
-    "high_quality_meshing": True,
-    "atom_label_color": "#000000",
+    # --- Color ---
     "bond_color": "#808080",
+    "cpk_colors": {},
     # --- 2D Settings ---
     "bond_width_2d": 2.0,
     "bond_spacing_double_2d": 3.5,
@@ -79,10 +74,4 @@ DEFAULT_SETTINGS = {
     "template_fusing_enabled_2d": True,
     "template_fusing_distance_2d": 14.0,
     "template_snapping_distance_2d": 14.0,
-    # --- Application Session / UI State ---
-    "theme": "light",
-    "window_size": [1200, 800],
-    "window_position": [100, 100],
-    "splitter_sizes": [600, 600],
-    "last_dir": "",
 }
