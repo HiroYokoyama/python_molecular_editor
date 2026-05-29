@@ -78,6 +78,7 @@ DEFAULT_SETTINGS = {
     "atom_font_family_2d": "Arial",
     "atom_fusing_enabled_2d": True,
     "atom_fusing_distance_2d": 14.0,
+    "template_snapping_distance_2d": 14.0,
     # --- Application Session / UI State ---
     "theme": "light",
     "window_size": [1200, 800],

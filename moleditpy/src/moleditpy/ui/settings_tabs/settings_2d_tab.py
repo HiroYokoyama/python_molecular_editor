@@ -168,6 +168,24 @@ class Settings2DTab(SettingsTabBase):
             ),
         )
 
+        form_layout.addRow(self._create_separator())
+
+        # --- Template Snapping Settings ---
+        form_layout.addRow(QLabel("<b>Template Snapping Settings</b>"))
+
+        # Template Snapping Distance
+        (
+            self.template_snapping_distance_2d_slider,
+            self.template_snapping_distance_2d_label,
+        ) = self._create_slider(5, 50, 1.0, is_int=True)
+        form_layout.addRow(
+            "Snapping Distance (px):",
+            self._wrap_layout(
+                self.template_snapping_distance_2d_slider,
+                self.template_snapping_distance_2d_label,
+            ),
+        )
+
     def _pick_bg_color_2d(self) -> None:
         color = QColorDialog.getColor(
             QColor(self.current_bg_color_2d), self, "Select 2D Background Color"
@@ -238,6 +256,9 @@ class Settings2DTab(SettingsTabBase):
         self.atom_fusing_distance_2d_slider.setValue(
             int(settings_dict.get("atom_fusing_distance_2d", 14.0))
         )
+        self.template_snapping_distance_2d_slider.setValue(
+            int(settings_dict.get("template_snapping_distance_2d", 14.0))
+        )
 
     def get_settings(self) -> dict[str, Any]:
         return {
@@ -255,5 +276,8 @@ class Settings2DTab(SettingsTabBase):
             "atom_fusing_enabled_2d": self.atom_fusing_enabled_2d_checkbox.isChecked(),
             "atom_fusing_distance_2d": float(
                 self.atom_fusing_distance_2d_slider.value()
+            ),
+            "template_snapping_distance_2d": float(
+                self.template_snapping_distance_2d_slider.value()
             ),
         }

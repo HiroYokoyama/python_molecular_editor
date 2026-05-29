@@ -4868,6 +4868,7 @@ _No description provided._
 - assert tab.bond_dash_count_2d_slider.value() == 12
 - assert tab.atom_font_size_2d_slider.value() == 24
 - assert tab.atom_fusing_distance_2d_slider.value() == 18
+- assert tab.template_snapping_distance_2d_slider.value() == 20
 
 ### test_update_ui_sets_cap_style
 _No description provided._
@@ -4891,6 +4892,7 @@ _No description provided._
 - assert result['atom_use_bond_color_2d'] == DEFAULT_SETTINGS['atom_use_bond_color_2d']
 - assert result['atom_fusing_enabled_2d'] == DEFAULT_SETTINGS['atom_fusing_enabled_2d']
 - assert abs(result['atom_fusing_distance_2d'] - DEFAULT_SETTINGS['atom_fusing_distance_2d']) < 0.05
+- assert abs(result['template_snapping_distance_2d'] - DEFAULT_SETTINGS['template_snapping_distance_2d']) < 0.05
 
 ### test_get_settings_returns_all_keys
 _No description provided._
@@ -4921,6 +4923,7 @@ _No description provided._
 - assert tab.bond_cap_style_2d_combo.currentText() == DEFAULT_SETTINGS['bond_cap_style_2d']
 - assert tab.atom_fusing_enabled_2d_checkbox.isChecked() == DEFAULT_SETTINGS['atom_fusing_enabled_2d']
 - assert tab.atom_fusing_distance_2d_slider.value() == int(DEFAULT_SETTINGS['atom_fusing_distance_2d'])
+- assert tab.template_snapping_distance_2d_slider.value() == int(DEFAULT_SETTINGS['template_snapping_distance_2d'])
 
 ## tests/unit/test_settings_3d_tabs.py
 
@@ -5807,6 +5810,32 @@ _No description provided._
 _No description provided._
 
 - mock_q.assert_not_called()
+
+## tests/unit/test_template_snapping_logic.py
+
+### test_update_template_preview_uses_template_snapping_distance
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert tol == 25.0
+
+### test_update_user_template_preview_uses_template_snapping_distance
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert tol == 30.0
+
+### test_keyboard_key_4_uses_template_snapping_distance
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert tol == 22.0
+
+### test_keyboard_other_keys_use_atom_fusing_distance
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert tol == 8.0
 
 ## tests/unit/test_translation_dialog.py
 

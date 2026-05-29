@@ -384,11 +384,9 @@ class TemplateMixin:
         if isinstance(pos, Mock):
             pos = QPointF(0, 0)
         find_atom_near_fn = getattr(self, "find_atom_near", None)
-        if find_atom_near_fn is not None and _get_setting(
-            self, "atom_fusing_enabled_2d", True
-        ):
-            fuse_dist = _get_setting(self, "atom_fusing_distance_2d", 14.0)
-            item = find_atom_near_fn(pos, tol=fuse_dist)  # pylint: disable=not-callable
+        if find_atom_near_fn is not None:
+            snap_dist = _get_setting(self, "template_snapping_distance_2d", 14.0)
+            item = find_atom_near_fn(pos, tol=snap_dist)  # pylint: disable=not-callable
         if item is None:
             items_under = self.items(pos)  # top-most first
             for it in items_under:
@@ -586,12 +584,17 @@ class TemplateMixin:
             return
 
         # Find attachment point (first atom or clicked item)
-        items_under = self.items(pos)
+        find_atom_near_fn = getattr(self, "find_atom_near", None)
         attachment_atom = None
-        for item in items_under:
-            if isinstance(item, AtomItem):
-                attachment_atom = item
-                break
+        if find_atom_near_fn is not None:
+            snap_dist = _get_setting(self, "template_snapping_distance_2d", 14.0)
+            attachment_atom = find_atom_near_fn(pos, tol=snap_dist)
+        if attachment_atom is None:
+            items_under = self.items(pos)
+            for item in items_under:
+                if isinstance(item, AtomItem):
+                    attachment_atom = item
+                    break
 
         # Calculate template positions
         points = []
@@ -749,17 +752,20 @@ class KeyboardMixin:
             from PyQt6.QtGui import QTransform
 
             transform = QTransform()
+        key = event.key()
+        modifiers = event.modifiers()
         item_at_cursor = None
         find_atom_near_fn = getattr(self, "find_atom_near", None)
         if find_atom_near_fn is not None and _get_setting(
             self, "atom_fusing_enabled_2d", True
         ):
-            fuse_dist = _get_setting(self, "atom_fusing_distance_2d", 14.0)
+            if key == Qt.Key.Key_4:
+                fuse_dist = _get_setting(self, "template_snapping_distance_2d", 14.0)
+            else:
+                fuse_dist = _get_setting(self, "atom_fusing_distance_2d", 14.0)
             item_at_cursor = find_atom_near_fn(cursor_pos, tol=fuse_dist)  # pylint: disable=not-callable
         if item_at_cursor is None:
             item_at_cursor = self.itemAt(cursor_pos, transform)
-        key = event.key()
-        modifiers = event.modifiers()
 
         if not self.window.ui_manager.is_2d_editable:
             return
