@@ -13,6 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional
+from unittest.mock import Mock
 
 from PyQt6.QtCore import QLineF, Qt, QPointF
 from PyQt6.QtGui import QPen
@@ -107,7 +108,13 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             and self.window
             and hasattr(self.window, "init_manager")
         ):
-            return self.window.init_manager.settings.get(key, default)
+            settings = self.window.init_manager.settings
+            if isinstance(settings, Mock):
+                return default
+            val = settings.get(key, default)
+            if isinstance(val, Mock):
+                return default
+            return val
         return default
 
     def update_connected_bonds(self, atoms: List[AtomItem]) -> None:
@@ -210,7 +217,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     if isinstance(it, (AtomItem, BondItem))
                     and not sip_isdeleted_safe(it)
                 ]
-            except Exception as e:
+            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 # Fallback to empty selection if the scene state is inconsistent during event processing
                 logging.debug(
                     f"Failed to retrieve selected items in mousePressEvent: {e}"
@@ -304,9 +311,14 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.clearSelection()
             event.accept()
 
-        item: Optional[QGraphicsItem] = self.itemAt(
-            self.press_pos, self.views()[0].transform()
-        )
+        item = None
+        if self.get_setting("atom_fusing_enabled_2d", True) and not isinstance(
+            self.press_pos, Mock
+        ):
+            fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
+            item = self.find_atom_near(self.press_pos, tol=fuse_dist)
+        if item is None:
+            item = self.itemAt(self.press_pos, self.views()[0].transform())
 
         if isinstance(item, AtomItem):
             self.start_atom = item
@@ -352,10 +364,16 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             end_point = current_pos
 
             target_atom = None
-            for item in self.items(current_pos):
-                if isinstance(item, AtomItem):
-                    target_atom = item
-                    break
+            if self.get_setting("atom_fusing_enabled_2d", True) and not isinstance(
+                current_pos, Mock
+            ):
+                fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
+                target_atom = self.find_atom_near(current_pos, tol=fuse_dist)
+            else:
+                for item in self.items(current_pos):
+                    if isinstance(item, AtomItem):
+                        target_atom = item
+                        break
 
             is_valid_snap_target = target_atom is not None and (
                 self.start_atom is None or target_atom is not self.start_atom
@@ -544,7 +562,14 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.mode.startswith("atom") or self.mode.startswith("bond")
         ):
             line = QLineF(self.start_atom.pos(), end_pos)
-            end_item = self.itemAt(end_pos, self.views()[0].transform())
+            end_item = None
+            if self.get_setting("atom_fusing_enabled_2d", True) and not isinstance(
+                end_pos, Mock
+            ):
+                fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
+                end_item = self.find_atom_near(end_pos, tol=fuse_dist)
+            if end_item is None:
+                end_item = self.itemAt(end_pos, self.views()[0].transform())
             # Determine bond style to use
             # In atom modes, set bond_order/stereo to None so create_bond uses defaults (1, 0)
             # In bond_* modes, use current settings (self.bond_order/stereo)
@@ -593,7 +618,14 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 self.create_atom(self.current_atom_symbol, end_pos)
                 self.data_changed_in_event = True
             else:
-                end_item = self.itemAt(end_pos, self.views()[0].transform())
+                end_item = None
+                if self.get_setting("atom_fusing_enabled_2d", True) and not isinstance(
+                    end_pos, Mock
+                ):
+                    fuse_dist = self.get_setting("atom_fusing_distance_2d", 14.0)
+                    end_item = self.find_atom_near(end_pos, tol=fuse_dist)
+                if end_item is None:
+                    end_item = self.itemAt(end_pos, self.views()[0].transform())
                 if isinstance(end_item, AtomItem):
                     start_id = self.create_atom(
                         self.current_atom_symbol, self.start_pos

@@ -15,6 +15,7 @@ from typing import Any, Optional
 
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QColorDialog,
     QComboBox,
     QFontComboBox,
@@ -135,14 +136,36 @@ class Settings2DTab(SettingsTabBase):
             ),
         )
 
-        from PyQt6.QtWidgets import QCheckBox
-
         self.atom_use_bond_color_2d_checkbox = QCheckBox()
         self.atom_use_bond_color_2d_checkbox.setToolTip(
-            "If checked, atoms will use the unified Bond Color instead of element-specific colors (CPK)."
+            "If checked, atoms will use the unified Bond Color "
+            "instead of element-specific colors (CPK)."
         )
         form_layout.addRow(
             "Use Bond Color for Atoms:", self.atom_use_bond_color_2d_checkbox
+        )
+
+        form_layout.addRow(self._create_separator())
+
+        # --- Atom Fusing Settings ---
+        form_layout.addRow(QLabel("<b>Atom Fusing Settings</b>"))
+
+        self.atom_fusing_enabled_2d_checkbox = QCheckBox()
+        self.atom_fusing_enabled_2d_checkbox.setToolTip(
+            "If checked, drawing or placing templates near an existing atom "
+            "will connect to it rather than creating a new one."
+        )
+        form_layout.addRow("Enable Atom Fusing:", self.atom_fusing_enabled_2d_checkbox)
+
+        # Fusing Distance
+        self.atom_fusing_distance_2d_slider, self.atom_fusing_distance_2d_label = (
+            self._create_slider(5, 50, 1.0, is_int=True)
+        )
+        form_layout.addRow(
+            "Fusing Distance (px):",
+            self._wrap_layout(
+                self.atom_fusing_distance_2d_slider, self.atom_fusing_distance_2d_label
+            ),
         )
 
     def _pick_bg_color_2d(self) -> None:
@@ -209,6 +232,12 @@ class Settings2DTab(SettingsTabBase):
         self.atom_use_bond_color_2d_checkbox.setChecked(
             settings_dict.get("atom_use_bond_color_2d", False)
         )
+        self.atom_fusing_enabled_2d_checkbox.setChecked(
+            settings_dict.get("atom_fusing_enabled_2d", True)
+        )
+        self.atom_fusing_distance_2d_slider.setValue(
+            int(settings_dict.get("atom_fusing_distance_2d", 14.0))
+        )
 
     def get_settings(self) -> dict[str, Any]:
         return {
@@ -223,4 +252,8 @@ class Settings2DTab(SettingsTabBase):
             "atom_font_family_2d": self.atom_font_family_2d_combo.currentFont().family(),
             "atom_font_size_2d": self.atom_font_size_2d_slider.value(),
             "atom_use_bond_color_2d": self.atom_use_bond_color_2d_checkbox.isChecked(),
+            "atom_fusing_enabled_2d": self.atom_fusing_enabled_2d_checkbox.isChecked(),
+            "atom_fusing_distance_2d": float(
+                self.atom_fusing_distance_2d_slider.value()
+            ),
         }

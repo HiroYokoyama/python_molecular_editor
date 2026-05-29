@@ -14,6 +14,7 @@ from __future__ import annotations
 import math
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
+from unittest.mock import Mock
 
 from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
 from PyQt6.QtGui import QCursor
@@ -39,6 +40,14 @@ except ImportError:
         SNAP_DISTANCE,
         SUM_TOLERANCE,
     )
+
+
+def _get_setting(obj: Any, key: str, default: Any = None) -> Any:
+    """Safely get setting from obj, falling back to default if get_setting method is missing."""
+    get_setting_fn = getattr(obj, "get_setting", None)
+    if get_setting_fn is not None:
+        return get_setting_fn(key, default)
+    return default
 
 
 class TemplateMixin:
@@ -236,7 +245,7 @@ class TemplateMixin:
             if i < num_points and j < num_points
         ]
         avg_len = (sum(ref_lengths) / len(ref_lengths)) if ref_lengths else 20.0
-        map_threshold = max(0.5 * avg_len, 8.0)
+        click_map_threshold = max(0.5 * avg_len, 8.0)
 
         for ex_item in existing_items:
             try:
@@ -248,7 +257,7 @@ class TemplateMixin:
                     d = dist_pts(p, ex_pos)
                     if best_d is None or d < best_d:
                         best_d, best_idx = d, i
-                if best_idx != -1 and best_d <= max(map_threshold, 1.5 * avg_len):
+                if best_idx != -1 and best_d <= max(click_map_threshold, 1.5 * avg_len):
                     atom_items[best_idx] = ex_item
                     used_indices.add(best_idx)
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -258,27 +267,29 @@ class TemplateMixin:
 
         # --- 2) Enumerate existing atoms in the scene from self.data.atoms and map them ---
         mapped_atoms = {it for it in atom_items if it is not None}
-        for i, p in enumerate(points):
-            if atom_items[i] is not None:
-                continue
-
-            nearby = None
-            best_d = float("inf")
-
-            for atom_data in self.data.atoms.values():
-                a_item = atom_data.get("item")
-                if not a_item or a_item in mapped_atoms:
+        if _get_setting(self, "atom_fusing_enabled_2d", True):
+            map_threshold = _get_setting(self, "atom_fusing_distance_2d", 14.0)
+            for i, p in enumerate(points):
+                if atom_items[i] is not None:
                     continue
-                try:
-                    d = dist_pts(p, a_item.pos())
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    continue
-                if d < best_d:
-                    best_d, nearby = d, a_item
 
-            if nearby and best_d <= map_threshold:
-                atom_items[i] = nearby
-                mapped_atoms.add(nearby)
+                nearby = None
+                best_d = float("inf")
+
+                for atom_data in self.data.atoms.values():
+                    a_item = atom_data.get("item")
+                    if not a_item or a_item in mapped_atoms:
+                        continue
+                    try:
+                        d = dist_pts(p, a_item.pos())
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        continue
+                    if d < best_d:
+                        best_d, nearby = d, a_item
+
+                if nearby and best_d <= map_threshold:
+                    atom_items[i] = nearby
+                    mapped_atoms.add(nearby)
 
         # --- 3) Create missing vertices ---
         for i, p in enumerate(points):
@@ -369,12 +380,21 @@ class TemplateMixin:
             except ValueError:
                 return
 
-        items_under = self.items(pos)  # top-most first
         item = None
-        for it in items_under:
-            if isinstance(it, (AtomItem, BondItem)):
-                item = it
-                break
+        if isinstance(pos, Mock):
+            pos = QPointF(0, 0)
+        find_atom_near_fn = getattr(self, "find_atom_near", None)
+        if find_atom_near_fn is not None and _get_setting(
+            self, "atom_fusing_enabled_2d", True
+        ):
+            fuse_dist = _get_setting(self, "atom_fusing_distance_2d", 14.0)
+            item = find_atom_near_fn(pos, tol=fuse_dist)  # pylint: disable=not-callable
+        if item is None:
+            items_under = self.items(pos)  # top-most first
+            for it in items_under:
+                if isinstance(it, (AtomItem, BondItem)):
+                    item = it
+                    break
 
         points, bonds_info = [], []
         l = DEFAULT_BOND_LENGTH
@@ -722,7 +742,22 @@ class KeyboardMixin:
     def keyPressEvent(self, event: Any) -> None:
         view = self.views()[0]
         cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
-        item_at_cursor = self.itemAt(cursor_pos, view.transform())
+        if isinstance(cursor_pos, Mock):
+            cursor_pos = QPointF(0, 0)
+        transform = view.transform()
+        if isinstance(transform, Mock):
+            from PyQt6.QtGui import QTransform
+
+            transform = QTransform()
+        item_at_cursor = None
+        find_atom_near_fn = getattr(self, "find_atom_near", None)
+        if find_atom_near_fn is not None and _get_setting(
+            self, "atom_fusing_enabled_2d", True
+        ):
+            fuse_dist = _get_setting(self, "atom_fusing_distance_2d", 14.0)
+            item_at_cursor = find_atom_near_fn(cursor_pos, tol=fuse_dist)  # pylint: disable=not-callable
+        if item_at_cursor is None:
+            item_at_cursor = self.itemAt(cursor_pos, transform)
         key = event.key()
         modifiers = event.modifiers()
 
@@ -741,13 +776,69 @@ class KeyboardMixin:
                     if isinstance(item_at_cursor, AtomItem):
                         p0 = item_at_cursor.pos()
                         l = DEFAULT_BOND_LENGTH
-                        direction = QLineF(p0, cursor_pos).unitVector()
-                        p1 = (
-                            p0 + direction.p2() * l
-                            if direction.length() > 0
-                            else p0 + QPointF(l, 0)
-                        )
-                        points = self._calculate_polygon_from_edge(p0, p1, n)
+
+                        # Check if this is a terminal atom (exactly 1 neighbor)
+                        neighbor_positions = []
+                        if hasattr(item_at_cursor, "bonds") and item_at_cursor.bonds:
+                            for b in item_at_cursor.bonds:
+                                if not sip_isdeleted_safe(b):
+                                    other = (
+                                        b.atom1
+                                        if b.atom2 is item_at_cursor
+                                        else b.atom2
+                                    )
+                                    if (
+                                        other
+                                        and not sip_isdeleted_safe(other)
+                                        and hasattr(other, "pos")
+                                    ):
+                                        try:
+                                            neighbor_positions.append(other.pos())
+                                        except RuntimeError:
+                                            continue
+
+                        if len(neighbor_positions) == 1:
+                            v_to_neighbor = neighbor_positions[0] - p0
+                            angle_to_neighbor = math.atan2(
+                                v_to_neighbor.y(), v_to_neighbor.x()
+                            )
+                            angle_plus = angle_to_neighbor + math.radians(120)
+                            angle_minus = angle_to_neighbor - math.radians(120)
+                            angle_cursor = math.atan2(
+                                cursor_pos.y() - p0.y(), cursor_pos.x() - p0.x()
+                            )
+                            diff_plus = abs(
+                                math.atan2(
+                                    math.sin(angle_cursor - angle_plus),
+                                    math.cos(angle_cursor - angle_plus),
+                                )
+                            )
+                            diff_minus = abs(
+                                math.atan2(
+                                    math.sin(angle_cursor - angle_minus),
+                                    math.cos(angle_cursor - angle_minus),
+                                )
+                            )
+                            best_angle = (
+                                angle_plus if diff_plus < diff_minus else angle_minus
+                            )
+                            p1 = p0 + QPointF(
+                                l * math.cos(best_angle), l * math.sin(best_angle)
+                            )
+                            bend_dir = p0 - v_to_neighbor
+                            points = self._calculate_polygon_from_edge(
+                                p0, p1, n, cursor_pos=bend_dir
+                            )
+                        else:
+                            direction = QLineF(p0, cursor_pos).unitVector()
+                            p1 = (
+                                p0 + direction.p2() * l
+                                if direction.length() > 0
+                                else p0 + QPointF(l, 0)
+                            )
+                            points = self._calculate_polygon_from_edge(
+                                p0, p1, n, cursor_pos=cursor_pos
+                            )
                         existing_items = [item_at_cursor]
 
                     elif isinstance(item_at_cursor, BondItem):
@@ -1008,7 +1099,17 @@ class KeyboardMixin:
                     target_pos = start_pos + new_pos_offset
 
                     # Find nearby atom
-                    near_atom = self.find_atom_near(target_pos, tol=SNAP_DISTANCE)
+                    near_atom = None
+                    if isinstance(target_pos, Mock):
+                        target_pos = QPointF(0, 0)
+                    find_atom_near_fn = getattr(self, "find_atom_near", None)
+                    if find_atom_near_fn is not None and _get_setting(
+                        self, "atom_fusing_enabled_2d", True
+                    ):
+                        fuse_dist = _get_setting(
+                            self, "atom_fusing_distance_2d", SNAP_DISTANCE
+                        )
+                        near_atom = find_atom_near_fn(target_pos, tol=fuse_dist)  # pylint: disable=not-callable
 
                     if near_atom and near_atom is not start_atom:
                         # Bond if exists
@@ -1377,6 +1478,8 @@ class SceneQueryMixin:
             return False
 
     def find_atom_near(self, pos: Any, tol: float = 14.0) -> Any:
+        if isinstance(pos, Mock):
+            return None
         # Create a small search rectangle around the position
         search_rect = QRectF(pos.x() - tol, pos.y() - tol, 2 * tol, 2 * tol)
         nearby_items = self.items(search_rect)

@@ -4656,6 +4656,24 @@ _Test undo/redo integration via scene modifications._
 - assert len(window.edit_actions_manager.undo_stack) == 0
 - assert len(window.edit_actions_manager.undo_stack) == initial_len + 1
 
+### test_atom_fusing_enabled
+_Test that drawing a bond near an existing atom snaps/fuses to it when enabled._
+
+- assert len(data.atoms) == 2
+- assert len(data.bonds) == 1
+
+### test_atom_fusing_disabled
+_Test that drawing a bond near an existing atom does not snap/fuse when disabled._
+
+- assert len(data.atoms) == 3
+- assert len(data.bonds) == 1
+
+### test_benzene_terminal_120_deg_alignment
+_Test that pressing 4 at a terminal atom aligns the benzene ring at 120 degrees._
+
+- assert len(data.atoms) == 7
+- assert found_expected_pos
+
 ## tests/unit/test_scene_extended.py
 
 ### test_scene_keypress_modes
@@ -4849,6 +4867,7 @@ _No description provided._
 - assert tab.bond_wedge_width_2d_slider.value() == 80
 - assert tab.bond_dash_count_2d_slider.value() == 12
 - assert tab.atom_font_size_2d_slider.value() == 24
+- assert tab.atom_fusing_distance_2d_slider.value() == 18
 
 ### test_update_ui_sets_cap_style
 _No description provided._
@@ -4870,6 +4889,8 @@ _No description provided._
 - assert result['bond_dash_count_2d'] == DEFAULT_SETTINGS['bond_dash_count_2d']
 - assert result['atom_font_size_2d'] == DEFAULT_SETTINGS['atom_font_size_2d']
 - assert result['atom_use_bond_color_2d'] == DEFAULT_SETTINGS['atom_use_bond_color_2d']
+- assert result['atom_fusing_enabled_2d'] == DEFAULT_SETTINGS['atom_fusing_enabled_2d']
+- assert abs(result['atom_fusing_distance_2d'] - DEFAULT_SETTINGS['atom_fusing_distance_2d']) < 0.05
 
 ### test_get_settings_returns_all_keys
 _No description provided._
@@ -4895,8 +4916,11 @@ _No description provided._
 _No description provided._
 
 - assert tab.current_bg_color_2d == '#123456'
+- assert tab.atom_fusing_enabled_2d_checkbox.isChecked() is False
 - assert tab.current_bg_color_2d == DEFAULT_SETTINGS['background_color_2d']
 - assert tab.bond_cap_style_2d_combo.currentText() == DEFAULT_SETTINGS['bond_cap_style_2d']
+- assert tab.atom_fusing_enabled_2d_checkbox.isChecked() == DEFAULT_SETTINGS['atom_fusing_enabled_2d']
+- assert tab.atom_fusing_distance_2d_slider.value() == int(DEFAULT_SETTINGS['atom_fusing_distance_2d'])
 
 ## tests/unit/test_settings_3d_tabs.py
 
