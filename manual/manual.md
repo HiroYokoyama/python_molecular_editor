@@ -21,17 +21,19 @@
   - [6.2. 3D Structure Optimization](#62-3d-structure-optimization)
   - [6.3. Changing 3D Display Style](#63-changing-3d-display-style)
   - [6.4. 3D View Operations](#64-3d-view-operations)
-  - [6.5. Official Plugin Repository](#65-official-plugin-repository)
-  - [6.6. 3D Measurement Function ("3D Select" Mode)](#66-3d-measurement-function-3d-select-mode)
-  - [6.7. 3D Editing Function ("3D Drag" Mode / Alt Key)](#67-3d-editing-function-3d-drag-mode-alt-key)
-  - [6.8. Other 3D Editing Functions (Menu `3D Edit`)](#68-other-3d-editing-functions-menu-3d-edit)
-  - [6.9. Constrained Optimization](#69-constrained-optimization)
-  - [6.10. Displaying Atom Information](#610-displaying-atom-information)
+  - [6.5. 3D Measurement Function ("3D Select" Mode)](#65-3d-measurement-function-3d-select-mode)
+  - [6.6. 3D Editing Function ("3D Drag" Mode / Alt Key)](#66-3d-editing-function-3d-drag-mode--alt-key)
+  - [6.7. Other 3D Editing Functions (Menu `3D Edit`)](#67-other-3d-editing-functions-menu-`3d-edit`)
+  - [6.8. Constrained Optimization](#68-constrained-optimization)
+  - [6.9. Displaying Atom Information](#69-displaying-atom-information)
 - [7. Molecular Analysis](#7-molecular-analysis)
 - [8. Settings](#8-settings)
-- [9. Keyboard Shortcuts](#9-keyboard-shortcuts)
-- [10. Version / License](#10-version-license)
-
+- [9. Plugin System](#9-plugin-system)
+  - [9.1. Plugin Management](#91-plugin-management)
+  - [9.2. Installing Plugins](#92-installing-plugins)
+  - [9.3. Finding Plugins and Examples](#93-finding-plugins-and-examples)
+- [10. Keyboard Shortcuts](#10-keyboard-shortcuts)
+- [11. Version / License](#11-version--license)
 
 ## 1\. Introduction
 
@@ -269,23 +271,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
   * **Reset View:** `View` \> `Reset 3D View` (Ctrl+Shift+R) from the menu resets the camera position and zoom to their initial state.
   * **Redraw 3D Molecule:** `View` \> `Redraw 3D Molecule` from the menu forces a redraw of the 3D structure.
 
-### 6.5. Official Plugin Repository
-
-Official plugins are available in the [GitHub repository](https://github.com/HiroYokoyama/moleditpy-plugins). You can download them and place them in your plugins directory (`~/.moleditpy/plugins`) to use them. You can also use the **Plugin Manager** via `Plugin` \> `Plugin Manager...`.
-
-**Examples of Available Plugins
-
-- **Input Generators: Gaussian / ORCA Input Generator Neo**
-    Evolved from simple demos to production-ready tools.
-    * **Gaussian Version:** Supports Link 0 commands, Route sections, and detailed Charge/Multiplicity settings.
-    * **ORCA Version:** Features a Block Builder to assist in constructing complex input blocks.
-
- - **Advanced Analysis & Vis: Mapped Cube Viewer & MS Spectrum Neo**
-    Powerful tools for visual and numerical analysis of molecular properties.
-    * **Mapped Cube Viewer:** Maps properties (e.g., Electrostatic Potential) onto isosurfaces like electron density.
-    * **MS Spectrum Neo:** Simulates Mass Spectrometry spectra, supporting interactive zooming of isotope distributions and Gaussian broadening.
-
-### 6.6. 3D Measurement Function ("3D Select" Mode)
+### 6.5. 3D Measurement Function ("3D Select" Mode)
 
 1.  Click the **3D Select** button on the main toolbar to enable measurement mode.
 
@@ -301,7 +287,7 @@ Official plugins are available in the [GitHub repository](https://github.com/Hir
 
  ![](img/measurement.png)
 
-### 6.7. 3D Editing Function ("3D Drag" Mode / Alt Key)
+### 6.6. 3D Editing Function ("3D Drag" Mode / Alt Key)
 
 You can directly edit the atomic coordinates of the 3D structure. Turn on the **3D Drag** button on the main toolbar, or perform operations **while holding down the Alt key**.
 
@@ -309,7 +295,7 @@ You can directly edit the atomic coordinates of the 3D structure. Turn on the **
 
    ![](img/atom-drag.png)
 
-### 6.8. Other 3D Editing Functions (Menu `3D Edit`)
+### 6.7. Other 3D Editing Functions (Menu `3D Edit`)
 
 These functions are available from the menu when a 3D structure is displayed. Many open a dedicated dialog where you can select atoms or input parameters.
 
@@ -342,7 +328,7 @@ These functions are available from the menu when a 3D structure is displayed. Ma
 
   ![](img/multiple-molecules-edit.png)
 
-### 6.9. Constrained Optimization
+### 6.8. Constrained Optimization
 
 This is an advanced feature that performs a molecular structure optimization (force field calculation) while keeping the values of specific atomic distances, angles, or dihedral angles fixed (constrained).
 
@@ -360,7 +346,7 @@ This is an advanced feature that performs a molecular structure optimization (fo
 
   ![](img/constrained-opt.png)
 
-### 6.10. Displaying Atom Information
+### 6.9. Displaying Atom Information
 
 From the menu `View` \> `3D Atom Info Display`, you can select the information to be displayed above each atom in the 3D view.
 
@@ -448,7 +434,27 @@ You can also reset all settings to defaults via `Settings` \> `Reset All Setting
 
 -----
 
-## 9\. Keyboard Shortcuts
+## 9\. Plugin System
+
+MoleditPy supports extending its functionality through Python scripts.
+
+### 9.1. Plugin Management
+You can open the Plugin Manager via the menu Plugin \> Plugin Manager.... From here, you can view, reload, and remove installed plugins.
+
+### 9.2. Installing Plugins
+* **Drag & Drop:** Open the Plugin Manager and drag & drop a .py or .zip file into the window to install it easily.
+* **CLI (Command Line):** You can install plugins headlessly by running moleditpy --install-plugin [PATH] from your terminal.
+* **Manual Install:** You can manually place custom scripts in the ~/.moleditpy/plugins directory.
+
+### 9.3. Finding Plugins and Examples
+You can explore and download official plugins from the **Plugin Explorer**: [https://hiroyokoyama.github.io/moleditpy-plugins/explorer/](https://hiroyokoyama.github.io/moleditpy-plugins/explorer/)
+
+**Updated Examples of Available Plugins:**
+* **ORCA Input Generator Pro:** An advanced tool for generating ORCA inputs, featuring a Block Builder to assist in constructing complex input blocks.
+* **PySCF Calculator:** A plugin that integrates PySCF for direct calculation capabilities.
+* **ORCA Result Analyzer:** A powerful tool for parsing and visualizing ORCA calculation results.
+
+## 10\. Keyboard Shortcuts
 
 | Key | Function (Select Mode) | Function (Draw/Edit Mode) |
 | :--- | :--- | :--- |
@@ -498,7 +504,7 @@ You can also reset all settings to defaults via `Settings` \> `Reset All Setting
 
 -----
 
-## 10\. Version / License
+## 11\. Version / License
 
   * **Version:** 3.5
   * **Author:** Hiromichi Yokoyama
