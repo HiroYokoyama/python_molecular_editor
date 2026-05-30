@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QSlider,
     QWidget,
+    QDoubleSpinBox,
 )
 from .settings_tab_base import SettingsTabBase
 
@@ -76,10 +77,23 @@ class SettingsOtherTab(SettingsTabBase):
 
         self.aromatic_torus_thickness_slider = QSlider(Qt.Orientation.Horizontal)
         self.aromatic_torus_thickness_slider.setRange(10, 300)
-        self.aromatic_torus_thickness_label = QLabel("0.6")
-        self.aromatic_torus_thickness_slider.valueChanged.connect(
-            lambda v: self.aromatic_torus_thickness_label.setText(f"{v / 100:.1f}")
-        )
+        self.aromatic_torus_thickness_label = QDoubleSpinBox()
+        self.aromatic_torus_thickness_label.setRange(0.1, 3.0)
+        self.aromatic_torus_thickness_label.setSingleStep(0.1)
+        self.aromatic_torus_thickness_label.setDecimals(1)
+
+        def sync_spin(val):
+            self.aromatic_torus_thickness_label.blockSignals(True)
+            self.aromatic_torus_thickness_label.setValue(val / 100.0)
+            self.aromatic_torus_thickness_label.blockSignals(False)
+
+        def sync_slider(val):
+            self.aromatic_torus_thickness_slider.blockSignals(True)
+            self.aromatic_torus_thickness_slider.setValue(int(round(val * 100)))
+            self.aromatic_torus_thickness_slider.blockSignals(False)
+
+        self.aromatic_torus_thickness_slider.valueChanged.connect(sync_spin)
+        self.aromatic_torus_thickness_label.valueChanged.connect(sync_slider)
 
         atl = QHBoxLayout()
         atl.addWidget(self.aromatic_torus_thickness_slider)

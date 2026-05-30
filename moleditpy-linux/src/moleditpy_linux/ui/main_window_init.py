@@ -1866,6 +1866,14 @@ class MainInitManager:
         edit_3d_menu.addAction(translation_action)
         self.host.translation_action = translation_action
 
+        move_selected_atoms_action = QAction("Move Selected Atoms...", self.host)
+        move_selected_atoms_action.triggered.connect(
+            self.host.dialog_manager.open_move_selected_atoms_dialog
+        )
+        move_selected_atoms_action.setEnabled(False)
+        edit_3d_menu.addAction(move_selected_atoms_action)
+        self.host.move_selected_atoms_action = move_selected_atoms_action
+
         move_group_action = QAction("Move Group...", self.host)
         move_group_action.triggered.connect(
             self.host.dialog_manager.open_move_group_dialog

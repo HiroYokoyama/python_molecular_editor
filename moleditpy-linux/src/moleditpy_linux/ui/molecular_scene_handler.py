@@ -228,6 +228,9 @@ class TemplateMixin:
             return math.hypot(ax - bx, ay - by)
 
         # --- 1) Map already clicked existing_items to template vertices ---
+        alt_pressed = bool(
+            QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier
+        )
         existing_items = existing_items or []
         used_indices = set()
         ref_lengths = [
@@ -258,8 +261,14 @@ class TemplateMixin:
 
         # --- 2) Enumerate existing atoms in the scene from self.data.atoms and map them ---
         mapped_atoms = {it for it in atom_items if it is not None}
-        if self.get_setting("template_fusing_enabled_2d", True):
-            map_threshold = self.get_setting("template_fusing_distance_2d", 14.0)
+        if (
+            hasattr(self, "data")
+            and hasattr(self.data, "atoms")
+            and self.data.atoms is not None
+            and self.get_setting("template_fusing_enabled_2d", True)
+            and not alt_pressed
+        ):
+            map_threshold = self.get_setting("template_fusing_distance_2d", 7.0)
             for i, p in enumerate(points):
                 if atom_items[i] is not None:
                     continue
@@ -353,12 +362,14 @@ class TemplateMixin:
 
         return atom_items
 
-    def update_template_preview(self, pos: QPointF) -> None:
+    def update_template_preview(
+        self, pos: QPointF, alt_pressed: Optional[bool] = None
+    ) -> None:
         mode_parts = self.mode.split("_")
 
         # Check if this is a user template
         if len(mode_parts) >= 3 and mode_parts[1] == "user":
-            self.update_user_template_preview(pos)
+            self.update_user_template_preview(pos, alt_pressed=alt_pressed)
             return
 
         is_aromatic = False
@@ -371,6 +382,10 @@ class TemplateMixin:
             except ValueError:
                 return
 
+        if alt_pressed is None:
+            alt_pressed = bool(
+                QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier
+            )
         item = None
         if pos:
             snap_dist = self.get_setting("template_snapping_distance_2d", 14.0)
@@ -383,7 +398,7 @@ class TemplateMixin:
                     break
 
         points, bonds_info = [], []
-        l = DEFAULT_BOND_LENGTH
+        bond_len = DEFAULT_BOND_LENGTH
         self.template_context = {}
 
         if isinstance(item, AtomItem):
@@ -391,7 +406,10 @@ class TemplateMixin:
             continuous_angle = math.atan2(pos.y() - p0.y(), pos.x() - p0.x())
             snap_angle_rad = math.radians(15)
             snapped_angle = round(continuous_angle / snap_angle_rad) * snap_angle_rad
-            p1 = p0 + QPointF(l * math.cos(snapped_angle), l * math.sin(snapped_angle))
+            p1 = p0 + QPointF(
+                bond_len * math.cos(snapped_angle),
+                bond_len * math.sin(snapped_angle),
+            )
             points = self._calculate_polygon_from_edge(p0, p1, n)
             self.template_context["items"] = [item]
 
@@ -409,8 +427,8 @@ class TemplateMixin:
             points = [
                 pos
                 + QPointF(
-                    l * math.cos(start_angle + i * angle_step),
-                    l * math.sin(start_angle + i * angle_step),
+                    bond_len * math.cos(start_angle + i * angle_step),
+                    bond_len * math.sin(start_angle + i * angle_step),
                 )
                 for i in range(n)
             ]
@@ -425,6 +443,57 @@ class TemplateMixin:
 
             self.template_context["points"] = points
             self.template_context["bonds_info"] = bonds_info
+
+            # Snap individual preview vertices to nearby atoms to reflect template fusing visually
+            if self.get_setting("template_fusing_enabled_2d", True) and not alt_pressed:
+                fuse_dist = self.get_setting("template_fusing_distance_2d", 7.0)
+                mapped_atoms = set(self.template_context.get("items", []))
+                used_indices = set()
+                click_map_threshold = max(0.5 * bond_len, 8.0)
+
+                # Map already clicked existing items first
+                for ex_item in self.template_context.get("items", []):
+                    try:
+                        ex_pos = ex_item.pos()
+                        best_idx, best_d = -1, float("inf")
+                        for i, p in enumerate(points):
+                            if i in used_indices:
+                                continue
+                            d = math.hypot(p.x() - ex_pos.x(), p.y() - ex_pos.y())
+                            if d < best_d:
+                                best_d, best_idx = d, i
+                        if best_idx != -1 and best_d <= click_map_threshold:
+                            points[best_idx] = ex_pos
+                            used_indices.add(best_idx)
+                    except (AttributeError, TypeError, IndexError):
+                        pass
+
+                # Map unmapped points to other unmapped nearby atoms in the scene
+                if (
+                    hasattr(self, "data")
+                    and hasattr(self.data, "atoms")
+                    and self.data.atoms is not None
+                ):
+                    for i, p in enumerate(points):
+                        if i in used_indices:
+                            continue
+                        nearby = None
+                        best_d = float("inf")
+                        for atom_data in self.data.atoms.values():
+                            a_item = atom_data.get("item")
+                            if not a_item or a_item in mapped_atoms:
+                                continue
+                            try:
+                                d = math.hypot(
+                                    p.x() - a_item.pos().x(), p.y() - a_item.pos().y()
+                                )
+                            except (AttributeError, TypeError):
+                                continue
+                            if d < best_d:
+                                best_d, nearby = d, a_item
+                        if nearby and best_d <= fuse_dist:
+                            points[i] = nearby.pos()
+                            mapped_atoms.add(nearby)
 
             self.template_preview.set_geometry(points, is_aromatic)
 
@@ -558,7 +627,9 @@ class TemplateMixin:
             if atom_id in self.data.atoms and self.data.atoms[atom_id]["item"]:
                 self.data.atoms[atom_id]["item"].update_style()
 
-    def update_user_template_preview(self, pos: QPointF) -> None:
+    def update_user_template_preview(
+        self, pos: QPointF, alt_pressed: Optional[bool] = None
+    ) -> None:
         """Update user template preview"""
         # Robust preview: avoid self.data.atoms for preview-only atoms
         if not hasattr(self, "user_template_data") or not self.user_template_data:
@@ -659,8 +730,8 @@ class KeyboardMixin:
         Returns the offset QPointF.
         """
         start_pos = start_atom.pos()
-        l = bond_length
-        new_pos_offset = QPointF(0, -l)  # Default offset (up)
+        bond_len = bond_length
+        new_pos_offset = QPointF(0, -bond_len)  # Default offset (up)
 
         # Get non-H neighbors
         neighbor_positions = []
@@ -673,7 +744,7 @@ class KeyboardMixin:
 
         if num_non_H_neighbors == 0:
             # Zero bonds: default direction (up)
-            new_pos_offset = QPointF(0, -l)
+            new_pos_offset = QPointF(0, -bond_len)
 
         elif num_non_H_neighbors == 1:
             # One bond: ~120/60 degree angle
@@ -688,7 +759,7 @@ class KeyboardMixin:
             new_vx, new_vy = vx * cos_a - vy * sin_a, vx * sin_a + vy * cos_a
             rotated_vector = QPointF(new_vx, new_vy)
             line = QLineF(QPointF(0, 0), rotated_vector)
-            line.setLength(l)
+            line.setLength(bond_len)
             new_pos_offset = line.p2()
 
         elif num_non_H_neighbors == 3:
@@ -705,10 +776,10 @@ class KeyboardMixin:
             # SUM_TOLERANCE is now a module-level constant
             if bond_vectors_sum.manhattanLength() > SUM_TOLERANCE:
                 new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
-                new_direction_line.setLength(l)
+                new_direction_line.setLength(bond_len)
                 new_pos_offset = new_direction_line.p2()
             else:
-                new_pos_offset = QPointF(l * 0.7071, -l * 0.7071)
+                new_pos_offset = QPointF(bond_len * 0.7071, -bond_len * 0.7071)
 
         else:  # 2, 4+ bonds: skeleton continuation or over-bonding
             bond_vectors_sum = QPointF(0, 0)
@@ -721,26 +792,36 @@ class KeyboardMixin:
 
             if bond_vectors_sum.manhattanLength() > 0.01:
                 new_direction_line = QLineF(QPointF(0, 0), -bond_vectors_sum)
-                new_direction_line.setLength(l)
+                new_direction_line.setLength(bond_len)
                 new_pos_offset = new_direction_line.p2()
             else:
                 # Default (up) if sum is zero
-                new_pos_offset = QPointF(0, -l)
+                new_pos_offset = QPointF(0, -bond_len)
 
         return new_pos_offset
 
     def keyPressEvent(self, event: Any) -> None:
+        if not self.views():
+            try:
+                from PyQt6.QtWidgets import QGraphicsScene
+
+                QGraphicsScene.keyPressEvent(self, event)  # type: ignore[arg-type]
+            except (ImportError, AttributeError, TypeError, RuntimeError):
+                logging.exception("Error delegating keyPressEvent")
+            return
+
         view = self.views()[0]
         cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
         transform = view.transform()
         key = event.key()
         modifiers = event.modifiers()
+
         item_at_cursor = None
         if key == Qt.Key.Key_4:
             snap_dist = self.get_setting("template_snapping_distance_2d", 14.0)
             item_at_cursor = self.find_atom_near(cursor_pos, tol=snap_dist)
         elif self.get_setting("template_fusing_enabled_2d", True):
-            fuse_dist = self.get_setting("template_fusing_distance_2d", 14.0)
+            fuse_dist = self.get_setting("template_fusing_distance_2d", 7.0)
             item_at_cursor = self.find_atom_near(cursor_pos, tol=fuse_dist)
         if item_at_cursor is None:
             item_at_cursor = self.itemAt(cursor_pos, transform)
@@ -759,7 +840,7 @@ class KeyboardMixin:
                     # Calculate placement like update_template_preview
                     if isinstance(item_at_cursor, AtomItem):
                         p0 = item_at_cursor.pos()
-                        l = DEFAULT_BOND_LENGTH
+                        bond_len = DEFAULT_BOND_LENGTH
 
                         # Check if this is a terminal atom (exactly 1 neighbor)
                         neighbor_positions = []
@@ -807,7 +888,8 @@ class KeyboardMixin:
                                 angle_plus if diff_plus < diff_minus else angle_minus
                             )
                             p1 = p0 + QPointF(
-                                l * math.cos(best_angle), l * math.sin(best_angle)
+                                bond_len * math.cos(best_angle),
+                                bond_len * math.sin(best_angle),
                             )
                             bend_dir = p0 - v_to_neighbor
                             points = self._calculate_polygon_from_edge(
@@ -816,9 +898,9 @@ class KeyboardMixin:
                         else:
                             direction = QLineF(p0, cursor_pos).unitVector()
                             p1 = (
-                                p0 + direction.p2() * l
+                                p0 + direction.p2() * bond_len
                                 if direction.length() > 0
-                                else p0 + QPointF(l, 0)
+                                else p0 + QPointF(bond_len, 0)
                             )
                             points = self._calculate_polygon_from_edge(
                                 p0, p1, n, cursor_pos=cursor_pos
@@ -1076,8 +1158,10 @@ class KeyboardMixin:
 
                 if start_atom:
                     start_pos = start_atom.pos()
-                    l = DEFAULT_BOND_LENGTH
-                    new_pos_offset = self._calculate_new_atom_position(start_atom, l)
+                    bond_len = DEFAULT_BOND_LENGTH
+                    new_pos_offset = self._calculate_new_atom_position(
+                        start_atom, bond_len
+                    )
 
                     # SNAP_DISTANCE is a module-level constant
                     target_pos = start_pos + new_pos_offset

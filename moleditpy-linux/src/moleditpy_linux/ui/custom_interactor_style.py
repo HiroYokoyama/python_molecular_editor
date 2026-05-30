@@ -22,10 +22,8 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera  # 
 
 
 try:
-    from .move_group_dialog import MoveGroupDialog
     from .atom_picking import pick_atom_index_from_screen
 except ImportError:
-    from moleditpy_linux.ui.move_group_dialog import MoveGroupDialog
     from moleditpy_linux.ui.atom_picking import pick_atom_index_from_screen
 
 from rdkit import Geometry
@@ -107,10 +105,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._mouse_press_pos = None
 
         # Check Move Group dialog
+        # Check Move Group or Move Selected Atoms dialog
         move_group_dialog = None
         for widget in QApplication.topLevelWidgets():
             try:
-                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                if (
+                    type(widget).__name__
+                    in ("MoveGroupDialog", "MoveSelectedAtomsDialog")
+                    and widget.isVisible()
+                ):
                     move_group_dialog = widget
                     break
             except (AttributeError, RuntimeError, TypeError):
@@ -147,6 +150,20 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     self._suppress_next_left_button_up = True
                     return  # Disable camera rotation
                 else:
+                    if type(move_group_dialog).__name__ == "MoveSelectedAtomsDialog":
+                        # For MoveSelectedAtomsDialog, we toggle ONLY the clicked atom, no BFS!
+                        def _deferred_toggle(
+                            idx=clicked_atom_idx, dlg=move_group_dialog
+                        ):
+                            try:
+                                dlg.on_atom_picked(idx)
+                            except (AttributeError, RuntimeError):
+                                pass
+
+                        QTimer.singleShot(0, _deferred_toggle)
+                        self._suppress_next_left_button_up = True
+                        return
+
                     # Clicked outside group - Search connected component
                     visited = set()
                     queue = [clicked_atom_idx]
@@ -172,8 +189,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                     # Multi-selection with Ctrl
                     is_ctrl_pressed = bool(
-                        QApplication.keyboardModifiers()
-                        & Qt.KeyboardModifier.ControlModifier
+                        (
+                            QApplication.keyboardModifiers()
+                            & Qt.KeyboardModifier.ControlModifier
+                        )
+                        or (
+                            self.GetInteractor()
+                            and self.GetInteractor().GetControlKey()
+                        )
                     )
 
                     if is_ctrl_pressed:
@@ -208,8 +231,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 super(CustomInteractorStyle, self).OnLeftButtonDown()
                 return
 
+        interactor = self.GetInteractor()
         is_temp_mode = bool(
-            QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier
+            (QApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier)
+            or (interactor and interactor.GetAltKey())
         )
         is_edit_active = mw.edit_3d_manager.is_3d_edit_mode or is_temp_mode
 
@@ -293,11 +318,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         """
         mw = self.main_window
 
-        # Check if Move Group dialog is open
+        # Check if Move Group dialog or Move Selected Atoms dialog is open
         move_group_dialog = None
         try:
             for widget in QApplication.topLevelWidgets():
-                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                if (
+                    type(widget).__name__
+                    in ("MoveGroupDialog", "MoveSelectedAtomsDialog")
+                    and widget.isVisible()
+                ):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError) as e:
@@ -350,11 +379,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         """
         mw = self.main_window
 
-        # Move Group drag handling
+        # Move Group / Selected Atoms drag handling
         move_group_dialog = None
         try:
             for widget in QApplication.topLevelWidgets():
-                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                if (
+                    type(widget).__name__
+                    in ("MoveGroupDialog", "MoveSelectedAtomsDialog")
+                    and widget.isVisible()
+                ):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
@@ -442,11 +475,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         """
         mw = self.main_window
 
-        # Finalize Move Group drag
+        # Finalize Move Group / Selected Atoms drag
         move_group_dialog = None
         try:
             for widget in QApplication.topLevelWidgets():
-                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                if (
+                    type(widget).__name__
+                    in ("MoveGroupDialog", "MoveSelectedAtomsDialog")
+                    and widget.isVisible()
+                ):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
@@ -749,11 +786,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         """
         mw = self.main_window
 
-        # Finalize Move Group rotation
+        # Finalize Move Group / Selected Atoms rotation
         move_group_dialog = None
         try:
             for widget in QApplication.topLevelWidgets():
-                if isinstance(widget, MoveGroupDialog) and widget.isVisible():
+                if (
+                    type(widget).__name__
+                    in ("MoveGroupDialog", "MoveSelectedAtomsDialog")
+                    and widget.isVisible()
+                ):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):

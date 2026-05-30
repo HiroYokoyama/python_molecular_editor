@@ -148,4 +148,14 @@ def main() -> None:
     app = QApplication([sys.argv[0]] + remaining)
     window = MainWindow(initial_file=args.file, safe_mode=args.safe)
     window.show()
+
+    # Force Windows to refresh taskbar/titlebar icon after event loop starts
+    if sys.platform == "win32":
+        try:
+            from PyQt6.QtCore import QTimer
+
+            QTimer.singleShot(100, lambda: window.setWindowIcon(window.windowIcon()))
+        except Exception:
+            pass
+
     sys.exit(app.exec())
