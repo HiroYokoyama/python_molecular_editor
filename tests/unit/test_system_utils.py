@@ -192,3 +192,16 @@ class TestDetectSystemDarkMode:
             "moleditpy.utils.system_utils.detect_system_theme", return_value=None
         ):
             assert detect_system_dark_mode() is None
+
+    def test_winreg_import_error_fallback(self):
+        import sys
+        import importlib
+        from unittest.mock import patch
+
+        with patch.dict(sys.modules, {"winreg": None}):
+            import moleditpy.utils.system_utils as su
+            importlib.reload(su)
+            assert su.winreg is None
+        
+        # Restore standard state
+        importlib.reload(su)
