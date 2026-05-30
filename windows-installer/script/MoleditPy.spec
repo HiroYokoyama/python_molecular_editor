@@ -20,6 +20,7 @@ a = Analysis(
     optimize=0,
     datas=[
         (str(linux_package_dir / 'assets'), 'assets'),
+        (str(linux_package_dir / 'assets'), 'moleditpy_linux/assets'),
     ],
 )
 pyz = PYZ(a.pure)
