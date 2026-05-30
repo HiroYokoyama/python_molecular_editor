@@ -133,4 +133,3 @@ def test_sync_slider_from_spinbox(app):
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     tab.aromatic_torus_thickness_label.setValue(1.50)
     assert tab.aromatic_torus_thickness_slider.value() == 150
-

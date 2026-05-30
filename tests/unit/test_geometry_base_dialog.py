@@ -227,6 +227,7 @@ class TestOnSliderMovedRealtime:
 class TestLoggingErrorFallback:
     def test_missing_chiral_labels_on_released(self, dlg):
         from unittest.mock import patch
+
         # Delete update_chiral_labels if it exists (MagicMock dynamically generates it)
         if hasattr(dlg.main_window.view_3d_manager, "update_chiral_labels"):
             del dlg.main_window.view_3d_manager.update_chiral_labels
@@ -238,6 +239,7 @@ class TestLoggingErrorFallback:
 
     def test_missing_chiral_labels_on_click(self, dlg):
         from unittest.mock import patch
+
         dlg._slider_dragging = False
         dlg._complete = True
         dlg._snapshot_positions = dlg.mol.GetConformer().GetPositions().copy()
@@ -249,4 +251,3 @@ class TestLoggingErrorFallback:
             mock_log.assert_called_once_with(
                 "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
             )
-

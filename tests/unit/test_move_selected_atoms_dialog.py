@@ -257,3 +257,361 @@ class TestClearSelection:
         with patch.object(type(dlg), "clear_atom_labels"):
             dlg.clear_selection()
         assert len(dlg.selected_atoms) == 0
+
+
+# ---------------------------------------------------------------------------
+# Extra tests for Properties, Highlights, and Event Filter
+# ---------------------------------------------------------------------------
+
+
+def test_group_atoms_property(make_dialog):
+    dlg, _, _ = make_dialog()
+    dlg.group_atoms = {0, 2}
+    assert dlg.selected_atoms == {0, 2}
+    assert dlg.group_atoms == {0, 2}
+
+
+def test_preselected_atoms_init(qapp):
+    from moleditpy.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
+
+    mol = _ethane()
+    mw = _make_main_window(mol)
+    with (
+        patch.object(MoveSelectedAtomsDialog, "show_atom_labels"),
+        patch.object(MoveSelectedAtomsDialog, "clear_atom_labels"),
+    ):
+        dlg = MoveSelectedAtomsDialog(mol, mw, preselected_atoms={0, 1})
+    assert dlg.selected_atoms == {0, 1}
+    dlg.close()
+
+
+def test_show_atom_labels_none_positions(make_dialog):
+    dlg, mol, mw = make_dialog()
+    mw.view_3d_manager.atom_positions_3d = None
+    with patch("moleditpy.ui.move_selected_atoms_dialog.logging.error") as mock_log:
+        dlg.selected_atoms.add(0)
+        dlg.show_atom_labels()
+        mock_log.assert_called_once_with(
+            "atom_positions_3d is None in update_atom_labels"
+        )
+
+
+def test_show_and_clear_atom_labels(make_dialog):
+    dlg, mol, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+
+    dlg.selected_atoms.update([0, 1])
+
+    with patch("moleditpy.ui.move_selected_atoms_dialog.pv") as mock_pv:
+        mock_pd = MagicMock()
+        mock_pv.PolyData.return_value = mock_pd
+        mock_pd.glyph.return_value = MagicMock()
+        mock_pv.Sphere.return_value = MagicMock()
+        dlg.show_atom_labels()
+        plotter.add_mesh.assert_called_once()
+        plotter.render.assert_called()
+
+    dlg.clear_atom_labels()
+    plotter.remove_actor.assert_called()
+
+
+def test_event_filter_unrelated_obj(make_dialog):
+    from PyQt6.QtWidgets import QWidget
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+    event = MagicMock()
+    assert dlg.eventFilter(QWidget(), event) is False
+
+
+def test_event_filter_double_click(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+    event = QMouseEvent(
+        QEvent.Type.MouseButtonDblClick,
+        QPointF(100.0, 100.0),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    dlg.drag_state["potential_drag"] = True
+    assert dlg.eventFilter(plotter.interactor, event) is False
+    assert dlg.drag_state["potential_drag"] is False
+
+
+def test_event_filter_mouse_press_with_selection(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+
+    dlg.selected_atoms.add(0)
+    event = QMouseEvent(
+        QEvent.Type.MouseButtonPress,
+        QPointF(100.0, 100.0),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    assert dlg.eventFilter(plotter.interactor, event) is False
+
+
+def test_event_filter_mouse_press_selects_atom(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+    plotter.interactor.GetEventPosition.return_value = (100, 100)
+
+    event = QMouseEvent(
+        QEvent.Type.MouseButtonPress,
+        QPointF(100.0, 100.0),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    with (
+        patch(
+            "moleditpy.ui.move_selected_atoms_dialog.pick_atom_index_from_screen",
+            return_value=0,
+        ),
+        patch.object(dlg, "on_atom_picked") as mock_pick,
+    ):
+        assert dlg.eventFilter(plotter.interactor, event) is True
+        mock_pick.assert_called_once_with(0)
+        assert dlg.drag_state["consume_next_left_release"] is True
+
+
+def test_event_filter_mouse_press_empty_space(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+    plotter.interactor.GetEventPosition.return_value = (100, 100)
+
+    event = QMouseEvent(
+        QEvent.Type.MouseButtonPress,
+        QPointF(100.0, 100.0),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    with patch(
+        "moleditpy.ui.move_selected_atoms_dialog.pick_atom_index_from_screen",
+        return_value=None,
+    ):
+        assert dlg.eventFilter(plotter.interactor, event) is False
+
+
+def test_event_filter_mouse_move_hover_cursor(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+    plotter.interactor.GetEventPosition.return_value = (100, 100)
+
+    event = QMouseEvent(
+        QEvent.Type.MouseMove,
+        QPointF(100.0, 100.0),
+        Qt.MouseButton.NoButton,
+        Qt.MouseButton.NoButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    dlg.selected_atoms.add(0)
+
+    # Cursor over selected atom
+    with patch(
+        "moleditpy.ui.move_selected_atoms_dialog.pick_atom_index_from_screen",
+        return_value=0,
+    ):
+        dlg.eventFilter(plotter.interactor, event)
+        plotter.setCursor.assert_called_with(Qt.CursorShape.OpenHandCursor)
+
+    # Cursor not over selected atom
+    with patch(
+        "moleditpy.ui.move_selected_atoms_dialog.pick_atom_index_from_screen",
+        return_value=1,
+    ):
+        dlg.eventFilter(plotter.interactor, event)
+        plotter.setCursor.assert_called_with(Qt.CursorShape.ArrowCursor)
+
+
+def test_event_filter_mouse_release_consume(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+
+    event = QMouseEvent(
+        QEvent.Type.MouseButtonRelease,
+        QPointF(100.0, 100.0),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    dlg.drag_state["consume_next_left_release"] = True
+    assert dlg.eventFilter(plotter.interactor, event) is True
+    assert dlg.drag_state["consume_next_left_release"] is False
+
+
+def test_mouse_move_potential_drag_to_actual_drag(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+
+    dlg.drag_state["potential_drag"] = True
+    dlg.drag_state["drag_start_pos"] = (100, 100)
+
+    plotter.interactor.GetEventPosition.return_value = (110, 110)
+
+    event = QMouseEvent(
+        QEvent.Type.MouseMove,
+        QPointF(110.0, 110.0),
+        Qt.MouseButton.NoButton,
+        Qt.MouseButton.NoButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    assert dlg.eventFilter(plotter.interactor, event) is True
+    assert dlg.drag_state["is_dragging_group"] is True
+    assert dlg.drag_state["potential_drag"] is False
+    plotter.setCursor.assert_called_with(Qt.CursorShape.ClosedHandCursor)
+
+
+def test_mouse_move_during_actual_drag(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+
+    dlg.drag_state["is_dragging_group"] = True
+    dlg.drag_state["drag_start_pos"] = (100, 100)
+    dlg.drag_state["mouse_moved_during_drag"] = False
+
+    plotter.interactor.GetEventPosition.return_value = (105, 105)
+    event = QMouseEvent(
+        QEvent.Type.MouseMove,
+        QPointF(105.0, 105.0),
+        Qt.MouseButton.NoButton,
+        Qt.MouseButton.NoButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    assert dlg.eventFilter(plotter.interactor, event) is True
+    assert dlg.drag_state["mouse_moved_during_drag"] is True
+
+
+def test_mouse_release_no_movement_toggles_atom(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+
+    dlg.drag_state["potential_drag"] = True
+    dlg.drag_state["mouse_moved_during_drag"] = False
+    dlg.clicked_atom_for_toggle = 0
+
+    event = QMouseEvent(
+        QEvent.Type.MouseButtonRelease,
+        QPointF(100.0, 100.0),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    with patch.object(dlg, "on_atom_picked") as mock_pick:
+        assert dlg.eventFilter(plotter.interactor, event) is True
+        mock_pick.assert_called_once_with(0)
+        assert dlg.drag_state["potential_drag"] is False
+
+
+def test_mouse_release_with_movement_resets_drag_state(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+
+    dlg.drag_state["is_dragging_group"] = True
+    dlg.drag_state["mouse_moved_during_drag"] = True
+    dlg.clicked_atom_for_toggle = 0
+
+    event = QMouseEvent(
+        QEvent.Type.MouseButtonRelease,
+        QPointF(110.0, 110.0),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    with patch.object(dlg, "on_atom_picked") as mock_pick:
+        assert dlg.eventFilter(plotter.interactor, event) is True
+        mock_pick.assert_not_called()
+        assert dlg.drag_state["is_dragging_group"] is False
+
+
+def test_handle_mouse_press_exceptions(make_dialog):
+    from PyQt6.QtCore import QEvent, Qt, QPointF
+    from PyQt6.QtGui import QMouseEvent
+
+    dlg, _, mw = make_dialog()
+    plotter = MagicMock()
+    mw.view_3d_manager.plotter = plotter
+    plotter.interactor.GetEventPosition.side_effect = AttributeError("Mock error")
+
+    event = QMouseEvent(
+        QEvent.Type.MouseButtonPress,
+        QPointF(100.0, 100.0),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+    assert dlg.eventFilter(plotter.interactor, event) is False
+
+
+def test_on_atom_picked_during_drag_ignored(make_dialog):
+    dlg, _, _ = make_dialog()
+    dlg.drag_state["is_dragging_group"] = True
+    dlg.selected_atoms.clear()
+    dlg.on_atom_picked(0)
+    assert 0 not in dlg.selected_atoms
+
+
+def test_update_display_many_atoms(make_dialog):
+    dlg, _, _ = make_dialog()
+    dlg.selected_atoms.update([0, 1, 2, 3, 4, 5, 6])
+    dlg.update_display()
+    text = dlg.widgets["selection_label"].text()
+    assert "..." in text
+    assert "Selected: 7 atoms" in text

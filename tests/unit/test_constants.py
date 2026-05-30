@@ -11,12 +11,14 @@ import pytest
 # We want to test different import and file states for constants._get_version()
 # using importlib.reload.
 
+
 def test_constants_version_from_metadata():
     """Test when importlib.metadata successfully finds the package version."""
     mock_version = MagicMock(return_value="1.2.3")
-    
+
     with patch("importlib.metadata.version", mock_version):
         import moleditpy.utils.constants as constants
+
         importlib.reload(constants)
         assert constants.VERSION == "1.2.3"
         assert mock_version.call_count >= 1
@@ -40,6 +42,7 @@ def test_constants_version_metadata_package_not_found():
         patch("builtins.open", m_open),
     ):
         import moleditpy.utils.constants as constants
+
         importlib.reload(constants)
         assert constants.VERSION == "2.3.4"
 
@@ -50,11 +53,13 @@ def test_constants_version_import_error_fallback():
     # We can do this by patching sys.modules or importlib.import_module.
     # But since _get_version does `from importlib.metadata import version`,
     # let's patch builtins.__import__ or mock sys.modules.
-    
+
     original_import = builtins.__import__
 
     def mock_import(name, *args, **kwargs):
-        if name == "importlib.metadata" or (args and args[0] == "metadata" and name == "importlib"):
+        if name == "importlib.metadata" or (
+            args and args[0] == "metadata" and name == "importlib"
+        ):
             raise ImportError("Mocked import error")
         return original_import(name, *args, **kwargs)
 
@@ -68,6 +73,7 @@ def test_constants_version_import_error_fallback():
         patch("builtins.open", m_open),
     ):
         import moleditpy.utils.constants as constants
+
         importlib.reload(constants)
         assert constants.VERSION == "3.4.5"
 
@@ -86,6 +92,7 @@ def test_constants_version_all_fail_returns_unknown():
         patch("os.path.exists", mock_exists),
     ):
         import moleditpy.utils.constants as constants
+
         importlib.reload(constants)
         assert constants.VERSION == "Unknown"
 
@@ -106,6 +113,7 @@ def test_constants_version_file_exception_returns_unknown():
         patch("builtins.open", m_open),
     ):
         import moleditpy.utils.constants as constants
+
         importlib.reload(constants)
         assert constants.VERSION == "Unknown"
 
@@ -113,4 +121,5 @@ def test_constants_version_file_exception_returns_unknown():
 def test_restore_state():
     """Helper to restore constants state after reloading it under mocks."""
     import moleditpy.utils.constants as constants
+
     importlib.reload(constants)

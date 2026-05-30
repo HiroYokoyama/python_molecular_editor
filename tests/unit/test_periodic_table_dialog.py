@@ -40,7 +40,7 @@ def test_periodic_table_dialog_with_parent_overrides(app):
             "C": "#222222",
         }
     }
-    
+
     dialog = PeriodicTableDialog(parent=parent)
     assert dialog.windowTitle() == "Select an Element"
 
@@ -48,7 +48,7 @@ def test_periodic_table_dialog_with_parent_overrides(app):
 def test_periodic_table_dialog_with_parent_error_handling(app):
     """Test dialog creation when parent attribute access raises exception."""
     parent = ErrorMockParent()
-    
+
     dialog = PeriodicTableDialog(parent=parent)
     assert dialog.windowTitle() == "Select an Element"
 
@@ -56,7 +56,7 @@ def test_periodic_table_dialog_with_parent_error_handling(app):
 def test_periodic_table_dialog_element_clicked(app, qtbot):
     """Test that clicking a button emits element_selected and accepts the dialog."""
     dialog = PeriodicTableDialog()
-    
+
     # We will spy on the element_selected signal
     with qtbot.waitSignal(dialog.element_selected) as blocker:
         # Find a button to click, e.g., the "H" button
@@ -66,9 +66,11 @@ def test_periodic_table_dialog_element_clicked(app, qtbot):
             if widget and widget.text() == "H":
                 h_button = widget
                 break
-        
+
         assert h_button is not None
         # Simulate click
-        qtbot.mouseClick(h_button, pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton)
-        
+        qtbot.mouseClick(
+            h_button, pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton
+        )
+
     assert blocker.args == ["H"]

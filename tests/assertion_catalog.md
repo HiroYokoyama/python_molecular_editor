@@ -3740,6 +3740,113 @@ _No description provided._
 
 - assert len(dlg.selected_atoms) == 0
 
+### test_group_atoms_property
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 2}
+- assert dlg.group_atoms == {0, 2}
+
+### test_preselected_atoms_init
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1}
+
+### test_show_atom_labels_none_positions
+_No description provided._
+
+- mock_log.assert_called_once_with('atom_positions_3d is None in update_atom_labels')
+
+### test_show_and_clear_atom_labels
+_No description provided._
+
+- plotter.remove_actor.assert_called()
+- plotter.add_mesh.assert_called_once()
+- plotter.render.assert_called()
+
+### test_event_filter_unrelated_obj
+_No description provided._
+
+- assert dlg.eventFilter(QWidget(), event) is False
+
+### test_event_filter_double_click
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is False
+- assert dlg.drag_state['potential_drag'] is False
+
+### test_event_filter_mouse_press_with_selection
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is False
+
+### test_event_filter_mouse_press_selects_atom
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- mock_pick.assert_called_once_with(0)
+- assert dlg.drag_state['consume_next_left_release'] is True
+
+### test_event_filter_mouse_press_empty_space
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is False
+
+### test_event_filter_mouse_move_hover_cursor
+_No description provided._
+
+- plotter.setCursor.assert_called_with(Qt.CursorShape.OpenHandCursor)
+- plotter.setCursor.assert_called_with(Qt.CursorShape.ArrowCursor)
+
+### test_event_filter_mouse_release_consume
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- assert dlg.drag_state['consume_next_left_release'] is False
+
+### test_mouse_move_potential_drag_to_actual_drag
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- assert dlg.drag_state['is_dragging_group'] is True
+- assert dlg.drag_state['potential_drag'] is False
+- plotter.setCursor.assert_called_with(Qt.CursorShape.ClosedHandCursor)
+
+### test_mouse_move_during_actual_drag
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- assert dlg.drag_state['mouse_moved_during_drag'] is True
+
+### test_mouse_release_no_movement_toggles_atom
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- mock_pick.assert_called_once_with(0)
+- assert dlg.drag_state['potential_drag'] is False
+
+### test_mouse_release_with_movement_resets_drag_state
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- mock_pick.assert_not_called()
+- assert dlg.drag_state['is_dragging_group'] is False
+
+### test_handle_mouse_press_exceptions
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is False
+
+### test_on_atom_picked_during_drag_ignored
+_No description provided._
+
+- assert 0 not in dlg.selected_atoms
+
+### test_update_display_many_atoms
+_No description provided._
+
+- assert '...' in text
+- assert 'Selected: 7 atoms' in text
+
 ## tests/unit/test_parser_robustness.py
 
 ### test_set_mol_prop_safe_robustness
