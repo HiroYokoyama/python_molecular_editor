@@ -17,10 +17,14 @@ Test matrix:
 The CI workflow installs the main package from `moleditpy/` and runs:
 
 ```bash
+# On dev branch (runs all suites including GUI tests):
+python tests/run_all_tests.py --no-cov --no-report
+
+# On main/master branch (skips GUI tests for production stability):
 python tests/run_all_tests.py --no-cov --no-report --unit --integration
 ```
 
-GUI tests are not run in CI.
+GUI tests are fully enabled and run in headless mode on the `dev` branch CI.
 
 ## `test-release.yml` - Test Release
 
