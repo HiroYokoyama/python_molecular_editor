@@ -96,3 +96,40 @@ def test_original_id_mode_hides_rdkit_id_labels(app, mock_parser_host):
     assert label_texts == ["42"]
     view3d.plotter.add_text.assert_called_once()
     assert view3d.plotter.add_text.call_args.args[0] == "ID"
+
+
+def test_fit_to_view_empty(app, mock_parser_host):
+    """Verify that fit_to_view resets zoom when the scene has no items."""
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.scene.items.return_value = []
+
+    # Mock reset_zoom to verify it gets called
+    view3d.reset_zoom = MagicMock()
+
+    view3d.fit_to_view()
+
+    view3d.reset_zoom.assert_called_once()
+
+
+def test_fit_to_view_with_items(app, mock_parser_host):
+    """Verify that fit_to_view calculates bounding box and fits view when scene has items."""
+    view3d = _make_view3d(mock_parser_host)
+
+    # Mock items in scene
+    mock_item = MagicMock()
+    mock_item.isVisible.return_value = True
+    from PyQt6.QtCore import QRectF
+    mock_item.sceneBoundingRect.return_value = QRectF(10, 10, 50, 50)
+
+    mock_parser_host.init_manager.scene.items.return_value = [mock_item]
+
+    # Mock anchors and fitInView
+    view_2d = mock_parser_host.init_manager.view_2d
+    view_2d.transformationAnchor.return_value = 1
+    view_2d.resizeAnchor.return_value = 2
+
+    view3d.fit_to_view()
+
+    view_2d.setTransformationAnchor.assert_called()
+    view_2d.setResizeAnchor.assert_called()
+    view_2d.fitInView.assert_called_once()

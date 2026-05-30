@@ -5472,6 +5472,17 @@ _No description provided._
 
 - assert sip_isdeleted_safe(object()) is False
 
+### TestSipIsDeletedSafe.test_fallback_to_standard_sip
+_No description provided._
+
+- assert sds.sip_isdeleted_safe(object()) is True
+
+### TestSipIsDeletedSafe.test_fallback_when_both_sip_packages_missing
+_No description provided._
+
+- assert sds.sip_isdeleted_safe(object()) is False
+- assert sds._sip_isdeleted is None
+
 ## tests/unit/test_slider_logic.py
 
 ### test_angle_dialog_wrapping
@@ -6198,6 +6209,18 @@ _Original-ID labels should not fall back to RDKit index labels._
 - assert label_texts == ['42']
 - view3d.plotter.add_text.assert_called_once()
 - assert view3d.plotter.add_text.call_args.args[0] == 'ID'
+
+### test_fit_to_view_empty
+_Verify that fit_to_view resets zoom when the scene has no items._
+
+- view3d.reset_zoom.assert_called_once()
+
+### test_fit_to_view_with_items
+_Verify that fit_to_view calculates bounding box and fits view when scene has items._
+
+- view_2d.setTransformationAnchor.assert_called()
+- view_2d.setResizeAnchor.assert_called()
+- view_2d.fitInView.assert_called_once()
 
 ## tests/unit/test_view_3d_logic_extended.py
 
