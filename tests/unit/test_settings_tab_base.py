@@ -29,24 +29,30 @@ def test_create_separator_returns_hline(app):
 
 def test_create_slider_range(app):
     tab = ConcreteTab(DEFAULT_SETTINGS)
-    slider, label = tab._create_slider(10, 200, 10.0)
+    slider, spin = tab._create_slider(10, 200, 10.0)
     assert isinstance(slider, QSlider)
     assert slider.minimum() == 10
     assert slider.maximum() == 200
 
 
-def test_create_slider_float_label_updates(app):
+def test_create_slider_float_spin_updates(app):
     tab = ConcreteTab(DEFAULT_SETTINGS)
-    slider, label = tab._create_slider(0, 100, 10.0)
+    slider, spin = tab._create_slider(0, 100, 10.0)
     slider.setValue(50)
-    assert label.text() == "5.00"
+    assert spin.value() == 5.0
+
+    spin.setValue(8.0)
+    assert slider.value() == 80
 
 
-def test_create_slider_int_label_updates(app):
+def test_create_slider_int_spin_updates(app):
     tab = ConcreteTab(DEFAULT_SETTINGS)
-    slider, label = tab._create_slider(3, 20, 1.0, is_int=True)
+    slider, spin = tab._create_slider(3, 20, 1.0, is_int=True)
     slider.setValue(10)
-    assert label.text() == "10"
+    assert spin.value() == 10
+
+    spin.setValue(15)
+    assert slider.value() == 15
 
 
 def test_wrap_layout_returns_layout_with_children(app):

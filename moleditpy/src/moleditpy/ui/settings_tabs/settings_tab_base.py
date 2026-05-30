@@ -11,10 +11,18 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QWidget
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QSlider,
+    QWidget,
+    QSpinBox,
+    QDoubleSpinBox,
+)
 
 
 class SettingsTabBase(QWidget):
@@ -47,18 +55,49 @@ class SettingsTabBase(QWidget):
 
     def _create_slider(
         self, min_val: int, max_val: int, scale: float = 1.0, is_int: bool = False
-    ) -> tuple[QSlider, QLabel]:
-        """Create a slider with a linked label showing the value."""
+    ) -> tuple[QSlider, Union[QSpinBox, QDoubleSpinBox]]:
+        """Create a slider with a linked spinbox showing and setting the value."""
         slider = QSlider(Qt.Orientation.Horizontal)
         slider.setRange(min_val, max_val)
-        label = QLabel()
+
         if is_int:
-            slider.valueChanged.connect(lambda v: label.setText(str(v)))
-            label.setText(str(slider.value()))
+            spin = QSpinBox()
+            spin.setRange(min_val, max_val)
+            spin.setValue(slider.value())
+
+            def sync_spin(val):
+                spin.blockSignals(True)
+                spin.setValue(val)
+                spin.blockSignals(False)
+
+            def sync_slider(val):
+                slider.blockSignals(True)
+                slider.setValue(val)
+                slider.blockSignals(False)
+
+            slider.valueChanged.connect(sync_spin)
+            spin.valueChanged.connect(sync_slider)
         else:
-            slider.valueChanged.connect(lambda v: label.setText(f"{v / scale:.2f}"))
-            label.setText(f"{slider.value() / scale:.2f}")
-        return slider, label
+            spin = QDoubleSpinBox()
+            spin.setRange(min_val / scale, max_val / scale)
+            spin.setSingleStep(1.0 / scale)
+            spin.setDecimals(2)
+            spin.setValue(slider.value() / scale)
+
+            def sync_spin(val):
+                spin.blockSignals(True)
+                spin.setValue(val / scale)
+                spin.blockSignals(False)
+
+            def sync_slider(val):
+                slider.blockSignals(True)
+                slider.setValue(int(round(val * scale)))
+                slider.blockSignals(False)
+
+            slider.valueChanged.connect(sync_spin)
+            spin.valueChanged.connect(sync_slider)
+
+        return slider, spin
 
     def _wrap_layout(self, slider: QWidget, label: QWidget) -> QHBoxLayout:
         """Wrap a slider and its label in a horizontal layout."""
