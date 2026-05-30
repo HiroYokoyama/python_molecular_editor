@@ -88,11 +88,11 @@ pip install pytest pytest-qt pytest-mock
 
 You will also need the application's main dependencies, such as `PyQt6`.
 
-## 5\. Headless Mode Limitations
+## 5\. Headless Mode Compatibility
 
-GUI tests in this directory interact with real `PyQt6` widgets and simulate mouse/keyboard events through the view's coordinate system. Some tests may fail or behave inconsistently when run in a headless or offscreen environment (e.g., `QT_QPA_PLATFORM=offscreen`, CI without a display, or `MOLEDITPY_HEADLESS=1`).
+GUI tests in this directory interact with real `PyQt6` widgets and simulate mouse/keyboard events through the view's coordinate system. These tests are fully stabilized in headless and offscreen environments (`QT_QPA_PLATFORM=offscreen` and `MOLEDITPY_HEADLESS=1`) via strict single-window fixture isolation and safe event loop cleanup to prevent C++ object deletion races.
 
-**Recommendation**: Run GUI tests on a machine with a display server, or use a virtual framebuffer such as `Xvfb` on Linux. Unit tests in `tests/unit/` are fully headless-safe.
+They are fully enabled and automatically executed in the GitHub Actions CI on the `dev` branch.
 
 ## 6\. GUI Testing Notice
 

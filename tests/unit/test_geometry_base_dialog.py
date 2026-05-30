@@ -222,3 +222,32 @@ class TestOnSliderMovedRealtime:
         dlg.on_slider_moved_realtime(200, inp, scale=100.0)
         assert inp.text() == "2.000"
         assert dlg.applied_values == [pytest.approx(2.0)]
+
+
+class TestLoggingErrorFallback:
+    def test_missing_chiral_labels_on_released(self, dlg):
+        from unittest.mock import patch
+
+        # Delete update_chiral_labels if it exists (MagicMock dynamically generates it)
+        if hasattr(dlg.main_window.view_3d_manager, "update_chiral_labels"):
+            del dlg.main_window.view_3d_manager.update_chiral_labels
+        with patch("moleditpy.ui.geometry_base_dialog.logging.error") as mock_log:
+            dlg.on_slider_released()
+            mock_log.assert_called_once_with(
+                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
+            )
+
+    def test_missing_chiral_labels_on_click(self, dlg):
+        from unittest.mock import patch
+
+        dlg._slider_dragging = False
+        dlg._complete = True
+        dlg._snapshot_positions = dlg.mol.GetConformer().GetPositions().copy()
+        inp = _input()
+        if hasattr(dlg.main_window.view_3d_manager, "update_chiral_labels"):
+            del dlg.main_window.view_3d_manager.update_chiral_labels
+        with patch("moleditpy.ui.geometry_base_dialog.logging.error") as mock_log:
+            dlg.on_slider_value_changed_click(150, inp, scale=100.0)
+            mock_log.assert_called_once_with(
+                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
+            )

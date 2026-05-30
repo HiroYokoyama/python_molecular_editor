@@ -1030,6 +1030,38 @@ _Verify that UFF fallback uses _temp_optimization_method and doesn't change pers
 - assert mock_optimize.called
 - assert compute.optimization_method == 'MMFF_RDKIT'
 
+## tests/unit/test_constants.py
+
+### test_constants_version_from_metadata
+_Test when importlib.metadata successfully finds the package version._
+
+- assert constants.VERSION == '1.2.3'
+- assert mock_version.call_count >= 1
+
+### test_constants_version_metadata_package_not_found
+_Test fallback to pyproject.toml when PackageNotFoundError is raised._
+
+- assert constants.VERSION == '2.3.4'
+
+### test_constants_version_import_error_fallback
+_Test fallback to pyproject.toml when importlib.metadata cannot be imported (ImportError)._
+
+- assert constants.VERSION == '3.4.5'
+
+### test_constants_version_all_fail_returns_unknown
+_Test that it falls back to 'Unknown' when all lookup methods fail._
+
+- assert constants.VERSION == 'Unknown'
+
+### test_constants_version_file_exception_returns_unknown
+_Test that any reading file exception is handled and returns 'Unknown'._
+
+- assert constants.VERSION == 'Unknown'
+
+### test_restore_state
+_Helper to restore constants state after reloading it under mocks._
+
+
 ## tests/unit/test_constrained_optimization_dialog.py
 
 ### TestAtomSelection.test_pick_adds_atom
@@ -2369,6 +2401,16 @@ _No description provided._
 - assert inp.text() == '2.000'
 - assert dlg.applied_values == [pytest.approx(2.0)]
 
+### TestLoggingErrorFallback.test_missing_chiral_labels_on_released
+_No description provided._
+
+- mock_log.assert_called_once_with("REPORT ERROR: Missing attribute 'update_chiral_labels' on object")
+
+### TestLoggingErrorFallback.test_missing_chiral_labels_on_click
+_No description provided._
+
+- mock_log.assert_called_once_with("REPORT ERROR: Missing attribute 'update_chiral_labels' on object")
+
 ## tests/unit/test_geometry_dialogs.py
 
 ### TestBondLengthPicking.test_first_pick_sets_atom1
@@ -3698,6 +3740,113 @@ _No description provided._
 
 - assert len(dlg.selected_atoms) == 0
 
+### test_group_atoms_property
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 2}
+- assert dlg.group_atoms == {0, 2}
+
+### test_preselected_atoms_init
+_No description provided._
+
+- assert dlg.selected_atoms == {0, 1}
+
+### test_show_atom_labels_none_positions
+_No description provided._
+
+- mock_log.assert_called_once_with('atom_positions_3d is None in update_atom_labels')
+
+### test_show_and_clear_atom_labels
+_No description provided._
+
+- plotter.remove_actor.assert_called()
+- plotter.add_mesh.assert_called_once()
+- plotter.render.assert_called()
+
+### test_event_filter_unrelated_obj
+_No description provided._
+
+- assert dlg.eventFilter(QWidget(), event) is False
+
+### test_event_filter_double_click
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is False
+- assert dlg.drag_state['potential_drag'] is False
+
+### test_event_filter_mouse_press_with_selection
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is False
+
+### test_event_filter_mouse_press_selects_atom
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- mock_pick.assert_called_once_with(0)
+- assert dlg.drag_state['consume_next_left_release'] is True
+
+### test_event_filter_mouse_press_empty_space
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is False
+
+### test_event_filter_mouse_move_hover_cursor
+_No description provided._
+
+- plotter.setCursor.assert_called_with(Qt.CursorShape.OpenHandCursor)
+- plotter.setCursor.assert_called_with(Qt.CursorShape.ArrowCursor)
+
+### test_event_filter_mouse_release_consume
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- assert dlg.drag_state['consume_next_left_release'] is False
+
+### test_mouse_move_potential_drag_to_actual_drag
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- assert dlg.drag_state['is_dragging_group'] is True
+- assert dlg.drag_state['potential_drag'] is False
+- plotter.setCursor.assert_called_with(Qt.CursorShape.ClosedHandCursor)
+
+### test_mouse_move_during_actual_drag
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- assert dlg.drag_state['mouse_moved_during_drag'] is True
+
+### test_mouse_release_no_movement_toggles_atom
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- mock_pick.assert_called_once_with(0)
+- assert dlg.drag_state['potential_drag'] is False
+
+### test_mouse_release_with_movement_resets_drag_state
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is True
+- mock_pick.assert_not_called()
+- assert dlg.drag_state['is_dragging_group'] is False
+
+### test_handle_mouse_press_exceptions
+_No description provided._
+
+- assert dlg.eventFilter(plotter.interactor, event) is False
+
+### test_on_atom_picked_during_drag_ignored
+_No description provided._
+
+- assert 0 not in dlg.selected_atoms
+
+### test_update_display_many_atoms
+_No description provided._
+
+- assert '...' in text
+- assert 'Selected: 7 atoms' in text
+
 ## tests/unit/test_parser_robustness.py
 
 ### test_set_mol_prop_safe_robustness
@@ -3842,6 +3991,30 @@ _Verify skip chemistry check flag is set when user chooses to skip._
 
 - assert mol is not None
 - assert mol.HasProp('_xyz_skip_checks') or getattr(mol, '_xyz_skip_checks', False)
+
+## tests/unit/test_periodic_table_dialog.py
+
+### test_periodic_table_dialog_no_parent
+_Test dialog creation without parent settings._
+
+- assert dialog.windowTitle() == 'Select an Element'
+- assert dialog.layout() is not None
+
+### test_periodic_table_dialog_with_parent_overrides
+_Test dialog creation with parent settings cpk_colors overrides._
+
+- assert dialog.windowTitle() == 'Select an Element'
+
+### test_periodic_table_dialog_with_parent_error_handling
+_Test dialog creation when parent attribute access raises exception._
+
+- assert dialog.windowTitle() == 'Select an Element'
+
+### test_periodic_table_dialog_element_clicked
+_Test that clicking a button emits element_selected and accepts the dialog._
+
+- assert blocker.args == ['H']
+- assert h_button is not None
 
 ## tests/unit/test_planarize_dialog.py
 
@@ -5382,6 +5555,11 @@ _No description provided._
 - assert result['skip_chemistry_checks'] == DEFAULT_SETTINGS['skip_chemistry_checks']
 - assert abs(result['aromatic_torus_thickness_factor'] - DEFAULT_SETTINGS['aromatic_torus_thickness_factor']) < 0.01
 
+### test_sync_slider_from_spinbox
+_No description provided._
+
+- assert tab.aromatic_torus_thickness_slider.value() == 150
+
 ## tests/unit/test_settings_tab_base.py
 
 ### test_init_stores_default_settings
@@ -5471,6 +5649,17 @@ _No description provided._
 _No description provided._
 
 - assert sip_isdeleted_safe(object()) is False
+
+### TestSipIsDeletedSafe.test_fallback_to_standard_sip
+_No description provided._
+
+- assert sds.sip_isdeleted_safe(object()) is True
+
+### TestSipIsDeletedSafe.test_fallback_when_both_sip_packages_missing
+_No description provided._
+
+- assert sds.sip_isdeleted_safe(object()) is False
+- assert sds._sip_isdeleted is None
 
 ## tests/unit/test_slider_logic.py
 
@@ -5659,6 +5848,11 @@ _No description provided._
 _No description provided._
 
 - assert detect_system_dark_mode() is None
+
+### TestDetectSystemDarkMode.test_winreg_import_error_fallback
+_No description provided._
+
+- assert su.winreg is None
 
 ## tests/unit/test_template_fusing_preview.py
 
@@ -6198,6 +6392,18 @@ _Original-ID labels should not fall back to RDKit index labels._
 - assert label_texts == ['42']
 - view3d.plotter.add_text.assert_called_once()
 - assert view3d.plotter.add_text.call_args.args[0] == 'ID'
+
+### test_fit_to_view_empty
+_Verify that fit_to_view resets zoom when the scene has no items._
+
+- view3d.reset_zoom.assert_called_once()
+
+### test_fit_to_view_with_items
+_Verify that fit_to_view calculates bounding box and fits view when scene has items._
+
+- view_2d.setTransformationAnchor.assert_called()
+- view_2d.setResizeAnchor.assert_called()
+- view_2d.fitInView.assert_called_once()
 
 ## tests/unit/test_view_3d_logic_extended.py
 

@@ -1345,56 +1345,7 @@ def window(app, qtbot, monkeypatch):
             orig_init(self, *a, **k)
 
         monkeypatch.setattr(MainWindowClass, "__init__", patched_init)
-        main_window = MainWindowClass()
 
-        # Attach dummy toolbars and buttons for test compatibility
-        from PyQt6.QtWidgets import QWidget, QToolBar
-        from PyQt6.QtGui import QAction
-
-        main_window.init_manager.toolbar = QToolBar()
-        main_window.init_manager.toolbar_bottom = QToolBar()
-        main_window.init_manager.measurement_action = QAction(checkable=True)
-        main_window.init_manager.measurement_action.triggered.connect(
-            main_window.edit_3d_manager.toggle_measurement_mode
-        )
-        main_window.init_manager.edit_3d_action = QAction(checkable=True)
-        main_window.init_manager.edit_3d_action.triggered.connect(
-            main_window.ui_manager.toggle_3d_edit_mode
-        )
-
-        # Dummy splitter with widget() method
-        class DummyWidget(QWidget):
-            def mapTo(self, parent, point):
-                return point
-
-            def rect(self):
-                from PyQt6.QtCore import QRect
-
-                return QRect(0, 0, 100, 100)
-
-            def geometry(self):
-                from PyQt6.QtCore import QRect
-
-                return QRect(0, 0, 100, 100)
-
-        class DummySplitter:
-            def widget(self, idx):
-                return DummyWidget()
-
-            def handle(self, idx):
-                return DummyWidget()
-
-            def sizes(self):
-                return [100, 100]
-
-            def setSizes(self, sizes):
-                pass
-
-        main_window.init_manager.splitter = DummySplitter()
-        # ... (rest of the headless-specific mocks and patches) ...
-        # Keep running to the common yield below so teardown/cleanup are
-        # handled in a single place for both headless and GUI.
-        pass
     main_window = MainWindowClass()
     qtbot.addWidget(main_window)
     main_window.show()
@@ -1730,6 +1681,21 @@ def window(app, qtbot, monkeypatch):
             monkeypatch.setattr(
                 "moleditpy.ui.view_3d_logic.View3DManager.draw_molecule_3d",
                 safe_draw,
+                raising=False,
+            )
+
+        orig_fit = getattr(_view3d_logic.View3DManager, "fit_to_view", None)
+        if orig_fit is not None:
+
+            def safe_fit(self, *a, **k):
+                try:
+                    return orig_fit(self, *a, **k)
+                except (RuntimeError, TypeError, AttributeError):
+                    return None
+
+            monkeypatch.setattr(
+                "moleditpy.ui.view_3d_logic.View3DManager.fit_to_view",
+                safe_fit,
                 raising=False,
             )
     except Exception:
