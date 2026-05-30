@@ -268,7 +268,7 @@ class TemplateMixin:
             and self.get_setting("template_fusing_enabled_2d", True)
             and not alt_pressed
         ):
-            map_threshold = self.get_setting("template_fusing_distance_2d", 14.0)
+            map_threshold = self.get_setting("template_fusing_distance_2d", 7.0)
             for i, p in enumerate(points):
                 if atom_items[i] is not None:
                     continue
@@ -446,7 +446,7 @@ class TemplateMixin:
 
             # Snap individual preview vertices to nearby atoms to reflect template fusing visually
             if self.get_setting("template_fusing_enabled_2d", True) and not alt_pressed:
-                fuse_dist = self.get_setting("template_fusing_distance_2d", 14.0)
+                fuse_dist = self.get_setting("template_fusing_distance_2d", 7.0)
                 mapped_atoms = set(self.template_context.get("items", []))
                 used_indices = set()
                 click_map_threshold = max(0.5 * bond_len, 8.0)
@@ -821,7 +821,7 @@ class KeyboardMixin:
             snap_dist = self.get_setting("template_snapping_distance_2d", 14.0)
             item_at_cursor = self.find_atom_near(cursor_pos, tol=snap_dist)
         elif self.get_setting("template_fusing_enabled_2d", True):
-            fuse_dist = self.get_setting("template_fusing_distance_2d", 14.0)
+            fuse_dist = self.get_setting("template_fusing_distance_2d", 7.0)
             item_at_cursor = self.find_atom_near(cursor_pos, tol=fuse_dist)
         if item_at_cursor is None:
             item_at_cursor = self.itemAt(cursor_pos, transform)

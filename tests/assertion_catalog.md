@@ -5401,15 +5401,17 @@ _No description provided._
 - assert slider.minimum() == 10
 - assert slider.maximum() == 200
 
-### test_create_slider_float_label_updates
+### test_create_slider_float_spin_updates
 _No description provided._
 
-- assert label.text() == '5.00'
+- assert spin.value() == 5.0
+- assert slider.value() == 80
 
-### test_create_slider_int_label_updates
+### test_create_slider_int_spin_updates
 _No description provided._
 
-- assert label.text() == '10'
+- assert spin.value() == 10
+- assert slider.value() == 15
 
 ### test_wrap_layout_returns_layout_with_children
 _No description provided._
