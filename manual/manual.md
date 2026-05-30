@@ -71,7 +71,7 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
     After installation, run this command to create the shortcut in your application menu (e.g., Start Menu or Applications folder).
 
     ```bash
-    moleditpy-installer
+    python -m moleditpy_installer
     ```
 
 **Launch:**

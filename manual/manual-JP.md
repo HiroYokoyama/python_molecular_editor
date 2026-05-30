@@ -67,7 +67,7 @@ MoleditPy は、Python で開発された分子編集ソフトウェアです。
     インストール後、このコマンドを実行すると、アプリケーションメニュー（スタートメニューやアプリケーションフォルダなど）にショートカットが作成されます。
 
     ```bash
-    moleditpy-installer
+    python -m moleditpy_installer
     ```
 
 
