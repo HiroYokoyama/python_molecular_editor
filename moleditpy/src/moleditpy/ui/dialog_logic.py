@@ -18,7 +18,8 @@ import json
 import os
 from typing import Any, List, Literal, Optional, cast
 
-from PyQt6.QtWidgets import QInputDialog, QMessageBox
+from PyQt6.QtWidgets import QInputDialog, QMessageBox, QDialog
+from PyQt6.QtCore import Qt
 
 
 try:
@@ -215,6 +216,13 @@ class DialogManager:
                 self.host, "Error", f"Failed to save template: {str(e)}"
             )
 
+    def _show_modeless_dialog(self, dialog: QDialog) -> None:
+        """Show a modeless dialog on top, especially important for macOS."""
+        dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
+
     def open_translation_dialog(self) -> None:
         """Open the translation dialog"""
         # Get preselected atoms
@@ -231,8 +239,8 @@ class DialogManager:
             preselected_atoms,
             parent=self.host,
         )
-        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)  # Keep reference
-        dialog.show()  # Use show for modeless display
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
+        self._show_modeless_dialog(dialog)
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Translation applied.")
         )
@@ -258,7 +266,7 @@ class DialogManager:
             parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
-        dialog.show()
+        self._show_modeless_dialog(dialog)
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Group transformation applied.")
         )
@@ -284,7 +292,7 @@ class DialogManager:
             parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
-        dialog.show()
+        self._show_modeless_dialog(dialog)
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage(
                 "Selected atoms transformation applied."
@@ -313,7 +321,7 @@ class DialogManager:
             parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
-        dialog.show()
+        self._show_modeless_dialog(dialog)
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage(
                 f"Atoms aligned to {plane.upper()} plane."
@@ -341,7 +349,7 @@ class DialogManager:
             parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
-        dialog.show()
+        self._show_modeless_dialog(dialog)
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage(
                 "Selection planarized to best-fit plane."
@@ -370,7 +378,7 @@ class DialogManager:
             parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
-        dialog.show()
+        self._show_modeless_dialog(dialog)
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage(
                 f"Atoms aligned to {axis.upper()}-axis."
@@ -398,7 +406,7 @@ class DialogManager:
             parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
-        dialog.show()
+        self._show_modeless_dialog(dialog)
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Bond length adjusted.")
         )
@@ -424,7 +432,7 @@ class DialogManager:
             parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
-        dialog.show()
+        self._show_modeless_dialog(dialog)
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Angle adjusted.")
         )
@@ -450,7 +458,7 @@ class DialogManager:
             parent=self.host,
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
-        dialog.show()
+        self._show_modeless_dialog(dialog)
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Dihedral angle adjusted.")
         )
@@ -470,8 +478,18 @@ class DialogManager:
             self.host.init_manager.measurement_action.setChecked(False)
             self.host.edit_3d_manager.toggle_measurement_mode(False)
 
-        dialog = MirrorDialog(self.host.view_3d_manager.current_mol, self.host)
-        dialog.exec()
+        dialog = MirrorDialog(
+            self.host.view_3d_manager.current_mol, self.host, parent=self.host
+        )
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
+        self._show_modeless_dialog(dialog)
+        dialog.accepted.connect(
+            lambda: self.host.statusBar().showMessage("Mirror applied.")
+        )
+        dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )
 
     def open_settings_dialog(self) -> None:
         """Open the application settings dialog."""
@@ -498,7 +516,7 @@ class DialogManager:
             self.host.view_3d_manager.current_mol, self.host, parent=self.host
         )
         self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
-        dialog.show()
+        self._show_modeless_dialog(dialog)
         dialog.finished.connect(
             lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
         )

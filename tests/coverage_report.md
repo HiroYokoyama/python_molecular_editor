@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **79.03%**
-- **Core Molecular Logic Coverage**: **80.65%**
+- **Overall Project Coverage (Full)**: **79.01%**
+- **Core Molecular Logic Coverage**: **80.63%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -11,7 +11,7 @@
 | File | Stmts | Miss | Cover |
 | :--- | :--- | :--- | :--- |
 | moleditpy\src\moleditpy\__init__.py                     |      7 |      2 |   71.4% |
-| moleditpy\src\moleditpy\main.py                         |     80 |     22 |   72.5% |
+| moleditpy\src\moleditpy\main.py                         |     86 |     28 |   67.4% |
 | moleditpy\src\moleditpy\core\mol_geometry.py            |    260 |     19 |   92.7% |
 | moleditpy\src\moleditpy\core\molecular_data.py          |    307 |     38 |   87.6% |
 | moleditpy\src\moleditpy\plugins\plugin_interface.py     |    128 |      0 |  100.0% |
@@ -31,7 +31,7 @@
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    199 |     32 |   83.9% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    399 |     96 |   75.9% |
 | moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    139 |     21 |   84.9% |
-| moleditpy\src\moleditpy\ui\dialog_logic.py              |    241 |     42 |   82.6% |
+| moleditpy\src\moleditpy\ui\dialog_logic.py              |    251 |     42 |   83.3% |
 | moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    259 |     35 |   86.5% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    247 |     41 |   83.4% |
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    858 |    217 |   74.7% |
@@ -57,14 +57,14 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     54 |     17 |   68.5% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
-| **TOTAL** | **13644** | **2640** | **80.65%** |
+| **TOTAL** | **13660** | **2646** | **80.63%** |
 
 ### Full Application Breakdown
 
 | File | Stmts | Miss | Cover |
 | :--- | :--- | :--- | :--- |
 | moleditpy\src\moleditpy\__init__.py                     |      7 |      2 |   71.4% |
-| moleditpy\src\moleditpy\main.py                         |     80 |     22 |   72.5% |
+| moleditpy\src\moleditpy\main.py                         |     86 |     28 |   67.4% |
 | moleditpy\src\moleditpy\core\mol_geometry.py            |    260 |     19 |   92.7% |
 | moleditpy\src\moleditpy\core\molecular_data.py          |    307 |     38 |   87.6% |
 | moleditpy\src\moleditpy\plugins\plugin_interface.py     |    128 |      0 |  100.0% |
@@ -89,7 +89,7 @@
 | moleditpy\src\moleditpy\ui\custom_interactor_style.py   |    467 |    331 |   29.1% |
 | moleditpy\src\moleditpy\ui\custom_qt_interactor.py      |     44 |     35 |   20.5% |
 | moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    143 |     24 |   83.2% |
-| moleditpy\src\moleditpy\ui\dialog_logic.py              |    241 |     42 |   82.6% |
+| moleditpy\src\moleditpy\ui\dialog_logic.py              |    251 |     42 |   83.3% |
 | moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    261 |     36 |   86.2% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    247 |     41 |   83.4% |
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    858 |    217 |   74.7% |
@@ -122,7 +122,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      7 |   63.2% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      2 |   94.4% |
-| **TOTAL** | **15400** | **3230** | **79.03%** |
+| **TOTAL** | **15416** | **3236** | **79.01%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

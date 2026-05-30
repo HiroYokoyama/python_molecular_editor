@@ -48,12 +48,11 @@ class DummyCompute(ComputeManager):
     def __getattr__(self, name):
         return getattr(self._host, name)
 
-    def _start_calculation_worker(
-        self, mol_block, options, run_id
-    ) -> None:
+    def _start_calculation_worker(self, mol_block, options, run_id) -> None:
         # Call the real _start_calculation_worker but with QThread.start mocked
         # to prevent background threads from starting, avoiding random segfaults/aborts.
         from unittest.mock import patch
+
         with patch("PyQt6.QtCore.QThread.start"):
             ComputeManager._start_calculation_worker(self, mol_block, options, run_id)
 

@@ -1704,8 +1704,10 @@ _finished lambda calls remove_dialog_from_list with this dialog._
 ### TestOpenMirrorDialog.test_opens_when_mol_exists
 _No description provided._
 
-- MockM.assert_called_once_with(dm.host.view_3d_manager.current_mol, dm.host)
-- instance.exec.assert_called_once()
+- MockM.assert_called_once_with(dm.host.view_3d_manager.current_mol, dm.host, parent=dm.host)
+- instance.show.assert_called_once()
+- instance.finished.connect.assert_called_once()
+- assert instance in dm.host.edit_3d_manager.active_3d_dialogs
 
 ### TestOpenMirrorDialog.test_shows_error_when_no_mol
 _No description provided._

@@ -153,6 +153,7 @@ def main() -> None:
     if sys.platform == "win32":
         try:
             from PyQt6.QtCore import QTimer
+
             QTimer.singleShot(100, lambda: window.setWindowIcon(window.windowIcon()))
         except Exception:
             pass
