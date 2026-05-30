@@ -1,12 +1,9 @@
 import os
 import sys
-import shutil
 import zipfile
 import ast
-import logging
 from unittest.mock import MagicMock, patch
 
-import pytest
 from moleditpy.plugins.plugin_manager import PluginManager
 
 

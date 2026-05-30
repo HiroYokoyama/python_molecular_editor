@@ -13,9 +13,9 @@ import os
 import sys
 import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
-from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QApplication
 
 _src = os.path.abspath(
@@ -288,8 +288,6 @@ class TestAtomLabels:
             dlg.on_atom_picked(0)
 
     def test_show_atom_labels_calls_plotter_add_mesh(self, make_dialog):
-        import pyvista as pv
-
         dlg, mol, mw = make_dialog()
         self._pick_all(dlg)
         mw.view_3d_manager.atom_positions_3d = np.array(

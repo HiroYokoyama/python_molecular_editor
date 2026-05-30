@@ -71,7 +71,7 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
     After installation, run this command to create the shortcut in your application menu (e.g., Start Menu or Applications folder).
 
     ```bash
-    moleditpy-installer
+    python -m moleditpy_installer
     ```
 
 **Launch:**
@@ -167,7 +167,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
 
 ### 4.3. Using Templates
 
-  * **Standard Templates:** Click a button on the template toolbar (benzene ring, cyclohexane ring, etc.) to select the mode, then click on the canvas to place it. Clicking on an existing atom or bond allows you to merge the structures. Template snapping distance and fusing settings can be adjusted in the `Settings` menu.
+  * **Standard Templates:** Click a button on the template toolbar (benzene ring, cyclohexane ring, etc.) to select the mode, then click on the canvas to place it. Clicking on an existing atom or bond allows you to merge the structures. Template snapping distance and fusing settings can be adjusted in the `Settings` menu. **Hold down the `Alt` key to temporarily bypass atom fusing; the template preview will deform to show fusing points visually unless the `Alt` key is pressed.**
 
   * **User Templates:**
 
@@ -300,6 +300,8 @@ You can directly edit the atomic coordinates of the 3D structure. Turn on the **
 These functions are available from the menu when a 3D structure is displayed. Many open a dedicated dialog where you can select atoms or input parameters.
 
   * **Translation...:** Translates the entire molecule or a selected group of atoms. You can specify translation using relative coordinates (shift amount) or absolute coordinate mode to move the selection to an exact position in 3D space. **An option to translate only the selected atoms is also available.**
+
+  * **Move Selected Atoms...:** Translates or rotates only the selected atoms. You can input numeric translation values (dX, dY, dZ in Å) and rotation angles (Around X/Y/Z in degrees) around the selected atoms' centroid, or interactively drag the selected atoms in the 3D view (left-drag to translate, right-drag to rotate).
 
   * **Move Group...:** Allows for the selection and manipulation of connected molecular fragments (groups).
 
@@ -475,6 +477,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 | `Z` / `E` | (On hovered double bond) Set Z / E configuration | (On hovered double bond) Set Z / E configuration |
 | `.` (Period) | Toggle radical on selected or hovered atom (0-\>1-\>2-\>0) | Toggle radical on selected or hovered atom (0-\>1-\>2-\>0) |
 | `+` / `-` | Increase/Decrease charge on selected or hovered atom | Increase/Decrease charge on selected or hovered atom |
+| `Alt` | (In 3D view) Hold to drag atoms (3D Drag shortcut) | (In 2D view) Hold during template placement to bypass atom fusing |
 | `Delete` / `Backspace` | Delete selected or hovered item | Cancel operation (during drawing) / Delete selected or hovered item |
 
 
@@ -509,7 +512,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 3.5
+  * **Version:** 3.6
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

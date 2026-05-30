@@ -176,3 +176,36 @@ def test_atom_click_without_drag_resets_without_render_updates(app, mock_parser_
     mock_parser_host.edit_3d_manager.update_measurement_labels_display.assert_not_called()
     mock_parser_host.edit_3d_manager.update_2d_measurement_labels.assert_not_called()
     mock_parser_host.view_3d_manager.show_all_atom_info.assert_not_called()
+
+
+def test_custom_interactor_style_move_selected_atoms_no_bfs(app, mock_parser_host):
+    """Verify that clicking outside selection in MoveSelectedAtomsDialog toggles only that atom (no BFS)."""
+    interactor_style = CustomInteractorStyle(mock_parser_host)
+
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (100, 100)
+    interactor_style.GetInteractor = MagicMock(return_value=mock_interactor)
+
+    mock_dialog = MagicMock()
+    mock_dialog.isVisible.return_value = True
+    type(mock_dialog).__name__ = "MoveSelectedAtomsDialog"
+    mock_dialog.group_atoms = {0}
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch("moleditpy.ui.custom_interactor_style.QTimer.singleShot") as mock_timer,
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=1,
+        ),
+    ):
+        mock_qapp.topLevelWidgets.return_value = [mock_dialog]
+        mock_qapp.keyboardModifiers.return_value = Qt.KeyboardModifier.NoModifier
+
+        interactor_style.on_left_button_down(None, None)
+
+        mock_timer.assert_called_once()
+        callback = mock_timer.call_args[0][1]
+        callback()
+
+        mock_dialog.on_atom_picked.assert_called_once_with(1)

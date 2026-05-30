@@ -8,12 +8,9 @@ Covers:
   - detect_system_dark_mode: wraps detect_system_theme correctly
 """
 
-import sys
 import types
-import subprocess
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
-import pytest
 
 # ---------------------------------------------------------------------------
 # Path setup happens via conftest; just import directly.

@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch, MagicMock
 from moleditpy.ui.settings_dialog import SettingsDialog
 from moleditpy.utils.default_settings import DEFAULT_SETTINGS
 

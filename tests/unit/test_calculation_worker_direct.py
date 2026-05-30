@@ -1,6 +1,5 @@
 import pytest
 from rdkit import Chem
-from rdkit.Chem import AllChem
 from moleditpy.ui.calculation_worker import CalculationWorker
 from unittest.mock import patch
 

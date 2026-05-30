@@ -101,7 +101,7 @@ For detailed instructions, please refer to the project [Wiki](https://github.com
     After installation, run this command to create the shortcut in your application menu (e.g., Start Menu or Applications folder).
 
     ```bash
-    moleditpy-installer
+    python -m moleditpy_installer
     ```
 
 #### Running the Application
@@ -234,7 +234,7 @@ Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Ze
     インストール後、このコマンドを実行すると、アプリケーションメニュー（スタートメニューやアプリケーションフォルダなど）にショートカットが作成されます。
 
     ```bash
-    moleditpy-installer
+    python -m moleditpy_installer
     ```
 
 #### アプリケーションの起動

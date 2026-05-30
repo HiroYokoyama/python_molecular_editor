@@ -434,6 +434,7 @@ class UIManager(QObject):
         actions = [
             "translation_action",
             "move_group_action",
+            "move_selected_atoms_action",
             "alignplane_xy_action",
             "alignplane_xz_action",
             "alignplane_yz_action",

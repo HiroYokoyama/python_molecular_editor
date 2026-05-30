@@ -32,9 +32,7 @@ Covers:
 """
 
 import json
-import os
-import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QPointF, QRectF, QSize
 from PyQt6.QtGui import QImage, QPainter, QResizeEvent, QShowEvent
 from PyQt6.QtWidgets import QGraphicsScene

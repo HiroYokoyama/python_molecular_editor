@@ -533,8 +533,12 @@ class TestOpenMirrorDialog:
             instance = MagicMock()
             MockM.return_value = instance
             dm.open_mirror_dialog()
-        MockM.assert_called_once_with(dm.host.view_3d_manager.current_mol, dm.host)
-        instance.exec.assert_called_once()
+        MockM.assert_called_once_with(
+            dm.host.view_3d_manager.current_mol, dm.host, parent=dm.host
+        )
+        instance.show.assert_called_once()
+        instance.finished.connect.assert_called_once()
+        assert instance in dm.host.edit_3d_manager.active_3d_dialogs
 
     def test_shows_error_when_no_mol(self, dm):
         dm.host.view_3d_manager.current_mol = None

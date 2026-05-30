@@ -193,6 +193,20 @@ _No description provided._
 
 - mw.edit_actions_manager.push_undo_state.assert_called()
 
+## tests/unit/test_alt_template_bypass.py
+
+### test_update_template_preview_allows_snapping_but_bypasses_fusing_when_alt_pressed
+_No description provided._
+
+- assert len(scene.find_atom_near_args) == 1
+- assert passed_points[1].x() == 10.0
+- assert passed_points[1].y() == 20.0
+
+### test_add_molecule_fragment_bypasses_fusing_when_alt_pressed
+_No description provided._
+
+- assert scene.create_atom.call_count == 6
+
 ## tests/unit/test_app_logic.py
 
 ### test_ez_preservation_logic
@@ -1274,6 +1288,12 @@ _Simple atom clicks should not run drag redraw/update work._
 - mock_parser_host.edit_3d_manager.update_2d_measurement_labels.assert_not_called()
 - mock_parser_host.view_3d_manager.show_all_atom_info.assert_not_called()
 
+### test_custom_interactor_style_move_selected_atoms_no_bfs
+_Verify that clicking outside selection in MoveSelectedAtomsDialog toggles only that atom (no BFS)._
+
+- mock_timer.assert_called_once()
+- mock_dialog.on_atom_picked.assert_called_once_with(1)
+
 ## tests/unit/test_dialog_3d_picking_mixin.py
 
 ### test_init_defaults
@@ -1684,8 +1704,10 @@ _finished lambda calls remove_dialog_from_list with this dialog._
 ### TestOpenMirrorDialog.test_opens_when_mol_exists
 _No description provided._
 
-- MockM.assert_called_once_with(dm.host.view_3d_manager.current_mol, dm.host)
-- instance.exec.assert_called_once()
+- MockM.assert_called_once_with(dm.host.view_3d_manager.current_mol, dm.host, parent=dm.host)
+- instance.show.assert_called_once()
+- instance.finished.connect.assert_called_once()
+- assert instance in dm.host.edit_3d_manager.active_3d_dialogs
 
 ### TestOpenMirrorDialog.test_shows_error_when_no_mol
 _No description provided._
@@ -3611,6 +3633,71 @@ _Events on objects other than the plotter interactor use base behaviour._
 
 - assert result is False
 
+## tests/unit/test_move_selected_atoms_dialog.py
+
+### TestOnAtomPicked.test_picks_atom_individually_no_bfs
+_Picking an atom should select ONLY that atom (no BFS connected components)._
+
+- assert dlg.selected_atoms == {0}
+
+### TestOnAtomPicked.test_picking_again_toggles_deselect
+_Re-picking the same atom deselects it._
+
+- assert 0 in dlg.selected_atoms
+- assert 0 not in dlg.selected_atoms
+
+### TestApplyTranslation.test_no_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyTranslation.test_invalid_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyTranslation.test_translation_updates_only_selected_atoms
+_No description provided._
+
+- assert after[0] == pytest.approx(before[0] + [1.0, 2.0, 3.0], abs=0.0001)
+- assert after[1] == pytest.approx(before[1], abs=0.0001)
+
+### TestApplyRotation.test_no_atoms_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyRotation.test_invalid_input_shows_warning
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestApplyRotation.test_rotation_updates_only_selected_atoms_around_centroid
+_No description provided._
+
+- assert after[0] == pytest.approx([0.0, 1.0, 0.0], abs=1e-05)
+- assert after[1] == pytest.approx([0.0, -1.0, 0.0], abs=1e-05)
+- assert after[2] == pytest.approx([5.0, 5.0, 5.0], abs=1e-05)
+
+### TestResetInputs.test_reset_translation_inputs
+_No description provided._
+
+- assert dlg.x_trans_input.text() == '0.0'
+- assert dlg.y_trans_input.text() == '0.0'
+- assert dlg.z_trans_input.text() == '0.0'
+
+### TestResetInputs.test_reset_rotation_inputs
+_No description provided._
+
+- assert dlg.x_rot_input.text() == '0.0'
+- assert dlg.y_rot_input.text() == '0.0'
+- assert dlg.z_rot_input.text() == '0.0'
+
+### TestClearSelection.test_clear_removes_selected_atoms
+_No description provided._
+
+- assert len(dlg.selected_atoms) == 0
+
 ## tests/unit/test_parser_robustness.py
 
 ### test_set_mol_prop_safe_robustness
@@ -5316,20 +5403,24 @@ _No description provided._
 - assert slider.minimum() == 10
 - assert slider.maximum() == 200
 
-### test_create_slider_float_label_updates
+### test_create_slider_float_spin_updates
 _No description provided._
 
-- assert label.text() == '5.00'
+- assert spin.value() == 5.0
+- assert slider.value() == 80
 
-### test_create_slider_int_label_updates
+### test_create_slider_int_spin_updates
 _No description provided._
 
-- assert label.text() == '10'
+- assert spin.value() == 10
+- assert slider.value() == 15
 
-### test_wrap_layout_returns_widget_with_children
+### test_wrap_layout_returns_layout_with_children
 _No description provided._
 
-- assert isinstance(container, QWidget)
+- assert isinstance(layout, QHBoxLayout)
+- assert layout.indexOf(slider) != -1
+- assert layout.indexOf(label) != -1
 
 ### test_reset_to_defaults_calls_update_ui
 _No description provided._
@@ -5568,6 +5659,16 @@ _No description provided._
 _No description provided._
 
 - assert detect_system_dark_mode() is None
+
+## tests/unit/test_template_fusing_preview.py
+
+### test_update_template_preview_snaps_points_for_fusing
+_No description provided._
+
+- assert passed_points[0].x() == 0.0
+- assert passed_points[0].y() == 0.0
+- assert passed_points[1].x() == 10.5
+- assert passed_points[1].y() == 0.5
 
 ## tests/unit/test_template_preview.py
 

@@ -1,5 +1,5 @@
 import pytest
-from PyQt6.QtCore import Qt, QPointF, QRectF
+from PyQt6.QtCore import QPointF, QRectF
 from PyQt6.QtGui import QPainter, QPainterPath
 from PyQt6.QtWidgets import (
     QGraphicsScene,

@@ -14,10 +14,10 @@ Covers:
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
-from PyQt6.QtCore import Qt, QPointF, QPoint, QEvent
+from unittest.mock import MagicMock, patch
+from PyQt6.QtCore import Qt, QPoint, QEvent
 from PyQt6.QtGui import QMouseEvent, QWheelEvent
-from PyQt6.QtWidgets import QGraphicsScene, QApplication
+from PyQt6.QtWidgets import QGraphicsScene
 from moleditpy.ui.zoomable_view import ZoomableView
 
 
