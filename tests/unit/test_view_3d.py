@@ -119,6 +119,7 @@ def test_fit_to_view_with_items(app, mock_parser_host):
     mock_item = MagicMock()
     mock_item.isVisible.return_value = True
     from PyQt6.QtCore import QRectF
+
     mock_item.sceneBoundingRect.return_value = QRectF(10, 10, 50, 50)
 
     mock_parser_host.init_manager.scene.items.return_value = [mock_item]
