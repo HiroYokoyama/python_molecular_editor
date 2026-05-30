@@ -60,11 +60,10 @@ class SettingsTabBase(QWidget):
             label.setText(f"{slider.value() / scale:.2f}")
         return slider, label
 
-    def _wrap_layout(self, slider: QWidget, label: QWidget) -> QWidget:
-        """Wrap a slider and its label in a horizontal layout/widget."""
+    def _wrap_layout(self, slider: QWidget, label: QWidget) -> QHBoxLayout:
+        """Wrap a slider and its label in a horizontal layout."""
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(slider)
         layout.addWidget(label)
-        container = QWidget()
-        container.setLayout(layout)
-        return container
+        return layout

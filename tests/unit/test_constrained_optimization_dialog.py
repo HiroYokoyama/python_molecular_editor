@@ -16,9 +16,8 @@ import os
 import sys
 
 import pytest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QTableWidgetItem
 
 # ---------------------------------------------------------------------------

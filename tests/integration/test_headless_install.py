@@ -1,10 +1,8 @@
-import os
 import sys
 import textwrap
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import pytest
 from moleditpy.main import main
-from moleditpy.plugins.plugin_manager import PluginManager
 
 
 def test_headless_install_success(tmp_path, capsys):

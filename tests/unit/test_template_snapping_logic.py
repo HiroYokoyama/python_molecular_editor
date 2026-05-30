@@ -1,9 +1,7 @@
-import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QKeyEvent
 from moleditpy.ui.molecular_scene_handler import TemplateMixin, KeyboardMixin
-from moleditpy.ui.atom_item import AtomItem
 
 
 class MockTemplateScene(TemplateMixin):

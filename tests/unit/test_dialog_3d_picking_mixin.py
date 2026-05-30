@@ -17,11 +17,10 @@ Covers:
 """
 
 import numpy as np
-import pytest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QEvent, Qt, QPoint
 from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QApplication, QDialog
+from PyQt6.QtWidgets import QDialog
 
 from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
 

@@ -16,10 +16,9 @@ Covers:
 
 import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeyEvent
-from PyQt6.QtWidgets import QApplication
 from rdkit import Chem
 from rdkit.Chem import AllChem
 

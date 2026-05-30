@@ -15,9 +15,7 @@ Covers uncovered paths:
 """
 
 import numpy as np
-import pytest
-from unittest.mock import MagicMock, patch, call
-from PyQt6.QtCore import QPointF, QRectF
+from unittest.mock import MagicMock, patch
 
 from moleditpy.ui.edit_3d_logic import Edit3DManager
 

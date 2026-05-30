@@ -33,6 +33,7 @@ try:
     from .dihedral_dialog import DihedralDialog
     from .mirror_dialog import MirrorDialog
     from .move_group_dialog import MoveGroupDialog
+    from .move_selected_atoms_dialog import MoveSelectedAtomsDialog
     from .periodic_table_dialog import PeriodicTableDialog
     from .planarize_dialog import PlanarizeDialog
     from .settings_dialog import SettingsDialog
@@ -53,6 +54,7 @@ except ImportError:
     from moleditpy.ui.dihedral_dialog import DihedralDialog
     from moleditpy.ui.mirror_dialog import MirrorDialog
     from moleditpy.ui.move_group_dialog import MoveGroupDialog
+    from moleditpy.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
     from moleditpy.ui.periodic_table_dialog import PeriodicTableDialog
     from moleditpy.ui.planarize_dialog import PlanarizeDialog
     from moleditpy.ui.settings_dialog import SettingsDialog
@@ -259,6 +261,34 @@ class DialogManager:
         dialog.show()
         dialog.accepted.connect(
             lambda: self.host.statusBar().showMessage("Group transformation applied.")
+        )
+        dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
+        dialog.finished.connect(
+            lambda: self.host.edit_3d_manager.remove_dialog_from_list(dialog)
+        )
+
+    def open_move_selected_atoms_dialog(self) -> None:
+        """Open Move Selected Atoms dialog"""
+        # Get preselected atoms
+        preselected_atoms = self._get_preselected_atoms_3d()
+
+        # Disable measurement mode
+        if self.host.edit_3d_manager.measurement_mode:
+            self.host.init_manager.measurement_action.setChecked(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
+
+        dialog = MoveSelectedAtomsDialog(
+            self.host.view_3d_manager.current_mol,
+            self.host,
+            preselected_atoms,
+            parent=self.host,
+        )
+        self.host.edit_3d_manager.active_3d_dialogs.append(dialog)
+        dialog.show()
+        dialog.accepted.connect(
+            lambda: self.host.statusBar().showMessage(
+                "Selected atoms transformation applied."
+            )
         )
         dialog.accepted.connect(self.host.edit_actions_manager.push_undo_state)
         dialog.finished.connect(

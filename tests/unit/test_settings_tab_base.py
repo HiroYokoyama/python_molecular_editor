@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock
-from PyQt6.QtWidgets import QFrame, QSlider, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QSlider, QHBoxLayout
 from moleditpy.ui.settings_tabs.settings_tab_base import SettingsTabBase
 from moleditpy.utils.default_settings import DEFAULT_SETTINGS
 
@@ -49,11 +49,13 @@ def test_create_slider_int_label_updates(app):
     assert label.text() == "10"
 
 
-def test_wrap_layout_returns_widget_with_children(app):
+def test_wrap_layout_returns_layout_with_children(app):
     tab = ConcreteTab(DEFAULT_SETTINGS)
     slider, label = tab._create_slider(0, 100, 1.0)
-    container = tab._wrap_layout(slider, label)
-    assert isinstance(container, QWidget)
+    layout = tab._wrap_layout(slider, label)
+    assert isinstance(layout, QHBoxLayout)
+    assert layout.indexOf(slider) != -1
+    assert layout.indexOf(label) != -1
 
 
 def test_reset_to_defaults_calls_update_ui(app):

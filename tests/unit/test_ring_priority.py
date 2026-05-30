@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock
 from moleditpy.core.molecular_data import MolecularData
 

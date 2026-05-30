@@ -1,10 +1,7 @@
-import os
-import shutil
-import hashlib
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import Qt, QUrl, QMimeData
+from PyQt6.QtCore import Qt, QMimeData
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 from PyQt6.QtWidgets import QMessageBox
 

@@ -1874,6 +1874,14 @@ class MainInitManager:
         edit_3d_menu.addAction(move_group_action)
         self.host.move_group_action = move_group_action
 
+        move_selected_atoms_action = QAction("Move Selected Atoms...", self.host)
+        move_selected_atoms_action.triggered.connect(
+            self.host.dialog_manager.open_move_selected_atoms_dialog
+        )
+        move_selected_atoms_action.setEnabled(False)
+        edit_3d_menu.addAction(move_selected_atoms_action)
+        self.host.move_selected_atoms_action = move_selected_atoms_action
+
         edit_3d_menu.addSeparator()
         align_menu = edit_3d_menu.addMenu("Align to")
         align_menu.setEnabled(False)
