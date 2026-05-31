@@ -351,8 +351,8 @@ def main():
         if rt_type:
             metadata["resource_type"] = {"id": rt_type}
 
-    # Clean up custom fields if present (strip read-only 'title' fields to prevent 500 server errors on PUT)
-    custom = metadata.get("custom", {})
+    # Clean up custom fields if present (map to custom_fields and strip read-only 'title' keys to prevent 500 server errors on PUT)
+    custom = metadata.pop("custom", None)
     if isinstance(custom, dict):
         new_custom = {}
         for k, v in custom.items():
@@ -372,7 +372,7 @@ def main():
                 new_custom[k] = v_copy
             else:
                 new_custom[k] = v
-        metadata["custom"] = new_custom
+        metadata["custom_fields"] = new_custom
 
     # Set new version
     metadata["version"] = version
