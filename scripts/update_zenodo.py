@@ -198,8 +198,37 @@ def main():
     print("\n[5/6] Updating metadata...")
     metadata = draft.get("metadata", {}).copy()
 
-    # Bypass the known dates list validation bug (serialize issues on PUT)
-    metadata.pop("dates", None)
+    # Map dates correctly (each entry needs a date string and a type dict with an id)
+    dates = metadata.get("dates", [])
+    if isinstance(dates, list):
+        new_dates = []
+        for d in dates:
+            if isinstance(d, dict):
+                d_date = d.get("date")
+                d_type = d.get("type")
+                
+                # If date is missing (e.g. legacy compatibility dates list), use today's date
+                if not d_date:
+                    d_date = datetime.date.today().isoformat()
+                
+                # Ensure type is a dictionary with an id
+                if isinstance(d_type, str):
+                    d_type = {"id": d_type}
+                elif isinstance(d_type, dict) and "id" not in d_type:
+                    type_id = d_type.get("type") or d_type.get("id") or "other"
+                    d_type = {"id": type_id}
+                elif not d_type:
+                    d_type = {"id": "other"}
+                
+                new_dates.append({
+                    "date": d_date,
+                    "type": d_type
+                })
+        metadata["dates"] = new_dates
+
+    # Ensure publisher is set to Zenodo if missing
+    if "publisher" not in metadata or not metadata["publisher"]:
+        metadata["publisher"] = "Zenodo"
 
     # Remove system-assigned or read-only fields that could fail schema validation on PUT
     metadata.pop("doi", None)
@@ -216,12 +245,37 @@ def main():
                     name = c.get("name")
                     if name:
                         c_type = c.get("type", "personal")
-                        new_creators.append({
-                            "person_or_org": {
-                                "name": name,
-                                "type": c_type
-                            }
-                        })
+                        person_or_org = {
+                            "name": name,
+                            "type": c_type
+                        }
+                        # Add identifiers if present
+                        identifiers = []
+                        if "orcid" in c and c["orcid"]:
+                            identifiers.append({
+                                "scheme": "orcid",
+                                "identifier": c["orcid"]
+                            })
+                        if "gnd" in c and c["gnd"]:
+                            identifiers.append({
+                                "scheme": "gnd",
+                                "identifier": c["gnd"]
+                            })
+                        if identifiers:
+                            person_or_org["identifiers"] = identifiers
+
+                        new_creator = {
+                            "person_or_org": person_or_org
+                        }
+
+                        # Add affiliations if present
+                        if "affiliation" in c and c["affiliation"]:
+                            new_creator["affiliations"] = [
+                                {
+                                    "name": c["affiliation"]
+                                }
+                            ]
+                        new_creators.append(new_creator)
                     else:
                         new_creators.append(c)
                 else:
