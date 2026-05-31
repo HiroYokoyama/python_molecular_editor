@@ -203,6 +203,10 @@ def main():
     parent_record = make_request(parent_url, headers=headers, method="GET")
     parent_metadata = parent_record.get("metadata", {})
 
+    # Print debug info to help diagnose metadata shape in the logs
+    print(f"[DEBUG] Original Draft Metadata: {json.dumps(draft.get('metadata'), indent=2)}")
+    print(f"[DEBUG] Parent Record Metadata: {json.dumps(parent_metadata, indent=2)}")
+
     # Construct a clean metadata dictionary containing only allowed/editable fields to prevent 500 server errors
     metadata = {}
     
@@ -276,32 +280,6 @@ def main():
                     new_creators.append(new_creator)
         metadata["creators"] = new_creators
 
-    # Map dates correctly (each entry needs today's date string and a type dict with an id)
-    dates = parent_metadata.get("dates", [])
-    if isinstance(dates, list):
-        new_dates = []
-        for d in dates:
-            if isinstance(d, dict):
-                d_type = d.get("type")
-                
-                # Automatically update date in dates list to today's date
-                d_date = today_str
-                
-                # Ensure type is a dictionary with an id
-                if isinstance(d_type, str):
-                    d_type = {"id": d_type}
-                elif isinstance(d_type, dict) and "id" not in d_type:
-                    type_id = d_type.get("type") or d_type.get("id") or "other"
-                    d_type = {"id": type_id}
-                elif not d_type:
-                    d_type = {"id": "other"}
-                
-                new_dates.append({
-                    "date": d_date,
-                    "type": d_type
-                })
-        metadata["dates"] = new_dates
-
     # Map legacy license to InvenioRDM rights list
     lic = parent_metadata.get("license")
     if lic and isinstance(lic, dict):
@@ -317,6 +295,7 @@ def main():
             metadata["resource_type"] = {"id": rt_type}
 
     update_payload = {"metadata": metadata}
+    print(f"[DEBUG] PUT Payload Metadata: {json.dumps(update_payload, indent=2)}")
     print(f"Updating draft {draft_id} metadata: version={version}, publication_date={today_str}")
     make_request(draft_self_url, data=update_payload, headers=headers, method="PUT")
 
