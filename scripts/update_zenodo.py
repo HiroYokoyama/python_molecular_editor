@@ -196,7 +196,18 @@ def main():
 
     # 5. Update Metadata (version and publication date)
     print("\n[5/6] Updating metadata...")
-    metadata = draft.get("metadata", {}).copy()
+    
+    # Fetch the parent record to retrieve the original, complete metadata (old info to copy in)
+    parent_url = f"{base_url}/records/{deposition_id}"
+    print(f"Fetching parent record metadata from {parent_url} to ensure completeness...")
+    parent_record = make_request(parent_url, headers=headers, method="GET")
+    parent_metadata = parent_record.get("metadata", {})
+
+    metadata = draft.get("metadata", {}).copy() if draft.get("metadata") else {}
+    # Use parent metadata as a fallback for any empty/missing keys (e.g. creators, description)
+    for key, val in parent_metadata.items():
+        if key not in metadata or not metadata[key]:
+            metadata[key] = val
 
     # Map dates correctly (each entry needs a date string and a type dict with an id)
     dates = metadata.get("dates", [])
