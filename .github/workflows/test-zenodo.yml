@@ -13,6 +13,9 @@ on:
         type: string
         default: "506734"
 
+permissions:
+  contents: read
+
 jobs:
   test-zenodo-upload:
     runs-on: ubuntu-latest
