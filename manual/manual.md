@@ -19,7 +19,7 @@
   - [5.4. 3D View Operations](#54-3d-view-operations)
   - [5.5. 3D Measurement Function ("3D Select" Mode)](#55-3d-measurement-function-3d-select-mode)
   - [5.6. 3D Editing Function ("3D Drag" Mode / Alt Key)](#56-3d-editing-function-3d-drag-mode--alt-key)
-  - [5.7. Other 3D Editing Functions (Menu `3D Edit`)](#57-other-3d-editing-functions-menu-`3d-edit`)
+  - [5.7. Other 3D Editing Functions (Menu `3D Edit`)](#57-other-3d-editing-functions-menu-3d-edit)
   - [5.8. Constrained Optimization](#58-constrained-optimization)
   - [5.9. Displaying Atom Information](#59-displaying-atom-information)
 - [6. File Operations](#6-file-operations)
