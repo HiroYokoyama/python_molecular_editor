@@ -203,9 +203,6 @@ def main():
     parent_record = make_request(parent_url, headers=headers, method="GET")
     parent_metadata = parent_record.get("metadata", {})
 
-    # Print debug info to help diagnose metadata shape in the logs
-    print(f"[DEBUG] Original Draft Metadata: {json.dumps(draft.get('metadata'), indent=2)}")
-    print(f"[DEBUG] Parent Record Metadata: {json.dumps(parent_metadata, indent=2)}")
 
     # Validate version uniqueness within the deposition concept series
     parent_version = parent_metadata.get("version")
@@ -243,13 +240,34 @@ def main():
             if new_refs:
                 metadata["references"] = new_refs
 
-    # Set new version and publisher
-    metadata["version"] = version
-    metadata["publisher"] = "Zenodo"
-
     # Set publication date to today's date automatically
     today_str = datetime.date.today().isoformat()
     metadata["publication_date"] = today_str
+
+    # Map dates from legacy format to InvenioRDM format
+    if "dates" in parent_metadata:
+        dates = parent_metadata["dates"]
+        if isinstance(dates, list):
+            new_dates = []
+            for d in dates:
+                if isinstance(d, dict):
+                    d_val = d.get("date") or today_str
+                    d_type = d.get("type")
+                    if isinstance(d_type, dict):
+                        t_id = d_type.get("id")
+                    else:
+                        t_id = d_type
+                    if t_id:
+                        new_dates.append({
+                            "date": d_val,
+                            "type": {"id": t_id.lower()}
+                        })
+            if new_dates:
+                metadata["dates"] = new_dates
+
+    # Set new version and publisher
+    metadata["version"] = version
+    metadata["publisher"] = "Zenodo"
 
     # Map and format creators correctly to the InvenioRDM nested structure
     creators = parent_metadata.get("creators", [])
@@ -330,10 +348,17 @@ def main():
         update_payload["access"] = draft["access"]
     if "pids" in draft and isinstance(draft["pids"], dict):
         update_payload["pids"] = draft["pids"]
-    if "custom_fields" in draft and isinstance(draft["custom_fields"], dict):
-        update_payload["custom_fields"] = draft["custom_fields"]
 
-    print(f"[DEBUG] PUT Payload Metadata: {json.dumps(update_payload, indent=2)}")
+    # Map custom fields from parent record and draft
+    custom_fields = {}
+    if "custom_fields" in draft and isinstance(draft["custom_fields"], dict):
+        custom_fields.update(draft["custom_fields"])
+    custom = parent_metadata.get("custom")
+    if custom and isinstance(custom, dict):
+        custom_fields.update(custom)
+    if custom_fields:
+        update_payload["custom_fields"] = custom_fields
+
     print(f"Updating draft {draft_id} metadata: version={version}, publication_date={today_str}")
     make_request(draft_self_url, data=update_payload, headers=headers, method="PUT")
 
