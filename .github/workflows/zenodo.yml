@@ -10,7 +10,7 @@ on:
         required: false
         type: string
       deposition_id:
-        description: "Zenodo Deposition ID (to override the default production ID 17268532)."
+        description: "Zenodo Deposition ID (to override the default production ID 20463243)."
         required: false
         type: string
 

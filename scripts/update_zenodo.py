@@ -60,7 +60,7 @@ def main():
     parser.add_argument("--token", help="Zenodo access token")
     parser.add_argument(
         "--deposition-id",
-        default="17268532",
+        default="20463243",
         help="Zenodo deposition ID (concept/latest version ID)",
     )
     parser.add_argument(
