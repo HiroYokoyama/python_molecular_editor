@@ -210,11 +210,17 @@ def main():
     # Validate version uniqueness within the deposition concept series
     parent_version = parent_metadata.get("version")
     if version == parent_version:
-        raise ValueError(
-            f"The target version '{version}' is identical to the parent record's version. "
-            f"Zenodo requires each version to have a unique version identifier. "
-            f"Please specify a bumped version string (e.g. 3.6.1) in the manual trigger inputs."
-        )
+        if args.publish:
+            raise ValueError(
+                f"The target version '{version}' is identical to the parent record's version. "
+                f"Zenodo requires each version to have a unique version identifier when publishing. "
+                f"Please specify a bumped version string (e.g. 3.6.1) in the manual trigger inputs."
+            )
+        else:
+            print(
+                f"[WARNING] The target version '{version}' is identical to the parent record's version. "
+                f"This is allowed for drafts, but publishing will fail unless you specify a unique version identifier."
+            )
 
     # Construct a clean metadata dictionary containing only allowed/editable fields to prevent 500 server errors
     metadata = {}
