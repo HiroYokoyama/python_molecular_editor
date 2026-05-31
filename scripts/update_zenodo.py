@@ -226,9 +226,22 @@ def main():
     metadata = {}
     
     # Copy essential standard fields from parent record metadata
-    for field in ["title", "description", "references"]:
+    for field in ["title", "description"]:
         if field in parent_metadata:
             metadata[field] = parent_metadata[field]
+
+    # Map references from legacy list of strings to InvenioRDM list of objects
+    if "references" in parent_metadata:
+        refs = parent_metadata["references"]
+        if isinstance(refs, list):
+            new_refs = []
+            for ref in refs:
+                if isinstance(ref, str):
+                    new_refs.append({"reference": ref})
+                elif isinstance(ref, dict) and "reference" in ref:
+                    new_refs.append(ref)
+            if new_refs:
+                metadata["references"] = new_refs
 
     # Set new version and publisher
     metadata["version"] = version
