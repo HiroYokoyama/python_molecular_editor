@@ -48,8 +48,11 @@ def make_request(url, data=None, headers=None, method="GET", json_response=True)
             return resp_content
     except urllib.error.HTTPError as e:
         err_body = e.read().decode("utf-8", errors="replace")
+        req_body_str = ""
+        if data is not None and isinstance(data, (dict, list)):
+            req_body_str = f"\nRequest Body: {json.dumps(data, indent=2)}"
         raise RuntimeError(
-            f"HTTP Error {e.code}: {e.reason}\nURL: {url}\nMethod: {method}\nBody: {err_body}"
+            f"HTTP Error {e.code}: {e.reason}\nURL: {url}\nMethod: {method}{req_body_str}\nResponse Body: {err_body}"
         ) from e
     except urllib.error.URLError as e:
         raise RuntimeError(f"URL Error: {e.reason}\nURL: {url}\nMethod: {method}") from e
