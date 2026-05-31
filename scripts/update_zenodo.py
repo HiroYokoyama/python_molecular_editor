@@ -309,14 +309,15 @@ def main():
         if rt_type:
             metadata["resource_type"] = {"id": rt_type}
 
-    update_payload = {"metadata": metadata}
-    if "access" in draft:
+    update_payload = {
+        "metadata": metadata,
+        "files": {"enabled": True}
+    }
+    if "access" in draft and isinstance(draft["access"], dict):
         update_payload["access"] = draft["access"]
-    if "files" in draft:
-        update_payload["files"] = draft["files"]
-    if "pids" in draft:
+    if "pids" in draft and isinstance(draft["pids"], dict):
         update_payload["pids"] = draft["pids"]
-    if "custom_fields" in draft:
+    if "custom_fields" in draft and isinstance(draft["custom_fields"], dict):
         update_payload["custom_fields"] = draft["custom_fields"]
 
     print(f"[DEBUG] PUT Payload Metadata: {json.dumps(update_payload, indent=2)}")
