@@ -304,6 +304,15 @@ def main():
             metadata["resource_type"] = {"id": rt_type}
 
     update_payload = {"metadata": metadata}
+    if "access" in draft:
+        update_payload["access"] = draft["access"]
+    if "files" in draft:
+        update_payload["files"] = draft["files"]
+    if "pids" in draft:
+        update_payload["pids"] = draft["pids"]
+    if "custom_fields" in draft:
+        update_payload["custom_fields"] = draft["custom_fields"]
+
     print(f"[DEBUG] PUT Payload Metadata: {json.dumps(update_payload, indent=2)}")
     print(f"Updating draft {draft_id} metadata: version={version}, publication_date={today_str}")
     make_request(draft_self_url, data=update_payload, headers=headers, method="PUT")
