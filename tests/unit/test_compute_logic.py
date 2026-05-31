@@ -736,7 +736,6 @@ def test_trigger_conversion_early_exits(mock_parser_host):
             assert mock_fallback.called
 
 
-@pytest.mark.skip(reason="Segfaults in headless environment")
 def test_check_chemistry_problems_fallback(mock_parser_host):
     """Test the manual valence check when RDKit fails."""
     # from moleditpy.modules.atom_item import AtomItem
@@ -766,7 +765,7 @@ def test_check_chemistry_problems_fallback(mock_parser_host):
     compute.check_chemistry_problems_fallback()
     assert compute.data.atoms[0]["item"].has_problem == True
     msgs = compute.get_status_messages()
-    assert any("chemistry problem" in msg and "valence" in msg for msg in msgs)
+    assert any("chemistry problems found" in msg for msg in msgs)
 
 
 def test_trigger_conversion_happy_path(mock_parser_host):
@@ -836,7 +835,6 @@ def test_halt_conversion(mock_parser_host):
     # Note: halt_conversion doesn't show status message directly
 
 
-@pytest.mark.skip(reason="Segfaults in headless environment")
 def test_on_calculation_error_updated(mock_parser_host):
     """Test on_calculation_error with correct message formatting."""
     compute = DummyCompute(mock_parser_host)
@@ -849,7 +847,6 @@ def test_on_calculation_error_updated(mock_parser_host):
     assert worker_id not in compute.active_worker_ids
 
 
-@pytest.mark.skip(reason="Segfaults in headless environment despite mocking")
 def test_trigger_conversion_chemistry_problem_detection(mock_parser_host):
     """Test trigger_conversion detects and flags chemistry problems (valence)."""
     from PyQt6.QtCore import QPointF
@@ -883,7 +880,7 @@ def test_trigger_conversion_chemistry_problem_detection(mock_parser_host):
 
     # It should hit either DetectChemistryProblems or the fallback if mol is None
     msgs = compute.get_status_messages()
-    assert any("chemistry problem(s) found" in msg for msg in msgs)
+    assert any("chemistry problems found" in msg for msg in msgs)
 
     # Verify the item was flagged
     assert mock_item.has_problem == True
