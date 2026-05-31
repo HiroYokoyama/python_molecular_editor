@@ -1,0 +1,64 @@
+name: Zenodo Production Upload
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to upload (e.g. 3.6.0). If left empty, the latest release will be used."
+        required: false
+        type: string
+
+jobs:
+  zenodo-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Download Release Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist
+          
+          # Resolve the target tag based on the trigger event
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="${{ github.event.inputs.tag }}"
+            if [ -z "$TAG" ]; then
+              echo "No tag specified, fetching latest release tag..."
+              TAG=$(gh release view --json tagName --template '{{.tagName}}')
+            fi
+          fi
+          
+          echo "Processing tag: $TAG"
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+          # Download uploaded release assets (*.tar.gz and *.whl files)
+          gh release download "$TAG" --pattern "*.tar.gz" --pattern "*.whl" --dir dist --skip-existing || true
+
+          # Download the source code tarball archive
+          curl -L -o "dist/source.tar.gz" "https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+
+          # List the files to verify
+          echo "Downloaded assets:"
+          ls -la dist/
+
+      - name: Upload and Publish to Zenodo
+        env:
+          ZENODO_TOKEN: ${{ secrets.ZENODO_TOKEN }}
+        run: |
+          # Run the update script, updating metadata and publishing the deposition.
+          python scripts/update_zenodo.py \
+            --publish \
+            --version-string "$TAG" \
+            dist/*

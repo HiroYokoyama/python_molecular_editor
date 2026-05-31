@@ -1,0 +1,59 @@
+name: Test Zenodo Sandbox Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to upload (e.g. 3.6.0). If left empty, the latest release will be used."
+        required: false
+        type: string
+
+jobs:
+  test-zenodo-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Download Release Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist
+          
+          # Determine the target tag
+          TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            echo "No tag specified, fetching latest release tag..."
+            TAG=$(gh release view --json tagName --template '{{.tagName}}')
+          fi
+          echo "Processing tag: $TAG"
+          echo "TAG=$TAG" >> $GITHUB_ENV
+
+          # Download uploaded release assets (*.tar.gz and *.whl files)
+          gh release download "$TAG" --pattern "*.tar.gz" --pattern "*.whl" --dir dist --skip-existing || true
+
+          # Download the source code tarball archive
+          curl -L -o "dist/source.tar.gz" "https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+
+          # List the files to verify
+          echo "Downloaded assets:"
+          ls -la dist/
+
+      - name: Upload to Zenodo Sandbox
+        env:
+          ZENODO_TOKEN: ${{ secrets.ZENODO_SANDBOX_TOKEN }}
+        run: |
+          # Run the update script pointing to Zenodo Sandbox.
+          # We do not automatically publish to sandbox unless requested,
+          # but we upload all assets in the dist/ folder.
+          python scripts/update_zenodo.py \
+            --sandbox \
+            --version-string "$TAG" \
+            dist/*
