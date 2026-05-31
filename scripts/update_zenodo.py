@@ -261,6 +261,20 @@ def main():
                             "name": name,
                             "type": c_type
                         }
+                        if c_type == "personal":
+                            if "," in name:
+                                parts = name.split(",", 1)
+                                family_name = parts[0].strip()
+                                given_name = parts[1].strip()
+                            elif " " in name:
+                                parts = name.rsplit(" ", 1)
+                                given_name = parts[0].strip()
+                                family_name = parts[1].strip()
+                            else:
+                                given_name = name
+                                family_name = name
+                            person_or_org["family_name"] = family_name
+                            person_or_org["given_name"] = given_name
                         # Add identifiers if present
                         identifiers = []
                         if "orcid" in c and c["orcid"]:
@@ -291,6 +305,28 @@ def main():
                     else:
                         new_creators.append(c)
                 else:
+                    # If person_or_org is already present in c, ensure family_name and given_name are populated for personal type
+                    person_or_org = c.get("person_or_org", {})
+                    if isinstance(person_or_org, dict):
+                        c_type = person_or_org.get("type", "personal")
+                        if c_type == "personal":
+                            name = person_or_org.get("name")
+                            family = person_or_org.get("family_name")
+                            given = person_or_org.get("given_name")
+                            if name and (not family or not given):
+                                if "," in name:
+                                    parts = name.split(",", 1)
+                                    family = parts[0].strip()
+                                    given = parts[1].strip()
+                                elif " " in name:
+                                    parts = name.rsplit(" ", 1)
+                                    given = parts[0].strip()
+                                    family = parts[1].strip()
+                                else:
+                                    given = name
+                                    family = name
+                                person_or_org["family_name"] = family
+                                person_or_org["given_name"] = given
                     new_creators.append(c)
             else:
                 new_creators.append(c)
