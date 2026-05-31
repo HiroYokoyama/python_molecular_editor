@@ -9,6 +9,10 @@ on:
         description: "Release tag to upload (e.g. 3.6.0). If left empty, the latest release will be used."
         required: false
         type: string
+      deposition_id:
+        description: "Zenodo Deposition ID (to override the default production ID 17268532)."
+        required: false
+        type: string
 
 jobs:
   zenodo-upload:
@@ -57,8 +61,14 @@ jobs:
         env:
           ZENODO_TOKEN: ${{ secrets.ZENODO_TOKEN }}
         run: |
+          DEP_ARG=""
+          if [ -n "${{ github.event.inputs.deposition_id }}" ]; then
+            DEP_ARG="--deposition-id ${{ github.event.inputs.deposition_id }}"
+          fi
+
           # Run the update script, updating metadata and publishing the deposition.
           python scripts/update_zenodo.py \
             --publish \
+            $DEP_ARG \
             --version-string "$TAG" \
             dist/*

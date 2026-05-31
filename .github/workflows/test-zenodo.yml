@@ -7,6 +7,10 @@ on:
         description: "Release tag to upload (e.g. 3.6.0). If left empty, the latest release will be used."
         required: false
         type: string
+      deposition_id:
+        description: "Zenodo Sandbox Deposition ID (defaults to production ID if blank, which will 404 on Sandbox. Create a dummy record on sandbox.zenodo.org first to get an ID)."
+        required: false
+        type: string
 
 jobs:
   test-zenodo-upload:
@@ -50,10 +54,16 @@ jobs:
         env:
           ZENODO_TOKEN: ${{ secrets.ZENODO_SANDBOX_TOKEN }}
         run: |
+          DEP_ARG=""
+          if [ -n "${{ github.event.inputs.deposition_id }}" ]; then
+            DEP_ARG="--deposition-id ${{ github.event.inputs.deposition_id }}"
+          fi
+
           # Run the update script pointing to Zenodo Sandbox.
           # Upload all assets in the dist/ folder and auto-publish.
           python scripts/update_zenodo.py \
             --sandbox \
             --publish \
+            $DEP_ARG \
             --version-string "$TAG" \
             dist/*
