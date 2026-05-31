@@ -201,6 +201,42 @@ def main():
     # Bypass the known dates list validation bug (serialize issues on PUT)
     metadata.pop("dates", None)
 
+    # Remove system-assigned or read-only fields that could fail schema validation on PUT
+    metadata.pop("doi", None)
+    metadata.pop("conceptdoi", None)
+    metadata.pop("relations", None)
+
+    # Ensure creators is in the format expected by the InvenioRDM schema
+    creators = metadata.get("creators", [])
+    if isinstance(creators, list):
+        new_creators = []
+        for c in creators:
+            if isinstance(c, dict):
+                if "person_or_org" not in c:
+                    name = c.get("name")
+                    if name:
+                        c_type = c.get("type", "personal")
+                        new_creators.append({
+                            "person_or_org": {
+                                "name": name,
+                                "type": c_type
+                            }
+                        })
+                    else:
+                        new_creators.append(c)
+                else:
+                    new_creators.append(c)
+            else:
+                new_creators.append(c)
+        metadata["creators"] = new_creators
+
+    # Ensure resource_type is in the format expected by the InvenioRDM schema
+    resource_type = metadata.get("resource_type", {})
+    if isinstance(resource_type, dict):
+        rt_type = resource_type.get("type") or resource_type.get("id")
+        if rt_type:
+            metadata["resource_type"] = {"id": rt_type}
+
     # Set new version
     metadata["version"] = version
 
