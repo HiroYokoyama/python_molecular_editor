@@ -8,9 +8,10 @@ on:
         required: false
         type: string
       deposition_id:
-        description: "Zenodo Sandbox Deposition ID (defaults to production ID if blank, which will 404 on Sandbox. Create a dummy record on sandbox.zenodo.org first to get an ID)."
+        description: "Zenodo Sandbox Deposition ID to update."
         required: false
         type: string
+        default: "506734"
 
 jobs:
   test-zenodo-upload:
@@ -54,10 +55,11 @@ jobs:
         env:
           ZENODO_TOKEN: ${{ secrets.ZENODO_SANDBOX_TOKEN }}
         run: |
-          DEP_ARG=""
-          if [ -n "${{ github.event.inputs.deposition_id }}" ]; then
-            DEP_ARG="--deposition-id ${{ github.event.inputs.deposition_id }}"
+          DEP_ID="${{ github.event.inputs.deposition_id }}"
+          if [ -z "$DEP_ID" ]; then
+            DEP_ID="506734"
           fi
+          DEP_ARG="--deposition-id $DEP_ID"
 
           # Run the update script pointing to Zenodo Sandbox.
           # Upload all assets in the dist/ folder and auto-publish.
