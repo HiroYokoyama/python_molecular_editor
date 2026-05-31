@@ -11,7 +11,7 @@ on:
         description: "Zenodo Sandbox Deposition ID to update."
         required: false
         type: string
-        default: "506734"
+        default: "506735"
 
 permissions:
   contents: read
@@ -60,7 +60,7 @@ jobs:
         run: |
           DEP_ID="${{ github.event.inputs.deposition_id }}"
           if [ -z "$DEP_ID" ]; then
-            DEP_ID="506734"
+            DEP_ID="506735"
           fi
           DEP_ARG="--deposition-id $DEP_ID"
 
