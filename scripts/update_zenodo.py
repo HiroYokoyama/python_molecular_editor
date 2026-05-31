@@ -3,6 +3,7 @@
 scripts/update_zenodo.py -- Automates updating an existing Zenodo deposition with a new release version
 using the new InvenioRDM REST API (/api/records).
 """
+
 import argparse
 import datetime
 import json
@@ -55,11 +56,15 @@ def make_request(url, data=None, headers=None, method="GET", json_response=True)
             f"HTTP Error {e.code}: {e.reason}\nURL: {url}\nMethod: {method}{req_body_str}\nResponse Body: {err_body}"
         ) from e
     except urllib.error.URLError as e:
-        raise RuntimeError(f"URL Error: {e.reason}\nURL: {url}\nMethod: {method}") from e
+        raise RuntimeError(
+            f"URL Error: {e.reason}\nURL: {url}\nMethod: {method}"
+        ) from e
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Update Zenodo Deposition (InvenioRDM API)")
+    parser = argparse.ArgumentParser(
+        description="Update Zenodo Deposition (InvenioRDM API)"
+    )
     parser.add_argument("--token", help="Zenodo access token")
     parser.add_argument(
         "--deposition-id",
@@ -95,9 +100,7 @@ def main():
 
     # Determine base API URL
     base_url = (
-        "https://sandbox.zenodo.org/api"
-        if args.sandbox
-        else "https://zenodo.org/api"
+        "https://sandbox.zenodo.org/api" if args.sandbox else "https://zenodo.org/api"
     )
 
     # Determine token
@@ -134,7 +137,9 @@ def main():
         print(f"[DRY-RUN] Would call POST {base_url}/records/{deposition_id}/versions")
         print(f"[DRY-RUN] Would fetch draft details using GET on the draft link.")
         if args.files:
-            print(f"[DRY-RUN] Would register {len(args.files)} files via POST on draft files endpoint.")
+            print(
+                f"[DRY-RUN] Would register {len(args.files)} files via POST on draft files endpoint."
+            )
             for fpath in args.files:
                 print(f"[DRY-RUN] Would upload file: {fpath} via PUT content endpoint.")
                 print(f"[DRY-RUN] Would commit file: {fpath} via POST commit endpoint.")
@@ -170,7 +175,9 @@ def main():
     if args.files:
         print(f"\n[3/6] Registering {len(args.files)} files to upload...")
         register_payload = [{"key": os.path.basename(fpath)} for fpath in args.files]
-        make_request(draft_files_url, data=register_payload, headers=headers, method="POST")
+        make_request(
+            draft_files_url, data=register_payload, headers=headers, method="POST"
+        )
 
         # 4. Upload and commit file contents
         print("\n[4/6] Uploading and committing file contents...")
@@ -188,7 +195,9 @@ def main():
             # Upload raw file content
             upload_headers = headers.copy()
             upload_headers["Content-Type"] = "application/octet-stream"
-            make_request(content_url, data=file_bytes, headers=upload_headers, method="PUT")
+            make_request(
+                content_url, data=file_bytes, headers=upload_headers, method="PUT"
+            )
 
             # Commit the upload
             print(f"Committing file: {filename}...")
@@ -199,13 +208,14 @@ def main():
 
     # 5. Update Metadata (version and publication date)
     print("\n[5/6] Updating metadata...")
-    
+
     # Fetch the parent record to retrieve the original, complete metadata (old info to copy in)
     parent_url = f"{base_url}/records/{deposition_id}"
-    print(f"Fetching parent record metadata from {parent_url} to ensure completeness...")
+    print(
+        f"Fetching parent record metadata from {parent_url} to ensure completeness..."
+    )
     parent_record = make_request(parent_url, headers=headers, method="GET")
     parent_metadata = parent_record.get("metadata", {})
-
 
     # Validate version uniqueness within the deposition concept series
     parent_version = parent_metadata.get("version")
@@ -224,7 +234,7 @@ def main():
 
     # Construct a clean metadata dictionary containing only allowed/editable fields to prevent 500 server errors
     metadata = {}
-    
+
     # Copy essential standard fields from parent record metadata
     for field in ["title", "description"]:
         if field in parent_metadata:
@@ -261,10 +271,7 @@ def main():
                     else:
                         t_id = d_type
                     if t_id:
-                        new_dates.append({
-                            "date": d_val,
-                            "type": {"id": t_id.lower()}
-                        })
+                        new_dates.append({"date": d_val, "type": {"id": t_id.lower()}})
             if new_dates:
                 metadata["dates"] = new_dates
 
@@ -281,10 +288,7 @@ def main():
                 name = c.get("name")
                 if name:
                     c_type = c.get("type", "personal")
-                    person_or_org = {
-                        "name": name,
-                        "type": c_type
-                    }
+                    person_or_org = {"name": name, "type": c_type}
                     if c_type == "personal":
                         if "," in name:
                             parts = name.split(",", 1)
@@ -299,33 +303,23 @@ def main():
                             family_name = name
                         person_or_org["family_name"] = family_name
                         person_or_org["given_name"] = given_name
-                    
+
                     # Add ORCID and identifiers if present
                     identifiers = []
                     if "orcid" in c and c["orcid"]:
-                        identifiers.append({
-                            "scheme": "orcid",
-                            "identifier": c["orcid"]
-                        })
+                        identifiers.append(
+                            {"scheme": "orcid", "identifier": c["orcid"]}
+                        )
                     if "gnd" in c and c["gnd"]:
-                        identifiers.append({
-                            "scheme": "gnd",
-                            "identifier": c["gnd"]
-                        })
+                        identifiers.append({"scheme": "gnd", "identifier": c["gnd"]})
                     if identifiers:
                         person_or_org["identifiers"] = identifiers
 
-                    new_creator = {
-                        "person_or_org": person_or_org
-                    }
+                    new_creator = {"person_or_org": person_or_org}
 
                     # Add affiliations if present
                     if "affiliation" in c and c["affiliation"]:
-                        new_creator["affiliations"] = [
-                            {
-                                "name": c["affiliation"]
-                            }
-                        ]
+                        new_creator["affiliations"] = [{"name": c["affiliation"]}]
                     new_creators.append(new_creator)
         metadata["creators"] = new_creators
 
@@ -343,10 +337,7 @@ def main():
         if rt_type:
             metadata["resource_type"] = {"id": rt_type}
 
-    update_payload = {
-        "metadata": metadata,
-        "files": {"enabled": True}
-    }
+    update_payload = {"metadata": metadata, "files": {"enabled": True}}
     if "access" in draft and isinstance(draft["access"], dict):
         update_payload["access"] = draft["access"]
     if "pids" in draft and isinstance(draft["pids"], dict):
@@ -362,7 +353,9 @@ def main():
     if custom_fields:
         update_payload["custom_fields"] = custom_fields
 
-    print(f"Updating draft {draft_id} metadata: version={version}, publication_date={today_str}")
+    print(
+        f"Updating draft {draft_id} metadata: version={version}, publication_date={today_str}"
+    )
     make_request(draft_self_url, data=update_payload, headers=headers, method="PUT")
 
     # 6. Publish (Optional)
@@ -370,7 +363,9 @@ def main():
         if not draft_publish_url:
             raise RuntimeError("Publish URL is not available in the draft links.")
         print(f"\n[6/6] Publishing deposition {draft_id}...")
-        publish_resp = make_request(draft_publish_url, data=None, headers=headers, method="POST")
+        publish_resp = make_request(
+            draft_publish_url, data=None, headers=headers, method="POST"
+        )
         final_doi = publish_resp.get("doi")
         print(f"Successfully published new version! DOI: {final_doi}")
     else:
