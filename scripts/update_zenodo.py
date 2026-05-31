@@ -203,17 +203,81 @@ def main():
     parent_record = make_request(parent_url, headers=headers, method="GET")
     parent_metadata = parent_record.get("metadata", {})
 
-    metadata = draft.get("metadata", {}).copy() if draft.get("metadata") else {}
-    # Use parent metadata as a fallback for any empty/missing keys (e.g. creators, description)
-    for key, val in parent_metadata.items():
-        if key not in metadata or not metadata[key]:
-            metadata[key] = val
+    # Construct a clean metadata dictionary containing only allowed/editable fields to prevent 500 server errors
+    metadata = {}
+    
+    # Copy essential standard fields from parent record metadata
+    for field in ["title", "description", "references"]:
+        if field in parent_metadata:
+            metadata[field] = parent_metadata[field]
 
-    # Determine today's date for automatic updates
+    # Set new version and publisher
+    metadata["version"] = version
+    metadata["publisher"] = "Zenodo"
+
+    # Set publication date to today's date automatically
     today_str = datetime.date.today().isoformat()
+    metadata["publication_date"] = today_str
+
+    # Map and format creators correctly to the InvenioRDM nested structure
+    creators = parent_metadata.get("creators", [])
+    if isinstance(creators, list):
+        new_creators = []
+        for c in creators:
+            if isinstance(c, dict):
+                name = c.get("name")
+                if name:
+                    c_type = c.get("type", "personal")
+                    person_or_org = {
+                        "name": name,
+                        "type": c_type
+                    }
+                    if c_type == "personal":
+                        if "," in name:
+                            parts = name.split(",", 1)
+                            family_name = parts[0].strip()
+                            given_name = parts[1].strip()
+                        elif " " in name:
+                            parts = name.rsplit(" ", 1)
+                            given_name = parts[0].strip()
+                            family_name = parts[1].strip()
+                        else:
+                            given_name = name
+                            family_name = name
+                        person_or_org["family_name"] = family_name
+                        person_or_org["given_name"] = given_name
+                    
+                    # Add ORCID and identifiers if present
+                    identifiers = []
+                    if "orcid" in c and c["orcid"]:
+                        identifiers.append({
+                            "scheme": "orcid",
+                            "identifier": c["orcid"]
+                        })
+                    if "gnd" in c and c["gnd"]:
+                        identifiers.append({
+                            "scheme": "gnd",
+                            "identifier": c["gnd"]
+                        })
+                    if identifiers:
+                        person_or_org["identifiers"] = identifiers
+
+                    new_creator = {
+                        "person_or_org": person_or_org
+                    }
+
+                    # Add affiliations if present
+                    if "affiliation" in c and c["affiliation"]:
+                        new_creator["affiliations"] = [
+                            {
+                                "name": c["affiliation"]
+                            }
+                        ]
+                    new_creators.append(new_creator)
+        metadata["creators"] = new_creators
 
     # Map dates correctly (each entry needs today's date string and a type dict with an id)
-    dates = metadata.get("dates", [])
+    dates = parent_metadata.get("dates", [])
     if isinstance(dates, list):
         new_dates = []
         for d in dates:
@@ -238,147 +302,19 @@ def main():
                 })
         metadata["dates"] = new_dates
 
-    # Ensure publisher is set to Zenodo if missing
-    if "publisher" not in metadata or not metadata["publisher"]:
-        metadata["publisher"] = "Zenodo"
-
-    # Remove system-assigned or read-only fields that could fail schema validation on PUT
-    metadata.pop("doi", None)
-    metadata.pop("conceptdoi", None)
-    metadata.pop("relations", None)
-    metadata.pop("conceptrecid", None)
-    metadata.pop("recid", None)
-
     # Map legacy license to InvenioRDM rights list
-    lic = metadata.pop("license", None)
+    lic = parent_metadata.get("license")
     if lic and isinstance(lic, dict):
         lic_id = lic.get("id")
         if lic_id:
             metadata["rights"] = [{"id": lic_id}]
 
-    # Remove legacy access_right field (InvenioRDM uses top-level access configuration instead)
-    metadata.pop("access_right", None)
-
-    # Ensure creators is in the format expected by the InvenioRDM schema
-    creators = metadata.get("creators", [])
-    if isinstance(creators, list):
-        new_creators = []
-        for c in creators:
-            if isinstance(c, dict):
-                if "person_or_org" not in c:
-                    name = c.get("name")
-                    if name:
-                        c_type = c.get("type", "personal")
-                        person_or_org = {
-                            "name": name,
-                            "type": c_type
-                        }
-                        if c_type == "personal":
-                            if "," in name:
-                                parts = name.split(",", 1)
-                                family_name = parts[0].strip()
-                                given_name = parts[1].strip()
-                            elif " " in name:
-                                parts = name.rsplit(" ", 1)
-                                given_name = parts[0].strip()
-                                family_name = parts[1].strip()
-                            else:
-                                given_name = name
-                                family_name = name
-                            person_or_org["family_name"] = family_name
-                            person_or_org["given_name"] = given_name
-                        # Add identifiers if present
-                        identifiers = []
-                        if "orcid" in c and c["orcid"]:
-                            identifiers.append({
-                                "scheme": "orcid",
-                                "identifier": c["orcid"]
-                            })
-                        if "gnd" in c and c["gnd"]:
-                            identifiers.append({
-                                "scheme": "gnd",
-                                "identifier": c["gnd"]
-                            })
-                        if identifiers:
-                            person_or_org["identifiers"] = identifiers
-
-                        new_creator = {
-                            "person_or_org": person_or_org
-                        }
-
-                        # Add affiliations if present
-                        if "affiliation" in c and c["affiliation"]:
-                            new_creator["affiliations"] = [
-                                {
-                                    "name": c["affiliation"]
-                                }
-                            ]
-                        new_creators.append(new_creator)
-                    else:
-                        new_creators.append(c)
-                else:
-                    # If person_or_org is already present in c, ensure family_name and given_name are populated for personal type
-                    person_or_org = c.get("person_or_org", {})
-                    if isinstance(person_or_org, dict):
-                        c_type = person_or_org.get("type", "personal")
-                        if c_type == "personal":
-                            name = person_or_org.get("name")
-                            family = person_or_org.get("family_name")
-                            given = person_or_org.get("given_name")
-                            if name and (not family or not given):
-                                if "," in name:
-                                    parts = name.split(",", 1)
-                                    family = parts[0].strip()
-                                    given = parts[1].strip()
-                                elif " " in name:
-                                    parts = name.rsplit(" ", 1)
-                                    given = parts[0].strip()
-                                    family = parts[1].strip()
-                                else:
-                                    given = name
-                                    family = name
-                                person_or_org["family_name"] = family
-                                person_or_org["given_name"] = given
-                    new_creators.append(c)
-            else:
-                new_creators.append(c)
-        metadata["creators"] = new_creators
-
     # Ensure resource_type is in the format expected by the InvenioRDM schema
-    resource_type = metadata.get("resource_type", {})
+    resource_type = parent_metadata.get("resource_type", {})
     if isinstance(resource_type, dict):
         rt_type = resource_type.get("type") or resource_type.get("id")
         if rt_type:
             metadata["resource_type"] = {"id": rt_type}
-
-    # Clean up custom fields if present (map to custom_fields and strip read-only 'title' keys to prevent 500 server errors on PUT)
-    custom = metadata.pop("custom", None)
-    if isinstance(custom, dict):
-        new_custom = {}
-        for k, v in custom.items():
-            if isinstance(v, list):
-                new_list = []
-                for item in v:
-                    if isinstance(item, dict):
-                        item_copy = item.copy()
-                        item_copy.pop("title", None)
-                        new_list.append(item_copy)
-                    else:
-                        new_list.append(item)
-                new_custom[k] = new_list
-            elif isinstance(v, dict):
-                v_copy = v.copy()
-                v_copy.pop("title", None)
-                new_custom[k] = v_copy
-            else:
-                new_custom[k] = v
-        metadata["custom_fields"] = new_custom
-
-    # Set new version
-    metadata["version"] = version
-
-    # Set publication date to today's date automatically
-    metadata["publication_date"] = today_str
 
     update_payload = {"metadata": metadata}
     print(f"Updating draft {draft_id} metadata: version={version}, publication_date={today_str}")
