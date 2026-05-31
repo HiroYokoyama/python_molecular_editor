@@ -224,6 +224,9 @@ def main():
     print("\n[5/5] Updating deposition metadata (version and publication date)...")
     metadata = draft.get("metadata", {}).copy()
 
+    # Exclude metadata.dates to avoid a known Zenodo API serialization bug ("Invalid date provided")
+    metadata.pop("dates", None)
+
     # Update version
     metadata["version"] = version
 
