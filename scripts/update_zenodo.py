@@ -246,6 +246,18 @@ def main():
     metadata.pop("doi", None)
     metadata.pop("conceptdoi", None)
     metadata.pop("relations", None)
+    metadata.pop("conceptrecid", None)
+    metadata.pop("recid", None)
+
+    # Map legacy license to InvenioRDM rights list
+    lic = metadata.pop("license", None)
+    if lic and isinstance(lic, dict):
+        lic_id = lic.get("id")
+        if lic_id:
+            metadata["rights"] = [{"id": lic_id}]
+
+    # Remove legacy access_right field (InvenioRDM uses top-level access configuration instead)
+    metadata.pop("access_right", None)
 
     # Ensure creators is in the format expected by the InvenioRDM schema
     creators = metadata.get("creators", [])
