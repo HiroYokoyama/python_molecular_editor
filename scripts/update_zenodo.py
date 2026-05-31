@@ -209,18 +209,19 @@ def main():
         if key not in metadata or not metadata[key]:
             metadata[key] = val
 
-    # Map dates correctly (each entry needs a date string and a type dict with an id)
+    # Determine today's date for automatic updates
+    today_str = datetime.date.today().isoformat()
+
+    # Map dates correctly (each entry needs today's date string and a type dict with an id)
     dates = metadata.get("dates", [])
     if isinstance(dates, list):
         new_dates = []
         for d in dates:
             if isinstance(d, dict):
-                d_date = d.get("date")
                 d_type = d.get("type")
                 
-                # If date is missing (e.g. legacy compatibility dates list), use today's date
-                if not d_date:
-                    d_date = datetime.date.today().isoformat()
+                # Automatically update date in dates list to today's date
+                d_date = today_str
                 
                 # Ensure type is a dictionary with an id
                 if isinstance(d_type, str):
@@ -305,8 +306,7 @@ def main():
     # Set new version
     metadata["version"] = version
 
-    # Set publication date to today's date
-    today_str = datetime.date.today().isoformat()
+    # Set publication date to today's date automatically
     metadata["publication_date"] = today_str
 
     update_payload = {"metadata": metadata}
