@@ -207,6 +207,15 @@ def main():
     print(f"[DEBUG] Original Draft Metadata: {json.dumps(draft.get('metadata'), indent=2)}")
     print(f"[DEBUG] Parent Record Metadata: {json.dumps(parent_metadata, indent=2)}")
 
+    # Validate version uniqueness within the deposition concept series
+    parent_version = parent_metadata.get("version")
+    if version == parent_version:
+        raise ValueError(
+            f"The target version '{version}' is identical to the parent record's version. "
+            f"Zenodo requires each version to have a unique version identifier. "
+            f"Please specify a bumped version string (e.g. 3.6.1) in the manual trigger inputs."
+        )
+
     # Construct a clean metadata dictionary containing only allowed/editable fields to prevent 500 server errors
     metadata = {}
     
