@@ -13,6 +13,11 @@ on:
         description: "Zenodo Deposition ID (to override the default production ID 20463243)."
         required: false
         type: string
+      draft:
+        description: "Keep as a draft (do not publish)."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -69,9 +74,14 @@ jobs:
             DEP_ARG="--deposition-id ${{ github.event.inputs.deposition_id }}"
           fi
 
+          PUBLISH_ARG="--publish"
+          if [ "${{ github.event.inputs.draft }}" = "true" ]; then
+            PUBLISH_ARG=""
+          fi
+
           # Run the update script, updating metadata and publishing the deposition.
           python scripts/update_zenodo.py \
-            --publish \
+            $PUBLISH_ARG \
             $DEP_ARG \
             --version-string "$TAG" \
             dist/*
