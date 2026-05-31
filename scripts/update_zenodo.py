@@ -186,11 +186,13 @@ def main():
             print(f"Uploading {filename} to {upload_url}...")
             with open(fpath, "rb") as f:
                 file_bytes = f.read()
-            # Send raw bytes using PUT request
+            # Send raw bytes using PUT request with authorization headers
+            upload_headers = headers.copy()
+            upload_headers["Content-Type"] = "application/octet-stream"
             make_request(
                 upload_url,
                 data=file_bytes,
-                headers={"Content-Type": "application/octet-stream"},
+                headers=upload_headers,
                 method="PUT"
             )
     else:
