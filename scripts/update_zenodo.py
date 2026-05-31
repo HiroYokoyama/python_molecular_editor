@@ -339,6 +339,29 @@ def main():
         if rt_type:
             metadata["resource_type"] = {"id": rt_type}
 
+    # Clean up custom fields if present (strip read-only 'title' fields to prevent 500 server errors on PUT)
+    custom = metadata.get("custom", {})
+    if isinstance(custom, dict):
+        new_custom = {}
+        for k, v in custom.items():
+            if isinstance(v, list):
+                new_list = []
+                for item in v:
+                    if isinstance(item, dict):
+                        item_copy = item.copy()
+                        item_copy.pop("title", None)
+                        new_list.append(item_copy)
+                    else:
+                        new_list.append(item)
+                new_custom[k] = new_list
+            elif isinstance(v, dict):
+                v_copy = v.copy()
+                v_copy.pop("title", None)
+                new_custom[k] = v_copy
+            else:
+                new_custom[k] = v
+        metadata["custom"] = new_custom
+
     # Set new version
     metadata["version"] = version
 
