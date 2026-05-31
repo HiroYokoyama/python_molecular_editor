@@ -972,7 +972,7 @@ _Test early exits in trigger_conversion (empty mol, etc.)._
 _Test the manual valence check when RDKit fails._
 
 - assert compute.data.atoms[0]['item'].has_problem == True
-- assert any(('chemistry problem' in msg and 'valence' in msg for msg in msgs))
+- assert any(('chemistry problems found' in msg for msg in msgs))
 
 ### test_trigger_conversion_happy_path
 _Test trigger_conversion follows the success path until worker setup._
@@ -1000,7 +1000,7 @@ _Test on_calculation_error with correct message formatting._
 ### test_trigger_conversion_chemistry_problem_detection
 _Test trigger_conversion detects and flags chemistry problems (valence)._
 
-- assert any(('chemistry problem(s) found' in msg for msg in msgs))
+- assert any(('chemistry problems found' in msg for msg in msgs))
 - assert mock_item.has_problem == True
 
 ### test_trigger_conversion_fragment_message_exact

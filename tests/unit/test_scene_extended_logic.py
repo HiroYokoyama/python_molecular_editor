@@ -66,9 +66,6 @@ def test_scene_ez_toggle_logic(scene_setup):
     assert data.bonds[(0, 1)]["stereo"] == 3
 
 
-@pytest.mark.skip(
-    reason="Mocking artifact in deletion path; manually verified with debug prints."
-)
 def test_scene_item_deletion_path(scene_setup):
     """Test item deletion logic in mouseReleaseEvent."""
     scene, data, win = scene_setup
@@ -78,7 +75,7 @@ def test_scene_item_deletion_path(scene_setup):
     scene.addItem(atom)
     scene.delete_items = MagicMock(return_value=True)
 
-    pos = QPointF(0, 0)
+    pos = QPointF(10, 10)
     event = create_mock_event(pos)
 
     scene.press_pos = pos  # Manually set to ensure is_click
