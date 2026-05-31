@@ -137,7 +137,7 @@ def main():
     # 1. Create a new version of the deposition
     print(f"\n[1/5] Creating new version draft for deposition {args.deposition_id}...")
     new_version_url = f"{base_url}/deposit/depositions/{args.deposition_id}/actions/newversion"
-    resp = make_request(new_version_url, data={}, headers=headers, method="POST")
+    resp = make_request(new_version_url, data=None, headers=headers, method="POST")
 
     latest_draft_url = resp.get("links", {}).get("latest_draft")
     if not latest_draft_url:
@@ -239,7 +239,7 @@ def main():
     if args.publish:
         print(f"\nPublishing deposition {draft_id}...")
         publish_url = f"{latest_draft_url}/actions/publish"
-        publish_resp = make_request(publish_url, data={}, headers=headers, method="POST")
+        publish_resp = make_request(publish_url, data=None, headers=headers, method="POST")
         final_doi = publish_resp.get("doi")
         print(f"Successfully published new version! DOI: {final_doi}")
     else:
