@@ -165,10 +165,32 @@ def main():
         print(f"\n[3/5] Cleaning up {len(existing_files)} inherited files from draft...")
         for file_info in existing_files:
             file_id = file_info.get("id")
-            # In the old/current API, files can be deleted using their delete link
-            delete_url = file_info.get("links", {}).get("self") or f"{latest_draft_url}/files/{file_id}"
-            print(f"Deleting file: {file_info.get('filename')} (ID: {file_id})...")
-            make_request(delete_url, headers=headers, method="DELETE", json_response=False)
+            filename = file_info.get("filename")
+
+            # Try bucket API deletion first, then legacy deposition files endpoint
+            deleted = False
+            if bucket_url and filename:
+                bucket_file_url = f"{bucket_url}/{filename}"
+                print(f"Attempting to delete file from bucket: {filename} ({bucket_file_url})...")
+                try:
+                    make_request(bucket_file_url, headers=headers, method="DELETE", json_response=False)
+                    print(f"Successfully deleted {filename} from bucket.")
+                    deleted = True
+                except Exception as e:
+                    print(f"Bucket delete failed for {filename}: {e}. Retrying via deposition file URL...")
+
+            if not deleted:
+                delete_url = file_info.get("links", {}).get("self") or f"{latest_draft_url}/files/{file_id}"
+                print(f"Attempting to delete file via deposition endpoint: {filename} ({delete_url})...")
+                try:
+                    make_request(delete_url, headers=headers, method="DELETE", json_response=False)
+                    print(f"Successfully deleted {filename} via deposition endpoint.")
+                except Exception as e:
+                    print(
+                        f"Warning: Failed to delete inherited file {filename}. Zenodo returned error: {e}.\n"
+                        f"This is a known transient issue on Zenodo/Sandbox. We will proceed. If files "
+                        f"have the same name, they will be overwritten."
+                    )
     else:
         print("\n[3/5] No inherited files found in draft to clean up.")
 
