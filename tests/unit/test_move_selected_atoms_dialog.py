@@ -697,3 +697,39 @@ class TestClickToDeselect:
             result = dlg.eventFilter(mw.view_3d_manager.plotter.interactor, ev)
             assert result is True
             mock_on_pick.assert_called_once_with(0)
+
+
+def test_show_atom_labels_camera_restore(qapp):
+    from moleditpy.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
+
+    mol = _ethane()
+    mw = _make_main_window(mol)
+    plotter = MagicMock()
+    plotter.camera_position = [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
+    mw.view_3d_manager.plotter = plotter
+
+    with (
+        patch.object(MoveSelectedAtomsDialog, "show_atom_labels"),
+        patch.object(MoveSelectedAtomsDialog, "clear_atom_labels"),
+    ):
+        dlg = MoveSelectedAtomsDialog(mol, mw)
+
+    dlg.selected_atoms.add(0)
+
+    with (
+        patch("moleditpy.ui.move_selected_atoms_dialog.pv") as mock_pv,
+        patch.object(dlg, "clear_atom_labels") as mock_clear,
+    ):
+        mock_pd = MagicMock()
+        mock_pv.PolyData.return_value = mock_pd
+        mock_pd.glyph.return_value = MagicMock()
+
+        MoveSelectedAtomsDialog.show_atom_labels(dlg)
+
+        mock_clear.assert_called_once()
+
+        args, kwargs = plotter.add_mesh.call_args
+        assert kwargs.get("reset_camera") is False
+
+        assert plotter.camera_position == [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
+        plotter.render.assert_called()
