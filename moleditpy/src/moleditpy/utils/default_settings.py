@@ -74,4 +74,5 @@ DEFAULT_SETTINGS = {
     "template_fusing_enabled_2d": True,
     "template_fusing_distance_2d": 7.0,
     "template_snapping_distance_2d": 14.0,
+    "bond_snapping_distance_2d": 14.0,
 }

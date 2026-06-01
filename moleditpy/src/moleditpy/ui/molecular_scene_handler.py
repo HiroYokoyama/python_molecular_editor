@@ -820,9 +820,9 @@ class KeyboardMixin:
         if key == Qt.Key.Key_4:
             snap_dist = self.get_setting("template_snapping_distance_2d", 14.0)
             item_at_cursor = self.find_atom_near(cursor_pos, tol=snap_dist)
-        elif self.get_setting("template_fusing_enabled_2d", True):
-            fuse_dist = self.get_setting("template_fusing_distance_2d", 7.0)
-            item_at_cursor = self.find_atom_near(cursor_pos, tol=fuse_dist)
+        else:
+            snap_dist = self.get_setting("bond_snapping_distance_2d", 14.0)
+            item_at_cursor = self.find_atom_near(cursor_pos, tol=snap_dist)
         if item_at_cursor is None:
             item_at_cursor = self.itemAt(cursor_pos, transform)
 
@@ -1168,11 +1168,8 @@ class KeyboardMixin:
 
                     # Find nearby atom
                     near_atom = None
-                    if self.get_setting("template_fusing_enabled_2d", True):
-                        fuse_dist = self.get_setting(
-                            "template_fusing_distance_2d", SNAP_DISTANCE
-                        )
-                        near_atom = self.find_atom_near(target_pos, tol=fuse_dist)
+                    snap_dist = self.get_setting("bond_snapping_distance_2d", 14.0)
+                    near_atom = self.find_atom_near(target_pos, tol=snap_dist)
 
                     if near_atom and near_atom is not start_atom:
                         # Bond if exists

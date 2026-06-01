@@ -265,10 +265,9 @@ def test_atom_fusing_disabled(scene_setup, monkeypatch):
     # Create existing atom at (0, 0)
     a1_id = scene.create_atom("C", QPointF(0, 0))
 
-    # Disable fusing
+    # Disable fusing (by setting snapping distance to 0)
     window.init_manager.settings = {
-        "template_fusing_enabled_2d": False,
-        "template_fusing_distance_2d": 14.0,
+        "bond_snapping_distance_2d": 0.0,
     }
 
     start_pos = QPointF(100, 0)
@@ -350,3 +349,58 @@ def test_benzene_terminal_120_deg_alignment(scene_setup, monkeypatch):
     assert found_expected_pos, (
         "Benzene was not aligned at 120 degrees relative to terminal bond"
     )
+
+
+def test_click_selected_atom_deselects(scene_setup, monkeypatch):
+    """Test that clicking (without dragging) on a selected atom deselects it."""
+    scene, window, view, data = scene_setup
+
+    start_pos = QPointF(0, 0)
+    a1_id = scene.create_atom("C", start_pos)
+    a1_item = data.atoms[a1_id]["item"]
+
+    scene.mode = "select"
+
+    # Select the atom first
+    a1_item.setSelected(True)
+
+    # Click on the atom (press and release at the same position)
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: a1_item)
+
+    mouse_press(scene, start_pos, Qt.MouseButton.LeftButton)
+    assert scene.was_selected_on_press is True
+
+    mouse_release(scene, start_pos, Qt.MouseButton.LeftButton)
+
+    # Verify that the atom has been deselected
+    assert a1_item.isSelected() is False
+
+
+def test_drag_selected_atom_keeps_selected(scene_setup, monkeypatch):
+    """Test that dragging a selected atom moves it but keeps it selected."""
+    scene, window, view, data = scene_setup
+
+    start_pos = QPointF(0, 0)
+    a1_id = scene.create_atom("C", start_pos)
+    a1_item = data.atoms[a1_id]["item"]
+
+    scene.mode = "select"
+
+    # Select the atom first
+    a1_item.setSelected(True)
+
+    # Drag from (0,0) to (50, 50)
+    new_pos = QPointF(50, 50)
+
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: a1_item)
+    monkeypatch.setattr(scene, "items", lambda: [a1_item])
+
+    mouse_press(scene, start_pos, Qt.MouseButton.LeftButton)
+    a1_item.setPos(new_pos)
+    mouse_move(scene, new_pos, Qt.MouseButton.LeftButton)
+    mouse_release(scene, new_pos, Qt.MouseButton.LeftButton)
+
+    # Verify position updated
+    assert a1_item.pos() == new_pos
+    # Verify that the atom remains selected
+    assert a1_item.isSelected() is True

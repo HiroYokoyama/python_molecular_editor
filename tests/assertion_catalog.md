@@ -434,6 +434,21 @@ _No description provided._
 
 - assert pick_atom_index_from_screen(_view(), (200, 200), _Mol()) is None
 
+### test_pick_atom_index_from_screen_vectorized_success
+_No description provided._
+
+- assert pick_atom_index_from_screen_vectorized(_view(), (111, 100), _Mol()) == 0
+
+### test_pick_atom_index_from_screen_sequential_success
+_No description provided._
+
+- assert pick_atom_index_from_screen_sequential(_view(), (111, 100), _Mol()) == 0
+
+### test_pick_atom_index_from_screen_fallback
+_No description provided._
+
+- assert pick_atom_index_from_screen(view_obj, (111, 100), _Mol()) == 0
+
 ## tests/unit/test_atom_placement_logic.py
 
 ### test_placement_0_neighbors
@@ -4792,6 +4807,18 @@ _Test that pressing 4 at a terminal atom aligns the benzene ring at 120 degrees.
 - assert len(data.atoms) == 7
 - assert found_expected_pos
 
+### test_click_selected_atom_deselects
+_Test that clicking (without dragging) on a selected atom deselects it._
+
+- assert scene.was_selected_on_press is True
+- assert a1_item.isSelected() is False
+
+### test_drag_selected_atom_keeps_selected
+_Test that dragging a selected atom moves it but keeps it selected._
+
+- assert a1_item.pos() == new_pos
+- assert a1_item.isSelected() is True
+
 ## tests/unit/test_scene_extended.py
 
 ### test_scene_keypress_modes
@@ -4987,6 +5014,7 @@ _No description provided._
 - assert tab.atom_font_size_2d_slider.value() == 24
 - assert tab.template_fusing_distance_2d_slider.value() == 18
 - assert tab.template_snapping_distance_2d_slider.value() == 20
+- assert tab.bond_snapping_distance_2d_slider.value() == 16
 
 ### test_update_ui_sets_cap_style
 _No description provided._
@@ -5011,6 +5039,7 @@ _No description provided._
 - assert result['template_fusing_enabled_2d'] == DEFAULT_SETTINGS['template_fusing_enabled_2d']
 - assert abs(result['template_fusing_distance_2d'] - DEFAULT_SETTINGS['template_fusing_distance_2d']) < 0.05
 - assert abs(result['template_snapping_distance_2d'] - DEFAULT_SETTINGS['template_snapping_distance_2d']) < 0.05
+- assert abs(result['bond_snapping_distance_2d'] - DEFAULT_SETTINGS['bond_snapping_distance_2d']) < 0.05
 
 ### test_get_settings_returns_all_keys
 _No description provided._
@@ -5042,6 +5071,7 @@ _No description provided._
 - assert tab.template_fusing_enabled_2d_checkbox.isChecked() == DEFAULT_SETTINGS['template_fusing_enabled_2d']
 - assert tab.template_fusing_distance_2d_slider.value() == int(DEFAULT_SETTINGS['template_fusing_distance_2d'])
 - assert tab.template_snapping_distance_2d_slider.value() == int(DEFAULT_SETTINGS['template_snapping_distance_2d'])
+- assert tab.bond_snapping_distance_2d_slider.value() == int(DEFAULT_SETTINGS['bond_snapping_distance_2d'])
 
 ### test_template_fusing_checkbox_disables_slider
 _No description provided._
@@ -5977,7 +6007,7 @@ _No description provided._
 - assert len(scene.find_atom_near_args) == 1
 - assert tol == 22.0
 
-### test_keyboard_other_keys_use_template_fusing_distance
+### test_keyboard_other_keys_use_bond_snapping_distance
 _No description provided._
 
 - assert len(scene.find_atom_near_args) == 1

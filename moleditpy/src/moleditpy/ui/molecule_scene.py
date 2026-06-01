@@ -177,6 +177,11 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
     def mousePressEvent(self, event: Any) -> None:
         self.press_pos = event.scenePos()
+        self.was_selected_on_press = False
+        if self.mode == "select" and event.button() == Qt.MouseButton.LeftButton:
+            item = self.itemAt(self.press_pos, self.views()[0].transform())
+            if isinstance(item, AtomItem) and item.isSelected():
+                self.was_selected_on_press = True
         self.mouse_moved_since_press = False
         self.data_changed_in_event = False
 
@@ -387,7 +392,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
         end_pos = event.scenePos()
         is_click = (
-            self.press_pos
+            self.press_pos is not None
             and (end_pos - self.press_pos).manhattanLength()
             < QApplication.startDragDistance()
         )
@@ -642,6 +647,14 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         # 5. Other processing (Select mode, etc.)
         else:
             super().mouseReleaseEvent(event)
+            if (
+                self.mode == "select"
+                and is_click
+                and getattr(self, "was_selected_on_press", False)
+            ):
+                released_item = self.itemAt(end_pos, self.views()[0].transform())
+                if isinstance(released_item, AtomItem):
+                    released_item.setSelected(False)
 
         # Safely check for moved objects
         moved_atoms = []

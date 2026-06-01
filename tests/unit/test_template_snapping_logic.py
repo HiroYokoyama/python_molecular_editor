@@ -46,6 +46,7 @@ class MockKeyboardScene(KeyboardMixin):
         self.update_all_items = MagicMock()
         self._calculate_polygon_from_edge = MagicMock(return_value=[QPointF(0, 0)] * 6)
         self.add_molecule_fragment = MagicMock()
+        self.selectedItems = MagicMock(return_value=[])
 
     def get_setting(self, key, default=None):
         return self.settings.get(key, default)
@@ -123,10 +124,10 @@ def test_keyboard_key_4_uses_template_snapping_when_fusing_disabled(app):
     assert tol == 22.0
 
 
-def test_keyboard_other_keys_use_template_fusing_distance(app):
+def test_keyboard_other_keys_use_bond_snapping_distance(app):
     scene = MockKeyboardScene()
     scene.settings["template_snapping_distance_2d"] = 22.0
-    scene.settings["template_fusing_distance_2d"] = 8.0
+    scene.settings["bond_snapping_distance_2d"] = 8.0
 
     event = MagicMock(spec=QKeyEvent)
     # Qt.Key.Key_C or similar to trigger atomic action
@@ -137,7 +138,7 @@ def test_keyboard_other_keys_use_template_fusing_distance(app):
         mock_cursor.return_value = QPointF(0, 0)
         scene.keyPressEvent(event)
 
-    # Assert find_atom_near was called with 8.0 (fusing)
+    # Assert find_atom_near was called with 8.0 (bond snapping)
     assert len(scene.find_atom_near_args) == 1
     pos, tol = scene.find_atom_near_args[0]
     assert tol == 8.0

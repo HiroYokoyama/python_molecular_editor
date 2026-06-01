@@ -30,6 +30,7 @@ def test_update_ui_sets_sliders(app):
     settings["atom_font_size_2d"] = 24
     settings["template_fusing_distance_2d"] = 18.0
     settings["template_snapping_distance_2d"] = 20.0
+    settings["bond_snapping_distance_2d"] = 16.0
     tab.update_ui(settings)
     assert tab.bond_width_2d_slider.value() == 30
     assert tab.bond_spacing_double_2d_slider.value() == 40
@@ -39,6 +40,7 @@ def test_update_ui_sets_sliders(app):
     assert tab.atom_font_size_2d_slider.value() == 24
     assert tab.template_fusing_distance_2d_slider.value() == 18
     assert tab.template_snapping_distance_2d_slider.value() == 20
+    assert tab.bond_snapping_distance_2d_slider.value() == 16
 
 
 def test_update_ui_sets_cap_style(app):
@@ -88,6 +90,13 @@ def test_get_settings_roundtrip(app):
         )
         < 0.05
     )
+    assert (
+        abs(
+            result["bond_snapping_distance_2d"]
+            - DEFAULT_SETTINGS["bond_snapping_distance_2d"]
+        )
+        < 0.05
+    )
 
 
 def test_get_settings_returns_all_keys(app):
@@ -108,6 +117,7 @@ def test_get_settings_returns_all_keys(app):
         "template_fusing_enabled_2d",
         "template_fusing_distance_2d",
         "template_snapping_distance_2d",
+        "bond_snapping_distance_2d",
     }
     assert expected_keys == set(result.keys())
 
@@ -153,6 +163,7 @@ def test_reset_to_defaults(app):
     custom["template_fusing_enabled_2d"] = False
     custom["template_fusing_distance_2d"] = 25.0
     custom["template_snapping_distance_2d"] = 25.0
+    custom["bond_snapping_distance_2d"] = 22.0
     tab.update_ui(custom)
     assert tab.current_bg_color_2d == "#123456"
     assert tab.template_fusing_enabled_2d_checkbox.isChecked() is False
@@ -172,6 +183,9 @@ def test_reset_to_defaults(app):
     )
     assert tab.template_snapping_distance_2d_slider.value() == int(
         DEFAULT_SETTINGS["template_snapping_distance_2d"]
+    )
+    assert tab.bond_snapping_distance_2d_slider.value() == int(
+        DEFAULT_SETTINGS["bond_snapping_distance_2d"]
     )
 
 
