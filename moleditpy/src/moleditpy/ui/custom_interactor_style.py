@@ -405,7 +405,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             dx = current_pos[0] - move_group_dialog._drag_start_pos[0]
             dy = current_pos[1] - move_group_dialog._drag_start_pos[1]
 
-            if abs(dx) > 2 or abs(dy) > 2:
+            if abs(dx) > 10 or abs(dy) > 10:
                 move_group_dialog._mouse_moved = True
 
             return  # Disable camera rotation
@@ -423,7 +423,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             dx = current_pos[0] - move_group_dialog._rotation_start_pos[0]
             dy = current_pos[1] - move_group_dialog._rotation_start_pos[1]
 
-            if abs(dx) > 2 or abs(dy) > 2:
+            if abs(dx) > 10 or abs(dy) > 10:
                 move_group_dialog._rotation_mouse_moved = True
 
             return  # Disable camera rotation
@@ -493,6 +493,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if getattr(
                 move_group_dialog, "_is_dragging_group_vtk", False
             ) and not getattr(move_group_dialog, "_mouse_moved", False):
+                # No drag = click only -> toggle
+                clicked_atom = getattr(move_group_dialog, "_drag_atom_idx", None)
+                if clicked_atom is not None:
+                    try:
+                        move_group_dialog.on_atom_picked(clicked_atom)
+                    except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+                        print(f"Error in toggle: {e}")
                 # Reset if multi-clicked without drag
                 move_group_dialog._is_dragging_group_vtk = False
                 move_group_dialog._drag_start_pos = None

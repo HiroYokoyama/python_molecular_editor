@@ -9,6 +9,7 @@ License: GPL-3.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
+# pylint: disable=duplicate-code
 
 from typing import Optional, Any
 import logging
@@ -53,17 +54,15 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
             self.selected_atoms.update(preselected_atoms)
 
         self.clicked_atom_for_toggle: Optional[int] = None
+        # State for group movement (used by dialog's own event filter)
+        self.drag_atom_idx: Optional[int] = None
+        self.potential_drag: bool = False
+        self.is_dragging_group: bool = False
+        self.drag_start_pos: Optional[Any] = None
+        self.mouse_moved_during_drag: bool = False
+        self._consume_next_left_release: bool = False
         self.highlight_actor: Optional[pv.Actor] = None
 
-        # Grouped states to comply with Pylint instance attribute limit
-        self.drag_state: dict[str, Any] = {
-            "drag_atom_idx": None,
-            "potential_drag": False,
-            "is_dragging_group": False,
-            "drag_start_pos": (0, 0),
-            "mouse_moved_during_drag": False,
-            "consume_next_left_release": False,
-        }
         self.widgets: dict[str, Any] = {}
 
         self.init_ui()
@@ -231,180 +230,6 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
 
         layout.addLayout(button_layout)
 
-    def _handle_double_click(self) -> bool:
-        """Handle MouseButtonDblClick event."""
-        self.drag_state["is_dragging_group"] = False
-        self.drag_state["drag_start_pos"] = (0, 0)
-        self.drag_state["mouse_moved_during_drag"] = False
-        self.drag_state["potential_drag"] = False
-        self.clicked_atom_for_toggle = None
-        return False
-
-    def _handle_mouse_press(self, plotter: Any) -> bool:
-        """Handle MouseButtonPress event for LeftButton."""
-        self.drag_state["is_dragging_group"] = False
-        self.drag_state["potential_drag"] = False
-        self.clicked_atom_for_toggle = None
-
-        if self.selected_atoms:
-            return False
-
-        try:
-            interactor = plotter.interactor
-            if interactor is None:
-                return False
-            click_pos = interactor.GetEventPosition()
-
-            clicked_atom_idx = pick_atom_index_from_screen(
-                self.main_window.view_3d_manager,
-                (int(click_pos[0]), int(click_pos[1])),
-                self.mol,
-            )
-
-            if clicked_atom_idx is not None:
-                if self.selected_atoms and clicked_atom_idx in self.selected_atoms:
-                    self.drag_state["is_dragging_group"] = False
-                    self.drag_state["drag_start_pos"] = click_pos
-                    self.drag_state["drag_atom_idx"] = clicked_atom_idx
-                    self.drag_state["mouse_moved_during_drag"] = False
-                    self.drag_state["potential_drag"] = True
-                    self.clicked_atom_for_toggle = clicked_atom_idx
-                    return False
-
-                self.on_atom_picked(clicked_atom_idx)
-                self.drag_state["consume_next_left_release"] = True
-                return True
-
-            return False
-
-        except (AttributeError, RuntimeError, ValueError) as e:
-            logging.debug("Error in mouse press: %s", e)
-            return False
-
-    def _handle_potential_drag(self, plotter: Any) -> bool:
-        """Handle potential drag checking and threshold transition."""
-        start_pos = self.drag_state["drag_start_pos"]
-        try:
-            interactor = plotter.interactor
-            if interactor is None:
-                return False
-            current_pos = interactor.GetEventPosition()
-            dx = current_pos[0] - start_pos[0]
-            dy = current_pos[1] - start_pos[1]
-
-            if abs(dx) > 5 or abs(dy) > 5:
-                self.drag_state["is_dragging_group"] = True
-                self.drag_state["potential_drag"] = False
-                try:
-                    plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    pass
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            pass
-        return self.drag_state["is_dragging_group"]
-
-    def _handle_actual_drag(self, plotter: Any) -> bool:
-        """Update drag movement flags during active dragging."""
-        start_pos = self.drag_state["drag_start_pos"]
-        try:
-            interactor = plotter.interactor
-            if interactor is None:
-                return False
-            current_pos = interactor.GetEventPosition()
-            dx = current_pos[0] - start_pos[0]
-            dy = current_pos[1] - start_pos[1]
-            if abs(dx) > 2 or abs(dy) > 2:
-                self.drag_state["mouse_moved_during_drag"] = True
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            pass
-        return True
-
-    def _handle_hover_cursor(self, plotter: Any) -> bool:
-        """Set appropriate hover cursor style over selected atoms."""
-        try:
-            interactor = plotter.interactor
-            if interactor is None:
-                return False
-            current_pos = interactor.GetEventPosition()
-            closest_atom_idx = pick_atom_index_from_screen(
-                self.main_window.view_3d_manager,
-                (int(current_pos[0]), int(current_pos[1])),
-                self.mol,
-            )
-
-            if closest_atom_idx in self.selected_atoms:
-                plotter.setCursor(Qt.CursorShape.OpenHandCursor)
-            else:
-                plotter.setCursor(Qt.CursorShape.ArrowCursor)
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            pass
-        return False
-
-    def _handle_mouse_move(self, plotter: Any) -> bool:
-        """Handle MouseMove event."""
-        if (
-            self.drag_state["potential_drag"]
-            and not self.drag_state["is_dragging_group"]
-        ):
-            if not self._handle_potential_drag(plotter):
-                return False
-
-        if self.drag_state["is_dragging_group"]:
-            return self._handle_actual_drag(plotter)
-
-        if self.selected_atoms:
-            return self._handle_hover_cursor(plotter)
-
-        return False
-
-    def _reset_drag_state(self) -> None:
-        """Reset internal drag flags."""
-        self.drag_state["is_dragging_group"] = False
-        self.drag_state["drag_start_pos"] = (0, 0)
-        self.drag_state["mouse_moved_during_drag"] = False
-        self.drag_state["potential_drag"] = False
-
-    def _restore_arrow_cursor(self) -> None:
-        """Restore standard arrow cursor in the 3D viewer."""
-        try:
-            plotter_ptr = self.main_window.view_3d_manager.plotter
-            if plotter_ptr is not None:
-                plotter_ptr.setCursor(Qt.CursorShape.ArrowCursor)
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            pass
-
-    def _handle_mouse_release(self) -> bool:
-        """Handle MouseButtonRelease event for LeftButton."""
-        if self.drag_state["consume_next_left_release"]:
-            self.drag_state["consume_next_left_release"] = False
-            return True
-
-        is_drag_active = (
-            self.drag_state["potential_drag"] or self.drag_state["is_dragging_group"]
-        )
-        if not is_drag_active:
-            return False
-
-        has_moved = (
-            self.drag_state["is_dragging_group"]
-            and self.drag_state["mouse_moved_during_drag"]
-        )
-        clicked_atom = self.clicked_atom_for_toggle
-
-        if not has_moved and clicked_atom is not None:
-            self.clicked_atom_for_toggle = None
-            self._reset_drag_state()
-            try:
-                self.on_atom_picked(clicked_atom)
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                pass
-            self._restore_arrow_cursor()
-            return True
-
-        self._reset_drag_state()
-        self._restore_arrow_cursor()
-        return True
-
     def eventFilter(self, obj: Any, event: Any) -> bool:
         """Mouse event handling in 3D view.
 
@@ -417,31 +242,207 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         if obj != plotter.interactor:
             return super().eventFilter(obj, event)
 
-        result = False
         e_type = event.type()
 
         if e_type == QEvent.Type.MouseButtonDblClick:
-            result = self._handle_double_click()
-        elif (
+            # Ignore double clicks and reset state
+            self.is_dragging_group = False
+            self.drag_start_pos = None
+            self.mouse_moved_during_drag = False
+            self.potential_drag = False
+            self.clicked_atom_for_toggle = None
+            return False
+
+        if (
             e_type == QEvent.Type.MouseButtonPress
             and isinstance(event, QMouseEvent)
             and event.button() == Qt.MouseButton.LeftButton
         ):
-            result = self._handle_mouse_press(plotter)
+            # Clean up previous state (triple-click countermeasure)
+            self.is_dragging_group = False
+            self.potential_drag = False
+            self.clicked_atom_for_toggle = None
+            # Delegate to CustomInteractorStyle if atoms are already selected
+            if self.selected_atoms:
+                return False
+
+            # Mouse press handling
+            try:
+                interactor = plotter.interactor
+                if interactor is None:
+                    return False
+                click_pos = interactor.GetEventPosition()
+
+                clicked_atom_idx = pick_atom_index_from_screen(
+                    self.main_window.view_3d_manager,
+                    (int(click_pos[0]), int(click_pos[1])),
+                    self.mol,
+                )
+
+                # Handle clicked atom
+                if clicked_atom_idx is not None:
+                    if self.selected_atoms and clicked_atom_idx in self.selected_atoms:
+                        # Atom within existing group - prepare for drag
+                        self.is_dragging_group = False
+                        self.drag_start_pos = click_pos
+                        self.drag_atom_idx = clicked_atom_idx
+                        self.mouse_moved_during_drag = False
+                        self.potential_drag = True
+                        self.clicked_atom_for_toggle = clicked_atom_idx
+                        return False
+                    else:
+                        # Atom outside group - select
+                        self.on_atom_picked(clicked_atom_idx)
+                        self._consume_next_left_release = True
+                        return True
+                else:
+                    # Clicked outside atoms
+                    return False
+
+            except (AttributeError, RuntimeError, ValueError) as e:
+                logging.debug(f"Error in mouse press: {e}")
+                return False
+
         elif e_type == QEvent.Type.MouseMove and isinstance(event, QMouseEvent):
-            result = self._handle_mouse_move(plotter)
+            # Mouse move handling
+            if (
+                getattr(self, "potential_drag", False)
+                and self.drag_start_pos
+                and not self.is_dragging_group
+            ):
+                try:
+                    plotter_ref = self.main_window.view_3d_manager.plotter
+                    if plotter_ref is None or plotter_ref.interactor is None:
+                        return False
+                    interactor = plotter_ref.interactor
+                    current_pos = interactor.GetEventPosition()
+                    dx = current_pos[0] - self.drag_start_pos[0]
+                    dy = current_pos[1] - self.drag_start_pos[1]
+
+                    # Start drag if threshold is exceeded
+                    drag_threshold = 10  # pixels
+                    if abs(dx) > drag_threshold or abs(dy) > drag_threshold:
+                        self.is_dragging_group = True
+                        self.potential_drag = False
+                        try:
+                            plotter_ptr = self.main_window.view_3d_manager.plotter
+                            if plotter_ptr is not None:
+                                plotter_ptr.setCursor(Qt.CursorShape.ClosedHandCursor)
+                        except (
+                            AttributeError,
+                            RuntimeError,
+                            ValueError,
+                            TypeError,
+                        ):
+                            pass
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    pass
+
+                if not self.is_dragging_group:
+                    return False
+
+            if self.is_dragging_group and self.drag_start_pos:
+                try:
+                    plotter_ref = self.main_window.view_3d_manager.plotter
+                    if plotter_ref is None or plotter_ref.interactor is None:
+                        return False
+                    interactor = plotter_ref.interactor
+                    current_pos = interactor.GetEventPosition()
+                    dx = current_pos[0] - self.drag_start_pos[0]
+                    dy = current_pos[1] - self.drag_start_pos[1]
+                    if abs(dx) > 5 or abs(dy) > 5:
+                        self.mouse_moved_during_drag = True
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    pass
+                return True
+
+            # Hover handling
+            if self.selected_atoms:
+                try:
+                    plotter_ref = self.main_window.view_3d_manager.plotter
+                    if plotter_ref is None or plotter_ref.interactor is None:
+                        return False
+                    interactor = plotter_ref.interactor
+                    current_pos = interactor.GetEventPosition()
+                    closest_atom_idx = pick_atom_index_from_screen(
+                        self.main_window.view_3d_manager,
+                        (int(current_pos[0]), int(current_pos[1])),
+                        self.mol,
+                    )
+
+                    if closest_atom_idx in self.selected_atoms:
+                        plotter_ref.setCursor(Qt.CursorShape.OpenHandCursor)
+                    else:
+                        plotter_ref.setCursor(Qt.CursorShape.ArrowCursor)
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    pass
+
+            return False
+
         elif (
             e_type == QEvent.Type.MouseButtonRelease
             and isinstance(event, QMouseEvent)
             and event.button() == Qt.MouseButton.LeftButton
         ):
-            result = self._handle_mouse_release()
+            if self._consume_next_left_release:
+                self._consume_next_left_release = False
+                return True
 
-        return result
+            if getattr(self, "potential_drag", False) or (
+                self.is_dragging_group and self.drag_start_pos
+            ):
+                try:
+                    if not (self.is_dragging_group and self.mouse_moved_during_drag):
+                        # Mouse move below threshold = simple click (toggle)
+                        if self.clicked_atom_for_toggle is not None:
+                            clicked_atom = self.clicked_atom_for_toggle
+                            self.clicked_atom_for_toggle = None
+                            self.is_dragging_group = False
+                            self.drag_start_pos = None
+                            self.mouse_moved_during_drag = False
+                            self.potential_drag = False
+                            if clicked_atom is not None:
+                                self.on_atom_picked(clicked_atom)
+                            try:
+                                plotter_ptr = self.main_window.view_3d_manager.plotter
+                                if plotter_ptr is not None:
+                                    plotter_ptr.setCursor(Qt.CursorShape.ArrowCursor)
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ):
+                                pass
+                            return True
+                        else:
+                            logging.error(
+                                "REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self"
+                            )
+
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    pass
+                finally:
+                    self.is_dragging_group = False
+                    self.drag_start_pos = None
+                    self.mouse_moved_during_drag = False
+                    self.potential_drag = False
+                    try:
+                        plotter_ptr = self.main_window.view_3d_manager.plotter
+                        if plotter_ptr is not None:
+                            plotter_ptr.setCursor(Qt.CursorShape.ArrowCursor)
+                    except (AttributeError, RuntimeError, ValueError, TypeError):
+                        pass
+
+                return True
+
+            return False
+
+        return super().eventFilter(obj, event)
 
     def on_atom_picked(self, atom_idx: int) -> None:
         """Select or deselect the clicked atom."""
-        if self.drag_state["is_dragging_group"]:
+        if getattr(self, "is_dragging_group", False):
             return
 
         if atom_idx in self.selected_atoms:
@@ -453,7 +454,10 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         self.update_display()
 
     def update_display(self) -> None:
-        """Update the selected atoms text label."""
+        """
+        Dialog for moving selected atoms as a rigid body.
+        # pylint: disable=duplicate-code
+        """
         if not self.selected_atoms:
             self.widgets["selection_label"].setText("No atoms selected")
         else:
@@ -636,5 +640,5 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
-        self.drag_state["is_dragging_group"] = False
-        self.drag_state["drag_start_pos"] = (0, 0)
+        self.is_dragging_group = False
+        self.drag_start_pos = None

@@ -87,6 +87,21 @@ class DummyInteractorStyleBase:
     def GetInteractor(self):
         return _mock.MagicMock()
 
+    def OnLeftButtonDown(self, *a, **k):
+        pass
+
+    def OnLeftButtonUp(self, *a, **k):
+        pass
+
+    def OnRightButtonDown(self, *a, **k):
+        pass
+
+    def OnRightButtonUp(self, *a, **k):
+        pass
+
+    def OnMouseMove(self, *a, **k):
+        pass
+
 
 vinter.vtkInteractorStyleTrackballCamera = DummyInteractorStyleBase
 

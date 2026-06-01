@@ -3690,6 +3690,14 @@ _Events on objects other than the plotter interactor use base behaviour._
 
 - assert result is False
 
+### TestMoveGroupDeselectToggle.test_on_atom_picked_deselects_connected_group
+_No description provided._
+
+- assert len(dlg.group_atoms) > 0
+- assert 0 in dlg.selected_atoms
+- assert len(dlg.group_atoms) == 0
+- assert 0 not in dlg.selected_atoms
+
 ## tests/unit/test_move_selected_atoms_dialog.py
 
 ### TestOnAtomPicked.test_picks_atom_individually_no_bfs
@@ -3787,7 +3795,7 @@ _No description provided._
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is False
-- assert dlg.drag_state['potential_drag'] is False
+- assert dlg.potential_drag is False
 
 ### test_event_filter_mouse_press_with_selection
 _No description provided._
@@ -3799,7 +3807,7 @@ _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
 - mock_pick.assert_called_once_with(0)
-- assert dlg.drag_state['consume_next_left_release'] is True
+- assert dlg._consume_next_left_release is True
 
 ### test_event_filter_mouse_press_empty_space
 _No description provided._
@@ -3816,35 +3824,35 @@ _No description provided._
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
-- assert dlg.drag_state['consume_next_left_release'] is False
+- assert dlg._consume_next_left_release is False
 
 ### test_mouse_move_potential_drag_to_actual_drag
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
-- assert dlg.drag_state['is_dragging_group'] is True
-- assert dlg.drag_state['potential_drag'] is False
+- assert dlg.is_dragging_group is True
+- assert dlg.potential_drag is False
 - plotter.setCursor.assert_called_with(Qt.CursorShape.ClosedHandCursor)
 
 ### test_mouse_move_during_actual_drag
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
-- assert dlg.drag_state['mouse_moved_during_drag'] is True
+- assert dlg.mouse_moved_during_drag is True
 
 ### test_mouse_release_no_movement_toggles_atom
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
 - mock_pick.assert_called_once_with(0)
-- assert dlg.drag_state['potential_drag'] is False
+- assert dlg.potential_drag is False
 
 ### test_mouse_release_with_movement_resets_drag_state
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
 - mock_pick.assert_not_called()
-- assert dlg.drag_state['is_dragging_group'] is False
+- assert dlg.is_dragging_group is False
 
 ### test_handle_mouse_press_exceptions
 _No description provided._
@@ -3861,6 +3869,23 @@ _No description provided._
 
 - assert '...' in text
 - assert 'Selected: 7 atoms' in text
+
+### TestClickToDeselect.test_eventfilter_delegates_to_vtk_when_atoms_selected
+_No description provided._
+
+- assert result is False
+
+### TestClickToDeselect.test_eventfilter_handles_press_when_no_atoms_selected
+_No description provided._
+
+- assert result is True
+- assert 0 in dlg.selected_atoms
+
+### TestClickToDeselect.test_eventfilter_release_click_only_deselects_atom
+_No description provided._
+
+- assert result is True
+- mock_on_pick.assert_called_once_with(0)
 
 ## tests/unit/test_parser_robustness.py
 

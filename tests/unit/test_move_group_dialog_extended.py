@@ -381,3 +381,21 @@ class TestEventFilter:
         result = dlg.eventFilter(MagicMock(), ev)
         # Super's eventFilter returns False for unrecognised objects
         assert result is False
+
+
+class TestMoveGroupDeselectToggle:
+    def test_on_atom_picked_deselects_connected_group(self, make_dialog):
+        dlg, mol, _ = make_dialog()
+        # Initial picking selects component starting at 0
+        with (
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
+        ):
+            dlg.on_atom_picked(0)
+            assert len(dlg.group_atoms) > 0
+            assert 0 in dlg.selected_atoms
+
+            # Second picking on same atom toggles it off
+            dlg.on_atom_picked(0)
+            assert len(dlg.group_atoms) == 0
+            assert 0 not in dlg.selected_atoms

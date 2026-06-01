@@ -9,6 +9,7 @@ License: GPL-3.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
+# pylint: disable=duplicate-code
 
 from typing import Optional, Any
 import logging
@@ -273,7 +274,7 @@ class MoveGroupDialog(BasePickingDialog):
                         dy = current_pos[1] - self.drag_start_pos[1]
 
                         # Start drag if threshold is exceeded
-                        drag_threshold = 5  # pixels
+                        drag_threshold = 10  # pixels
                         if abs(dx) > drag_threshold or abs(dy) > drag_threshold:
                             self.is_dragging_group = True
                             self.potential_drag = False
@@ -305,7 +306,7 @@ class MoveGroupDialog(BasePickingDialog):
                         current_pos = interactor.GetEventPosition()
                         dx = current_pos[0] - self.drag_start_pos[0]
                         dy = current_pos[1] - self.drag_start_pos[1]
-                        if abs(dx) > 2 or abs(dy) > 2:
+                        if abs(dx) > 5 or abs(dy) > 5:
                             self.mouse_moved_during_drag = True
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         pass
@@ -428,10 +429,11 @@ class MoveGroupDialog(BasePickingDialog):
         # Toggle group
         if visited.issubset(self.group_atoms):
             self.group_atoms -= visited
+            if atom_idx in self.selected_atoms:
+                self.selected_atoms.remove(atom_idx)
         else:
             self.group_atoms |= visited
-
-        self.selected_atoms.add(atom_idx)
+            self.selected_atoms.add(atom_idx)
         self.show_atom_labels()
         self.update_display()
 
