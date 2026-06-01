@@ -72,6 +72,6 @@ DEFAULT_SETTINGS = {
     "bond_dash_count_2d": 8,
     "atom_font_family_2d": "Arial",
     "template_fusing_enabled_2d": True,
-    "template_fusing_distance_2d": 14.0,
+    "template_fusing_distance_2d": 7.0,
     "template_snapping_distance_2d": 14.0,
 }

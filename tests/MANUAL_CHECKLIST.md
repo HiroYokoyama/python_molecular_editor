@@ -43,32 +43,14 @@ This comprehensive checklist is designed to verify that **MoleditPy** functions 
 - [ ] **User Templates**: Can the current structure be saved as a custom user template?
 - [ ] **Retrieval**: Can saved user templates be retrieved and placed on the canvas?
 
-## 4. File Operations
-
-### Project Management
-- [ ] **Save Project**: Can the workspace be saved as a project file (`.pmeprj`) with all data intact?
-- [ ] **Open Project**: Can a saved project file be re-opened with both 2D and 3D states preserved?
-
-### Import
-- [ ] **Chemical Formats**: Does importing standard files (e.g., MOL, SDF) load the structure into the 2D view correctly?
-- [ ] **SMILES**: Does entering a SMILES string generate the expected 2D topology?
-- [ ] **InChI**: Does entering an InChI string generate the expected 2D topology?
-- [ ] **3D Direct Import**: Do specific 3D formats load directly into the 3D view, bypassing the 2D editor?
-
-### Export
-- [ ] **Images**: Can the structure be exported as PNG (2D/3D) and SVG (2D) images?
-- [ ] **Chemical Data**: Can the data be exported into valid MOL and XYZ files?
-- [ ] **3D Models**: Can the 3D model be exported as an STL file (suitable for 3D printing)?
-- [ ] **Color Preservation**: Does the OBJ/MTL export preserve atom color information?
-
-## 5. 3D Generation & Visualization
+## 4. 3D Generation & Visualization
 - [ ] **2D to 3D Conversion**: Does the conversion function generate a valid 3D structure from a 2D drawing?
 - [ ] **Structural Optimization**: Does the 3D optimization function refine the geometry using the selected force field?
 - [ ] **View Controls**: Do Zoom (Wheel), Rotate (Drag), and Pan (Shift+Drag) operate smoothly?
 - [ ] **Display Styles**: Can the user switch between Ball & Stick, CPK, Wireframe, and Stick styles?
 - [ ] **Aromatic Representation**: Can aromatic rings be toggled between Kekulé (double bonds) and Torus (circles)?
 
-## 6. 3D Measurement & Editing
+## 5. 3D Measurement & Editing
 
 ### Measurement
 - [ ] **Distance**: Selecting 2 atoms displays the correct interatomic distance.
@@ -88,6 +70,24 @@ This comprehensive checklist is designed to verify that **MoleditPy** functions 
 - [ ] **Constraint Creation**: Can Distance/Angle/Dihedral constraints be added and listed?
 - [ ] **Visual Feedback**: Does selecting a constraint highlight the corresponding atoms in the 3D view?
 - [ ] **Execution**: Does the optimization respect the defined constraints during the calculation?
+
+## 6. File Operations
+
+### Project Management
+- [ ] **Save Project**: Can the workspace be saved as a project file (`.pmeprj`) with all data intact?
+- [ ] **Open Project**: Can a saved project file be re-opened with both 2D and 3D states preserved?
+
+### Import
+- [ ] **Chemical Formats**: Does importing standard files (e.g., MOL, SDF) load the structure into the 2D view correctly?
+- [ ] **SMILES**: Does entering a SMILES string generate the expected 2D topology?
+- [ ] **InChI**: Does entering an InChI string generate the expected 2D topology?
+- [ ] **3D Direct Import**: Do specific 3D formats load directly into the 3D view, bypassing the 2D editor?
+
+### Export
+- [ ] **Images**: Can the structure be exported as PNG (2D/3D) and SVG (2D) images?
+- [ ] **Chemical Data**: Can the data be exported into valid MOL and XYZ files?
+- [ ] **3D Models**: Can the 3D model be exported as an STL file (suitable for 3D printing)?
+- [ ] **Color Preservation**: Does the OBJ/MTL export preserve atom color information?
 
 ## 7. Analysis & Information
 - [ ] **Atom Labels**: Can labels (Index, Coordinates, Element) be toggled on/off in the 3D view?

@@ -2,9 +2,9 @@ name: MoleditPy Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, dev ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, dev ]
   workflow_dispatch:
 
 permissions:
@@ -29,15 +29,19 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.14"
           - os: windows-latest
+            python-version: "3.13"
+          - os: windows-latest
             python-version: "3.14"
+          - os: macos-latest
+            python-version: "3.13"
           - os: macos-latest
             python-version: "3.14"
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
@@ -60,17 +64,17 @@ jobs:
         MOLEDITPY_HEADLESS: "1"
         QT_QPA_PLATFORM: "offscreen"
       run: |
-        # Run only unit + integration suites in CI (skip GUI for stability)
-        python tests/run_all_tests.py --no-cov --no-report --unit --integration
+        # Run unit, integration, and GUI suites in CI on dev branch
+        python tests/run_all_tests.py --no-cov --no-report
 
   lint:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: "3.12"
         cache: 'pip'

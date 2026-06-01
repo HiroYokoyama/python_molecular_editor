@@ -54,3 +54,38 @@ class TestSipIsDeletedSafe:
         mock_checker = MagicMock(side_effect=TypeError)
         with patch("moleditpy.utils.sip_isdeleted_safe._sip_isdeleted", mock_checker):
             assert sip_isdeleted_safe(object()) is False
+
+    def test_fallback_to_standard_sip(self):
+        import sys
+        import importlib
+        from unittest.mock import patch, MagicMock
+
+        # Mock standard sip module
+        mock_sip = MagicMock()
+        mock_sip.isdeleted = MagicMock(return_value=True)
+
+        with patch.dict(
+            sys.modules, {"PyQt6": None, "PyQt6.sip": None, "sip": mock_sip}
+        ):
+            import moleditpy.utils.sip_isdeleted_safe as sds
+
+            importlib.reload(sds)
+            assert sds.sip_isdeleted_safe(object()) is True
+
+        # Restore standard state
+        importlib.reload(sds)
+
+    def test_fallback_when_both_sip_packages_missing(self):
+        import sys
+        import importlib
+        from unittest.mock import patch
+
+        with patch.dict(sys.modules, {"PyQt6": None, "PyQt6.sip": None, "sip": None}):
+            import moleditpy.utils.sip_isdeleted_safe as sds
+
+            importlib.reload(sds)
+            assert sds.sip_isdeleted_safe(object()) is False
+            assert sds._sip_isdeleted is None
+
+        # Restore standard state
+        importlib.reload(sds)

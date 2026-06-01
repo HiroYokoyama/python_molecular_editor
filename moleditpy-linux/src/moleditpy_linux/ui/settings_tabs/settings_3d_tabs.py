@@ -135,7 +135,9 @@ class SettingsModelTab(SettingsTabBase):
 
         info_label = QLabel(self.info_text)
         info_label.setWordWrap(True)
-        info_label.setStyleSheet("color: #666; font-style: italic;")
+        info_label.setStyleSheet(
+            "color: #666; font-style: italic; margin-top: 4px; margin-bottom: 12px;"
+        )
         form_layout.addRow(info_label)
 
         # Common Atom Scale (for BS and CPK)

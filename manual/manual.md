@@ -12,20 +12,20 @@
   - [4.4. Undo/Redo](#44-undoredo)
   - [4.5. Copy/Cut/Paste](#45-copycutpaste)
   - [4.6. Other Edit/View Functions](#46-other-editview-functions)
-- [5. File Operations](#5-file-operations)
-  - [5.1. Project Files (.pmeprj (Python Molecular Editor Project File))](#51-project-files-pmeprj-python-molecular-editor-project-file)
-  - [5.2. Import](#52-import)
-  - [5.3. Export](#53-export)
-- [6. 3D Functions](#6-3d-functions)
-  - [6.1. 2D to 3D Conversion](#61-2d-to-3d-conversion)
-  - [6.2. 3D Structure Optimization](#62-3d-structure-optimization)
-  - [6.3. Changing 3D Display Style](#63-changing-3d-display-style)
-  - [6.4. 3D View Operations](#64-3d-view-operations)
-  - [6.5. 3D Measurement Function ("3D Select" Mode)](#65-3d-measurement-function-3d-select-mode)
-  - [6.6. 3D Editing Function ("3D Drag" Mode / Alt Key)](#66-3d-editing-function-3d-drag-mode--alt-key)
-  - [6.7. Other 3D Editing Functions (Menu `3D Edit`)](#67-other-3d-editing-functions-menu-`3d-edit`)
-  - [6.8. Constrained Optimization](#68-constrained-optimization)
-  - [6.9. Displaying Atom Information](#69-displaying-atom-information)
+- [5. 3D Functions](#5-3d-functions)
+  - [5.1. 2D to 3D Conversion](#51-2d-to-3d-conversion)
+  - [5.2. 3D Structure Optimization](#52-3d-structure-optimization)
+  - [5.3. Changing 3D Display Style](#53-changing-3d-display-style)
+  - [5.4. 3D View Operations](#54-3d-view-operations)
+  - [5.5. 3D Measurement Function ("3D Select" Mode)](#55-3d-measurement-function-3d-select-mode)
+  - [5.6. 3D Editing Function ("3D Drag" Mode / Alt Key)](#56-3d-editing-function-3d-drag-mode--alt-key)
+  - [5.7. Other 3D Editing Functions (Menu `3D Edit`)](#57-other-3d-editing-functions-menu-3d-edit)
+  - [5.8. Constrained Optimization](#58-constrained-optimization)
+  - [5.9. Displaying Atom Information](#59-displaying-atom-information)
+- [6. File Operations](#6-file-operations)
+  - [6.1. Project Files (.pmeprj (Python Molecular Editor Project File))](#61-project-files-pmeprj-python-molecular-editor-project-file)
+  - [6.2. Import](#62-import)
+  - [6.3. Export](#63-export)
 - [7. Molecular Analysis](#7-molecular-analysis)
 - [8. Settings](#8-settings)
 - [9. Plugin System](#9-plugin-system)
@@ -197,43 +197,11 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
 
 -----
 
-## 5\. File Operations
-
-Perform various file operations from the `File` menu in the menu bar.
-
-### 5.1. Project Files (.pmeprj (Python Molecular Editor Project File))
-
-  * **New (Ctrl+N):** Clears all current work and starts a new session. A confirmation dialog will appear if there are unsaved changes.
-  * **Open Project... (Ctrl+O):** Opens a previously saved project file (.pmeprj or .pmeraw).
-  * **Save Project (Ctrl+S):** Overwrites the current project file with the current work (2D structure, generated 3D structure, etc.). If no file name is set, the "Save As" dialog will open. **.pmeprj (JSON format) is the recommended format.**
-  * **Save Project As... (Ctrl+Shift+S):** Saves the current work as a project file (.pmeprj) with a new name or location.
-
-### 5.2. Import
-
-  * **Import \> MOL/SDF File...:** Loads a MOL or SDF file and displays it as a 2D structure. Even if the file contains 3D coordinates, 2D coordinates will be recalculated (stereochemistry is preserved). The imported molecule is automatically appended to the current canvas without overwriting existing structures.
-  * **Import \> SMILES...:** Opens a dialog to input a SMILES string and displays the input molecule as a 2D structure. The imported molecule is automatically appended to the current canvas.
-  * **Import \> InChI...:** Opens a dialog to input an InChI string and displays the input molecule as a 2D structure. The imported molecule is automatically appended to the current canvas.
-  * **Import \> 3D MOL/SDF (3D View Only)...:** Loads a MOL/SDF file with 3D coordinates and displays it **in the 3D view only** (the 2D editor is cleared). This enters 3D viewer mode.
-  * **Import \> 3D XYZ (3D View Only)...:** Loads an XYZ file and displays it **in the 3D view only** (the 2D editor is cleared). Bonds are estimated based on interatomic distances. This enters 3D viewer mode.
-
-### 5.3. Export
-
-  * **Export \> PME Raw Format...:** Saves project data in the legacy binary format (.pmeraw).
-  * **Export \> 2D Formats \> MOL File...:** Saves the current 2D structure as a MOL file.
-  * **Export \> 2D Formats \> PNG Image...:** Saves the current 2D Edit View content as a PNG image file. You can choose whether to make the background transparent.
-  * **Export \> 2D Formats \> SVG Image...:** Saves the current 2D Edit View content as an SVG vector image file. You can choose whether to make the background transparent.
-  * **Export \> 3D Formats \> MOL File...:** Saves the currently displayed 3D structure as a MOL file with 3D coordinates.
-  * **Export \> 3D Formats \> XYZ File...:** Saves the currently displayed 3D structure as an XYZ file.
-  * **Export \> 3D Formats \> PNG Image...:** Saves the current 3D View content as a PNG image file. You can choose whether to make the background transparent.
-  * **Export \> 3D Formats \> STL File...:** Saves the current 3D model as an STL file (no color, e.g., for 3D printing).
-  * **Export \> 3D Formats \> OBJ/MTL (with colors)...:** Saves the current 3D model as an OBJ file and an MTL file (with color information).
-
------
-## 6\. 3D Functions
+## 5\. 3D Functions
 
 MoleditPy provides functions to generate, display, measure, and edit 3D structures from the drawn 2D structure.
 
-### 6.1. 2D to 3D Conversion
+### 5.1. 2D to 3D Conversion
 
 1.  Draw a molecular structure in the 2D Edit View.
 2.  Click the **Convert 2D to 3D** button in the bottom left, or select `Edit` \> `Convert 2D to 3D` (Ctrl+K) from the menu.
@@ -242,7 +210,13 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 
 **(Settings):** You can set the priority of libraries (RDKit, Open Babel) used for conversion, **or select the "Direct" mode (use 2D coords + add H)**, from the menu `Settings` \> `3D Conversion`. If Open Babel is not installed, related options will be disabled.
 
-### 6.2. 3D Structure Optimization
+**Conversion Modes:**
+*   **Fallback Mode (Default)**: Automatically tries RDKit first, then Open Babel (if available), and finally falls back to Direct Mode.
+*   **RDKit Mode**: Uses RDKit's ETKDGv2 (Experimental-Torsion Knowledge Distance Geometry) algorithm for conformer generation. If the initial embedding fails, it applies bounds matrix triangle smoothing with explicit stereochemistry constraints before trying again.
+*   **Open Babel Mode**: Uses Open Babel's `make3D()` coordinate generator run in a secure, isolated background subprocess to prevent application hangs or crashes.
+*   **Direct Mode**: Bypasses 3D conformer embedding to retain your exact 2D layout. Atoms are placed on the $Z = 0.0$ plane, with missing hydrogen atoms added geometrically. Stereochemistry is preserved by adding offset Z-coordinates ($Z = \pm 1.5$ Å) to wedge/dash atoms.
+
+### 5.2. 3D Structure Optimization
 
   * With a 3D structure displayed, click the **Optimize 3D** button in the bottom right, or select `Edit` \> `Optimize 3D` (Ctrl+L) from the menu.
   * A more detailed structure optimization calculation is performed using the selected force field (MMFF or UFF).
@@ -251,7 +225,11 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 
 **(Settings):** You can select the force field calculation library and method (RDKit MMFF94/MMFF94s/UFF, Open Babel MMFF94/MMFF94s/UFF/GAFF/Ghemical) from the menu `Settings` \> `3D Optimization Settings`.
 
-### 6.3. Changing 3D Display Style
+**Optimization Methods:**
+*   **RDKit Backend**: Supports **MMFF94s** (spectroscopic/default), **MMFF94**, and **UFF** (Universal Force Field). If MMFF94s fails setup due to unsupported elements (such as transition metals), the system automatically falls back to UFF to prevent crashes.
+*   **Open Babel Backend**: Supports **MMFF94s**, **MMFF94**, **UFF**, **GAFF** (General Amber Force Field), and **Ghemical**. It performs 100 iterations of Steepest Descent to clear major atomic collisions, followed by Conjugate Gradients minimization.
+
+### 5.3. Changing 3D Display Style
 
 You can select the display style from the **3D Style** dropdown menu on the right side of the main toolbar.
 
@@ -263,7 +241,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
 
 **(Settings):** Details for each display style (atom size, bond radius, **multiple bond offsets**, rendering quality, etc.) can be adjusted from the menu `Settings` \> `Settings...`. You can also change **CPK Colors** from `Settings` \> `CPK Colors...`.
 
-### 6.4. 3D View Operations
+### 5.4. 3D View Operations
 
   * **Rotate:** Left mouse button drag.
   * **Zoom:** Mouse wheel scroll (or Ctrl + Wheel).
@@ -271,7 +249,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
   * **Reset View:** `View` \> `Reset 3D View` (Ctrl+Shift+R) from the menu resets the camera position and zoom to their initial state.
   * **Redraw 3D Molecule:** `View` \> `Redraw 3D Molecule` from the menu forces a redraw of the 3D structure.
 
-### 6.5. 3D Measurement Function ("3D Select" Mode)
+### 5.5. 3D Measurement Function ("3D Select" Mode)
 
 1.  Click the **3D Select** button on the main toolbar to enable measurement mode.
 
@@ -287,7 +265,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
 
  ![](img/measurement.png)
 
-### 6.6. 3D Editing Function ("3D Drag" Mode / Alt Key)
+### 5.6. 3D Editing Function ("3D Drag" Mode / Alt Key)
 
 You can directly edit the atomic coordinates of the 3D structure. Turn on the **3D Drag** button on the main toolbar, or perform operations **while holding down the Alt key**.
 
@@ -295,7 +273,7 @@ You can directly edit the atomic coordinates of the 3D structure. Turn on the **
 
    ![](img/atom-drag.png)
 
-### 6.7. Other 3D Editing Functions (Menu `3D Edit`)
+### 5.7. Other 3D Editing Functions (Menu `3D Edit`)
 
 These functions are available from the menu when a 3D structure is displayed. Many open a dedicated dialog where you can select atoms or input parameters.
 
@@ -330,7 +308,7 @@ These functions are available from the menu when a 3D structure is displayed. Ma
 
   ![](img/multiple-molecules-edit.png)
 
-### 6.8. Constrained Optimization
+### 5.8. Constrained Optimization
 
 This is an advanced feature that performs a molecular structure optimization (force field calculation) while keeping the values of specific atomic distances, angles, or dihedral angles fixed (constrained).
 
@@ -348,7 +326,7 @@ This is an advanced feature that performs a molecular structure optimization (fo
 
   ![](img/constrained-opt.png)
 
-### 6.9. Displaying Atom Information
+### 5.9. Displaying Atom Information
 
 From the menu `View` \> `3D Atom Info Display`, you can select the information to be displayed above each atom in the 3D view.
 
@@ -358,6 +336,39 @@ From the menu `View` \> `3D Atom Info Display`, you can select the information t
   * **Show Element Symbol:** Displays the element symbol for each atom.
 
 Selecting the same menu item again will turn off the display.
+
+-----
+
+## 6\. File Operations
+
+Perform various file operations from the `File` menu in the menu bar.
+
+### 6.1. Project Files (.pmeprj (Python Molecular Editor Project File))
+
+  * **New (Ctrl+N):** Clears all current work and starts a new session. A confirmation dialog will appear if there are unsaved changes.
+  * **Open Project... (Ctrl+O):** Opens a previously saved project file (.pmeprj or .pmeraw).
+  * **Save Project (Ctrl+S):** Overwrites the current project file with the current work (2D structure, generated 3D structure, etc.). If no file name is set, the "Save As" dialog will open. **.pmeprj (JSON format) is the recommended format.**
+  * **Save Project As... (Ctrl+Shift+S):** Saves the current work as a project file (.pmeprj) with a new name or location.
+
+### 6.2. Import
+
+  * **Import \> MOL/SDF File...:** Loads a MOL or SDF file and displays it as a 2D structure. Even if the file contains 3D coordinates, 2D coordinates will be recalculated (stereochemistry is preserved). The imported molecule is automatically appended to the current canvas without overwriting existing structures.
+  * **Import \> SMILES...:** Opens a dialog to input a SMILES string and displays the input molecule as a 2D structure. The imported molecule is automatically appended to the current canvas.
+  * **Import \> InChI...:** Opens a dialog to input an InChI string and displays the input molecule as a 2D structure. The imported molecule is automatically appended to the current canvas.
+  * **Import \> 3D MOL/SDF (3D View Only)...:** Loads a MOL/SDF file with 3D coordinates and displays it **in the 3D view only** (the 2D editor is cleared). This enters 3D viewer mode.
+  * **Import \> 3D XYZ (3D View Only)...:** Loads an XYZ file and displays it **in the 3D view only** (the 2D editor is cleared). Bonds are estimated based on interatomic distances. This enters 3D viewer mode.
+
+### 6.3. Export
+
+  * **Export \> PME Raw Format...:** Saves project data in the legacy binary format (.pmeraw).
+  * **Export \> 2D Formats \> MOL File...:** Saves the current 2D structure as a MOL file.
+  * **Export \> 2D Formats \> PNG Image...:** Saves the current 2D Edit View content as a PNG image file. You can choose whether to make the background transparent.
+  * **Export \> 2D Formats \> SVG Image...:** Saves the current 2D Edit View content as an SVG vector image file. You can choose whether to make the background transparent.
+  * **Export \> 3D Formats \> MOL File...:** Saves the currently displayed 3D structure as a MOL file with 3D coordinates.
+  * **Export \> 3D Formats \> XYZ File...:** Saves the currently displayed 3D structure as an XYZ file.
+  * **Export \> 3D Formats \> PNG Image...:** Saves the current 3D View content as a PNG image file. You can choose whether to make the background transparent.
+  * **Export \> 3D Formats \> STL File...:** Saves the current 3D model as an STL file (no color, e.g., for 3D printing).
+  * **Export \> 3D Formats \> OBJ/MTL (with colors)...:** Saves the current 3D model as an OBJ file and an MTL file (with color information).
 
 -----
 
