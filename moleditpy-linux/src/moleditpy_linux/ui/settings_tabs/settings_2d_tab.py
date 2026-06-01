@@ -147,6 +147,26 @@ class Settings2DTab(SettingsTabBase):
 
         form_layout.addRow(self._create_separator())
 
+        # --- Bond Snapping Settings ---
+        form_layout.addRow(QLabel("<b>Bond Snapping Settings</b>"))
+
+        # Bond Snapping Distance
+        self.bond_snapping_distance_2d_slider, self.bond_snapping_distance_2d_label = (
+            self._create_slider(5, 50, 1.0, is_int=True)
+        )
+        self.bond_snapping_distance_2d_slider.setToolTip(
+            "The distance in pixels within which drawing a bond will snap to an existing atom."
+        )
+        form_layout.addRow(
+            "Bond Snapping Distance (px):",
+            self._wrap_layout(
+                self.bond_snapping_distance_2d_slider,
+                self.bond_snapping_distance_2d_label,
+            ),
+        )
+
+        form_layout.addRow(self._create_separator())
+
         # --- Template Settings ---
         form_layout.addRow(QLabel("<b>Template Settings</b>"))
 
@@ -270,6 +290,10 @@ class Settings2DTab(SettingsTabBase):
         self.template_fusing_distance_2d_slider.setEnabled(fusing_enabled)
         self.template_fusing_distance_2d_label.setEnabled(fusing_enabled)
 
+        self.bond_snapping_distance_2d_slider.setValue(
+            int(settings_dict.get("bond_snapping_distance_2d", 14.0))
+        )
+
         self.template_fusing_distance_2d_slider.setValue(
             int(settings_dict.get("template_fusing_distance_2d", 14.0))
         )
@@ -290,6 +314,9 @@ class Settings2DTab(SettingsTabBase):
             "atom_font_family_2d": self.atom_font_family_2d_combo.currentFont().family(),
             "atom_font_size_2d": self.atom_font_size_2d_slider.value(),
             "atom_use_bond_color_2d": self.atom_use_bond_color_2d_checkbox.isChecked(),
+            "bond_snapping_distance_2d": float(
+                self.bond_snapping_distance_2d_slider.value()
+            ),
             "template_fusing_enabled_2d": self.template_fusing_enabled_2d_checkbox.isChecked(),
             "template_fusing_distance_2d": float(
                 self.template_fusing_distance_2d_slider.value()
