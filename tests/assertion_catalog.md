@@ -193,6 +193,18 @@ _No description provided._
 
 - mw.edit_actions_manager.push_undo_state.assert_called()
 
+### TestApplyAlignmentMath.test_alignment_with_move_to_origin_true
+_When move_to_origin is True, the first atom is moved to the origin._
+
+- assert pos[0] == pytest.approx([0.0, 0.0, 0.0], abs=1e-05)
+- assert pos[1] == pytest.approx([3.0, 0.0, 0.0], abs=1e-05)
+
+### TestApplyAlignmentMath.test_alignment_with_move_to_origin_false
+_When move_to_origin is False, the first atom stays at its original position, but alignment is applied._
+
+- assert pos[0] == pytest.approx([1.0, 2.0, 3.0], abs=1e-05)
+- assert pos[1] == pytest.approx([4.0, 2.0, 3.0], abs=1e-05)
+
 ## tests/unit/test_alt_template_bypass.py
 
 ### test_update_template_preview_allows_snapping_but_bypasses_fusing_when_alt_pressed

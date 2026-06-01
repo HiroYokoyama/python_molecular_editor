@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Literal, Optional, Sequence
 
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -70,10 +71,16 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
 
         # Instructions
         instruction_label = QLabel(
-            f"Click atoms in the 3D view to select them for alignment to the {axis_names[self.axis]}. Exactly 2 atoms are required. The first atom will be moved to the origin, and the second atom will be positioned on the {axis_names[self.axis]}."
+            f"Click atoms in the 3D view to select them for alignment to the "
+            f"{axis_names[self.axis]}. Exactly 2 atoms are required."
         )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
+
+        # Move to origin option (default False)
+        self.move_to_origin_checkbox = QCheckBox("Move the first atom to the origin")
+        self.move_to_origin_checkbox.setChecked(False)
+        layout.addWidget(self.move_to_origin_checkbox)
 
         # Selected atoms display
         self.selection_label = QLabel("No atoms selected")
@@ -234,6 +241,13 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
                                 float(rotated_pos[2]),
                             ),
                         )
+
+            # If move_to_origin is False, translate back so atom1 is at its original position
+            if not self.move_to_origin_checkbox.isChecked():
+                for i in range(self.mol.GetNumAtoms()):
+                    current_pos = np.array(conf.GetAtomPosition(i))
+                    restored_pos = current_pos - translation
+                    conf.SetAtomPosition(i, restored_pos.tolist())
 
             # Update 3D positions
             self.main_window.view_3d_manager.atom_positions_3d = np.array(
