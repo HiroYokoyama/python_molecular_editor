@@ -277,3 +277,28 @@ def test_scene_drag_create_bond_sequence(
     # Verify bond created
     bond = scene.find_bond_between(a1, a2)
     assert bond.order == 1
+
+
+@patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
+@patch("PyQt6.QtWidgets.QGraphicsScene.mouseMoveEvent")
+@patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
+def test_scene_bond_snapping_distance(
+    mock_release, mock_move, mock_press, mock_parser_host
+):
+    """Verify that mouse interactions respect the configured bond_snapping_distance_2d setting."""
+    scene = setup_scene_with_view(mock_parser_host)
+    scene.mode = "bond_1"
+
+    # Configure settings
+    mock_parser_host.init_manager.settings = {
+        "bond_snapping_distance_2d": 25.0
+    }
+
+    id1 = scene.create_atom("C", QPointF(0, 0))
+    a1 = scene.data.atoms[id1]["item"]
+
+    # Press near A1 but not exactly on it (within 25.0 tolerance)
+    with patch.object(scene, "find_atom_near") as mock_find_near:
+        event_press = create_mock_event(QPointF(10, 10))
+        scene.mousePressEvent(event_press)
+        mock_find_near.assert_called_with(QPointF(10, 10), tol=25.0)
