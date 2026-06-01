@@ -290,9 +290,7 @@ def test_scene_bond_snapping_distance(
     scene.mode = "bond_1"
 
     # Configure settings
-    mock_parser_host.init_manager.settings = {
-        "bond_snapping_distance_2d": 25.0
-    }
+    mock_parser_host.init_manager.settings = {"bond_snapping_distance_2d": 25.0}
 
     id1 = scene.create_atom("C", QPointF(0, 0))
     a1 = scene.data.atoms[id1]["item"]

@@ -481,6 +481,24 @@ _Two neighbors: should continue skeleton (opposite to average bond vector)._
 - assert offset.x() == pytest.approx(0)
 - assert offset.y() == pytest.approx(-L)
 
+### test_placement_1_neighbor_anticlockwise
+_One bond with placement_direction_clockwise=False: rotate -60 degrees (anticlockwise)._
+
+- assert offset.x() == pytest.approx(10.0)
+- assert offset.y() == pytest.approx(-17.32, abs=0.01)
+
+### test_placement_alkyne_straight_continuation_target_order_3
+_If target_order is 3 (triple bond), the angle should be 0 (straight continuation)._
+
+- assert offset.x() == pytest.approx(L)
+- assert offset.y() == pytest.approx(0.0, abs=0.01)
+
+### test_placement_alkyne_straight_continuation_existing_bond_order_3
+_If the existing bond order is 3, the angle should be 0 (straight continuation)._
+
+- assert offset.x() == pytest.approx(L)
+- assert offset.y() == pytest.approx(0.0, abs=0.01)
+
 ## tests/unit/test_base_picking_dialog.py
 
 ### test_key_enter_clicks_apply_button_if_enabled
@@ -3576,6 +3594,14 @@ _No description provided._
 
 - assert 'No group' in dlg.selection_label.text()
 
+### test_show_atom_labels_camera_restore
+_No description provided._
+
+- mock_clear.assert_called_once()
+- assert kwargs.get('reset_camera') is False
+- assert plotter.camera_position == [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
+- plotter.render.assert_called()
+
 ## tests/unit/test_move_group_dialog_extended.py
 
 ### TestInit.test_preselected_atoms_triggers_on_atom_picked
@@ -3886,6 +3912,14 @@ _No description provided._
 
 - assert result is True
 - mock_on_pick.assert_called_once_with(0)
+
+### test_show_atom_labels_camera_restore
+_No description provided._
+
+- mock_clear.assert_called_once()
+- assert kwargs.get('reset_camera') is False
+- assert plotter.camera_position == [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
+- plotter.render.assert_called()
 
 ## tests/unit/test_parser_robustness.py
 
@@ -5186,6 +5220,11 @@ _Test the full mouse press -> move -> release sequence for creating a bond._
 
 - assert bond.order == 1
 - assert getattr(scene, 'start_atom', None) == a1
+
+### test_scene_bond_snapping_distance
+_Verify that mouse interactions respect the configured bond_snapping_distance_2d setting._
+
+- mock_find_near.assert_called_with(QPointF(10, 10), tol=25.0)
 
 ## tests/unit/test_settings_2d_tab.py
 
