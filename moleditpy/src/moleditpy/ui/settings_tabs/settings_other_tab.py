@@ -19,7 +19,6 @@ from PyQt6.QtWidgets import (
     QFormLayout,
     QFrame,
     QHBoxLayout,
-    QLabel,
     QSlider,
     QWidget,
     QDoubleSpinBox,

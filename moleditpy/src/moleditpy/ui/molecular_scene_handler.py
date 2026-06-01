@@ -32,11 +32,10 @@ except ImportError:
     from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 try:
-    from ..utils.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
+    from ..utils.constants import DEFAULT_BOND_LENGTH, SUM_TOLERANCE
 except ImportError:
     from moleditpy.utils.constants import (
         DEFAULT_BOND_LENGTH,
-        SNAP_DISTANCE,
         SUM_TOLERANCE,
     )
 
@@ -724,7 +723,9 @@ class KeyboardMixin:
 
     temp_line: Optional[QGraphicsLineItem]
 
-    def _calculate_new_atom_position(self, start_atom: Any, bond_length: Any) -> Any:
+    def _calculate_new_atom_position(
+        self, start_atom: Any, bond_length: Any, target_order: int = 1
+    ) -> Any:
         """
         Calculate the position for a new atom based on the surroundings of start_atom.
         Returns the offset QPointF.
@@ -752,8 +753,12 @@ class KeyboardMixin:
             other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
             existing_bond_vector = start_pos - other_atom.pos()
 
-            # Rotate 60° clockwise from existing bond
-            angle_rad = math.radians(60)
+            # Rotate 60° clockwise/anticlockwise from existing bond (or 0°/180° straight continuation for alkyne)
+            is_clockwise = getattr(self, "placement_direction_clockwise", True)
+            angle_deg = 60 if is_clockwise else -60
+            if target_order == 3 or getattr(bond, "order", 1) == 3:
+                angle_deg = 0
+            angle_rad = math.radians(angle_deg)
             cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
             vx, vy = existing_bond_vector.x(), existing_bond_vector.y()
             new_vx, new_vy = vx * cos_a - vy * sin_a, vx * sin_a + vy * cos_a
@@ -820,9 +825,9 @@ class KeyboardMixin:
         if key == Qt.Key.Key_4:
             snap_dist = self.get_setting("template_snapping_distance_2d", 14.0)
             item_at_cursor = self.find_atom_near(cursor_pos, tol=snap_dist)
-        elif self.get_setting("template_fusing_enabled_2d", True):
-            fuse_dist = self.get_setting("template_fusing_distance_2d", 7.0)
-            item_at_cursor = self.find_atom_near(cursor_pos, tol=fuse_dist)
+        else:
+            snap_dist = self.get_setting("bond_snapping_distance_2d", 14.0)
+            item_at_cursor = self.find_atom_near(cursor_pos, tol=snap_dist)
         if item_at_cursor is None:
             item_at_cursor = self.itemAt(cursor_pos, transform)
 
@@ -1160,7 +1165,7 @@ class KeyboardMixin:
                     start_pos = start_atom.pos()
                     bond_len = DEFAULT_BOND_LENGTH
                     new_pos_offset = self._calculate_new_atom_position(
-                        start_atom, bond_len
+                        start_atom, bond_len, target_order
                     )
 
                     # SNAP_DISTANCE is a module-level constant
@@ -1168,11 +1173,8 @@ class KeyboardMixin:
 
                     # Find nearby atom
                     near_atom = None
-                    if self.get_setting("template_fusing_enabled_2d", True):
-                        fuse_dist = self.get_setting(
-                            "template_fusing_distance_2d", SNAP_DISTANCE
-                        )
-                        near_atom = self.find_atom_near(target_pos, tol=fuse_dist)
+                    snap_dist = self.get_setting("bond_snapping_distance_2d", 14.0)
+                    near_atom = self.find_atom_near(target_pos, tol=snap_dist)
 
                     if near_atom and near_atom is not start_atom:
                         # Bond if exists
@@ -1193,6 +1195,13 @@ class KeyboardMixin:
                             bond_stereo=0,
                         )
 
+                    if target_order != 3:
+                        if hasattr(self, "placement_direction_clockwise"):
+                            self.placement_direction_clockwise = (
+                                not self.placement_direction_clockwise
+                            )
+                        else:
+                            self.placement_direction_clockwise = False
                     self.clearSelection()
                     self.update_all_items()
                     self.window.edit_actions_manager.push_undo_state()

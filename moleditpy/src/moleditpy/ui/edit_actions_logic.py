@@ -1443,9 +1443,9 @@ class EditActionsManager:
                         pos_i = positions_i[k]
                         vdw_i = vdw_i_all[k]
 
-                        for l, _ in enumerate(frag_j["indices"]):
-                            pos_j = positions_j[l]
-                            vdw_j = vdw_j_all[l]
+                        for idx, _ in enumerate(frag_j["indices"]):
+                            pos_j = positions_j[idx]
+                            vdw_j = vdw_j_all[idx]
 
                             distance_vec = pos_i - pos_j
                             distance_sq = np.dot(

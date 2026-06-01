@@ -17,7 +17,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
-    QLabel,
     QSlider,
     QWidget,
     QSpinBox,

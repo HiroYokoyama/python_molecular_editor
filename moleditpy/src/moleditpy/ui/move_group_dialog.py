@@ -288,10 +288,10 @@ class MoveGroupDialog(BasePickingDialog):
                                 RuntimeError,
                                 ValueError,
                                 TypeError,
-                            ):
-                                pass
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass
+                            ) as e:
+                                logging.debug(f"Failed to set closed hand cursor: {e}")
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error initiating drag on move: {e}")
 
                     if not self.is_dragging_group:
                         return False
@@ -305,10 +305,10 @@ class MoveGroupDialog(BasePickingDialog):
                         current_pos = interactor.GetEventPosition()
                         dx = current_pos[0] - self.drag_start_pos[0]
                         dy = current_pos[1] - self.drag_start_pos[1]
-                        if abs(dx) > 2 or abs(dy) > 2:
+                        if abs(dx) > 5 or abs(dy) > 5:
                             self.mouse_moved_during_drag = True
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error tracking drag movement: {e}")
                     return True
 
                 # Hover handling
@@ -329,8 +329,8 @@ class MoveGroupDialog(BasePickingDialog):
                             plotter_ref.setCursor(Qt.CursorShape.OpenHandCursor)
                         else:
                             plotter_ref.setCursor(Qt.CursorShape.ArrowCursor)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error updating hover cursor: {e}")
 
                 return False
 
@@ -373,16 +373,18 @@ class MoveGroupDialog(BasePickingDialog):
                                     RuntimeError,
                                     ValueError,
                                     TypeError,
-                                ):
-                                    pass
+                                ) as e:
+                                    logging.debug(
+                                        f"Failed to reset cursor to arrow: {e}"
+                                    )
                                 return True
                             else:
                                 logging.error(
                                     "REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self"
                                 )
 
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error in mouse release handling: {e}")
                     finally:
                         self.is_dragging_group = False
                         self.drag_start_pos = None
@@ -392,8 +394,15 @@ class MoveGroupDialog(BasePickingDialog):
                             plotter_ptr = self.main_window.view_3d_manager.plotter
                             if plotter_ptr is not None:
                                 plotter_ptr.setCursor(Qt.CursorShape.ArrowCursor)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            pass
+                        except (
+                            AttributeError,
+                            RuntimeError,
+                            ValueError,
+                            TypeError,
+                        ) as e:
+                            logging.debug(
+                                f"Failed to reset cursor in release finally: {e}"
+                            )
 
                     return True
 
@@ -428,10 +437,11 @@ class MoveGroupDialog(BasePickingDialog):
         # Toggle group
         if visited.issubset(self.group_atoms):
             self.group_atoms -= visited
+            if atom_idx in self.selected_atoms:
+                self.selected_atoms.remove(atom_idx)
         else:
             self.group_atoms |= visited
-
-        self.selected_atoms.add(atom_idx)
+            self.selected_atoms.add(atom_idx)
         self.show_atom_labels()
         self.update_display()
 

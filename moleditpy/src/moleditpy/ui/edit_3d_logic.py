@@ -12,15 +12,25 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-"""
-main_window_edit_3d.py
-Mixin class separated from main_window.py
-"""
+# main_window_edit_3d.py
+# Mixin class separated from main_window.py
 
 import logging
 from typing import Any, List, Optional
 
 import numpy as np
+import pyvista as pv
+from PyQt6.QtCore import QPointF
+from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtWidgets import QGraphicsTextItem
+
+try:
+    from PyQt6 import sip as _sip  # type: ignore
+
+    _sip_isdeleted = getattr(_sip, "isdeleted", None)
+except ImportError:
+    _sip = None  # type: ignore[assignment]
+    _sip_isdeleted = None
 
 try:
     from .mol_geometry import (
@@ -40,20 +50,6 @@ try:
     from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 except ImportError:
     from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
-
-# PyQt6 Modules
-import pyvista as pv
-from PyQt6.QtCore import QPointF
-from PyQt6.QtGui import QColor, QFont
-from PyQt6.QtWidgets import QGraphicsTextItem
-
-try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
@@ -169,8 +165,8 @@ class Edit3DManager:
             return
 
         # Prepare label positions and text
-        atom_indices = [l[0] for l in self.measurement_labels]
-        labels = [l[1] for l in self.measurement_labels]
+        atom_indices = [item[0] for item in self.measurement_labels]
+        labels = [item[1] for item in self.measurement_labels]
         positions = []
         texts = []
         positions_3d = self.host.view_3d_manager.atom_positions_3d

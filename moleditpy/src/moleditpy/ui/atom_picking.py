@@ -13,6 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 from typing import Any, Optional
+import logging
 
 import numpy as np
 
@@ -101,7 +102,7 @@ def _projected_radius_px(
     return radius_px
 
 
-def pick_atom_index_from_screen(
+def pick_atom_index_from_screen_sequential(
     view_3d_manager: Any,
     click_pos: tuple[int, int],
     mol: Optional[Any] = None,
@@ -161,3 +162,149 @@ def pick_atom_index_from_screen(
             best_score = score
 
     return best_idx
+
+
+def pick_atom_index_from_screen_vectorized(
+    view_3d_manager: Any,
+    click_pos: tuple[int, int],
+    mol: Optional[Any] = None,
+    padding_px: float = 8.0,
+    min_radius_px: float = 14.0,
+    max_radius_px: float = 96.0,
+) -> Optional[int]:
+    """
+    Vectorized atom picking using the camera's projection matrix.
+    Eliminates the O(N) Python loop and VTK C++ boundary calls.
+    """
+    try:
+        plotter = view_3d_manager.plotter
+        renderer = plotter.renderer
+        positions = view_3d_manager.atom_positions_3d
+    except (AttributeError, RuntimeError, TypeError):
+        return None
+
+    if positions is None or len(positions) == 0:
+        return None
+
+    try:
+        positions_array = np.asarray(positions, dtype=float)  # Shape: (N, 3)
+    except (TypeError, ValueError):
+        return None
+
+    if positions_array.ndim != 2 or positions_array.shape[1] < 3:
+        return None
+
+    if mol is None:
+        mol = getattr(view_3d_manager, "current_mol", None)
+
+    try:
+        atom_count = int(mol.GetNumAtoms()) if mol is not None else len(positions_array)
+    except (AttributeError, RuntimeError, TypeError, ValueError):
+        atom_count = len(positions_array)
+
+    active_atoms = min(atom_count, len(positions_array))
+    if active_atoms == 0:
+        return None
+
+    positions_array = positions_array[:active_atoms]
+
+    # 1. Retrieve the View-Projection (Composite) Matrix from the active camera
+    try:
+        camera = renderer.GetActiveCamera()
+        aspect_ratio = renderer.GetTiledAspectRatio()
+        # Get the 4x4 composite projection matrix (vtkMatrix4x4)
+        vtk_matrix = camera.GetCompositeProjectionTransformMatrix(aspect_ratio, -1, 1)
+
+        # Convert vtkMatrix4x4 to a NumPy 4x4 array
+        matrix = np.zeros((4, 4))
+        for i in range(4):
+            for j in range(4):
+                matrix[i, j] = vtk_matrix.GetElement(i, j)
+    except Exception:
+        return None
+
+    # 2. Convert all N world coordinates to homogeneous coordinates (N, 4)
+    homogeneous_coords = np.hstack([positions_array, np.ones((active_atoms, 1))])
+
+    # 3. Apply Matrix Multiplication: (N, 4) x (4, 4).T -> Clip Space Coordinates
+    clip_coords = homogeneous_coords @ matrix.T
+
+    # 4. Perform Perspective Divide -> Normalized Device Coordinates (NDC)
+    w = clip_coords[:, 3:4]
+    w_copy = np.copy(w)
+    w_copy[np.abs(w_copy) < 1e-5] = 1.0
+    ndc_coords = clip_coords[:, :3] / w_copy
+
+    # 5. Transform NDC to Screen/Display Coordinates
+    try:
+        size = renderer.GetSize()  # (width, height)
+    except Exception:
+        return None
+
+    # VTK display space coordinates: X: [0, W], Y: [0, H]
+    display_coords = np.zeros((active_atoms, 2))
+    display_coords[:, 0] = (ndc_coords[:, 0] + 1.0) * 0.5 * size[0]
+    display_coords[:, 1] = (ndc_coords[:, 1] + 1.0) * 0.5 * size[1]
+
+    # 6. Vectorized Distance and Hit Radius Calculation
+    dx = display_coords[:, 0] - click_pos[0]
+    dy = display_coords[:, 1] - click_pos[1]
+    distances = np.hypot(dx, dy)
+
+    try:
+        if camera.GetParallelProjection():
+            pixel_scale = size[1] / (2.0 * camera.GetParallelScale())
+        else:
+            view_angle_rad = np.radians(camera.GetViewAngle())
+            pixel_scale = size[1] / (
+                2.0 * np.abs(w.flatten()) * np.tan(view_angle_rad / 2.0)
+            )
+    except Exception:
+        pixel_scale = 20.0  # Safe fallback scale
+
+    # Pre-calculate world radii for all atoms
+    world_radii = np.array(
+        [_atom_world_radius(view_3d_manager, mol, idx) for idx in range(active_atoms)]
+    )
+
+    projected_radii = world_radii * pixel_scale
+    hit_radii = np.maximum(
+        min_radius_px, np.minimum(max_radius_px, projected_radii + padding_px)
+    )
+
+    # 7. Mask out atoms that are further than their hit radius
+    valid_mask = distances <= hit_radii
+    if not np.any(valid_mask):
+        return None
+
+    # 8. Score calculation and find the best index
+    # Tie-breaking logic: (ratio) + (distances * 1e-8)
+    scores = (distances / hit_radii) + (distances * 1e-8)
+
+    scores[~valid_mask] = np.inf
+    best_idx = int(np.argmin(scores))
+
+    return best_idx if scores[best_idx] != np.inf else None
+
+
+def pick_atom_index_from_screen(
+    view_3d_manager: Any,
+    click_pos: tuple[int, int],
+    mol: Optional[Any] = None,
+    padding_px: float = 8.0,
+    min_radius_px: float = 14.0,
+    max_radius_px: float = 96.0,
+) -> Optional[int]:
+    """Return the atom nearest a screen click, trying vectorized first, falling back to sequential."""
+    try:
+        best_idx = pick_atom_index_from_screen_vectorized(
+            view_3d_manager, click_pos, mol, padding_px, min_radius_px, max_radius_px
+        )
+        if best_idx is not None:
+            return best_idx
+    except Exception as e:
+        logging.debug("Vectorized picking failed, falling back to sequential: %s", e)
+
+    return pick_atom_index_from_screen_sequential(
+        view_3d_manager, click_pos, mol, padding_px, min_radius_px, max_radius_px
+    )

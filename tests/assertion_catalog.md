@@ -434,6 +434,21 @@ _No description provided._
 
 - assert pick_atom_index_from_screen(_view(), (200, 200), _Mol()) is None
 
+### test_pick_atom_index_from_screen_vectorized_success
+_No description provided._
+
+- assert pick_atom_index_from_screen_vectorized(_view(), (111, 100), _Mol()) == 0
+
+### test_pick_atom_index_from_screen_sequential_success
+_No description provided._
+
+- assert pick_atom_index_from_screen_sequential(_view(), (111, 100), _Mol()) == 0
+
+### test_pick_atom_index_from_screen_fallback
+_No description provided._
+
+- assert pick_atom_index_from_screen(view_obj, (111, 100), _Mol()) == 0
+
 ## tests/unit/test_atom_placement_logic.py
 
 ### test_placement_0_neighbors
@@ -3675,6 +3690,14 @@ _Events on objects other than the plotter interactor use base behaviour._
 
 - assert result is False
 
+### TestMoveGroupDeselectToggle.test_on_atom_picked_deselects_connected_group
+_No description provided._
+
+- assert len(dlg.group_atoms) > 0
+- assert 0 in dlg.selected_atoms
+- assert len(dlg.group_atoms) == 0
+- assert 0 not in dlg.selected_atoms
+
 ## tests/unit/test_move_selected_atoms_dialog.py
 
 ### TestOnAtomPicked.test_picks_atom_individually_no_bfs
@@ -3772,7 +3795,7 @@ _No description provided._
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is False
-- assert dlg.drag_state['potential_drag'] is False
+- assert dlg.potential_drag is False
 
 ### test_event_filter_mouse_press_with_selection
 _No description provided._
@@ -3784,7 +3807,7 @@ _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
 - mock_pick.assert_called_once_with(0)
-- assert dlg.drag_state['consume_next_left_release'] is True
+- assert dlg._consume_next_left_release is True
 
 ### test_event_filter_mouse_press_empty_space
 _No description provided._
@@ -3801,35 +3824,35 @@ _No description provided._
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
-- assert dlg.drag_state['consume_next_left_release'] is False
+- assert dlg._consume_next_left_release is False
 
 ### test_mouse_move_potential_drag_to_actual_drag
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
-- assert dlg.drag_state['is_dragging_group'] is True
-- assert dlg.drag_state['potential_drag'] is False
+- assert dlg.is_dragging_group is True
+- assert dlg.potential_drag is False
 - plotter.setCursor.assert_called_with(Qt.CursorShape.ClosedHandCursor)
 
 ### test_mouse_move_during_actual_drag
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
-- assert dlg.drag_state['mouse_moved_during_drag'] is True
+- assert dlg.mouse_moved_during_drag is True
 
 ### test_mouse_release_no_movement_toggles_atom
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
 - mock_pick.assert_called_once_with(0)
-- assert dlg.drag_state['potential_drag'] is False
+- assert dlg.potential_drag is False
 
 ### test_mouse_release_with_movement_resets_drag_state
 _No description provided._
 
 - assert dlg.eventFilter(plotter.interactor, event) is True
 - mock_pick.assert_not_called()
-- assert dlg.drag_state['is_dragging_group'] is False
+- assert dlg.is_dragging_group is False
 
 ### test_handle_mouse_press_exceptions
 _No description provided._
@@ -3846,6 +3869,23 @@ _No description provided._
 
 - assert '...' in text
 - assert 'Selected: 7 atoms' in text
+
+### TestClickToDeselect.test_eventfilter_delegates_to_vtk_when_atoms_selected
+_No description provided._
+
+- assert result is False
+
+### TestClickToDeselect.test_eventfilter_handles_press_when_no_atoms_selected
+_No description provided._
+
+- assert result is True
+- assert 0 in dlg.selected_atoms
+
+### TestClickToDeselect.test_eventfilter_release_click_only_deselects_atom
+_No description provided._
+
+- assert result is True
+- mock_on_pick.assert_called_once_with(0)
 
 ## tests/unit/test_parser_robustness.py
 
@@ -4965,6 +5005,18 @@ _Test that pressing 4 at a terminal atom aligns the benzene ring at 120 degrees.
 - assert len(data.atoms) == 7
 - assert found_expected_pos
 
+### test_click_selected_atom_deselects
+_Test that clicking (without dragging) on a selected atom deselects it._
+
+- assert scene.was_selected_on_press is True
+- assert a1_item.isSelected() is False
+
+### test_drag_selected_atom_keeps_selected
+_Test that dragging a selected atom moves it but keeps it selected._
+
+- assert a1_item.pos() == new_pos
+- assert a1_item.isSelected() is True
+
 ## tests/unit/test_scene_extended.py
 
 ### test_scene_keypress_modes
@@ -5160,6 +5212,7 @@ _No description provided._
 - assert tab.atom_font_size_2d_slider.value() == 24
 - assert tab.template_fusing_distance_2d_slider.value() == 18
 - assert tab.template_snapping_distance_2d_slider.value() == 20
+- assert tab.bond_snapping_distance_2d_slider.value() == 16
 
 ### test_update_ui_sets_cap_style
 _No description provided._
@@ -5184,6 +5237,7 @@ _No description provided._
 - assert result['template_fusing_enabled_2d'] == DEFAULT_SETTINGS['template_fusing_enabled_2d']
 - assert abs(result['template_fusing_distance_2d'] - DEFAULT_SETTINGS['template_fusing_distance_2d']) < 0.05
 - assert abs(result['template_snapping_distance_2d'] - DEFAULT_SETTINGS['template_snapping_distance_2d']) < 0.05
+- assert abs(result['bond_snapping_distance_2d'] - DEFAULT_SETTINGS['bond_snapping_distance_2d']) < 0.05
 
 ### test_get_settings_returns_all_keys
 _No description provided._
@@ -5215,6 +5269,7 @@ _No description provided._
 - assert tab.template_fusing_enabled_2d_checkbox.isChecked() == DEFAULT_SETTINGS['template_fusing_enabled_2d']
 - assert tab.template_fusing_distance_2d_slider.value() == int(DEFAULT_SETTINGS['template_fusing_distance_2d'])
 - assert tab.template_snapping_distance_2d_slider.value() == int(DEFAULT_SETTINGS['template_snapping_distance_2d'])
+- assert tab.bond_snapping_distance_2d_slider.value() == int(DEFAULT_SETTINGS['bond_snapping_distance_2d'])
 
 ### test_template_fusing_checkbox_disables_slider
 _No description provided._
@@ -6171,7 +6226,7 @@ _No description provided._
 - assert len(scene.find_atom_near_args) == 1
 - assert tol == 22.0
 
-### test_keyboard_other_keys_use_template_fusing_distance
+### test_keyboard_other_keys_use_bond_snapping_distance
 _No description provided._
 
 - assert len(scene.find_atom_near_args) == 1

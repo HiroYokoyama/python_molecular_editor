@@ -877,6 +877,3 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         # Default processing for other keys
         QDialog.keyPressEvent(self, event)
-
-
-from typing import Any
