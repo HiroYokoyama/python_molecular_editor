@@ -32,11 +32,10 @@ except ImportError:
     from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 try:
-    from ..utils.constants import DEFAULT_BOND_LENGTH, SNAP_DISTANCE, SUM_TOLERANCE
+    from ..utils.constants import DEFAULT_BOND_LENGTH, SUM_TOLERANCE
 except ImportError:
     from moleditpy.utils.constants import (
         DEFAULT_BOND_LENGTH,
-        SNAP_DISTANCE,
         SUM_TOLERANCE,
     )
 

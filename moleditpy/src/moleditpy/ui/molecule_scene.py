@@ -244,7 +244,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         if hasattr(item, "stereo") and item.stereo in [3, 4]:
                             item.set_stereo(0)
                             # Also update the data model
-                            for (id1, id2), bdata in self.data.bonds.items():
+                            for bdata in self.data.bonds.values():
                                 if bdata.get("item") is item:
                                     bdata["stereo"] = 0
                                     break

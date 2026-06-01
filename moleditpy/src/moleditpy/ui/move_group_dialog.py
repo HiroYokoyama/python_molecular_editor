@@ -9,7 +9,6 @@ License: GPL-3.0 license
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
-# pylint: disable=duplicate-code
 
 from typing import Optional, Any
 import logging
@@ -289,10 +288,10 @@ class MoveGroupDialog(BasePickingDialog):
                                 RuntimeError,
                                 ValueError,
                                 TypeError,
-                            ):
-                                pass
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass
+                            ) as e:
+                                logging.debug(f"Failed to set closed hand cursor: {e}")
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error initiating drag on move: {e}")
 
                     if not self.is_dragging_group:
                         return False
@@ -308,8 +307,8 @@ class MoveGroupDialog(BasePickingDialog):
                         dy = current_pos[1] - self.drag_start_pos[1]
                         if abs(dx) > 5 or abs(dy) > 5:
                             self.mouse_moved_during_drag = True
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error tracking drag movement: {e}")
                     return True
 
                 # Hover handling
@@ -330,8 +329,8 @@ class MoveGroupDialog(BasePickingDialog):
                             plotter_ref.setCursor(Qt.CursorShape.OpenHandCursor)
                         else:
                             plotter_ref.setCursor(Qt.CursorShape.ArrowCursor)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error updating hover cursor: {e}")
 
                 return False
 
@@ -374,16 +373,16 @@ class MoveGroupDialog(BasePickingDialog):
                                     RuntimeError,
                                     ValueError,
                                     TypeError,
-                                ):
-                                    pass
+                                ) as e:
+                                    logging.debug(f"Failed to reset cursor to arrow: {e}")
                                 return True
                             else:
                                 logging.error(
                                     "REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self"
                                 )
 
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        pass
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error in mouse release handling: {e}")
                     finally:
                         self.is_dragging_group = False
                         self.drag_start_pos = None
@@ -393,8 +392,8 @@ class MoveGroupDialog(BasePickingDialog):
                             plotter_ptr = self.main_window.view_3d_manager.plotter
                             if plotter_ptr is not None:
                                 plotter_ptr.setCursor(Qt.CursorShape.ArrowCursor)
-                        except (AttributeError, RuntimeError, ValueError, TypeError):
-                            pass
+                        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                            logging.debug(f"Failed to reset cursor in release finally: {e}")
 
                     return True
 

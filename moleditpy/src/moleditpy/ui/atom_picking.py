@@ -13,6 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 from typing import Any, Optional
+import logging
 
 import numpy as np
 
@@ -301,8 +302,8 @@ def pick_atom_index_from_screen(
         )
         if best_idx is not None:
             return best_idx
-    except Exception:
-        pass
+    except Exception as e:
+        logging.debug("Vectorized picking failed, falling back to sequential: %s", e)
 
     return pick_atom_index_from_screen_sequential(
         view_3d_manager, click_pos, mol, padding_px, min_radius_px, max_radius_px

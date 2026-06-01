@@ -499,7 +499,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     try:
                         move_group_dialog.on_atom_picked(clicked_atom)
                     except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                        print(f"Error in toggle: {e}")
+                        logging.error(f"Error in toggle: {e}")
                 # Reset if multi-clicked without drag
                 move_group_dialog._is_dragging_group_vtk = False
                 move_group_dialog._drag_start_pos = None
