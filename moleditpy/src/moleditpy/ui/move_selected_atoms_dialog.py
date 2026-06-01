@@ -319,7 +319,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                     dy = current_pos[1] - self.drag_start_pos[1]
 
                     # Start drag if threshold is exceeded
-                    drag_threshold = 10  # pixels
+                    drag_threshold = 5  # pixels
                     if abs(dx) > drag_threshold or abs(dy) > drag_threshold:
                         self.is_dragging_group = True
                         self.potential_drag = False

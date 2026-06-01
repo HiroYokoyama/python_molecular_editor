@@ -200,8 +200,9 @@ class TestDetectSystemDarkMode:
 
         with patch.dict(sys.modules, {"winreg": None}):
             import moleditpy.utils.system_utils as su
+
             importlib.reload(su)
             assert su.winreg is None
-        
+
         # Restore standard state
         importlib.reload(su)

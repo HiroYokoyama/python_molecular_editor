@@ -273,7 +273,7 @@ class MoveGroupDialog(BasePickingDialog):
                         dy = current_pos[1] - self.drag_start_pos[1]
 
                         # Start drag if threshold is exceeded
-                        drag_threshold = 10  # pixels
+                        drag_threshold = 5  # pixels
                         if abs(dx) > drag_threshold or abs(dy) > drag_threshold:
                             self.is_dragging_group = True
                             self.potential_drag = False
@@ -374,7 +374,9 @@ class MoveGroupDialog(BasePickingDialog):
                                     ValueError,
                                     TypeError,
                                 ) as e:
-                                    logging.debug(f"Failed to reset cursor to arrow: {e}")
+                                    logging.debug(
+                                        f"Failed to reset cursor to arrow: {e}"
+                                    )
                                 return True
                             else:
                                 logging.error(
@@ -392,8 +394,15 @@ class MoveGroupDialog(BasePickingDialog):
                             plotter_ptr = self.main_window.view_3d_manager.plotter
                             if plotter_ptr is not None:
                                 plotter_ptr.setCursor(Qt.CursorShape.ArrowCursor)
-                        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                            logging.debug(f"Failed to reset cursor in release finally: {e}")
+                        except (
+                            AttributeError,
+                            RuntimeError,
+                            ValueError,
+                            TypeError,
+                        ) as e:
+                            logging.debug(
+                                f"Failed to reset cursor in release finally: {e}"
+                            )
 
                     return True
 

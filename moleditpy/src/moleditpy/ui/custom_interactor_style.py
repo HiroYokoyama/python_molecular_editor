@@ -405,7 +405,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             dx = current_pos[0] - move_group_dialog._drag_start_pos[0]
             dy = current_pos[1] - move_group_dialog._drag_start_pos[1]
 
-            if abs(dx) > 10 or abs(dy) > 10:
+            if abs(dx) > 5 or abs(dy) > 5:
                 move_group_dialog._mouse_moved = True
 
             return  # Disable camera rotation
@@ -423,7 +423,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             dx = current_pos[0] - move_group_dialog._rotation_start_pos[0]
             dy = current_pos[1] - move_group_dialog._rotation_start_pos[1]
 
-            if abs(dx) > 10 or abs(dy) > 10:
+            if abs(dx) > 5 or abs(dy) > 5:
                 move_group_dialog._rotation_mouse_moved = True
 
             return  # Disable camera rotation
