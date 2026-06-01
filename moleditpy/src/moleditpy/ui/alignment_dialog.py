@@ -35,6 +35,21 @@ if TYPE_CHECKING:
     from .main_window import MainWindow
 
 
+class SelectionList(list):
+    def __eq__(self, other):
+        if isinstance(other, (set, list, tuple)):
+            return set(self) == set(other)
+        return super().__eq__(other)
+
+    def add(self, item):
+        if item not in self:
+            self.append(item)
+
+    def update(self, items):
+        for item in items:
+            self.add(item)
+
+
 class AlignmentDialog(Dialog3DPickingMixin, QDialog):
     def __init__(
         self,
@@ -49,19 +64,27 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         self.mol = mol
         self.main_window = main_window
         self.axis = axis
-        self.selected_atoms: set[int] = set()
+        self._selected_atoms = SelectionList()
 
         # Add preselected atoms (maximum 2)
         if preselected_atoms:
-            self.selected_atoms.update(preselected_atoms[:2])
+            self._selected_atoms.update(preselected_atoms[:2])
 
         self.init_ui()
 
         # Add labels to preselected atoms
-        if self.selected_atoms:
-            for i, atom_idx in enumerate(sorted(self.selected_atoms), 1):
+        if self._selected_atoms:
+            for i, atom_idx in enumerate(self._selected_atoms, 1):
                 self.add_selection_label(atom_idx, f"Atom {i}")
             self.update_display()
+
+    @property
+    def selected_atoms(self) -> SelectionList:
+        return self._selected_atoms
+
+    @selected_atoms.setter
+    def selected_atoms(self, val) -> None:
+        self._selected_atoms = SelectionList(val)
 
     def init_ui(self) -> None:
         axis_names = {"x": "X-axis", "y": "Y-axis", "z": "Z-axis"}
@@ -121,7 +144,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         else:
             # Maximum of 2 atoms can be selected
             if len(self.selected_atoms) < 2:
-                self.selected_atoms.add(atom_idx)
+                self.selected_atoms.append(atom_idx)
                 # Show label indicating selection order
                 label_text = f"Atom {len(self.selected_atoms)}"
                 self.add_selection_label(atom_idx, label_text)
@@ -136,14 +159,12 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             )
             self.apply_button.setEnabled(False)
         elif len(self.selected_atoms) == 1:
-            selected_list = list(self.selected_atoms)
-            atom = self.mol.GetAtomWithIdx(selected_list[0])
+            atom = self.mol.GetAtomWithIdx(self.selected_atoms[0])
             self.selection_label.setText(f"Selected 1 atom: {atom.GetSymbol()}")
             self.apply_button.setEnabled(False)
         elif len(self.selected_atoms) == 2:
-            selected_list = sorted(list(self.selected_atoms))
-            atom1 = self.mol.GetAtomWithIdx(selected_list[0])
-            atom2 = self.mol.GetAtomWithIdx(selected_list[1])
+            atom1 = self.mol.GetAtomWithIdx(self.selected_atoms[0])
+            atom2 = self.mol.GetAtomWithIdx(self.selected_atoms[1])
             self.selection_label.setText(
                 f"Selected 2 atoms: {atom1.GetSymbol()}, {atom2.GetSymbol()}"
             )
@@ -159,9 +180,8 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         """Remove a label for a specific atom."""
         # Re-draw all labels for simplicity
         self.clear_selection_labels()
-        for i, idx in enumerate(sorted(self.selected_atoms), 1):
-            if idx != atom_idx:
-                self.add_selection_label(idx, f"Atom {i}")
+        for i, idx in enumerate(self.selected_atoms, 1):
+            self.add_selection_label(idx, f"Atom {i}")
 
     def apply_alignment(self) -> None:
         """Apply the specific axial alignment to the molecule."""
@@ -171,8 +191,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             )
             return
         try:
-            selected_list = sorted(list(self.selected_atoms))
-            atom1_idx, atom2_idx = selected_list[0], selected_list[1]
+            atom1_idx, atom2_idx = self.selected_atoms[0], self.selected_atoms[1]
 
             conf = self.mol.GetConformer()
 
