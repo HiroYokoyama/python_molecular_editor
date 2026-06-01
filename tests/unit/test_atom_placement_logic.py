@@ -14,9 +14,10 @@ def MockAtom(pos=QPointF(0, 0), symbol="C"):
 
 
 class MockBond:
-    def __init__(self, a1, a2):
+    def __init__(self, a1, a2, order=1):
         self.atom1 = a1
         self.atom2 = a2
+        self.order = order
 
 
 class MockScene(KeyboardMixin):
@@ -113,3 +114,44 @@ def test_placement_2_neighbors_skeleton(scene):
     # Sum: (0, 1.0). Opposite: (0, -1.0). Scaled: (0, -L)
     assert offset.x() == pytest.approx(0)
     assert offset.y() == pytest.approx(-L)
+
+
+def test_placement_1_neighbor_anticlockwise(scene):
+    """One bond with placement_direction_clockwise=False: rotate -60 degrees (anticlockwise)."""
+    scene.placement_direction_clockwise = False
+    start_atom = MockAtom(QPointF(100, 100))
+    other_atom = MockAtom(QPointF(80, 100))  # Neighbor at Left
+    bond = MockBond(start_atom, other_atom)
+    start_atom.bonds = [bond]
+
+    offset = scene._calculate_new_atom_position(start_atom, L)
+    # Existing vector: (20, 0)
+    # -60 deg rotation: (20*cos(-60) - 0, 20*sin(-60) + 0) = (10, -17.32)
+    assert offset.x() == pytest.approx(10.0)
+    assert offset.y() == pytest.approx(-17.32, abs=0.01)
+
+
+def test_placement_alkyne_straight_continuation_target_order_3(scene):
+    """If target_order is 3 (triple bond), the angle should be 0 (straight continuation)."""
+    start_atom = MockAtom(QPointF(100, 100))
+    other_atom = MockAtom(QPointF(80, 100))  # Neighbor at Left
+    bond = MockBond(start_atom, other_atom)
+    start_atom.bonds = [bond]
+
+    offset = scene._calculate_new_atom_position(start_atom, L, target_order=3)
+    # Straight continuation of (20, 0) is (20, 0)
+    assert offset.x() == pytest.approx(L)
+    assert offset.y() == pytest.approx(0.0, abs=0.01)
+
+
+def test_placement_alkyne_straight_continuation_existing_bond_order_3(scene):
+    """If the existing bond order is 3, the angle should be 0 (straight continuation)."""
+    start_atom = MockAtom(QPointF(100, 100))
+    other_atom = MockAtom(QPointF(80, 100))  # Neighbor at Left
+    bond = MockBond(start_atom, other_atom, order=3)
+    start_atom.bonds = [bond]
+
+    offset = scene._calculate_new_atom_position(start_atom, L, target_order=1)
+    # Straight continuation of (20, 0) is (20, 0)
+    assert offset.x() == pytest.approx(L)
+    assert offset.y() == pytest.approx(0.0, abs=0.01)
