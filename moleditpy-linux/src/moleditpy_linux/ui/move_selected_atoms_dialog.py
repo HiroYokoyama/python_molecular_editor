@@ -471,13 +471,18 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
 
     def show_atom_labels(self) -> None:
         """Highlight selected atoms."""
+        plotter = self.main_window.view_3d_manager.plotter
+        try:
+            cam = plotter.camera_position if plotter else None
+        except (AttributeError, RuntimeError, TypeError):
+            cam = None
+
         self.clear_atom_labels()
 
         if not self.selected_atoms:
             return
 
         selected_indices = list(self.selected_atoms)
-        plotter = self.main_window.view_3d_manager.plotter
         if self.main_window.view_3d_manager.atom_positions_3d is None:
             logging.error("atom_positions_3d is None in update_atom_labels")
             return
@@ -507,7 +512,14 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
             opacity=0.3,
             name="move_selected_atoms_highlight",
             pickable=False,
+            reset_camera=False,
         )
+
+        if cam is not None:
+            try:
+                plotter.camera_position = cam
+            except (AttributeError, RuntimeError, TypeError):
+                pass
 
         plotter.render()
 
