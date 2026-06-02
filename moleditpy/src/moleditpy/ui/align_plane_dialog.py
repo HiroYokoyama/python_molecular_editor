@@ -11,8 +11,9 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-import numpy as np
 from typing import TYPE_CHECKING, Literal, Optional, Sequence
+
+import numpy as np
 
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -35,17 +36,22 @@ if TYPE_CHECKING:
 
 
 class SelectionList(list):
-    def __eq__(self, other):
+    """Order-preserving list that compares equal to sets/lists/tuples of same elements."""
+
+    def __eq__(self, other: object) -> bool:
+        """Compare by membership, ignoring order."""
         if isinstance(other, (set, list, tuple)):
             return set(self) == set(other)
         return super().__eq__(other)
 
-    def add(self, item):
+    def add(self, item: int) -> None:
+        """Append item only if not already present."""
         if item not in self:
             self.append(item)
 
-    def update(self, items):
-        for item in items:
+    def update(self, items: object) -> None:
+        """Append each item that is not already present."""
+        for item in items:  # type: ignore[union-attr]
             self.add(item)
 
 
