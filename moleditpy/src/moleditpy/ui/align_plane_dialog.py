@@ -36,6 +36,8 @@ if TYPE_CHECKING:
 
 
 class AlignPlaneDialog(BasePickingDialog):
+    """Dialog for aligning selected atoms to a principal plane (XY, XZ, or YZ)."""
+
     def __init__(
         self,
         mol: Chem.Mol,
@@ -70,6 +72,7 @@ class AlignPlaneDialog(BasePickingDialog):
         self._selected_atoms = SelectionList(val)  # type: ignore[arg-type]
 
     def init_ui(self) -> None:
+        """Build and lay out all widgets for the plane-alignment dialog."""
         plane_names = {"xy": "XY", "xz": "XZ", "yz": "YZ"}
         self.setWindowTitle(f"Align to {plane_names[self.plane]} Plane")
         self.setModal(False)

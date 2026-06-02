@@ -103,6 +103,7 @@ class DialogManager:
         dialog.exec()
 
     def open_periodic_table_dialog(self) -> None:
+        """Open the periodic table dialog and wire up element-selection callback."""
         dialog = PeriodicTableDialog(self.host)
         dialog.element_selected.connect(
             self.host.ui_manager.set_atom_from_periodic_table
@@ -115,6 +116,7 @@ class DialogManager:
         dialog.exec()
 
     def open_analysis_window(self) -> None:
+        """Open the analysis window for the current 3D molecule, if available."""
         if self.host.view_3d_manager.current_mol:
             dialog = AnalysisWindow(
                 self.host.view_3d_manager.current_mol,

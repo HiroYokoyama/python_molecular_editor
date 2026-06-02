@@ -43,6 +43,8 @@ if TYPE_CHECKING:
 
 
 class AlignmentDialog(Dialog3DPickingMixin, QDialog):
+    """Dialog for aligning two selected atoms along a principal axis (X, Y, or Z)."""
+
     def __init__(
         self,
         mol: Chem.Mol,
@@ -81,6 +83,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         self._selected_atoms = SelectionList(val)  # type: ignore[arg-type]
 
     def init_ui(self) -> None:
+        """Build and lay out all widgets for the alignment dialog."""
         axis_names = {"x": "X-axis", "y": "Y-axis", "z": "Z-axis"}
         self.setWindowTitle(f"Align to {axis_names[self.axis]}")
         self.setModal(False)
