@@ -276,6 +276,11 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             # Update 3D visualization
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
+            # Restore selection labels
+            self.clear_selection_labels()
+            for i, idx in enumerate(self.selected_atoms, 1):
+                self.add_selection_label(idx, f"Atom {i}")
+
             # Update chirality labels
             self.main_window.view_3d_manager.update_chiral_labels()
 

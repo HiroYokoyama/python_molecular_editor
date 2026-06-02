@@ -205,8 +205,6 @@ class AlignPlaneDialog(BasePickingDialog):
             positions = self.mol.GetConformer().GetPositions()
             selected_positions = positions[selected_indices]
 
-            atom1_idx = self.selected_atoms[0]
-
             # Calculate centroid
             centroid = np.mean(selected_positions, axis=0)
 
@@ -287,6 +285,7 @@ class AlignPlaneDialog(BasePickingDialog):
                 positions[i] = new_positions[i]
 
             self._update_molecule_geometry(positions)
+            self.show_atom_labels()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Failed to apply align: {str(e)}")
