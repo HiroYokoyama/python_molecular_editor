@@ -87,11 +87,13 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
 
     @property
     def selected_atoms(self) -> SelectionList:
+        """Return the ordered list of selected atom indices."""
         return self._selected_atoms
 
     @selected_atoms.setter
-    def selected_atoms(self, val) -> None:
-        self._selected_atoms = SelectionList(val)
+    def selected_atoms(self, val: object) -> None:
+        """Replace the selection with a new SelectionList built from val."""
+        self._selected_atoms = SelectionList(val)  # type: ignore[arg-type]
 
     def init_ui(self) -> None:
         axis_names = {"x": "X-axis", "y": "Y-axis", "z": "Z-axis"}
