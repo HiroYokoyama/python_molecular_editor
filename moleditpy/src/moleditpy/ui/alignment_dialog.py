@@ -10,11 +10,14 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import numpy as np
+import logging
 from typing import TYPE_CHECKING, Literal, Optional, Sequence
+
+import numpy as np
 
 from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -30,11 +33,18 @@ try:
 except ImportError:
     from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
 
+try:
+    from .base_picking_dialog import SelectionList
+except ImportError:
+    from moleditpy.ui.base_picking_dialog import SelectionList
+
 if TYPE_CHECKING:
     from .main_window import MainWindow
 
 
 class AlignmentDialog(Dialog3DPickingMixin, QDialog):
+    """Dialog for aligning two selected atoms along a principal axis (X, Y, or Z)."""
+
     def __init__(
         self,
         mol: Chem.Mol,
@@ -48,21 +58,32 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         self.mol = mol
         self.main_window = main_window
         self.axis = axis
-        self.selected_atoms: set[int] = set()
+        self._selected_atoms = SelectionList()
 
         # Add preselected atoms (maximum 2)
         if preselected_atoms:
-            self.selected_atoms.update(preselected_atoms[:2])
+            self._selected_atoms.update(preselected_atoms[:2])
 
         self.init_ui()
 
         # Add labels to preselected atoms
-        if self.selected_atoms:
-            for i, atom_idx in enumerate(sorted(self.selected_atoms), 1):
-                self.add_selection_label(atom_idx, f"Atom {i}")
+        if self._selected_atoms:
+            for i, atom_idx in enumerate(self._selected_atoms, 1):
+                self.add_selection_label(atom_idx, f"#{i}", color="yellow")
             self.update_display()
 
+    @property
+    def selected_atoms(self) -> SelectionList:
+        """Return the ordered list of selected atom indices."""
+        return self._selected_atoms
+
+    @selected_atoms.setter
+    def selected_atoms(self, val: object) -> None:
+        """Replace the selection with a new SelectionList built from val."""
+        self._selected_atoms = SelectionList(val)  # type: ignore[arg-type]
+
     def init_ui(self) -> None:
+        """Build and lay out all widgets for the alignment dialog."""
         axis_names = {"x": "X-axis", "y": "Y-axis", "z": "Z-axis"}
         self.setWindowTitle(f"Align to {axis_names[self.axis]}")
         self.setModal(False)
@@ -70,10 +91,16 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
 
         # Instructions
         instruction_label = QLabel(
-            f"Click atoms in the 3D view to select them for alignment to the {axis_names[self.axis]}. Exactly 2 atoms are required. The first atom will be moved to the origin, and the second atom will be positioned on the {axis_names[self.axis]}."
+            f"Click atoms in the 3D view to select them for alignment to the "
+            f"{axis_names[self.axis]}. Exactly 2 atoms are required."
         )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
+
+        # Move to origin option (default False)
+        self.move_to_origin_checkbox = QCheckBox("Move the first atom to the origin")
+        self.move_to_origin_checkbox.setChecked(False)
+        layout.addWidget(self.move_to_origin_checkbox)
 
         # Selected atoms display
         self.selection_label = QLabel("No atoms selected")
@@ -114,10 +141,10 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         else:
             # Maximum of 2 atoms can be selected
             if len(self.selected_atoms) < 2:
-                self.selected_atoms.add(atom_idx)
+                self.selected_atoms.append(atom_idx)
                 # Show label indicating selection order
-                label_text = f"Atom {len(self.selected_atoms)}"
-                self.add_selection_label(atom_idx, label_text)
+                label_text = f"#{len(self.selected_atoms)}"
+                self.add_selection_label(atom_idx, label_text, color="yellow")
 
         self.update_display()
 
@@ -129,14 +156,12 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             )
             self.apply_button.setEnabled(False)
         elif len(self.selected_atoms) == 1:
-            selected_list = list(self.selected_atoms)
-            atom = self.mol.GetAtomWithIdx(selected_list[0])
+            atom = self.mol.GetAtomWithIdx(self.selected_atoms[0])
             self.selection_label.setText(f"Selected 1 atom: {atom.GetSymbol()}")
             self.apply_button.setEnabled(False)
         elif len(self.selected_atoms) == 2:
-            selected_list = sorted(list(self.selected_atoms))
-            atom1 = self.mol.GetAtomWithIdx(selected_list[0])
-            atom2 = self.mol.GetAtomWithIdx(selected_list[1])
+            atom1 = self.mol.GetAtomWithIdx(self.selected_atoms[0])
+            atom2 = self.mol.GetAtomWithIdx(self.selected_atoms[1])
             self.selection_label.setText(
                 f"Selected 2 atoms: {atom1.GetSymbol()}, {atom2.GetSymbol()}"
             )
@@ -148,13 +173,11 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         self.selected_atoms.clear()
         self.update_display()
 
-    def remove_atom_label(self, atom_idx: int) -> None:
-        """Remove a label for a specific atom."""
-        # Re-draw all labels for simplicity
+    def remove_atom_label(self, _atom_idx: int) -> None:
+        """Remove a label for a specific atom (redraws all labels)."""
         self.clear_selection_labels()
-        for i, idx in enumerate(sorted(self.selected_atoms), 1):
-            if idx != atom_idx:
-                self.add_selection_label(idx, f"Atom {i}")
+        for i, idx in enumerate(self.selected_atoms, 1):
+            self.add_selection_label(idx, f"#{i}", color="yellow")
 
     def apply_alignment(self) -> None:
         """Apply the specific axial alignment to the molecule."""
@@ -164,8 +187,8 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             )
             return
         try:
-            selected_list = sorted(list(self.selected_atoms))
-            atom1_idx, atom2_idx = selected_list[0], selected_list[1]
+            atom1_idx = self.selected_atoms[0]
+            atom2_idx = self.selected_atoms[1]
 
             conf = self.mol.GetConformer()
 
@@ -235,6 +258,14 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
                             ),
                         )
 
+            # If move_to_origin is False, translate back so atom1 is
+            # at its original position
+            if not self.move_to_origin_checkbox.isChecked():
+                for i in range(self.mol.GetNumAtoms()):
+                    current_pos = np.array(conf.GetAtomPosition(i))
+                    restored_pos = current_pos - translation
+                    conf.SetAtomPosition(i, restored_pos.tolist())
+
             # Update 3D positions
             self.main_window.view_3d_manager.atom_positions_3d = np.array(
                 [list(conf.GetAtomPosition(i)) for i in range(self.mol.GetNumAtoms())]
@@ -243,6 +274,11 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             # Update 3D visualization
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
 
+            # Restore selection labels
+            self.clear_selection_labels()
+            for i, idx in enumerate(self.selected_atoms, 1):
+                self.add_selection_label(idx, f"#{i}", color="yellow")
+
             # Update chirality labels
             self.main_window.view_3d_manager.update_chiral_labels()
 
@@ -250,10 +286,13 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             self.main_window.edit_actions_manager.push_undo_state()
 
             QMessageBox.information(
-                self, "Success", f"Alignment to {self.axis.upper()}-axis completed."
+                self,
+                "Success",
+                f"Alignment to {self.axis.upper()}-axis completed.",
             )
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.exception("Failed to apply alignment")
             QMessageBox.critical(self, "Error", f"Failed to apply alignment: {str(e)}")
 
     def closeEvent(self, event: Optional[QCloseEvent]) -> None:

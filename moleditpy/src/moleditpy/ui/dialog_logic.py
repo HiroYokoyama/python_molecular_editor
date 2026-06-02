@@ -16,6 +16,7 @@ import logging
 
 import json
 import os
+import sys
 from typing import Any, List, Literal, Optional, cast
 
 from PyQt6.QtWidgets import QInputDialog, QMessageBox, QDialog
@@ -23,7 +24,7 @@ from PyQt6.QtCore import Qt
 
 
 try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
+    # package relative imports (preferred when running as python -m moleditpy)
     from .about_dialog import AboutDialog
     from .align_plane_dialog import AlignPlaneDialog
     from .alignment_dialog import AlignmentDialog
@@ -71,13 +72,19 @@ except ImportError:
 
 
 class DialogManager:
-    """Independent manager for UI dialogs, ported from MainWindowDialogManager mixin."""
+    """Independent manager for UI dialogs.
+
+    Ported from MainWindowDialogManager mixin.
+    """
 
     def __init__(self, host: Any) -> None:
         self.host = host
 
     def _get_preselected_atoms_3d(self) -> List[int]:
-        """Helper to collect preselected atoms from measurement mode (3D Select)."""
+        """Helper to collect preselected atoms from measurement mode.
+
+        Specifically for 3D Select.
+        """
         preselected_atoms = []
         if hasattr(self.host, "edit_3d_manager"):
             if self.host.edit_3d_manager.selected_atoms_for_measurement:
@@ -96,6 +103,7 @@ class DialogManager:
         dialog.exec()
 
     def open_periodic_table_dialog(self) -> None:
+        """Open the periodic table dialog and wire up element-selection callback."""
         dialog = PeriodicTableDialog(self.host)
         dialog.element_selected.connect(
             self.host.ui_manager.set_atom_from_periodic_table
@@ -108,6 +116,7 @@ class DialogManager:
         dialog.exec()
 
     def open_analysis_window(self) -> None:
+        """Open the analysis window for the current 3D molecule, if available."""
         if self.host.view_3d_manager.current_mol:
             dialog = AnalysisWindow(
                 self.host.view_3d_manager.current_mol,
@@ -126,7 +135,10 @@ class DialogManager:
         dialog.exec()
 
     def open_template_dialog_and_activate(self) -> None:
-        """Open the template dialog and activate the selected template for use in the main window"""
+        """Open the template dialog and activate it.
+
+        Used in the main window.
+        """
         # Check for existing dialog
         _template_dialog = getattr(self.host, "_template_dialog", None)
         if _template_dialog and not _template_dialog.isHidden():
@@ -218,7 +230,8 @@ class DialogManager:
 
     def _show_modeless_dialog(self, dialog: QDialog) -> None:
         """Show a modeless dialog on top, especially important for macOS."""
-        dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        if sys.platform == "darwin":
+            dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         dialog.show()
         dialog.raise_()
         dialog.activateWindow()

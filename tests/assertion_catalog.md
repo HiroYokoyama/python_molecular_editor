@@ -98,6 +98,21 @@ _No description provided._
 
 - mw.view_3d_manager.draw_molecule_3d.assert_called()
 
+### TestApplyPlaneAlignMath.test_align_plane_with_move_to_zero_plane_true
+_When move_to_zero_plane is True, the aligned plane of selected atoms is shifted to z=0._
+
+- assert pos[i][2] == pytest.approx(0.0, abs=1e-05)
+
+### TestApplyPlaneAlignMath.test_align_plane_with_move_to_zero_plane_false
+_When move_to_zero_plane is False, the aligned plane is not shifted to z=0._
+
+- assert abs(pos[i][2]) > 1.0
+
+### TestApplyPlaneAlignMath.test_align_plane_already_aligned_with_move_to_zero_plane_true
+_If already aligned, setting move_to_zero_plane to True shifts the plane to z=0._
+
+- assert pos[i][2] == pytest.approx(0.0, abs=1e-05)
+
 ## tests/unit/test_alignment_dialog.py
 
 ### TestOnAtomPicked.test_first_pick_adds_atom
@@ -192,6 +207,23 @@ _After Z-alignment, atom2 must lie on Z-axis (x=0, y=0)._
 _No description provided._
 
 - mw.edit_actions_manager.push_undo_state.assert_called()
+
+### TestApplyAlignmentMath.test_alignment_with_move_to_origin_true
+_When move_to_origin is True, the first atom is moved to the origin._
+
+- assert pos[0] == pytest.approx([0.0, 0.0, 0.0], abs=1e-05)
+- assert pos[1] == pytest.approx([3.0, 0.0, 0.0], abs=1e-05)
+
+### TestApplyAlignmentMath.test_alignment_with_move_to_origin_false
+_When move_to_origin is False, the first atom stays at its original position, but alignment is applied._
+
+- assert pos[0] == pytest.approx([1.0, 2.0, 3.0], abs=1e-05)
+- assert pos[1] == pytest.approx([4.0, 2.0, 3.0], abs=1e-05)
+
+### TestApplyAlignmentMath.test_already_aligned_with_move_to_origin_true
+_If already aligned, setting move_to_origin to True should still translate the first atom to origin._
+
+- assert pos[0] == pytest.approx([0.0, 0.0, 0.0], abs=1e-05)
 
 ## tests/unit/test_alt_template_bypass.py
 

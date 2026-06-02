@@ -238,6 +238,9 @@ def test_alignment_dialog_logic(mock_warning, mock_info):
     dialog.selected_atoms.add(0)
     dialog.selected_atoms.add(1)
 
+    # Enable move to origin to verify origin positioning
+    dialog.move_to_origin_checkbox.setChecked(True)
+
     # Execute the alignment
     dialog.apply_alignment()
 
