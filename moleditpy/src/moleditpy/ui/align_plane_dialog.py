@@ -14,6 +14,7 @@ import numpy as np
 from typing import TYPE_CHECKING, Literal, Optional, Sequence
 
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -32,6 +33,21 @@ if TYPE_CHECKING:
     from .main_window import MainWindow
 
 
+class SelectionList(list):
+    def __eq__(self, other):
+        if isinstance(other, (set, list, tuple)):
+            return set(self) == set(other)
+        return super().__eq__(other)
+
+    def add(self, item):
+        if item not in self:
+            self.append(item)
+
+    def update(self, items):
+        for item in items:
+            self.add(item)
+
+
 class AlignPlaneDialog(BasePickingDialog):
     def __init__(
         self,
@@ -43,18 +59,26 @@ class AlignPlaneDialog(BasePickingDialog):
     ) -> None:
         super().__init__(mol, main_window, parent)
         self.plane = plane
-        self.selected_atoms: set[int] = set()
+        self._selected_atoms = SelectionList()
 
         # Add preselected atoms
         if preselected_atoms:
-            self.selected_atoms.update(preselected_atoms)
+            self._selected_atoms.update(preselected_atoms)
 
         self.init_ui()
 
         # Add labels to preselected atoms
-        if self.selected_atoms:
+        if self._selected_atoms:
             self.show_atom_labels()
             self.update_display()
+
+    @property
+    def selected_atoms(self) -> SelectionList:
+        return self._selected_atoms
+
+    @selected_atoms.setter
+    def selected_atoms(self, val) -> None:
+        self._selected_atoms = SelectionList(val)
 
     def init_ui(self) -> None:
         plane_names = {"xy": "XY", "xz": "XZ", "yz": "YZ"}
@@ -68,6 +92,11 @@ class AlignPlaneDialog(BasePickingDialog):
         )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
+
+        # Move to zero plane option (default False)
+        self.move_to_zero_plane_checkbox = QCheckBox("Move the plane to the zero plane")
+        self.move_to_zero_plane_checkbox.setChecked(False)
+        layout.addWidget(self.move_to_zero_plane_checkbox)
 
         # Selected atoms display
         self.selection_label = QLabel("No atoms selected")
@@ -106,10 +135,10 @@ class AlignPlaneDialog(BasePickingDialog):
 
     def on_atom_picked(self, atom_idx: int) -> None:
         """Handle the event when an atom is picked in the 3D view."""
-        if atom_idx in self.selected_atoms:
-            self.selected_atoms.remove(atom_idx)
+        if atom_idx in self._selected_atoms:
+            self._selected_atoms.remove(atom_idx)
         else:
-            self.selected_atoms.add(atom_idx)
+            self._selected_atoms.append(atom_idx)
 
         self.update_display()
 
@@ -176,6 +205,8 @@ class AlignPlaneDialog(BasePickingDialog):
             positions = self.mol.GetConformer().GetPositions()
             selected_positions = positions[selected_indices]
 
+            atom1_idx = self.selected_atoms[0]
+
             # Calculate centroid
             centroid = np.mean(selected_positions, axis=0)
 
@@ -207,34 +238,53 @@ class AlignPlaneDialog(BasePickingDialog):
             rotation_axis = np.cross(normal_vector, target_normal)
             rotation_axis_norm = np.linalg.norm(rotation_axis)
 
-            if rotation_axis_norm > 1e-10:
-                rotation_axis = rotation_axis / rotation_axis_norm
-                cos_angle = np.dot(normal_vector, target_normal)
-                cos_angle = np.clip(cos_angle, -1.0, 1.0)
-                rotation_angle = np.arccos(cos_angle)
+            # Rodrigues' rotation formula
+            def rodrigues_rotation(
+                v: np.ndarray, axis: np.ndarray, angle: float
+            ) -> np.ndarray:
+                cos_a = np.cos(angle)
+                sin_a = np.sin(angle)
+                return (  # type: ignore[no-any-return]
+                    v * cos_a
+                    + np.cross(axis, v) * sin_a
+                    + axis * np.dot(axis, v) * (1 - cos_a)
+                )
 
-                # Rodrigues' rotation formula
-                def rodrigues_rotation(
-                    v: np.ndarray, axis: np.ndarray, angle: float
-                ) -> np.ndarray:
-                    cos_a = np.cos(angle)
-                    sin_a = np.sin(angle)
-                    return (  # type: ignore[no-any-return]
-                        v * cos_a
-                        + np.cross(axis, v) * sin_a
-                        + axis * np.dot(axis, v) * (1 - cos_a)
-                    )
-
-                # Rotate all atoms
-                conf = self.mol.GetConformer()
-                for i in range(self.mol.GetNumAtoms()):
-                    current_pos = np.array(conf.GetAtomPosition(i))
-                    centered_pos = current_pos - centroid
+            # Calculate new positions (rotated, but centered back at centroid by default)
+            conf = self.mol.GetConformer()
+            new_positions = np.empty_like(positions)
+            for i in range(self.mol.GetNumAtoms()):
+                current_pos = np.array(conf.GetAtomPosition(i))
+                centered_pos = current_pos - centroid
+                if rotation_axis_norm > 1e-10:
+                    rotation_axis_normalized = rotation_axis / rotation_axis_norm
+                    cos_angle = np.dot(normal_vector, target_normal)
+                    cos_angle = np.clip(cos_angle, -1.0, 1.0)
+                    rotation_angle = np.arccos(cos_angle)
                     rotated_pos = rodrigues_rotation(
-                        centered_pos, rotation_axis, rotation_angle
+                        centered_pos, rotation_axis_normalized, rotation_angle
                     )
-                    new_pos = rotated_pos + centroid
-                    positions[i] = new_pos
+                else:
+                    rotated_pos = centered_pos
+                new_pos = rotated_pos + centroid
+                new_positions[i] = new_pos
+
+            # If move_to_zero_plane is True, translate so the plane of selected atoms is at zero
+            if self.move_to_zero_plane_checkbox.isChecked():
+                selected_new_positions = new_positions[selected_indices]
+                new_centroid = np.mean(selected_new_positions, axis=0)
+                translation_offset = np.zeros(3)
+                if self.plane == "xy":
+                    translation_offset[2] = new_centroid[2]
+                elif self.plane == "xz":
+                    translation_offset[1] = new_centroid[1]
+                elif self.plane == "yz":
+                    translation_offset[0] = new_centroid[0]
+                new_positions = new_positions - translation_offset
+
+            # Update the conformer positions array in place
+            for i in range(self.mol.GetNumAtoms()):
+                positions[i] = new_positions[i]
 
             self._update_molecule_geometry(positions)
 

@@ -268,3 +268,56 @@ class TestApplyPlaneAlignMath:
             dlg.selected_atoms = set(range(mol.GetNumAtoms()))
         dlg.apply_PlaneAlign()
         mw.view_3d_manager.draw_molecule_3d.assert_called()
+
+    def test_align_plane_with_move_to_zero_plane_true(self, make_dialog):
+        """When move_to_zero_plane is True, the aligned plane of selected atoms is shifted to z=0."""
+        mol = self._flat_mol_in_xy()
+        # Shift all atoms along Z initially so centroid Z is non-zero
+        conf = mol.GetConformer()
+        for i in range(mol.GetNumAtoms()):
+            p = conf.GetAtomPosition(i)
+            conf.SetAtomPosition(i, (p.x, p.y, p.z + 4.0))
+
+        dlg, mol, _ = make_dialog(mol=mol, plane="xy")
+        dlg.selected_atoms = [1, 2, 3]
+        dlg.move_to_zero_plane_checkbox.setChecked(True)
+        dlg.apply_PlaneAlign()
+        pos = mol.GetConformer().GetPositions()
+        # The selected atoms' z positions should be exactly 0
+        for i in [1, 2, 3]:
+            assert pos[i][2] == pytest.approx(0.0, abs=1e-5)
+
+    def test_align_plane_with_move_to_zero_plane_false(self, make_dialog):
+        """When move_to_zero_plane is False, the aligned plane is not shifted to z=0."""
+        mol = self._flat_mol_in_xy()
+        # Shift all atoms along Z initially
+        conf = mol.GetConformer()
+        for i in range(mol.GetNumAtoms()):
+            p = conf.GetAtomPosition(i)
+            conf.SetAtomPosition(i, (p.x, p.y, p.z + 4.0))
+
+        dlg, mol, _ = make_dialog(mol=mol, plane="xy")
+        dlg.selected_atoms = [1, 2, 3]
+        dlg.move_to_zero_plane_checkbox.setChecked(False)
+        dlg.apply_PlaneAlign()
+        pos = mol.GetConformer().GetPositions()
+        # The selected atoms' z positions should still be around 4.0, not 0
+        for i in [1, 2, 3]:
+            assert abs(pos[i][2]) > 1.0
+
+    def test_align_plane_already_aligned_with_move_to_zero_plane_true(self, make_dialog):
+        """If already aligned, setting move_to_zero_plane to True shifts the plane to z=0."""
+        mol = self._flat_mol_in_xy()
+        # Already aligned to XY plane (z=0), but shifted to z=3.0
+        conf = mol.GetConformer()
+        for i in range(mol.GetNumAtoms()):
+            p = conf.GetAtomPosition(i)
+            conf.SetAtomPosition(i, (p.x, p.y, 3.0))
+
+        dlg, mol, _ = make_dialog(mol=mol, plane="xy")
+        dlg.selected_atoms = [1, 2, 3]
+        dlg.move_to_zero_plane_checkbox.setChecked(True)
+        dlg.apply_PlaneAlign()
+        pos = mol.GetConformer().GetPositions()
+        for i in [1, 2, 3]:
+            assert pos[i][2] == pytest.approx(0.0, abs=1e-5)
