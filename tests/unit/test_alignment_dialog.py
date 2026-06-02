@@ -332,3 +332,15 @@ class TestApplyAlignmentMath:
         assert pos[0] == pytest.approx([1.0, 2.0, 3.0], abs=1e-5)
         # atom2 is aligned relative to atom1 along the positive X-axis (i.e. pos1 + [3, 0, 0] = [4, 2, 3])
         assert pos[1] == pytest.approx([4.0, 2.0, 3.0], abs=1e-5)
+
+    def test_already_aligned_with_move_to_origin_true(self, make_dialog):
+        """If already aligned, setting move_to_origin to True should still translate the first atom to origin."""
+        mol = self._two_atom_mol(
+            [1.0, 2.0, 3.0], [4.0, 2.0, 3.0]
+        )  # already aligned along X, length 3
+        dlg, mol, _ = self._make_dlg(make_dialog, mol, "x")
+        dlg.move_to_origin_checkbox.setChecked(True)
+        with patch("moleditpy.ui.alignment_dialog.QMessageBox"):
+            dlg.apply_alignment()
+        pos = mol.GetConformer().GetPositions()
+        assert pos[0] == pytest.approx([0.0, 0.0, 0.0], abs=1e-5)

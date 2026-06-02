@@ -88,7 +88,9 @@ class AlignPlaneDialog(BasePickingDialog):
 
         # Instructions
         instruction_label = QLabel(
-            f"Click atoms in the 3D view to select them for align to the {plane_names[self.plane]} plane. At least 3 atoms are required."
+            f"Click atoms in the 3D view to select them for align to "
+            f"the {plane_names[self.plane]} plane. At least 3 atoms "
+            f"are required."
         )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
@@ -140,6 +142,7 @@ class AlignPlaneDialog(BasePickingDialog):
         else:
             self._selected_atoms.append(atom_idx)
 
+        self.show_atom_labels()
         self.update_display()
 
     def clear_selection(self) -> None:
@@ -179,7 +182,7 @@ class AlignPlaneDialog(BasePickingDialog):
             )
             self.apply_button.setEnabled(False)
         else:
-            # Just show the count of selected atoms (to prevent dialog resizing)
+            # Show selected count (to prevent dialog resizing)
             self.selection_label.setText(f"Selected {count} atoms")
             self.apply_button.setEnabled(count >= 3)
 
@@ -196,7 +199,9 @@ class AlignPlaneDialog(BasePickingDialog):
         """Apply plane alignment (rotation-based)."""
         if len(self.selected_atoms) < 3:
             QMessageBox.warning(
-                self, "Warning", "Please select at least 3 atoms for align."
+                self,
+                "Warning",
+                "Please select at least 3 atoms for align.",
             )
             return
         try:
@@ -226,7 +231,8 @@ class AlignPlaneDialog(BasePickingDialog):
             elif self.plane == "yz":
                 target_normal = np.array([1, 0, 0])  # X-axis direction
             else:
-                target_normal = np.array([0, 0, 1])  # Default to Z-axis (XY plane)
+                # Default to Z-axis (XY plane)
+                target_normal = np.array([0, 0, 1])
 
             # Adjust normal vector direction
             if np.dot(normal_vector, target_normal) < 0:
@@ -248,26 +254,30 @@ class AlignPlaneDialog(BasePickingDialog):
                     + axis * np.dot(axis, v) * (1 - cos_a)
                 )
 
-            # Calculate new positions (rotated, but centered back at centroid by default)
+            # Calculate new positions (rotated, centered back by default)
             conf = self.mol.GetConformer()
             new_positions = np.empty_like(positions)
             for i in range(self.mol.GetNumAtoms()):
                 current_pos = np.array(conf.GetAtomPosition(i))
                 centered_pos = current_pos - centroid
                 if rotation_axis_norm > 1e-10:
-                    rotation_axis_normalized = rotation_axis / rotation_axis_norm
+                    rot_norm = rotation_axis_norm
+                    rotation_axis_normalized = rotation_axis / rot_norm
                     cos_angle = np.dot(normal_vector, target_normal)
                     cos_angle = np.clip(cos_angle, -1.0, 1.0)
                     rotation_angle = np.arccos(cos_angle)
                     rotated_pos = rodrigues_rotation(
-                        centered_pos, rotation_axis_normalized, rotation_angle
+                        centered_pos,
+                        rotation_axis_normalized,
+                        rotation_angle,
                     )
                 else:
                     rotated_pos = centered_pos
                 new_pos = rotated_pos + centroid
                 new_positions[i] = new_pos
 
-            # If move_to_zero_plane is True, translate so the plane of selected atoms is at zero
+            # If move_to_zero_plane is True, translate so the plane
+            # of selected atoms is at zero
             if self.move_to_zero_plane_checkbox.isChecked():
                 selected_new_positions = new_positions[selected_indices]
                 new_centroid = np.mean(selected_new_positions, axis=0)

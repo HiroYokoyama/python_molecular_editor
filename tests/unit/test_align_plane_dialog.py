@@ -305,7 +305,9 @@ class TestApplyPlaneAlignMath:
         for i in [1, 2, 3]:
             assert abs(pos[i][2]) > 1.0
 
-    def test_align_plane_already_aligned_with_move_to_zero_plane_true(self, make_dialog):
+    def test_align_plane_already_aligned_with_move_to_zero_plane_true(
+        self, make_dialog
+    ):
         """If already aligned, setting move_to_zero_plane to True shifts the plane to z=0."""
         mol = self._flat_mol_in_xy()
         # Already aligned to XY plane (z=0), but shifted to z=3.0

@@ -191,7 +191,8 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             )
             return
         try:
-            atom1_idx, atom2_idx = self.selected_atoms[0], self.selected_atoms[1]
+            atom1_idx = self.selected_atoms[0]
+            atom2_idx = self.selected_atoms[1]
 
             conf = self.mol.GetConformer()
 
@@ -261,7 +262,8 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
                             ),
                         )
 
-            # If move_to_origin is False, translate back so atom1 is at its original position
+            # If move_to_origin is False, translate back so atom1 is
+            # at its original position
             if not self.move_to_origin_checkbox.isChecked():
                 for i in range(self.mol.GetNumAtoms()):
                     current_pos = np.array(conf.GetAtomPosition(i))
@@ -288,7 +290,9 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             self.main_window.edit_actions_manager.push_undo_state()
 
             QMessageBox.information(
-                self, "Success", f"Alignment to {self.axis.upper()}-axis completed."
+                self,
+                "Success",
+                f"Alignment to {self.axis.upper()}-axis completed.",
             )
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:

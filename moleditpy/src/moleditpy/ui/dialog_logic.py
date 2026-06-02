@@ -24,7 +24,7 @@ from PyQt6.QtCore import Qt
 
 
 try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
+    # package relative imports (preferred when running as python -m moleditpy)
     from .about_dialog import AboutDialog
     from .align_plane_dialog import AlignPlaneDialog
     from .alignment_dialog import AlignmentDialog
@@ -72,13 +72,19 @@ except ImportError:
 
 
 class DialogManager:
-    """Independent manager for UI dialogs, ported from MainWindowDialogManager mixin."""
+    """Independent manager for UI dialogs.
+
+    Ported from MainWindowDialogManager mixin.
+    """
 
     def __init__(self, host: Any) -> None:
         self.host = host
 
     def _get_preselected_atoms_3d(self) -> List[int]:
-        """Helper to collect preselected atoms from measurement mode (3D Select)."""
+        """Helper to collect preselected atoms from measurement mode.
+
+        Specifically for 3D Select.
+        """
         preselected_atoms = []
         if hasattr(self.host, "edit_3d_manager"):
             if self.host.edit_3d_manager.selected_atoms_for_measurement:
@@ -127,7 +133,10 @@ class DialogManager:
         dialog.exec()
 
     def open_template_dialog_and_activate(self) -> None:
-        """Open the template dialog and activate the selected template for use in the main window"""
+        """Open the template dialog and activate it.
+
+        Used in the main window.
+        """
         # Check for existing dialog
         _template_dialog = getattr(self.host, "_template_dialog", None)
         if _template_dialog and not _template_dialog.isHidden():
