@@ -75,7 +75,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         # Add labels to preselected atoms
         if self._selected_atoms:
             for i, atom_idx in enumerate(self._selected_atoms, 1):
-                self.add_selection_label(atom_idx, f"Atom {i}")
+                self.add_selection_label(atom_idx, f"#{i}", color="yellow")
             self.update_display()
 
     @property
@@ -146,8 +146,8 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             if len(self.selected_atoms) < 2:
                 self.selected_atoms.append(atom_idx)
                 # Show label indicating selection order
-                label_text = f"Atom {len(self.selected_atoms)}"
-                self.add_selection_label(atom_idx, label_text)
+                label_text = f"#{len(self.selected_atoms)}"
+                self.add_selection_label(atom_idx, label_text, color="yellow")
 
         self.update_display()
 
@@ -181,7 +181,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         # Re-draw all labels for simplicity
         self.clear_selection_labels()
         for i, idx in enumerate(self.selected_atoms, 1):
-            self.add_selection_label(idx, f"Atom {i}")
+            self.add_selection_label(idx, f"#{i}", color="yellow")
 
     def apply_alignment(self) -> None:
         """Apply the specific axial alignment to the molecule."""
@@ -281,7 +281,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             # Restore selection labels
             self.clear_selection_labels()
             for i, idx in enumerate(self.selected_atoms, 1):
-                self.add_selection_label(idx, f"Atom {i}")
+                self.add_selection_label(idx, f"#{i}", color="yellow")
 
             # Update chirality labels
             self.main_window.view_3d_manager.update_chiral_labels()

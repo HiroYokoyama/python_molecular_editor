@@ -198,7 +198,7 @@ class AlignPlaneDialog(BasePickingDialog):
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
             pairs = [(idx, f"#{i + 1}") for i, idx in enumerate(sorted_atoms)]
-            self.show_atom_labels_for(pairs, color="blue")
+            self.show_atom_labels_for(pairs, color="yellow")
         else:
             self.clear_atom_labels()
 
