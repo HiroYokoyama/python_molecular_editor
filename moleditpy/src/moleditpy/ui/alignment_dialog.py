@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 import numpy as np
 from typing import TYPE_CHECKING, Literal, Optional, Sequence
 
@@ -296,6 +297,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             )
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.exception("Failed to apply alignment")
             QMessageBox.critical(self, "Error", f"Failed to apply alignment: {str(e)}")
 
     def closeEvent(self, event: Optional[QCloseEvent]) -> None:

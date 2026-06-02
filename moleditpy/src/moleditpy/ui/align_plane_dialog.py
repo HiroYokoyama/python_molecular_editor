@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 import numpy as np
 from typing import TYPE_CHECKING, Literal, Optional, Sequence
 
@@ -171,6 +172,7 @@ class AlignPlaneDialog(BasePickingDialog):
             self.update_display()
 
         except (AttributeError, RuntimeError, TypeError, KeyError) as e:
+            logging.exception("Failed to select all atoms")
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def update_display(self) -> None:
@@ -305,4 +307,5 @@ class AlignPlaneDialog(BasePickingDialog):
             self.show_atom_labels()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.exception("Failed to apply align")
             QMessageBox.critical(self, "Error", f"Failed to apply align: {str(e)}")
