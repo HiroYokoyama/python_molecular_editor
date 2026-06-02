@@ -16,6 +16,7 @@ import logging
 
 import json
 import os
+import sys
 from typing import Any, List, Literal, Optional, cast
 
 from PyQt6.QtWidgets import QInputDialog, QMessageBox, QDialog
@@ -218,7 +219,8 @@ class DialogManager:
 
     def _show_modeless_dialog(self, dialog: QDialog) -> None:
         """Show a modeless dialog on top, especially important for macOS."""
-        dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        if sys.platform == "darwin":
+            dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         dialog.show()
         dialog.raise_()
         dialog.activateWindow()
