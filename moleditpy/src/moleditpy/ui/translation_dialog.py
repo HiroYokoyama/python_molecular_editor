@@ -133,7 +133,7 @@ class TranslationDialog(BasePickingDialog):
         layout.addLayout(coord_row)
 
         self.move_mol_checkbox = QCheckBox("Move entire molecule")
-        self.move_mol_checkbox.setChecked(False)
+        self.move_mol_checkbox.setChecked(True)
         self.move_mol_checkbox.stateChanged.connect(self._on_move_mol_toggled)
         layout.addWidget(self.move_mol_checkbox)
 
@@ -153,7 +153,7 @@ class TranslationDialog(BasePickingDialog):
         btn_row.addWidget(origin_btn)
 
         btn_row.addStretch()
-        self.abs_apply_btn = QPushButton("Move Selected")
+        self.abs_apply_btn = QPushButton("Move Molecule")
         self.abs_apply_btn.clicked.connect(self.apply_absolute)
         self.abs_apply_btn.setEnabled(False)
         btn_row.addWidget(self.abs_apply_btn)
