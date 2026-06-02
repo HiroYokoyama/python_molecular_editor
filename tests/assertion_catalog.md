@@ -190,16 +190,16 @@ _After X-alignment, atom1 must be at origin._
 - assert pos[0] == pytest.approx([0.0, 0.0, 0.0], abs=1e-05)
 
 ### TestApplyAlignmentMath.test_x_axis_alignment_atom2_on_x_axis
-_After X-alignment, atom2 must lie on positive X-axis (y=0, z=0)._
+_After X-alignment, the molecule is aligned parallel to X-axis, rotated about centroid._
 
-- assert pos[1][1] == pytest.approx(0.0, abs=1e-05)
+- assert pos[1][1] == pytest.approx(1.5, abs=1e-05)
 - assert pos[1][2] == pytest.approx(0.0, abs=1e-05)
 - assert pos[1][0] > 0
 
 ### TestApplyAlignmentMath.test_z_axis_alignment_atom2_on_z_axis
-_After Z-alignment, atom2 must lie on Z-axis (x=0, y=0)._
+_After Z-alignment, the molecule is aligned parallel to Z-axis, rotated about centroid._
 
-- assert pos[1][0] == pytest.approx(0.0, abs=1e-05)
+- assert pos[1][0] == pytest.approx(1.5, abs=1e-05)
 - assert pos[1][1] == pytest.approx(0.0, abs=1e-05)
 - assert pos[1][2] > 0
 
@@ -215,10 +215,10 @@ _When move_to_origin is True, the first atom is moved to the origin._
 - assert pos[1] == pytest.approx([3.0, 0.0, 0.0], abs=1e-05)
 
 ### TestApplyAlignmentMath.test_alignment_with_move_to_origin_false
-_When move_to_origin is False, the first atom stays at its original position, but alignment is applied._
+_When move_to_origin is False, the molecule rotates about its centroid (centroid preserved)._
 
-- assert pos[0] == pytest.approx([1.0, 2.0, 3.0], abs=1e-05)
-- assert pos[1] == pytest.approx([4.0, 2.0, 3.0], abs=1e-05)
+- assert pos[0] == pytest.approx([-0.5, 3.5, 3.0], abs=1e-05)
+- assert pos[1] == pytest.approx([2.5, 3.5, 3.0], abs=1e-05)
 
 ### TestApplyAlignmentMath.test_already_aligned_with_move_to_origin_true
 _If already aligned, setting move_to_origin to True should still translate the first atom to origin._
@@ -1563,11 +1563,11 @@ _Test the translation and rotation logic in MoveGroupDialog._
 - assert np.allclose(np.array(mol.GetConformer().GetAtomPosition(5)), initial_pos5)
 - assert np.allclose(new_pos0, expected_rotated, atol=1e-07)
 
-### test_abs_single_atom_enforcement
-_Clicking a second atom in Absolute tab replaces the first selection._
+### test_abs_multi_atom_selection
+_Clicking a second atom in Absolute tab accumulates the selection._
 
 - assert dialog.selected_atoms == {0}
-- assert dialog.selected_atoms == {3}
+- assert dialog.selected_atoms == {0, 3}
 
 ### test_abs_coordinate_inputs_populated_on_pick
 _Selecting an atom auto-fills X/Y/Z inputs with its current position._
@@ -6315,10 +6315,10 @@ _No description provided._
 
 - assert 0 in dlg.selected_atoms
 
-### TestAbsolutePicking.test_abs_pick_enforces_single_atom
+### TestAbsolutePicking.test_abs_pick_supports_multiple_selection
 _No description provided._
 
-- assert dlg.selected_atoms == {1}
+- assert dlg.selected_atoms == {0, 1}
 
 ### TestAbsolutePicking.test_abs_pick_populates_inputs
 _No description provided._
@@ -6345,7 +6345,7 @@ _No description provided._
 ### TestAbsoluteHelpers.test_move_mol_toggled_changes_button_label
 _No description provided._
 
-- assert dlg.abs_apply_btn.text() == 'Move Atom'
+- assert dlg.abs_apply_btn.text() == 'Move Selected'
 - assert dlg.abs_apply_btn.text() == 'Move Molecule'
 
 ### TestApplyAbsolute.test_no_atom_shows_warning
@@ -6363,10 +6363,11 @@ _No description provided._
 
 - assert after[i] == pytest.approx(before[i] + delta, abs=0.0001)
 
-### TestApplyAbsolute.test_move_atom_only_shifts_one_atom
+### TestApplyAbsolute.test_move_selected_only_shifts_selected_atoms
 _No description provided._
 
-- assert after[0] == pytest.approx([0.0, 0.0, 0.0], abs=0.0001)
+- assert after[0] == pytest.approx(before[0] + expected_delta, abs=0.0001)
+- assert after[1] == pytest.approx(before[1] + expected_delta, abs=0.0001)
 - assert after[i] == pytest.approx(before[i], abs=0.0001)
 
 ### TestApplyAbsolute.test_apply_absolute_pushes_undo

@@ -64,6 +64,8 @@ def test_alignment_logic(mock_parser_host, mol):
     with patch("moleditpy.ui.alignment_dialog.AlignmentDialog.init_ui"):
         dialog = AlignmentDialog(mol, window, axis="x")
         dialog.selected_atoms = {0, 1}
+        dialog.move_to_origin_checkbox = MagicMock()
+        dialog.move_to_origin_checkbox.isChecked.return_value = True
 
         with patch("moleditpy.ui.alignment_dialog.QMessageBox"):
             dialog.apply_alignment()
@@ -265,8 +267,8 @@ def _make_abs_dialog(mol, window):
     return dialog
 
 
-def test_abs_single_atom_enforcement(mock_parser_host, mol):
-    """Clicking a second atom in Absolute tab replaces the first selection."""
+def test_abs_multi_atom_selection(mock_parser_host, mol):
+    """Clicking a second atom in Absolute tab accumulates the selection."""
     window = mock_parser_host
     conf = mol.GetConformer()
     window.view_3d_manager.atom_positions_3d = np.array(
@@ -279,7 +281,7 @@ def test_abs_single_atom_enforcement(mock_parser_host, mol):
     assert dialog.selected_atoms == {0}
 
     dialog.on_atom_picked(3)
-    assert dialog.selected_atoms == {3}, "Second pick should replace first"
+    assert dialog.selected_atoms == {0, 3}, "Second pick should add to selection"
 
 
 def test_abs_coordinate_inputs_populated_on_pick(mock_parser_host, mol):

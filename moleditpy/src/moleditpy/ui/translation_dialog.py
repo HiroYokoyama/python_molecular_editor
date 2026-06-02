@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 from typing import Any
 
 import numpy as np
@@ -35,6 +36,8 @@ _TAB_DELTA = 1
 
 
 class TranslationDialog(BasePickingDialog):
+    """Dialog for translating selected atoms either absolutely or relatively."""
+
     def __init__(
         self,
         mol: Any,
@@ -44,6 +47,19 @@ class TranslationDialog(BasePickingDialog):
     ) -> None:
         super().__init__(mol, main_window, parent)
         self.selected_atoms = set()
+
+        # Predefine widgets to satisfy pylint W0201
+        self.abs_selection_label = None
+        self.abs_x_input = None
+        self.abs_y_input = None
+        self.abs_z_input = None
+        self.move_mol_checkbox = None
+        self.abs_apply_btn = None
+        self.delta_selection_label = None
+        self.dx_input = None
+        self.dy_input = None
+        self.dz_input = None
+        self.apply_button = None
 
         if preselected_atoms:
             self.selected_atoms.update(preselected_atoms)
@@ -56,7 +72,7 @@ class TranslationDialog(BasePickingDialog):
             self.tabs.blockSignals(True)
             if len(self.selected_atoms) == 1:
                 self.tabs.setCurrentIndex(_TAB_ABSOLUTE)
-                self._populate_abs_inputs_from_atom(next(iter(self.selected_atoms)))
+                self._populate_abs_inputs_from_centroid()
             else:
                 self.tabs.setCurrentIndex(_TAB_DELTA)
             self.tabs.blockSignals(False)
@@ -68,6 +84,7 @@ class TranslationDialog(BasePickingDialog):
     # ------------------------------------------------------------------
 
     def init_ui(self) -> None:
+        """Initialize and lay out all dialog widgets."""
         self.setWindowTitle("Translate Atoms")
         self.setModal(False)
         layout = QVBoxLayout(self)
@@ -89,16 +106,18 @@ class TranslationDialog(BasePickingDialog):
         self.enable_picking()
 
     def _build_absolute_tab(self) -> QWidget:
+        """Build the Absolute tab widget."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
         instr = QLabel(
-            "Click one atom to select it, then specify its target absolute coordinates (Å)."
+            "Click atoms to select them. The centroid of the selection "
+            "will be translated to the target absolute coordinates (Å)."
         )
         instr.setWordWrap(True)
         layout.addWidget(instr)
 
-        self.abs_selection_label = QLabel("No atom selected")
+        self.abs_selection_label = QLabel("No atoms selected")
         layout.addWidget(self.abs_selection_label)
 
         coord_row = QHBoxLayout()
@@ -114,7 +133,7 @@ class TranslationDialog(BasePickingDialog):
         layout.addLayout(coord_row)
 
         self.move_mol_checkbox = QCheckBox("Move entire molecule")
-        self.move_mol_checkbox.setChecked(True)
+        self.move_mol_checkbox.setChecked(False)
         self.move_mol_checkbox.stateChanged.connect(self._on_move_mol_toggled)
         layout.addWidget(self.move_mol_checkbox)
 
@@ -122,12 +141,19 @@ class TranslationDialog(BasePickingDialog):
         abs_clear_btn = QPushButton("Clear Selection")
         abs_clear_btn.clicked.connect(self._abs_clear_selection)
         btn_row.addWidget(abs_clear_btn)
+
+        abs_all_btn = QPushButton("Select All Atoms")
+        abs_all_btn.setToolTip("Select all atoms in the molecule")
+        abs_all_btn.clicked.connect(self._abs_select_all)
+        btn_row.addWidget(abs_all_btn)
+
         origin_btn = QPushButton("Set to Origin")
         origin_btn.setToolTip("Set target coordinates to the origin")
         origin_btn.clicked.connect(self._set_origin)
         btn_row.addWidget(origin_btn)
+
         btn_row.addStretch()
-        self.abs_apply_btn = QPushButton("Move Molecule")
+        self.abs_apply_btn = QPushButton("Move Selected")
         self.abs_apply_btn.clicked.connect(self.apply_absolute)
         self.abs_apply_btn.setEnabled(False)
         btn_row.addWidget(self.abs_apply_btn)
@@ -185,7 +211,8 @@ class TranslationDialog(BasePickingDialog):
     # Tab switching
     # ------------------------------------------------------------------
 
-    def _on_tab_changed(self, index: int) -> None:
+    def _on_tab_changed(self, _index: int) -> None:
+        """Handle tab switching event to reset active selections."""
         if hasattr(self, "_is_initializing") and self._is_initializing:
             return
         self.selected_atoms.clear()
@@ -203,9 +230,12 @@ class TranslationDialog(BasePickingDialog):
             self._delta_on_atom_picked(atom_idx)
 
     def _abs_on_atom_picked(self, atom_idx: int) -> None:
-        # Enforce single selection: replace previous atom
-        self.selected_atoms = {atom_idx}
-        self._populate_abs_inputs_from_atom(atom_idx)
+        """Toggle atom in/out of the absolute-tab selection, then refresh centroid."""
+        if atom_idx in self.selected_atoms:
+            self.selected_atoms.discard(atom_idx)
+        else:
+            self.selected_atoms.add(atom_idx)
+        self._populate_abs_inputs_from_centroid()
         self.update_display()
         self.show_atom_labels()
 
@@ -221,19 +251,24 @@ class TranslationDialog(BasePickingDialog):
     # Absolute tab helpers
     # ------------------------------------------------------------------
 
-    def _populate_abs_inputs_from_atom(self, atom_idx: int) -> None:
+    def _populate_abs_inputs_from_centroid(self) -> None:
+        """Populate X/Y/Z inputs with the centroid of all currently selected atoms."""
+        if not self.selected_atoms:
+            return
         mol = self.main_window.view_3d_manager.current_mol
         if mol is None:
             return
         conf = mol.GetConformer()
         if conf is None:
             return
-        pos = conf.GetPositions()[atom_idx]
-        self.abs_x_input.setText(f"{pos[0]:.4f}")
-        self.abs_y_input.setText(f"{pos[1]:.4f}")
-        self.abs_z_input.setText(f"{pos[2]:.4f}")
+        positions = conf.GetPositions()
+        centroid = np.mean([positions[i] for i in self.selected_atoms], axis=0)
+        self.abs_x_input.setText(f"{centroid[0]:.4f}")
+        self.abs_y_input.setText(f"{centroid[1]:.4f}")
+        self.abs_z_input.setText(f"{centroid[2]:.4f}")
 
     def _abs_clear_selection(self) -> None:
+        """Clear the absolute-tab selection and reset coordinate inputs."""
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.abs_x_input.setText("0.000")
@@ -241,19 +276,35 @@ class TranslationDialog(BasePickingDialog):
         self.abs_z_input.setText("0.000")
         self.update_display()
 
+    def _abs_select_all(self) -> None:
+        """Select all atoms in the molecule for the absolute tab."""
+        try:
+            mol = self.main_window.view_3d_manager.current_mol
+            if mol is not None:
+                self.selected_atoms = set(range(mol.GetNumAtoms()))
+            self._populate_abs_inputs_from_centroid()
+            self.show_atom_labels()
+            self.update_display()
+        except (AttributeError, RuntimeError, TypeError) as exc:
+            logging.exception("Failed to select all atoms: %s", exc)
+
     def _set_origin(self) -> None:
         self.abs_x_input.setText("0.0000")
         self.abs_y_input.setText("0.0000")
         self.abs_z_input.setText("0.0000")
 
-    def _on_move_mol_toggled(self, state: int) -> None:
-        label = "Move Molecule" if self.move_mol_checkbox.isChecked() else "Move Atom"
+    def _on_move_mol_toggled(self, _state: int) -> None:
+        """Update Apply button label to reflect move-molecule vs move-selected mode."""
+        label = (
+            "Move Molecule" if self.move_mol_checkbox.isChecked() else "Move Selected"
+        )
         self.abs_apply_btn.setText(label)
 
     def apply_absolute(self) -> None:
+        """Translate selected atoms so their centroid reaches the target coordinates."""
         self.mol = self.main_window.view_3d_manager.current_mol
-        if len(self.selected_atoms) != 1:
-            QMessageBox.warning(self, "Warning", "Please select exactly one atom.")
+        if not self.selected_atoms:
+            QMessageBox.warning(self, "Warning", "Please select at least one atom.")
             return
 
         try:
@@ -266,10 +317,9 @@ class TranslationDialog(BasePickingDialog):
             )
             return
 
-        atom_idx = next(iter(self.selected_atoms))
         positions = self.mol.GetConformer().GetPositions()
-        current = positions[atom_idx]
-        delta = np.array([tx, ty, tz]) - current
+        centroid = np.mean([positions[i] for i in self.selected_atoms], axis=0)
+        delta = np.array([tx, ty, tz]) - centroid
 
         if np.allclose(delta, 0):
             return
@@ -277,10 +327,12 @@ class TranslationDialog(BasePickingDialog):
         if self.move_mol_checkbox.isChecked():
             positions += delta
         else:
-            positions[atom_idx] += delta
+            for atom_idx in self.selected_atoms:
+                positions[atom_idx] += delta
 
         self._update_molecule_geometry(positions)
         self._push_undo()
+        self._populate_abs_inputs_from_centroid()
         self.show_atom_labels()
 
     # ------------------------------------------------------------------
@@ -288,11 +340,13 @@ class TranslationDialog(BasePickingDialog):
     # ------------------------------------------------------------------
 
     def clear_selection(self) -> None:
+        """Clear active atom selection for the relative tab."""
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
 
     def select_all_atoms(self) -> None:
+        """Select all atoms in the molecule for relative translation."""
         try:
             if hasattr(self, "mol") and self.mol is not None:
                 self.selected_atoms = set(range(self.mol.GetNumAtoms()))
@@ -308,6 +362,7 @@ class TranslationDialog(BasePickingDialog):
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def apply_translation(self) -> None:
+        """Apply relative translation vector to selected atoms."""
         self.mol = self.main_window.view_3d_manager.current_mol
         if not self.selected_atoms:
             QMessageBox.warning(self, "Warning", "Please select at least one atom.")
@@ -340,17 +395,32 @@ class TranslationDialog(BasePickingDialog):
     # ------------------------------------------------------------------
 
     def update_display(self) -> None:
+        """Update label descriptions and button enablement states."""
         tab = self.tabs.currentIndex()
         count = len(self.selected_atoms)
 
         if tab == _TAB_ABSOLUTE:
             if count == 0:
-                self.abs_selection_label.setText("Click one atom to select it")
+                self.abs_selection_label.setText("Click atoms to select them")
                 self.abs_apply_btn.setEnabled(False)
             else:
-                atom_idx = next(iter(self.selected_atoms))
-                sym = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
-                self.abs_selection_label.setText(f"Selected: atom {atom_idx} ({sym})")
+                mol = self.main_window.view_3d_manager.current_mol
+                if mol is not None and self.selected_atoms:
+                    positions = mol.GetConformer().GetPositions()
+                    centroid = np.mean(
+                        [positions[i] for i in self.selected_atoms], axis=0
+                    )
+                    centroid_str = (
+                        f"({centroid[0]:.3f}, {centroid[1]:.3f}, {centroid[2]:.3f})"
+                    )
+                    self.abs_selection_label.setText(
+                        f"{count} atom{'s' if count != 1 else ''} selected "
+                        f"— centroid: {centroid_str}"
+                    )
+                else:
+                    self.abs_selection_label.setText(
+                        f"{count} atom{'s' if count != 1 else ''} selected"
+                    )
                 self.abs_apply_btn.setEnabled(True)
         else:
             if count == 0:
@@ -365,6 +435,7 @@ class TranslationDialog(BasePickingDialog):
                 self.apply_button.setEnabled(True)
 
     def show_atom_labels(self) -> None:
+        """Redraw selection numeric tags in the active 3D viewport."""
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
             pairs = [(idx, str(i + 1)) for i, idx in enumerate(sorted_atoms)]

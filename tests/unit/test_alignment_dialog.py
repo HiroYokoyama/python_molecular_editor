@@ -275,24 +275,26 @@ class TestApplyAlignmentMath:
         assert pos[0] == pytest.approx([0.0, 0.0, 0.0], abs=1e-5)
 
     def test_x_axis_alignment_atom2_on_x_axis(self, make_dialog):
-        """After X-alignment, atom2 must lie on positive X-axis (y=0, z=0)."""
+        """After X-alignment, the molecule is aligned parallel to X-axis, rotated about centroid."""
         mol = self._two_atom_mol([0.0, 0.0, 0.0], [0.0, 3.0, 0.0])
         dlg, mol, _ = self._make_dlg(make_dialog, mol, "x")
         with patch("moleditpy.ui.alignment_dialog.QMessageBox"):
             dlg.apply_alignment()
         pos = mol.GetConformer().GetPositions()
-        assert pos[1][1] == pytest.approx(0.0, abs=1e-5)
+        # Centroid [0.0, 1.5, 0.0] preserved, vector aligned to X
+        assert pos[1][1] == pytest.approx(1.5, abs=1e-5)
         assert pos[1][2] == pytest.approx(0.0, abs=1e-5)
-        assert pos[1][0] > 0  # on positive X
+        assert pos[1][0] > 0  # positive direction
 
     def test_z_axis_alignment_atom2_on_z_axis(self, make_dialog):
-        """After Z-alignment, atom2 must lie on Z-axis (x=0, y=0)."""
+        """After Z-alignment, the molecule is aligned parallel to Z-axis, rotated about centroid."""
         mol = self._two_atom_mol([0.0, 0.0, 0.0], [3.0, 0.0, 0.0])
         dlg, mol, _ = self._make_dlg(make_dialog, mol, "z")
         with patch("moleditpy.ui.alignment_dialog.QMessageBox"):
             dlg.apply_alignment()
         pos = mol.GetConformer().GetPositions()
-        assert pos[1][0] == pytest.approx(0.0, abs=1e-5)
+        # Centroid [1.5, 0.0, 0.0] preserved, vector aligned to Z
+        assert pos[1][0] == pytest.approx(1.5, abs=1e-5)
         assert pos[1][1] == pytest.approx(0.0, abs=1e-5)
         assert pos[1][2] > 0
 
@@ -319,7 +321,7 @@ class TestApplyAlignmentMath:
         assert pos[1] == pytest.approx([3.0, 0.0, 0.0], abs=1e-5)
 
     def test_alignment_with_move_to_origin_false(self, make_dialog):
-        """When move_to_origin is False, the first atom stays at its original position, but alignment is applied."""
+        """When move_to_origin is False, the molecule rotates about its centroid (centroid preserved)."""
         mol = self._two_atom_mol(
             [1.0, 2.0, 3.0], [1.0, 5.0, 3.0]
         )  # aligned along Y initially, length 3
@@ -328,10 +330,11 @@ class TestApplyAlignmentMath:
         with patch("moleditpy.ui.alignment_dialog.QMessageBox"):
             dlg.apply_alignment()
         pos = mol.GetConformer().GetPositions()
-        # atom1 stays at its original position [1.0, 2.0, 3.0]
-        assert pos[0] == pytest.approx([1.0, 2.0, 3.0], abs=1e-5)
-        # atom2 is aligned relative to atom1 along the positive X-axis (i.e. pos1 + [3, 0, 0] = [4, 2, 3])
-        assert pos[1] == pytest.approx([4.0, 2.0, 3.0], abs=1e-5)
+        # Centroid is preserved at [1.0, 3.5, 3.0]
+        # atom1 (idx 0) becomes [-0.5, 3.5, 3.0]
+        assert pos[0] == pytest.approx([-0.5, 3.5, 3.0], abs=1e-5)
+        # atom2 (idx 1) is aligned relative to atom1 along the positive X-axis: [2.5, 3.5, 3.0]
+        assert pos[1] == pytest.approx([2.5, 3.5, 3.0], abs=1e-5)
 
     def test_already_aligned_with_move_to_origin_true(self, make_dialog):
         """If already aligned, setting move_to_origin to True should still translate the first atom to origin."""
