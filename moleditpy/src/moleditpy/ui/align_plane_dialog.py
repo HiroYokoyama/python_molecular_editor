@@ -27,32 +27,12 @@ from PyQt6.QtWidgets import (
 from rdkit import Chem
 
 try:
-    from .base_picking_dialog import BasePickingDialog
+    from .base_picking_dialog import BasePickingDialog, SelectionList
 except ImportError:
-    from moleditpy.ui.base_picking_dialog import BasePickingDialog
+    from moleditpy.ui.base_picking_dialog import BasePickingDialog, SelectionList
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
-
-
-class SelectionList(list):
-    """Order-preserving list that compares equal to sets/lists/tuples of same elements."""
-
-    def __eq__(self, other: object) -> bool:
-        """Compare by membership, ignoring order."""
-        if isinstance(other, (set, list, tuple)):
-            return set(self) == set(other)
-        return super().__eq__(other)
-
-    def add(self, item: int) -> None:
-        """Append item only if not already present."""
-        if item not in self:
-            self.append(item)
-
-    def update(self, items: object) -> None:
-        """Append each item that is not already present."""
-        for item in items:  # type: ignore[union-attr]
-            self.add(item)
 
 
 class AlignPlaneDialog(BasePickingDialog):

@@ -1,7 +1,7 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **80.16%**
-- **Core Molecular Logic Coverage**: **81.89%**
+- **Overall Project Coverage (Full)**: **80.15%**
+- **Core Molecular Logic Coverage**: **81.88%**
 
 > [!NOTE]
 > **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability.
@@ -18,13 +18,13 @@
 | moleditpy\src\moleditpy\plugins\plugin_manager.py       |    370 |     15 |   95.9% |
 | moleditpy\src\moleditpy\plugins\plugin_manager_window.py |    183 |      2 |   98.9% |
 | moleditpy\src\moleditpy\ui\about_dialog.py              |     66 |     15 |   77.3% |
-| moleditpy\src\moleditpy\ui\align_plane_dialog.py        |    169 |     19 |   88.8% |
-| moleditpy\src\moleditpy\ui\alignment_dialog.py          |    167 |     11 |   93.4% |
+| moleditpy\src\moleditpy\ui\align_plane_dialog.py        |    158 |     18 |   88.6% |
+| moleditpy\src\moleditpy\ui\alignment_dialog.py          |    160 |     12 |   92.5% |
 | moleditpy\src\moleditpy\ui\angle_dialog.py              |    255 |     31 |   87.8% |
 | moleditpy\src\moleditpy\ui\app_state.py                 |    423 |     99 |   76.6% |
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    311 |     46 |   85.2% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |    170 |     46 |   72.9% |
-| moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     77 |      6 |   92.2% |
+| moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     88 |      7 |   92.0% |
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    377 |     64 |   83.0% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    229 |     20 |   91.3% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    550 |     90 |   83.6% |
@@ -57,7 +57,7 @@
 | moleditpy\src\moleditpy\utils\constants.py              |     54 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
-| **TOTAL** | **13852** | **2508** | **81.89%** |
+| **TOTAL** | **13845** | **2509** | **81.88%** |
 
 ### Full Application Breakdown
 
@@ -72,14 +72,14 @@
 | moleditpy\src\moleditpy\plugins\plugin_manager_window.py |    183 |      2 |   98.9% |
 | moleditpy\src\moleditpy\ui\__init__.py                  |      7 |      3 |   57.1% |
 | moleditpy\src\moleditpy\ui\about_dialog.py              |     66 |     15 |   77.3% |
-| moleditpy\src\moleditpy\ui\align_plane_dialog.py        |    171 |     20 |   88.3% |
-| moleditpy\src\moleditpy\ui\alignment_dialog.py          |    169 |     12 |   92.9% |
+| moleditpy\src\moleditpy\ui\align_plane_dialog.py        |    160 |     19 |   88.1% |
+| moleditpy\src\moleditpy\ui\alignment_dialog.py          |    162 |     13 |   92.0% |
 | moleditpy\src\moleditpy\ui\analysis_window.py           |    116 |     25 |   78.4% |
 | moleditpy\src\moleditpy\ui\angle_dialog.py              |    257 |     32 |   87.5% |
 | moleditpy\src\moleditpy\ui\app_state.py                 |    423 |     99 |   76.6% |
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    311 |     46 |   85.2% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |    170 |     46 |   72.9% |
-| moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     79 |      7 |   91.1% |
+| moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     90 |      8 |   91.1% |
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    377 |     64 |   83.0% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    231 |     21 |   90.9% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    550 |     90 |   83.6% |
@@ -122,7 +122,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      0 |  100.0% |
-| **TOTAL** | **15613** | **3097** | **80.16%** |
+| **TOTAL** | **15606** | **3098** | **80.15%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
