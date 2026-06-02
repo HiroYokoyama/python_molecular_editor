@@ -38,6 +38,11 @@ try:
 except ImportError:
     from moleditpy_linux.ui.base_picking_dialog import SelectionList
 
+try:
+    from ..core.mol_geometry import rodrigues_rotate
+except ImportError:
+    from moleditpy_linux.core.mol_geometry import rodrigues_rotate
+
 if TYPE_CHECKING:
     from .main_window import MainWindow
 
@@ -192,21 +197,16 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
 
             conf = self.mol.GetConformer()
 
-            # Get current atom positions
-            pos1 = np.array(conf.GetAtomPosition(atom1_idx))
-            pos2 = np.array(conf.GetAtomPosition(atom2_idx))
+            # Get original atom positions
+            positions = np.array(
+                [list(conf.GetAtomPosition(i)) for i in range(self.mol.GetNumAtoms())]
+            )
+            centroid = np.mean(positions, axis=0)
 
-            # Translate entire molecule so atom1 is at the origin
-            translation = -pos1
-            for i in range(self.mol.GetNumAtoms()):
-                current_pos = np.array(conf.GetAtomPosition(i))
-                new_pos = current_pos + translation
-                conf.SetAtomPosition(i, new_pos.tolist())
+            pos1 = positions[atom1_idx]
+            pos2 = positions[atom2_idx]
 
-            # Get new position of atom2 after translation
-            pos2_translated = pos2 + translation
-
-            # Calculate rotation to align atom2 relative to the chosen axis
+            # Calculate rotation to align atom1 -> atom2 relative to the chosen axis
             axis_vectors = {
                 "x": np.array([1.0, 0.0, 0.0]),
                 "y": np.array([0.0, 1.0, 0.0]),
@@ -214,9 +214,12 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             }
             target_axis = axis_vectors[self.axis]
 
-            # Direction vector from origin to translated atom2
-            current_vector = pos2_translated
+            # Direction vector from atom1 to atom2
+            current_vector = pos2 - pos1
             current_length = np.linalg.norm(current_vector)
+
+            # Keep track of rotated positions (initially original positions)
+            new_positions = np.copy(positions)
 
             if current_length > 1e-10:  # If not a zero vector
                 current_vector_normalized = current_vector / current_length
@@ -231,45 +234,35 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
                     cos_angle = np.clip(cos_angle, -1.0, 1.0)
                     rotation_angle = np.arccos(cos_angle)
 
-                    # Use Rodrigues' rotation formula
-                    def rodrigues_rotation(
-                        v: np.ndarray, k: np.ndarray, theta: float
-                    ) -> np.ndarray:
-                        cos_theta = np.cos(theta)
-                        sin_theta = np.sin(theta)
-                        return (  # type: ignore[no-any-return]
-                            v * cos_theta
-                            + np.cross(k, v) * sin_theta
-                            + k * np.dot(k, v) * (1 - cos_theta)
-                        )
-
-                    # Apply rotation to all atoms
+                    # Apply rotation to all atoms about the molecule's centroid
                     for i in range(self.mol.GetNumAtoms()):
-                        current_pos = np.array(conf.GetAtomPosition(i))
-                        rotated_pos = rodrigues_rotation(
-                            current_pos, rotation_axis, rotation_angle
+                        rel_pos = positions[i] - centroid
+                        rotated_pos = rodrigues_rotate(
+                            rel_pos, rotation_axis, rotation_angle
                         )
-                        conf.SetAtomPosition(
-                            i,
-                            Geometry.Point3D(
-                                float(rotated_pos[0]),
-                                float(rotated_pos[1]),
-                                float(rotated_pos[2]),
-                            ),
-                        )
+                        new_positions[i] = rotated_pos + centroid
 
-            # If move_to_origin is False, translate back so atom1 is
-            # at its original position
-            if not self.move_to_origin_checkbox.isChecked():
-                for i in range(self.mol.GetNumAtoms()):
-                    current_pos = np.array(conf.GetAtomPosition(i))
-                    restored_pos = current_pos - translation
-                    conf.SetAtomPosition(i, restored_pos.tolist())
+            # If move_to_origin is True, translate entire molecule so atom1 ends up at origin
+            if (
+                hasattr(self, "move_to_origin_checkbox")
+                and self.move_to_origin_checkbox.isChecked()
+            ):
+                new_pos1 = new_positions[atom1_idx]
+                new_positions = new_positions - new_pos1
+
+            # Update conformer positions
+            for i in range(self.mol.GetNumAtoms()):
+                conf.SetAtomPosition(
+                    i,
+                    Geometry.Point3D(
+                        float(new_positions[i][0]),
+                        float(new_positions[i][1]),
+                        float(new_positions[i][2]),
+                    ),
+                )
 
             # Update 3D positions
-            self.main_window.view_3d_manager.atom_positions_3d = np.array(
-                [list(conf.GetAtomPosition(i)) for i in range(self.mol.GetNumAtoms())]
-            )
+            self.main_window.view_3d_manager.atom_positions_3d = new_positions
 
             # Update 3D visualization
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)

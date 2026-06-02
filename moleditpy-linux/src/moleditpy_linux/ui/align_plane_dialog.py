@@ -31,6 +31,11 @@ try:
 except ImportError:
     from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog, SelectionList
 
+try:
+    from ..core.mol_geometry import rodrigues_rotate
+except ImportError:
+    from moleditpy_linux.core.mol_geometry import rodrigues_rotate
+
 if TYPE_CHECKING:
     from .main_window import MainWindow
 
@@ -242,18 +247,6 @@ class AlignPlaneDialog(BasePickingDialog):
             rotation_axis = np.cross(normal_vector, target_normal)
             rotation_axis_norm = np.linalg.norm(rotation_axis)
 
-            # Rodrigues' rotation formula
-            def rodrigues_rotation(
-                v: np.ndarray, axis: np.ndarray, angle: float
-            ) -> np.ndarray:
-                cos_a = np.cos(angle)
-                sin_a = np.sin(angle)
-                return (  # type: ignore[no-any-return]
-                    v * cos_a
-                    + np.cross(axis, v) * sin_a
-                    + axis * np.dot(axis, v) * (1 - cos_a)
-                )
-
             # Calculate new positions (rotated, centered back by default)
             conf = self.mol.GetConformer()
             new_positions = np.empty_like(positions)
@@ -266,7 +259,7 @@ class AlignPlaneDialog(BasePickingDialog):
                     cos_angle = np.dot(normal_vector, target_normal)
                     cos_angle = np.clip(cos_angle, -1.0, 1.0)
                     rotation_angle = np.arccos(cos_angle)
-                    rotated_pos = rodrigues_rotation(
+                    rotated_pos = rodrigues_rotate(
                         centered_pos,
                         rotation_axis_normalized,
                         rotation_angle,
