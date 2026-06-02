@@ -119,14 +119,14 @@ class TestTabSwitching:
 
 
 class TestAbsolutePicking:
-    def test_abs_pick_enforces_single_atom(self, make_dialog):
+    def test_abs_pick_supports_multiple_selection(self, make_dialog):
         dlg, mol, mw = make_dialog()
         dlg.tabs.setCurrentIndex(0)
         mw.view_3d_manager.current_mol = mol
         with patch.object(type(dlg), "show_atom_labels"):
             dlg._abs_on_atom_picked(0)
-            dlg._abs_on_atom_picked(1)  # replaces, not adds
-        assert dlg.selected_atoms == {1}
+            dlg._abs_on_atom_picked(1)  # accumulates, not replaces
+        assert dlg.selected_atoms == {0, 1}
 
     def test_abs_pick_populates_inputs(self, make_dialog):
         dlg, mol, mw = make_dialog()
@@ -170,7 +170,7 @@ class TestAbsoluteHelpers:
         dlg, _, _ = make_dialog()
         dlg.move_mol_checkbox.setChecked(False)
         dlg._on_move_mol_toggled(0)
-        assert dlg.abs_apply_btn.text() == "Move Atom"
+        assert dlg.abs_apply_btn.text() == "Move Selected"
         dlg.move_mol_checkbox.setChecked(True)
         dlg._on_move_mol_toggled(2)
         assert dlg.abs_apply_btn.text() == "Move Molecule"
@@ -216,21 +216,24 @@ class TestApplyAbsolute:
         for i in range(mol.GetNumAtoms()):
             assert after[i] == pytest.approx(before[i] + delta, abs=1e-4)
 
-    def test_move_atom_only_shifts_one_atom(self, make_dialog):
+    def test_move_selected_only_shifts_selected_atoms(self, make_dialog):
         dlg, mol, mw = make_dialog()
         mw.view_3d_manager.current_mol = mol
-        dlg.selected_atoms = {0}
+        dlg.selected_atoms = {0, 1}
         before = mol.GetConformer().GetPositions().copy()
-        dlg.abs_x_input.setText("0.0000")
-        dlg.abs_y_input.setText("0.0000")
-        dlg.abs_z_input.setText("0.0000")
+        dlg.abs_x_input.setText("1.0000")
+        dlg.abs_y_input.setText("1.0000")
+        dlg.abs_z_input.setText("1.0000")
         dlg.move_mol_checkbox.setChecked(False)
+        centroid_before = np.mean([before[0], before[1]], axis=0)
+        expected_delta = np.array([1.0, 1.0, 1.0]) - centroid_before
         with patch.object(type(dlg), "show_atom_labels"):
             dlg.apply_absolute()
         after = mol.GetConformer().GetPositions()
-        assert after[0] == pytest.approx([0.0, 0.0, 0.0], abs=1e-4)
+        assert after[0] == pytest.approx(before[0] + expected_delta, abs=1e-4)
+        assert after[1] == pytest.approx(before[1] + expected_delta, abs=1e-4)
         # Other atoms unchanged
-        for i in range(1, mol.GetNumAtoms()):
+        for i in range(2, mol.GetNumAtoms()):
             assert after[i] == pytest.approx(before[i], abs=1e-4)
 
     def test_apply_absolute_pushes_undo(self, make_dialog):
