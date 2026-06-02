@@ -10,10 +10,13 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import numpy as np
+import logging
 from typing import TYPE_CHECKING, Literal, Optional, Sequence
 
+import numpy as np
+
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -24,15 +27,17 @@ from PyQt6.QtWidgets import (
 from rdkit import Chem
 
 try:
-    from .base_picking_dialog import BasePickingDialog
+    from .base_picking_dialog import BasePickingDialog, SelectionList
 except ImportError:
-    from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
+    from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog, SelectionList
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
 
 
 class AlignPlaneDialog(BasePickingDialog):
+    """Dialog for aligning selected atoms to a principal plane (XY, XZ, or YZ)."""
+
     def __init__(
         self,
         mol: Chem.Mol,
@@ -43,20 +48,31 @@ class AlignPlaneDialog(BasePickingDialog):
     ) -> None:
         super().__init__(mol, main_window, parent)
         self.plane = plane
-        self.selected_atoms: set[int] = set()
+        self._selected_atoms = SelectionList()
 
         # Add preselected atoms
         if preselected_atoms:
-            self.selected_atoms.update(preselected_atoms)
+            self._selected_atoms.update(preselected_atoms)
 
         self.init_ui()
 
         # Add labels to preselected atoms
-        if self.selected_atoms:
+        if self._selected_atoms:
             self.show_atom_labels()
             self.update_display()
 
+    @property
+    def selected_atoms(self) -> SelectionList:
+        """Return the ordered list of selected atom indices."""
+        return self._selected_atoms
+
+    @selected_atoms.setter
+    def selected_atoms(self, val: object) -> None:
+        """Replace the selection with a new SelectionList built from val."""
+        self._selected_atoms = SelectionList(val)  # type: ignore[arg-type]
+
     def init_ui(self) -> None:
+        """Build and lay out all widgets for the plane-alignment dialog."""
         plane_names = {"xy": "XY", "xz": "XZ", "yz": "YZ"}
         self.setWindowTitle(f"Align to {plane_names[self.plane]} Plane")
         self.setModal(False)
@@ -64,10 +80,17 @@ class AlignPlaneDialog(BasePickingDialog):
 
         # Instructions
         instruction_label = QLabel(
-            f"Click atoms in the 3D view to select them for align to the {plane_names[self.plane]} plane. At least 3 atoms are required."
+            f"Click atoms in the 3D view to select them for align to "
+            f"the {plane_names[self.plane]} plane. At least 3 atoms "
+            f"are required."
         )
         instruction_label.setWordWrap(True)
         layout.addWidget(instruction_label)
+
+        # Move to zero plane option (default False)
+        self.move_to_zero_plane_checkbox = QCheckBox("Move the plane to the zero plane")
+        self.move_to_zero_plane_checkbox.setChecked(False)
+        layout.addWidget(self.move_to_zero_plane_checkbox)
 
         # Selected atoms display
         self.selection_label = QLabel("No atoms selected")
@@ -106,11 +129,12 @@ class AlignPlaneDialog(BasePickingDialog):
 
     def on_atom_picked(self, atom_idx: int) -> None:
         """Handle the event when an atom is picked in the 3D view."""
-        if atom_idx in self.selected_atoms:
-            self.selected_atoms.remove(atom_idx)
+        if atom_idx in self._selected_atoms:
+            self._selected_atoms.remove(atom_idx)
         else:
-            self.selected_atoms.add(atom_idx)
+            self._selected_atoms.append(atom_idx)
 
+        self.show_atom_labels()
         self.update_display()
 
     def clear_selection(self) -> None:
@@ -139,6 +163,7 @@ class AlignPlaneDialog(BasePickingDialog):
             self.update_display()
 
         except (AttributeError, RuntimeError, TypeError, KeyError) as e:
+            logging.exception("Failed to select all atoms")
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def update_display(self) -> None:
@@ -150,8 +175,15 @@ class AlignPlaneDialog(BasePickingDialog):
             )
             self.apply_button.setEnabled(False)
         else:
-            # Just show the count of selected atoms (to prevent dialog resizing)
-            self.selection_label.setText(f"Selected {count} atoms")
+            atom_list = sorted(self.selected_atoms)
+            atom_display = []
+            for i, atom_idx in enumerate(atom_list):
+                symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
+                atom_display.append(f"#{i + 1}: {symbol}({atom_idx})")
+
+            self.selection_label.setText(
+                f"Selected {count} atoms: {', '.join(atom_display)}"
+            )
             self.apply_button.setEnabled(count >= 3)
 
     def show_atom_labels(self) -> None:
@@ -159,7 +191,7 @@ class AlignPlaneDialog(BasePickingDialog):
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
             pairs = [(idx, f"#{i + 1}") for i, idx in enumerate(sorted_atoms)]
-            self.show_atom_labels_for(pairs, color="blue")
+            self.show_atom_labels_for(pairs, color="yellow")
         else:
             self.clear_atom_labels()
 
@@ -167,7 +199,9 @@ class AlignPlaneDialog(BasePickingDialog):
         """Apply plane alignment (rotation-based)."""
         if len(self.selected_atoms) < 3:
             QMessageBox.warning(
-                self, "Warning", "Please select at least 3 atoms for align."
+                self,
+                "Warning",
+                "Please select at least 3 atoms for align.",
             )
             return
         try:
@@ -197,7 +231,8 @@ class AlignPlaneDialog(BasePickingDialog):
             elif self.plane == "yz":
                 target_normal = np.array([1, 0, 0])  # X-axis direction
             else:
-                target_normal = np.array([0, 0, 1])  # Default to Z-axis (XY plane)
+                # Default to Z-axis (XY plane)
+                target_normal = np.array([0, 0, 1])
 
             # Adjust normal vector direction
             if np.dot(normal_vector, target_normal) < 0:
@@ -207,36 +242,61 @@ class AlignPlaneDialog(BasePickingDialog):
             rotation_axis = np.cross(normal_vector, target_normal)
             rotation_axis_norm = np.linalg.norm(rotation_axis)
 
-            if rotation_axis_norm > 1e-10:
-                rotation_axis = rotation_axis / rotation_axis_norm
-                cos_angle = np.dot(normal_vector, target_normal)
-                cos_angle = np.clip(cos_angle, -1.0, 1.0)
-                rotation_angle = np.arccos(cos_angle)
+            # Rodrigues' rotation formula
+            def rodrigues_rotation(
+                v: np.ndarray, axis: np.ndarray, angle: float
+            ) -> np.ndarray:
+                cos_a = np.cos(angle)
+                sin_a = np.sin(angle)
+                return (  # type: ignore[no-any-return]
+                    v * cos_a
+                    + np.cross(axis, v) * sin_a
+                    + axis * np.dot(axis, v) * (1 - cos_a)
+                )
 
-                # Rodrigues' rotation formula
-                def rodrigues_rotation(
-                    v: np.ndarray, axis: np.ndarray, angle: float
-                ) -> np.ndarray:
-                    cos_a = np.cos(angle)
-                    sin_a = np.sin(angle)
-                    return (  # type: ignore[no-any-return]
-                        v * cos_a
-                        + np.cross(axis, v) * sin_a
-                        + axis * np.dot(axis, v) * (1 - cos_a)
-                    )
-
-                # Rotate all atoms
-                conf = self.mol.GetConformer()
-                for i in range(self.mol.GetNumAtoms()):
-                    current_pos = np.array(conf.GetAtomPosition(i))
-                    centered_pos = current_pos - centroid
+            # Calculate new positions (rotated, centered back by default)
+            conf = self.mol.GetConformer()
+            new_positions = np.empty_like(positions)
+            for i in range(self.mol.GetNumAtoms()):
+                current_pos = np.array(conf.GetAtomPosition(i))
+                centered_pos = current_pos - centroid
+                if rotation_axis_norm > 1e-10:
+                    rot_norm = rotation_axis_norm
+                    rotation_axis_normalized = rotation_axis / rot_norm
+                    cos_angle = np.dot(normal_vector, target_normal)
+                    cos_angle = np.clip(cos_angle, -1.0, 1.0)
+                    rotation_angle = np.arccos(cos_angle)
                     rotated_pos = rodrigues_rotation(
-                        centered_pos, rotation_axis, rotation_angle
+                        centered_pos,
+                        rotation_axis_normalized,
+                        rotation_angle,
                     )
-                    new_pos = rotated_pos + centroid
-                    positions[i] = new_pos
+                else:
+                    rotated_pos = centered_pos
+                new_pos = rotated_pos + centroid
+                new_positions[i] = new_pos
+
+            # If move_to_zero_plane is True, translate so the plane
+            # of selected atoms is at zero
+            if self.move_to_zero_plane_checkbox.isChecked():
+                selected_new_positions = new_positions[selected_indices]
+                new_centroid = np.mean(selected_new_positions, axis=0)
+                translation_offset = np.zeros(3)
+                if self.plane == "xy":
+                    translation_offset[2] = new_centroid[2]
+                elif self.plane == "xz":
+                    translation_offset[1] = new_centroid[1]
+                elif self.plane == "yz":
+                    translation_offset[0] = new_centroid[0]
+                new_positions = new_positions - translation_offset
+
+            # Update the conformer positions array in place
+            for i in range(self.mol.GetNumAtoms()):
+                positions[i] = new_positions[i]
 
             self._update_molecule_geometry(positions)
+            self.show_atom_labels()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+            logging.exception("Failed to apply align")
             QMessageBox.critical(self, "Error", f"Failed to apply align: {str(e)}")
