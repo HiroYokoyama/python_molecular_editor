@@ -52,6 +52,9 @@ Define these at the top of your script. They are used for the UI and the interna
 | `PLUGIN_AUTHOR` | Name of the developer. |
 | `PLUGIN_DESCRIPTION` | A short summary shown in the Plugin Manager. |
 | `PLUGIN_CATEGORY` | Optional category (e.g., `"Analysis"`, `"Visualization"`). |
+| `PLUGIN_SUPPORTED_MOLEDITPY_VERSION` | Optional: Version specifier matching the current MoleditPy app version (e.g., `"3.*"`, `">=3.5"`). |
+| `PLUGIN_TAGS` | Optional: List of tags/categories (e.g., `["Utility", "Analysis"]`). |
+| `PLUGIN_DEPENDENCIES` | Optional: List of package dependency strings. Supports standard PEP-508 version constraints (e.g. `["numpy>=1.20", "rdkit>=2022.03"]`) or packages without version constraints. |
 
 ### 1.4 Folder-based Plugins (Packages)
 For complex plugins, use a folder structure. MoleditPy will treat the folder as a single plugin if it contains an `__init__.py`.
