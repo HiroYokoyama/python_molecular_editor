@@ -30,7 +30,7 @@ You can expect an acknowledgement within **5 business days**. If the issue is co
 
 MoleditPy is a desktop application that runs locally. The primary attack surface is:
 
-- **File parsing**: Malformed molecular structure files (`.mol`, `.xyz`, `.pme`, etc.) loaded via the UI or drag-and-drop
+- **File parsing**: Malformed molecular structure files (`.mol`, `.xyz`, `.pmeprj`, `.pmeraw` etc.) loaded via the UI or drag-and-drop
 - **Plugin system**: Plugins execute arbitrary Python code — only install plugins from trusted sources
 - **SMILES/SMARTS input**: Strings passed to RDKit for parsing
 
