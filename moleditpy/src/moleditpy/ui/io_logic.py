@@ -942,7 +942,7 @@ class IOManager:
                     symbol = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
                         i
                     ).GetSymbol()
-                    xyz_lines.append(f"  {symbol:<11}{pos.x:11.8f}      {pos.y:11.8f}      {pos.z:11.8f}")
+                    xyz_lines.append(f"  {symbol:<5}{pos.x:>15.8f}{pos.y:>15.8f}{pos.z:>15.8f}")
 
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write("\n".join(xyz_lines) + "\n")
