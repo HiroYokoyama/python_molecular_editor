@@ -15,7 +15,7 @@ Only the latest release receives security fixes.
 
 To report a vulnerability, send an email to:
 
-**titech.yoko.hiro@gmail.com**
+**titech.yoko.hiro[at]gmail.com**
 
 Include the following in your report:
 
