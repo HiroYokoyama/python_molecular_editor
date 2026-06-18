@@ -78,6 +78,24 @@ class DummyHost:
     def push_undo_state(self):
         pass
 
+    def set_current_molecule(self, mol):
+        self.view_3d_manager.current_mol = mol
+
+    def set_current_file_path(self, path):
+        self.init_manager.current_file_path = path
+
+    def set_has_unsaved_changes(self, value):
+        self.state_manager.has_unsaved_changes = value
+
+    def set_atom_id_to_rdkit_idx_map(self, mapping):
+        self.view_3d_manager.atom_id_to_rdkit_idx_map = mapping
+
+    def update_status_message(self, message, timeout=0):
+        if timeout == 0:
+            self.statusBar_mock.showMessage(message)
+        else:
+            self.statusBar_mock.showMessage(message, timeout)
+
 
 # ===========================================================================
 # Tests for prompt_for_charge

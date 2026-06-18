@@ -132,6 +132,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
                     cache[:] = positions[:]
         except (AttributeError, ValueError, TypeError, IndexError):
             # If for some reason the cache is incompatible, draw_molecule_3d below will rebuild it
+            # Safe defensive fallback catching AttributeError, ValueError, TypeError, IndexError
             pass
 
         # 3. Redraw molecule

@@ -324,15 +324,15 @@ class IOManager:
                     ) as f:
                         json.dump(json_data, f, indent=2, ensure_ascii=False)
 
-                self.host.state_manager.has_unsaved_changes = False
+                self.host.set_has_unsaved_changes(False)
                 self.host.state_manager.update_window_title()
-                self.host.statusBar().showMessage(
-                    f"Project saved to {self.host.init_manager.current_file_path}"
+                self.host.update_status_message(
+                    f"Project saved to {self.host.get_current_file_path()}"
                 )
             except (OSError, IOError) as e:
-                self.host.statusBar().showMessage(f"File I/O error: {e}")
+                self.host.update_status_message(f"File I/O error: {e}")
             except Exception as e:
-                self.host.statusBar().showMessage(f"Error saving project: {e}")
+                self.host.update_status_message(f"Error saving project: {e}")
         else:
             self.save_project_as()
 
@@ -366,8 +366,8 @@ class IOManager:
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(json_data, f, indent=2, ensure_ascii=False)
 
-            self.host.state_manager.has_unsaved_changes = False
-            self.host.init_manager.current_file_path = file_path
+            self.host.set_has_unsaved_changes(False)
+            self.host.set_current_file_path(file_path)
             self.host.state_manager.update_window_title()
             try:
                 self.host.state_manager._saved_state = copy.deepcopy(
@@ -376,7 +376,7 @@ class IOManager:
             except Exception:
                 # Safe defensive fallback catching Exception
                 pass
-            self.host.statusBar().showMessage(f"Project saved to {file_path}")
+            self.host.update_status_message(f"Project saved to {file_path}")
         except (OSError, IOError) as e:
             self.host.statusBar().showMessage(f"File I/O error: {e}")
         except Exception as e:
@@ -449,14 +449,14 @@ class IOManager:
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(json_data, f, indent=2, ensure_ascii=False)
 
-            self.host.state_manager.has_unsaved_changes = False
-            self.host.init_manager.current_file_path = file_path
+            self.host.set_has_unsaved_changes(False)
+            self.host.set_current_file_path(file_path)
             self.host.state_manager.update_window_title()
-            self.host.statusBar().showMessage(f"PME Project saved to {file_path}")
+            self.host.update_status_message(f"PME Project saved to {file_path}")
         except (OSError, IOError) as e:
-            self.host.statusBar().showMessage(f"File I/O error: {e}")
+            self.host.update_status_message(f"File I/O error: {e}")
         except Exception as e:
-            self.host.statusBar().showMessage(f"Error saving PME Project file: {e}")
+            self.host.update_status_message(f"Error saving PME Project file: {e}")
 
     def load_json_data(self, file_path: Optional[str] = None) -> None:
         """Load PME Project (.pmeprj) file."""
@@ -555,8 +555,8 @@ class IOManager:
             with open(file_path, "wb") as f:
                 pickle.dump(save_data, f)
 
-            self.host.state_manager.has_unsaved_changes = False
-            self.host.init_manager.current_file_path = file_path
+            self.host.set_has_unsaved_changes(False)
+            self.host.set_current_file_path(file_path)
             self.host.state_manager.update_window_title()
             try:
                 self.host.state_manager._saved_state = copy.deepcopy(
@@ -567,7 +567,7 @@ class IOManager:
                 pass
             self.host.statusBar().showMessage(f"Project saved to {file_path}")
         except (OSError, IOError) as e:
-            self.host.statusBar().showMessage(f"File I/O error: {e}")
+            self.host.update_status_message(f"File I/O error: {e}")
         except Exception as e:
             self.host.statusBar().showMessage(f"Export error: {e}")
 
@@ -733,8 +733,8 @@ class IOManager:
                 raise ValueError("Failed to create molecule from XYZ file.")
 
             self.host.edit_actions_manager.clear_all(skip_check=True)
-            self.host.view_3d_manager.current_mol = mol
-            self.host.view_3d_manager.atom_id_to_rdkit_idx_map = {}
+            self.host.set_current_molecule(mol)
+            self.host.set_atom_id_to_rdkit_idx_map({})
 
             # Determine is_xyz_derived: True only when bond estimation was skipped
             import contextlib
@@ -789,8 +789,8 @@ class IOManager:
                 self.host.statusBar().showMessage(
                     f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
                 )
-            self.host.init_manager.current_file_path = file_path
-            self.host.state_manager.has_unsaved_changes = False
+            self.host.set_current_file_path(file_path)
+            self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
         except Exception as e:
             if hasattr(self.host, "statusBar") and self.host.statusBar():
@@ -860,9 +860,9 @@ class IOManager:
                 logging.error(
                     "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
                 )
-            self.host.statusBar().showMessage(f"Loaded {file_path} in 3D viewer")
-            self.host.init_manager.current_file_path = file_path
-            self.host.state_manager.has_unsaved_changes = False
+            self.host.update_status_message(f"Loaded {file_path} in 3D viewer")
+            self.host.set_current_file_path(file_path)
+            self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
         except Exception as e:
             self.host.statusBar().showMessage(f"3D MOL Load failed: {e}")

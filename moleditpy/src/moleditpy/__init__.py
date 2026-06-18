@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 Top-level package for moleditpy.
 """
 
-import importlib.util
+import importlib.util  # noqa: F401
 from .utils.constants import VERSION as __version__  # noqa: F401
 
 try:

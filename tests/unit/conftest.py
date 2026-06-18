@@ -246,6 +246,114 @@ def mock_parser_host(app):
             id1, id2, order=bond_order, stereo=bond_stereo
         )
 
+    # 5. Mediator methods
+    def set_current_molecule(mol):
+        host.view_3d_manager.current_mol = mol
+
+    def set_3d_atom_positions(positions):
+        host.view_3d_manager.atom_positions_3d = positions
+
+    def clear_3d_view():
+        host.view_3d_manager.current_mol = None
+        if host.view_3d_manager.plotter:
+            host.view_3d_manager.plotter.clear()
+
+    def set_plotter_camera_position(camera_position):
+        if host.view_3d_manager.plotter:
+            host.view_3d_manager.plotter.camera_position = camera_position
+
+    def set_plotter_picker(picker):
+        if host.view_3d_manager.plotter:
+            host.view_3d_manager.plotter.picker = picker
+
+    def set_constraints_3d(constraints):
+        host.edit_3d_manager.constraints_3d = constraints
+
+    def get_constraints_3d():
+        return host.edit_3d_manager.constraints_3d
+
+    def set_has_unsaved_changes(value):
+        host.state_manager.has_unsaved_changes = value
+
+    def set_current_file_path(path):
+        host.init_manager.current_file_path = path
+
+    def get_current_file_path():
+        return host.init_manager.current_file_path
+
+    def get_molecule_data():
+        return host.state_manager.data
+
+    def set_molecule_data(data):
+        host.state_manager.data = data
+        if host.init_manager.scene:
+            host.init_manager.scene.data = data
+
+    def set_settings_dirty(value):
+        host.init_manager.settings_dirty = value
+
+    def set_is_2d_editable(value):
+        host.ui_manager.is_2d_editable = value
+
+    def set_optimization_method(method):
+        host.init_manager.optimization_method = method
+
+    def set_3d_edit_mode(enabled):
+        host.edit_3d_manager.is_3d_edit_mode = enabled
+
+    def is_3d_measurement_mode():
+        return bool(host.edit_3d_manager.measurement_mode)
+
+    def set_scene_mode(mode):
+        if host.init_manager.scene:
+            host.init_manager.scene.mode = mode
+
+    def set_scene_atom_symbol(symbol):
+        if host.init_manager.scene:
+            host.init_manager.scene.current_atom_symbol = symbol
+
+    def set_scene_bond_properties(order, stereo=0):
+        if host.init_manager.scene:
+            host.init_manager.scene.bond_order = order
+            host.init_manager.scene.bond_stereo = stereo
+
+    def set_scene_user_template_data(data):
+        if host.init_manager.scene:
+            host.init_manager.scene.user_template_data = data
+
+    def update_status_message(message, timeout=0):
+        if host.statusBar():
+            if timeout == 0:
+                host.statusBar().showMessage(message)
+            else:
+                host.statusBar().showMessage(message, timeout)
+
+    def get_settings():
+        return host.init_manager.settings
+
+    host.set_current_molecule.side_effect = set_current_molecule
+    host.set_3d_atom_positions.side_effect = set_3d_atom_positions
+    host.clear_3d_view.side_effect = clear_3d_view
+    host.set_plotter_camera_position.side_effect = set_plotter_camera_position
+    host.set_plotter_picker.side_effect = set_plotter_picker
+    host.set_constraints_3d.side_effect = set_constraints_3d
+    host.get_constraints_3d.side_effect = get_constraints_3d
+    host.set_has_unsaved_changes.side_effect = set_has_unsaved_changes
+    host.set_current_file_path.side_effect = set_current_file_path
+    host.get_current_file_path.side_effect = get_current_file_path
+    host.get_molecule_data.side_effect = get_molecule_data
+    host.set_molecule_data.side_effect = set_molecule_data
+    host.set_settings_dirty.side_effect = set_settings_dirty
+    host.set_is_2d_editable.side_effect = set_is_2d_editable
+    host.set_optimization_method.side_effect = set_optimization_method
+    host.set_3d_edit_mode.side_effect = set_3d_edit_mode
+    host.is_3d_measurement_mode.side_effect = is_3d_measurement_mode
+    host.set_scene_mode.side_effect = set_scene_mode
+    host.set_scene_atom_symbol.side_effect = set_scene_atom_symbol
+    host.set_scene_bond_properties.side_effect = set_scene_bond_properties
+    host.set_scene_user_template_data.side_effect = set_scene_user_template_data
+    host.update_status_message.side_effect = update_status_message
+    host.get_settings.side_effect = get_settings
     host.init_manager.scene.create_atom.side_effect = default_create_atom
     host.init_manager.scene.create_bond.side_effect = default_create_bond
 

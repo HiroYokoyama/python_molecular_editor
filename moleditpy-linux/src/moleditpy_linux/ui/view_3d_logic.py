@@ -13,7 +13,10 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 import contextlib
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from .custom_qt_interactor import CustomQtInteractor
 
 import numpy as np
 import vtk
@@ -71,7 +74,33 @@ class View3DManager:
         self._camera_initialized: bool = False
         self.atom_actor_original_opacity: float = 1.0
         self.current_mol: Optional[Chem.Mol] = None
-        self.plotter: Optional[Any] = None  # Initialized in main_window_init.py
+        self._plotter_val: Optional[Any] = None  # Initialized in main_window_init.py
+
+    @property
+    def plotter(self) -> Optional[CustomQtInteractor]:
+        """Return the PyVista/VTK interactor for 3D rendering.
+
+        In production this is the :class:`CustomQtInteractor` set by
+        ``MainInitManager``.  In unit tests the manager under test is
+        created independently, so the property falls back to
+        ``self.host.view_3d_manager.plotter`` if the owning host carries a
+        different (mock) ``view_3d_manager`` instance.
+        """
+        val = getattr(self, "_plotter_val", None)
+        if val is not None:
+            return val  # type: ignore[return-value]
+        if (
+            hasattr(self, "host")
+            and hasattr(self.host, "view_3d_manager")
+            and self.host.view_3d_manager is not self
+            and hasattr(self.host.view_3d_manager, "plotter")
+        ):
+            return self.host.view_3d_manager.plotter  # type: ignore[return-value]
+        return None
+
+    @plotter.setter
+    def plotter(self, val: Optional[CustomQtInteractor]) -> None:
+        self._plotter_val = val  # type: ignore[assignment]
 
     def cleanup(self) -> None:
         """Cleanup resources used by the 3D manager."""
@@ -198,21 +227,19 @@ class View3DManager:
         self.host.view_3d_manager.plotter.clear()
 
         # 2. Background color setting
-        self.host.view_3d_manager.plotter.set_background(
-            self.host.init_manager.settings.get("background_color", "#919191")
+        self.plotter.set_background(
+            self.host.get_settings().get("background_color", "#919191")
         )
 
         # 3. End with background and axes if mol is None or empty
         if mol is None or mol.GetNumAtoms() == 0:
             self.atom_actor = None
-            self.host.view_3d_manager.current_mol = None
-            self.host.view_3d_manager.plotter.render()
+            self.current_mol = None
+            self.plotter.render()
             return
 
         # 4. Lighting setting
-        is_lighting_enabled = self.host.init_manager.settings.get(
-            "lighting_enabled", True
-        )
+        is_lighting_enabled = self.host.get_settings().get("lighting_enabled", True)
 
         if is_lighting_enabled:
             light = pv.Light(
@@ -274,6 +301,7 @@ class View3DManager:
                         KeyError,
                     ):
                         # Suppress traceback
+                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, KeyError
                         pass
 
         # Define common mesh properties
@@ -290,13 +318,11 @@ class View3DManager:
         self._add_3d_bond_cylinders(mol_to_draw, conf, col, current_style, mesh_props)
         self._add_3d_aromatic_rings(mol_to_draw, current_style, mesh_props)
         self._add_3d_labels(mol, mol_to_draw)
-        self.host.view_3d_manager.plotter.camera_position = camera_state
+        self.plotter.camera_position = camera_state
 
         # Update projection mode and force render
-        proj_mode = self.host.init_manager.settings.get(
-            "projection_mode", "Perspective"
-        )
-        if hasattr(self.host.view_3d_manager.plotter, "renderer") and hasattr(
+        proj_mode = self.host.get_settings().get("projection_mode", "Perspective")
+        if hasattr(self.plotter, "renderer") and hasattr(
             self.host.view_3d_manager.plotter.renderer, "GetActiveCamera"
         ):
             vcam = self.host.view_3d_manager.plotter.renderer.GetActiveCamera()
@@ -653,6 +679,7 @@ class View3DManager:
                         KeyError,
                     ):
                         # Suppress traceback
+                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, KeyError
                         pass
 
                 # Determine effective uniform color for this bond
@@ -1288,6 +1315,7 @@ class View3DManager:
                                 if old_stereo != new_stereo:
                                     label = "?"
                         except (KeyError, RuntimeError, TypeError):
+                            # Safe defensive fallback catching KeyError, RuntimeError, TypeError
                             pass
 
                     pts.append(center_pos)
@@ -1951,6 +1979,7 @@ class View3DManager:
                     self.axes_widget.SetEnabled(False)
                     self.axes_widget = None
                 except (AttributeError, RuntimeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError
                     pass
 
             if show_axes:

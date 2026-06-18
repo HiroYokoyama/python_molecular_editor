@@ -163,13 +163,13 @@ class DialogManager:
                 mode_name = f"template_user_{template_name}"
 
                 # Store template data for the scene to use
-                self.host.init_manager.scene.user_template_data = (
+                self.host.set_scene_user_template_data(
                     self.host._template_dialog.selected_template
                 )
                 self.host.ui_manager.set_mode(mode_name)
 
                 # Update status
-                self.host.statusBar().showMessage(f"Template mode: {template_name}")
+                self.host.update_status_message(f"Template mode: {template_name}")
 
         self.host._template_dialog.finished.connect(on_dialog_finished)
 

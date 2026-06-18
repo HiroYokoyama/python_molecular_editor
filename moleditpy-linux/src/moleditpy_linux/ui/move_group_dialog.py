@@ -508,6 +508,7 @@ class MoveGroupDialog(BasePickingDialog):
             try:
                 plotter.camera_position = cam
             except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                 pass
 
         plotter.render()
@@ -523,6 +524,7 @@ class MoveGroupDialog(BasePickingDialog):
             try:
                 plotter.remove_actor("move_group_highlight")
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
 
         if self.highlight_actor:
@@ -530,6 +532,7 @@ class MoveGroupDialog(BasePickingDialog):
                 try:
                     plotter.remove_actor(self.highlight_actor)
                 except (AttributeError, RuntimeError, ValueError, TypeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                     pass
             self.highlight_actor = None
 
@@ -537,6 +540,7 @@ class MoveGroupDialog(BasePickingDialog):
             try:
                 plotter.render()
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
 
     def reset_translation_inputs(self) -> None:

@@ -37,6 +37,22 @@ class DummyProjectIo(IOManager):
         self.statusBar_mock = MagicMock()
         self.host.statusBar.return_value = self.statusBar_mock
 
+        # 3. Mock mediator methods
+        def set_current_file_path(path):
+            self.host.init_manager.current_file_path = path
+        self.host.set_current_file_path.side_effect = set_current_file_path
+
+        def set_has_unsaved_changes(val):
+            self.host.state_manager.has_unsaved_changes = val
+        self.host.set_has_unsaved_changes.side_effect = set_has_unsaved_changes
+
+        def update_status_message(message, timeout=0):
+            if timeout == 0:
+                self.statusBar_mock.showMessage(message)
+            else:
+                self.statusBar_mock.showMessage(message, timeout)
+        self.host.update_status_message.side_effect = update_status_message
+
     def __getattr__(self, name):
         """Allow legacy access to host attributes for test convenience."""
         return getattr(self.host, name)

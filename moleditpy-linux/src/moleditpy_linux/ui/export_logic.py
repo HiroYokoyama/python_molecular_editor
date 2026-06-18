@@ -64,6 +64,7 @@ class ExportManager:
                 if name:
                     return str(name)
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
             pass
         return "untitled"
 
@@ -75,6 +76,7 @@ class ExportManager:
             if cur_path:
                 return os.path.join(os.path.dirname(cur_path), basename)
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
             pass
         return basename
 
@@ -537,6 +539,7 @@ class ExportManager:
                                 )
                         except (AttributeError, RuntimeError, TypeError):
                             # Use default color on failure to avoid console noise during complex mesh export
+                            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                             pass
 
                         # Create mesh copy
@@ -584,6 +587,7 @@ class ExportManager:
                                     TypeError,
                                 ):
                                     # Fail silently and fall through to default mesh addition
+                                    # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                                     pass
                             if colors is not None and colors.size > 0:
                                 # Normalize float colors to 0-255
@@ -677,6 +681,7 @@ class ExportManager:
                                     # Do not continue here; let the default addition handle it (color has been updated)
                         except (AttributeError, RuntimeError, ValueError, TypeError):
                             # Fallback: add single mesh on failure
+                            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                             pass
 
                         meshes_with_colors.append(
@@ -741,6 +746,7 @@ class ExportManager:
             original_background = self.host.init_manager.scene.backgroundBrush()
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Minimal risk; keep default brush
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
             pass
 
         try:
@@ -905,6 +911,7 @@ class ExportManager:
                 try:
                     dpi = int(self.host.logicalDpiX())
                 except (AttributeError, RuntimeError, TypeError, ValueError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
                     pass
             generator.setResolution(dpi)
 

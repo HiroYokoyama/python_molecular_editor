@@ -201,7 +201,7 @@ class EditActionsManager:
             self.redo_stack.clear()
             # Record changes after initialization
             if getattr(self.host, "initialization_complete", False):
-                self.host.state_manager.has_unsaved_changes = True
+                self.host.set_has_unsaved_changes(True)
                 self.host.state_manager.update_window_title()
 
         self.update_implicit_hydrogens()
@@ -894,9 +894,8 @@ class EditActionsManager:
         self.clear_2d_editor(push_to_undo=False)
 
         # Clear 3D model
-        self.host.view_3d_manager.current_mol = None
-        self.host.view_3d_manager.plotter.clear()
-        self.host.edit_3d_manager.constraints_3d = []
+        self.host.clear_3d_view()
+        self.host.set_constraints_3d([])
 
         # Disable 3D features
         self.host.ui_manager._enable_3d_features(False)
@@ -905,8 +904,8 @@ class EditActionsManager:
         self.host.state_manager.reset_undo_stack()
 
         # Reset file state
-        self.host.state_manager.has_unsaved_changes = False
-        self.host.init_manager.current_file_path = None
+        self.host.set_has_unsaved_changes(False)
+        self.host.set_current_file_path(None)
         self.host.state_manager.update_window_title()
 
         # Reset 2D zoom
@@ -938,13 +937,12 @@ class EditActionsManager:
         if hasattr(self.host, "plugin_manager") and self.host.plugin_manager:
             self.host.plugin_manager.invoke_document_reset_handlers()
 
-        self.host.statusBar().showMessage("Cleared all data.")
+        self.host.update_status_message("Cleared all data.")
         return True
 
     def clear_2d_editor(self, push_to_undo: bool = True) -> None:
         # Clear 2D editor (no undo push)
-        self.host.state_manager.data = MolecularData()
-        self.host.init_manager.scene.data = self.host.state_manager.data
+        self.host.set_molecule_data(MolecularData())
         self.host.init_manager.scene.clear()
         self.host.init_manager.scene.reinitialize_items()
         self.host.is_xyz_derived = False
@@ -960,8 +958,7 @@ class EditActionsManager:
             )
 
         # Clear 3D data and disable 3D-related menus
-        self.host.view_3d_manager.current_mol = None
-        self.host.view_3d_manager.plotter.clear()
+        self.host.clear_3d_view()
         # Disable 3D features
         self.host.ui_manager._enable_3d_features(False)
 

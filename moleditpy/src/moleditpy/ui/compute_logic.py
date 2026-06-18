@@ -150,9 +150,9 @@ class ComputeManager:
         if not method_name:
             return
         method = str(method_name).strip().upper()
-        self.host.init_manager.optimization_method = method
-        self.host.init_manager.settings["optimization_method"] = method
-        self.host.init_manager.settings_dirty = True
+        self.host.set_optimization_method(method)
+        self.host.get_settings()["optimization_method"] = method
+        self.host.set_settings_dirty(True)
 
         if (
             hasattr(self.host.init_manager, "opt3d_actions")
@@ -166,10 +166,8 @@ class ComputeManager:
 
     def toggle_intermolecular_interaction_rdkit(self, checked: bool) -> None:
         """Toggle intermolecular interactions for RDKit optimization."""
-        self.host.init_manager.settings["optimize_intermolecular_interaction_rdkit"] = (
-            checked
-        )
-        self.host.init_manager.settings_dirty = True
+        self.host.get_settings()["optimize_intermolecular_interaction_rdkit"] = checked
+        self.host.set_settings_dirty(True)
         state_str = "Enabled" if checked else "Disabled"
         self.host.statusBar().showMessage(
             f"Intermolecular interaction for RDKit: {state_str}"
@@ -237,13 +235,12 @@ class ComputeManager:
     def trigger_conversion(self) -> None:
         """Main entry point for 2D to 3D conversion."""
         self.last_successful_optimization_method = None
-        self.host.edit_3d_manager.constraints_3d = []
+        self.host.set_constraints_3d([])
 
         if not self.host.state_manager.data.atoms:
-            self.host.view_3d_manager.plotter.clear()
-            self.host.view_3d_manager.current_mol = None
+            self.host.clear_3d_view()
             self.host.init_manager.analysis_action.setEnabled(False)
-            self.host.statusBar().showMessage("3D view cleared.")
+            self.host.update_status_message("3D view cleared.")
             self.host.init_manager.view_2d.setFocus()
             return
 
@@ -282,26 +279,21 @@ class ComputeManager:
         self.host.init_manager.convert_button.clicked.connect(self.halt_conversion)
         self.host.init_manager.cleanup_button.setEnabled(False)
         self.host.ui_manager._enable_3d_features(False)
-        self.host.view_3d_manager.plotter.clear()
-        self.host.view_3d_manager.current_mol = None
+        self.host.clear_3d_view()
 
         # Add 'Calculating...' overlay
-        bg_qcolor = QColor(
-            self.host.init_manager.settings.get("background_color", "#919191")
-        )
+        bg_qcolor = QColor(self.host.get_settings().get("background_color", "#919191"))
         text_color = (
             "black"
             if (bg_qcolor.isValid() and bg_qcolor.toHsl().lightness() > 128)
             else "white"
         )
-        self.host.compute_manager._calculating_text_actor = (
-            self.host.view_3d_manager.plotter.add_text(
-                "Calculating...",
-                position="lower_right",
-                font_size=15,
-                color=text_color,
-                name="calculating_text",
-            )
+        self._calculating_text_actor = self.host.view_3d_manager.plotter.add_text(
+            "Calculating...",
+            position="lower_right",
+            font_size=15,
+            color=text_color,
+            name="calculating_text",
         )
         self.host.view_3d_manager.plotter.render()
 
@@ -499,14 +491,14 @@ class ComputeManager:
         if worker_id is not None:
             if worker_id not in self.active_worker_ids:
                 # Still show something if the user wants to see 'staled' result
-                self.host.statusBar().showMessage(
+                self.host.update_status_message(
                     f"Ignored halted worker result (ID = {worker_id})"
                 )
                 return  # stale worker, ignore
             self.active_worker_ids.discard(worker_id)
             self.halt_ids.discard(worker_id)
 
-        self.host.view_3d_manager.current_mol = mol
+        self.host.set_current_molecule(mol)
         self.host.is_xyz_derived = False
 
         # Restore properties

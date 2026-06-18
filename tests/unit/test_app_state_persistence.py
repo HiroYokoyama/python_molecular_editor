@@ -110,6 +110,44 @@ class DummyMainWindow(StateManager):
     def set_state_from_data(self, data):
         return super().set_state_from_data(data)
 
+    # --- Mediator stubs required by app_state.py ---
+
+    def set_current_molecule(self, mol):
+        self.view_3d_manager.current_mol = mol
+
+    def set_3d_atom_positions(self, positions):
+        self.view_3d_manager.atom_positions_3d = positions
+
+    def clear_3d_view(self):
+        self.view_3d_manager.current_mol = None
+
+    def set_constraints_3d(self, constraints):
+        self.edit_3d_manager.constraints_3d = constraints
+
+    def get_constraints_3d(self):
+        return self.edit_3d_manager.constraints_3d
+
+    def set_has_unsaved_changes(self, value):
+        self.state_manager.has_unsaved_changes = value
+
+    def set_current_file_path(self, path):
+        self.init_manager.current_file_path = path
+
+    def get_current_file_path(self):
+        return self.init_manager.current_file_path
+
+    def set_is_2d_editable(self, value):
+        self.ui_manager.is_2d_editable = value
+
+    def update_status_message(self, message, timeout=0):
+        pass
+
+    def set_last_successful_optimization_method(self, method):
+        self.compute_manager.last_successful_optimization_method = method
+
+    def get_settings(self):
+        return self.init_manager.settings
+
 
 @pytest.fixture
 def dummy_window(app):

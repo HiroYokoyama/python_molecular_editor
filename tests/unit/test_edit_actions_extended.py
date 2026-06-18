@@ -103,6 +103,45 @@ class DummyHost:
     def update_2d_measurement_labels(self):
         pass
 
+    # Mediator stubs
+    def set_current_molecule(self, mol):
+        self.view_3d_manager.current_mol = mol
+
+    def clear_3d_view(self):
+        self.view_3d_manager.current_mol = None
+
+    def set_constraints_3d(self, constraints):
+        self.edit_3d_manager.constraints_3d = constraints
+
+    def get_constraints_3d(self):
+        return self.edit_3d_manager.constraints_3d
+
+    def set_has_unsaved_changes(self, value):
+        self.state_manager.has_unsaved_changes = value
+
+    def set_current_file_path(self, path):
+        self.init_manager.current_file_path = path
+
+    def get_current_file_path(self):
+        return self.init_manager.current_file_path
+
+    def set_molecule_data(self, data):
+        self.state_manager.data = data
+        if self.init_manager.scene:
+            self.init_manager.scene.data = data
+
+    def get_molecule_data(self):
+        return self.state_manager.data
+
+    def update_status_message(self, message, timeout=0):
+        if timeout == 0:
+            self.statusBar_mock.showMessage(message)
+        else:
+            self.statusBar_mock.showMessage(message, timeout)
+
+    def get_settings(self):
+        return self.init_manager.settings
+
 
 class TestEditActionsExtended:
     @pytest.fixture

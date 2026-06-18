@@ -378,7 +378,8 @@ class AtomItem(QGraphicsItem):
                         except (AttributeError, RuntimeError, TypeError):
                             # If sip check fails, continue defensively.
                             # This usually means the object is in an inconsistent state.
-                            pass  # Silent failure for non-critical partner state check
+                            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError  # Silent failure for non-critical partner state check
+                            pass
 
                         other_pos = None
                         try:

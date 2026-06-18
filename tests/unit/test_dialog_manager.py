@@ -92,6 +92,24 @@ class DummyHost:
     def statusBar(self):
         return self.statusBar_mock
 
+    def set_scene_user_template_data(self, data):
+        if self.init_manager.scene:
+            self.init_manager.scene.user_template_data = data
+
+    def set_scene_mode(self, mode):
+        if self.init_manager.scene:
+            self.init_manager.scene.mode = mode
+
+    def set_scene_atom_symbol(self, symbol):
+        if self.init_manager.scene:
+            self.init_manager.scene.current_atom_symbol = symbol
+
+    def update_status_message(self, message, timeout=0):
+        if timeout == 0:
+            self.statusBar_mock.showMessage(message)
+        else:
+            self.statusBar_mock.showMessage(message, timeout)
+
 
 # ---------------------------------------------------------------------------
 # Fixture

@@ -65,7 +65,7 @@ class UIManager(QObject):
             )
 
         prev_mode = getattr(self.host.init_manager.scene, "mode", None)
-        self.host.init_manager.scene.mode = mode_str
+        self.host.set_scene_mode(mode_str)
         self.host.init_manager.view_2d.setMouseTracking(True)
 
         # Trigger immediate scene refresh to show/update template previews
@@ -96,26 +96,21 @@ class UIManager(QObject):
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
 
         if mode_str.startswith("atom"):
-            self.host.init_manager.scene.current_atom_symbol = mode_str.split("_")[1]
-            self.host.statusBar().showMessage(
-                f"Mode: Draw Atom ({self.host.init_manager.scene.current_atom_symbol})"
-            )
+            atom_symbol = mode_str.split("_")[1]
+            self.host.set_scene_atom_symbol(atom_symbol)
+            self.host.update_status_message(f"Mode: Draw Atom ({atom_symbol})")
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.host.init_manager.view_2d.setMouseTracking(True)
-            self.host.init_manager.scene.bond_order = 1
-            self.host.init_manager.scene.bond_stereo = 0
+            self.host.set_scene_bond_properties(1, 0)
         elif mode_str.startswith("bond"):
-            self.host.init_manager.scene.current_atom_symbol = "C"
+            self.host.set_scene_atom_symbol("C")
             parts = mode_str.split("_")
-            self.host.init_manager.scene.bond_order = int(parts[1])
-            self.host.init_manager.scene.bond_stereo = (
-                int(parts[2]) if len(parts) > 2 else 0
-            )
-            stereo_text = {0: "", 1: " (Wedge)", 2: " (Dash)"}.get(
-                self.host.init_manager.scene.bond_stereo, ""
-            )
-            self.host.statusBar().showMessage(
-                f"Mode: Draw Bond (Order: {self.host.init_manager.scene.bond_order}{stereo_text})"
+            order = int(parts[1])
+            stereo = int(parts[2]) if len(parts) > 2 else 0
+            self.host.set_scene_bond_properties(order, stereo)
+            stereo_text = {0: "", 1: " (Wedge)", 2: " (Dash)"}.get(stereo, "")
+            self.host.update_status_message(
+                f"Mode: Draw Bond (Order: {order}{stereo_text})"
             )
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.host.init_manager.view_2d.setMouseTracking(True)
@@ -139,16 +134,15 @@ class UIManager(QObject):
             self.host.statusBar().showMessage("Mode: Decrease Charge (Click on Atom)")
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
         elif mode_str == "radical":
-            self.host.statusBar().showMessage("Mode: Toggle Radical (Click on Atom)")
+            self.host.update_status_message("Mode: Toggle Radical (Click on Atom)")
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
 
         else:  # Select mode
-            self.host.statusBar().showMessage("Mode: Select")
+            self.host.update_status_message("Mode: Select")
             self.host.init_manager.view_2d.setDragMode(
                 QGraphicsView.DragMode.RubberBandDrag
             )
-            self.host.init_manager.scene.bond_order = 1
-            self.host.init_manager.scene.bond_stereo = 0
+            self.host.set_scene_bond_properties(1, 0)
 
     def set_mode_and_update_toolbar(self, mode_str: str) -> None:
         self.set_mode(mode_str)
@@ -238,8 +232,9 @@ class UIManager(QObject):
             )
             if modified:
                 self.host.init_manager.save_settings()
-                self.host.init_manager.settings_dirty = False
+                self.host.set_settings_dirty(False)
         except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, OSError
             pass
 
         # 2. Handle unsaved changes
@@ -272,6 +267,7 @@ class UIManager(QObject):
                     try:
                         widget.close()
                     except (RuntimeError, TypeError):
+                        # Safe defensive fallback catching RuntimeError, TypeError
                         pass
 
             # Stop calculation threads
@@ -289,8 +285,10 @@ class UIManager(QObject):
                     else:
                         logging.error("REPORT ERROR: Missing attribute 'wait' on thr")
                 except (RuntimeError, TypeError):
+                    # Safe defensive fallback catching RuntimeError, TypeError
                     pass
         except (AttributeError, RuntimeError, TypeError, ValueError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
             pass
 
         return True
@@ -310,11 +308,11 @@ class UIManager(QObject):
                 self.host.init_manager.measurement_action.setChecked(False)
                 self.host.edit_3d_manager.toggle_measurement_mode(False)
 
-        self.host.edit_3d_manager.is_3d_edit_mode = checked
+        self.host.set_3d_edit_mode(checked)
         if checked:
-            self.host.statusBar().showMessage("3D Drag Mode: ON.")
+            self.host.update_status_message("3D Drag Mode: ON.")
         else:
-            self.host.statusBar().showMessage("3D Drag Mode: OFF.")
+            self.host.update_status_message("3D Drag Mode: OFF.")
             # Reset any stuck VTK interactor state when leaving 3D edit mode
             try:
                 interactor_style = (
@@ -323,11 +321,12 @@ class UIManager(QObject):
                 if hasattr(interactor_style, "reset_interactor_state"):
                     interactor_style.reset_interactor_state()
             except (AttributeError, RuntimeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
         self.host.init_manager.view_2d.setFocus()
 
     def _setup_3d_picker(self) -> None:
-        self.host.view_3d_manager.plotter.picker = vtk.vtkCellPicker()
+        self.host.set_plotter_picker(vtk.vtkCellPicker())
         self.host.view_3d_manager.plotter.picker.SetTolerance(0.025)
 
         # Create CustomInteractorStyle
@@ -496,6 +495,7 @@ class UIManager(QObject):
                     obj.setEnabled(enabled)
             except (AttributeError, RuntimeError, TypeError, ValueError):
                 # Suppress non-critical 3D feature state update errors if widgets are not fully initialized
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
                 pass
 
         # Always enable these core 3D interactors
@@ -508,7 +508,7 @@ class UIManager(QObject):
 
     def _enter_3d_viewer_ui_mode(self) -> None:
         """Set UI mode to 3D viewer."""
-        self.host.ui_manager.is_2d_editable = False
+        self.is_2d_editable = False
         self.host.init_manager.cleanup_button.setEnabled(False)
         self.host.init_manager.convert_button.setEnabled(False)
         for action in self.host.init_manager.tool_group.actions():
@@ -527,8 +527,8 @@ class UIManager(QObject):
 
     def restore_ui_for_editing(self) -> None:
         """Enables all 2D editing UI elements."""
-        self.host.ui_manager.is_2d_editable = True
-        self.host.ui_manager.restore_2d_panel()
+        self.is_2d_editable = True
+        self.restore_2d_panel()
         self.host.init_manager.cleanup_button.setEnabled(True)
         self.host.init_manager.convert_button.setEnabled(True)
 
@@ -543,7 +543,7 @@ class UIManager(QObject):
             )
 
         # Collectively disable 3D edit functions when returning to 2D mode
-        self.host.ui_manager._enable_3d_edit_actions(False)
+        self._enable_3d_edit_actions(False)
 
     def minimize_2d_panel(self) -> None:
         """Minimize (hide) 2D panel."""

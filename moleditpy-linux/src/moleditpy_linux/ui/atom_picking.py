@@ -44,6 +44,7 @@ def _atom_world_radius(view_3d_manager: Any, mol: Any, atom_idx: int) -> float:
     try:
         settings = view_3d_manager.host.init_manager.settings
     except (AttributeError, RuntimeError, TypeError):
+        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
         pass
 
     style = str(getattr(view_3d_manager, "current_3d_style", "ball_and_stick"))

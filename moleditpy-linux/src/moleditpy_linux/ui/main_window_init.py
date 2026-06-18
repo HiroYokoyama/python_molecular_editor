@@ -597,6 +597,7 @@ class MainInitManager:
                     self.host.init_manager.settings.update(loaded_settings)
         except (AttributeError, RuntimeError, ValueError, TypeError, IOError):
             # Use defaults on any error
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError, IOError
             pass
 
         # 4.5 Save initial settings copy for change detection

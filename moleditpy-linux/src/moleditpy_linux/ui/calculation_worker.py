@@ -201,6 +201,7 @@ def _adjust_collision_avoidance(
         raise
     except (AttributeError, RuntimeError, TypeError, ValueError):
         # Suppress non-critical errors during fragment collision resolution if state is inconsistent
+        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
         pass
 
 
