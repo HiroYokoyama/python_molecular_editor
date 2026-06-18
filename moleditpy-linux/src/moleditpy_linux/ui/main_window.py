@@ -273,6 +273,7 @@ class MainWindow(QMainWindow):
     def save_state_snapshot(self) -> None:
         """Create a deep copy snapshot of the current state for undo/redo comparison."""
         import copy
+
         try:
             self.state_manager._saved_state = copy.deepcopy(
                 self.state_manager.get_current_state()

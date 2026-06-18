@@ -341,9 +341,7 @@ class MainInitManager:
             self.host.view_3d_manager.plotter
             and self.host.view_3d_manager.plotter.renderer
         ):
-            bg_color = self.settings.get(
-                "background_color", "#919191"
-            )
+            bg_color = self.settings.get("background_color", "#919191")
             self.host.view_3d_manager.plotter.set_background(bg_color)
             self.host.view_3d_manager.apply_3d_settings()
 
@@ -353,17 +351,10 @@ class MainInitManager:
                 self.host.view_3d_manager.draw_molecule_3d(mol)
 
         try:
-            if (
-                hasattr(self, "scene")
-                and self.scene
-            ):
+            if hasattr(self, "scene") and self.scene:
                 # Apply 2D background color
-                bg_color_2d = self.settings.get(
-                    "background_color_2d", "#FFFFFF"
-                )
-                self.scene.setBackgroundBrush(
-                    QBrush(QColor(bg_color_2d))
-                )
+                bg_color_2d = self.settings.get("background_color_2d", "#FFFFFF")
+                self.scene.setBackgroundBrush(QBrush(QColor(bg_color_2d)))
 
                 for it in list(self.scene.items()):
                     if hasattr(it, "update_style"):  # Safe
@@ -513,10 +504,7 @@ class MainInitManager:
             # Conversion actions
             if hasattr(self, "conv_actions"):
                 mode = (
-                    self.settings.get(
-                        "3d_conversion_mode", "fallback"
-                    )
-                    or ""
+                    self.settings.get("3d_conversion_mode", "fallback") or ""
                 ).lower()
                 for key, action in self.conv_actions.items():
                     action.setChecked(key.lower() == mode)
@@ -526,9 +514,7 @@ class MainInitManager:
             # Intermolecular interaction
             if hasattr(self.host, "intermolecular_rdkit_action"):
                 self.host.intermolecular_rdkit_action.setChecked(
-                    self.settings.get(
-                        "optimize_intermolecular_interaction_rdkit", True
-                    )
+                    self.settings.get("optimize_intermolecular_interaction_rdkit", True)
                 )
             else:
                 logging.error(
@@ -553,9 +539,7 @@ class MainInitManager:
         # Refresh 2D View
         if hasattr(self, "scene") and self.scene:
             try:
-                bg_c = self.settings.get(
-                    "background_color_2d", "#FFFFFF"
-                )
+                bg_c = self.settings.get("background_color_2d", "#FFFFFF")
                 self.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
                 for item in self.scene.items():
                     with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -581,9 +565,7 @@ class MainInitManager:
         # 2. Try to load from user's settings file
         try:
             if os.path.exists(self.settings_file):
-                with open(
-                    self.settings_file, "r", encoding="utf-8"
-                ) as f:
+                with open(self.settings_file, "r", encoding="utf-8") as f:
                     loaded_settings = json.load(f)
 
                     # 3. Handle legacy settings migration
@@ -600,20 +582,13 @@ class MainInitManager:
         self.host.initial_settings = self.settings.copy()
 
         # 5. Apply loaded settings to application state
-        self.host.set_show_chiral_labels(
-            self.settings.get("show_chiral_labels", False)
-        )
+        self.host.set_show_chiral_labels(self.settings.get("show_chiral_labels", False))
         # Apply optimization method
         if "optimization_method" in self.settings:
-            self.optimization_method = (
-                self.settings["optimization_method"]
-            )
+            self.optimization_method = self.settings["optimization_method"]
 
     def save_settings(self) -> None:
-        if (
-            not self.settings_dirty
-            or self.settings == self.host.initial_settings
-        ):
+        if not self.settings_dirty or self.settings == self.host.initial_settings:
             return
         try:
             if not os.path.exists(self.settings_dir):
@@ -866,10 +841,7 @@ class MainInitManager:
                     break
 
         targets = []
-        if (
-            hasattr(self, "export_button")
-            and self.export_button.menu()
-        ):
+        if hasattr(self, "export_button") and self.export_button.menu():
             targets.append(self.export_button.menu())
         if main_export_menu:
             targets.append(main_export_menu)
@@ -992,9 +964,7 @@ class MainInitManager:
         self.splitter.addWidget(right_pane)
 
         # Monitor splitter movement
-        self.splitter.splitterMoved.connect(
-            self.host.ui_manager.on_splitter_moved
-        )
+        self.splitter.splitterMoved.connect(self.host.ui_manager.on_splitter_moved)
         self.splitter.setSizes([600, 600])
 
         # Set tooltip for splitter handle
@@ -1002,9 +972,7 @@ class MainInitManager:
 
         # Settings to separate status bar segments
         self.status_bar = self.host.statusBar()
-        self.formula_label = QLabel(
-            ""
-        )  # Create label to be displayed on the right
+        self.formula_label = QLabel("")  # Create label to be displayed on the right
         # Add margin to the right end for better appearance
         self.formula_label.setStyleSheet("padding-right: 8px;")
         # Add label as a permanent widget on the right
@@ -1045,15 +1013,11 @@ class MainInitManager:
 
     def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""
-        self.scene = MoleculeScene(
-            self.host.state_manager.data, self.host
-        )
+        self.scene = MoleculeScene(self.host.state_manager.data, self.host)
         self.scene.setSceneRect(-4000, -4000, 4000, 4000)
         self.scene.setBackgroundBrush(QColor("#FFFFFF"))
 
-        self.view_2d = ZoomableView(
-            self.scene, self.host
-        )
+        self.view_2d = ZoomableView(self.scene, self.host)
         self.view_2d.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.view_2d.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -1141,9 +1105,7 @@ class MainInitManager:
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
         self.export_button.setText("Export 3D")
-        self.export_button.setPopupMode(
-            QToolButton.ToolButtonPopupMode.InstantPopup
-        )
+        self.export_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.export_button.setEnabled(False)  # Initially disabled
 
         export_menu = QMenu(self.host)
@@ -1334,16 +1296,12 @@ class MainInitManager:
         self.edit_3d_action.setToolTip(
             "Toggle 3D atom dragging mode (Hold Alt for temporary mode)"
         )
-        self.edit_3d_action.toggled.connect(
-            self.host.ui_manager.toggle_3d_edit_mode
-        )
+        self.edit_3d_action.toggled.connect(self.host.ui_manager.toggle_3d_edit_mode)
         toolbar.addAction(self.edit_3d_action)
 
         self.style_button = QToolButton()
         self.style_button.setText("3D Style")
-        self.style_button.setPopupMode(
-            QToolButton.ToolButtonPopupMode.InstantPopup
-        )
+        self.style_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         toolbar.addWidget(self.style_button)
 
         style_menu = QMenu(self.host)
@@ -1484,9 +1442,7 @@ class MainInitManager:
                 return QColor("#FFFFFF") if os_pref else QColor("#000000")
 
         with contextlib.suppress(Exception):
-            bg = QColor(
-                self.settings.get("background_color", "#919191")
-            )
+            bg = QColor(self.settings.get("background_color", "#919191"))
             if bg.isValid():
                 lum = 0.2126 * bg.redF() + 0.7152 * bg.greenF() + 0.0722 * bg.blueF()
                 return QColor("#FFFFFF") if lum < 0.5 else QColor("#000000")
@@ -1609,24 +1565,18 @@ class MainInitManager:
         edit_menu = menu_bar.addMenu("&Edit")
         self.undo_action = QAction("Undo", self.host)
         self.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
-        self.undo_action.triggered.connect(
-            self.host.edit_actions_manager.undo
-        )
+        self.undo_action.triggered.connect(self.host.edit_actions_manager.undo)
         edit_menu.addAction(self.undo_action)
 
         self.redo_action = QAction("Redo", self.host)
         self.redo_action.setShortcut(QKeySequence.StandardKey.Redo)
-        self.redo_action.triggered.connect(
-            self.host.edit_actions_manager.redo
-        )
+        self.redo_action.triggered.connect(self.host.edit_actions_manager.redo)
         edit_menu.addAction(self.redo_action)
 
         edit_menu.addSeparator()
         self.cut_action = QAction("Cut", self.host)
         self.cut_action.setShortcut(QKeySequence.StandardKey.Cut)
-        self.cut_action.triggered.connect(
-            self.host.edit_actions_manager.cut_selection
-        )
+        self.cut_action.triggered.connect(self.host.edit_actions_manager.cut_selection)
         edit_menu.addAction(self.cut_action)
 
         self.copy_action = QAction("Copy", self.host)
@@ -2046,9 +1996,7 @@ class MainInitManager:
             conv_group.addAction(a)
             self.conv_actions[key] = a
 
-        saved_conv = self.settings.get(
-            "3d_conversion_mode", "fallback"
-        )
+        saved_conv = self.settings.get("3d_conversion_mode", "fallback")
         if (
             saved_conv not in self.conv_actions
             or not self.conv_actions[saved_conv].isEnabled()
@@ -2097,18 +2045,14 @@ class MainInitManager:
         )
         self.host.intermolecular_rdkit_action.setCheckable(True)
         self.host.intermolecular_rdkit_action.setChecked(
-            self.settings.get(
-                "optimize_intermolecular_interaction_rdkit", True
-            )
+            self.settings.get("optimize_intermolecular_interaction_rdkit", True)
         )
         self.host.intermolecular_rdkit_action.triggered.connect(
             self.host.compute_manager.toggle_intermolecular_interaction_rdkit
         )
         optimization_menu.addAction(self.host.intermolecular_rdkit_action)
 
-        saved_opt = (
-            self.settings.get("optimization_method") or "MMFF_RDKIT"
-        ).upper()
+        saved_opt = (self.settings.get("optimization_method") or "MMFF_RDKIT").upper()
         if (
             saved_opt in self.opt3d_actions
             and self.opt3d_actions[saved_opt].isEnabled()
