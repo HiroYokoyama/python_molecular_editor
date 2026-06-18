@@ -679,10 +679,6 @@ class PluginManager:
                         if node.value:  # AnnAssign might presumably not have value? (though usually does for module globals)
                             if isinstance(node.value, ast.Constant):  # Py3.8+
                                 val = node.value.value
-                            elif hasattr(ast, "Str") and isinstance(
-                                node.value, getattr(ast, "Str", type(None))
-                            ):  # Py3.7 and below
-                                val = node.value.s
                             elif isinstance(node.value, ast.Tuple):
                                 # Handle version tuples e.g. (1, 0, 0)
                                 try:
@@ -691,10 +687,6 @@ class PluginManager:
                                     for elt in node.value.elts:
                                         if isinstance(elt, ast.Constant):
                                             elts.append(elt.value)
-                                        elif hasattr(ast, "Num") and isinstance(
-                                            elt, getattr(ast, "Num", type(None))
-                                        ):
-                                            elts.append(elt.n)
                                     val = ".".join(map(str, elts))
                                 except (
                                     AttributeError,

@@ -626,7 +626,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     constrained_method_name
                 )
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                logging.warning("Failed to set last_successful_optimization_method: %s", e)
+                logging.warning(
+                    "Failed to set last_successful_optimization_method: %s", e
+                )
 
             # Save constraints list to MainWindow on success (same logic as reject)
             try:
