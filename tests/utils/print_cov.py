@@ -179,9 +179,7 @@ markdown_lines.append(
 )
 markdown_lines.append("")
 
-markdown_lines.extend(
-    build_table(full_files, full_totals, "Coverage Breakdown")
-)
+markdown_lines.extend(build_table(full_files, full_totals, "Coverage Breakdown"))
 
 markdown_lines.append("## Test Suite Status")
 markdown_lines.append("- **Unit tests**: PASSED")

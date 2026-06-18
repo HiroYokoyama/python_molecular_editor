@@ -52,6 +52,10 @@ class ComputeManager:
         self.next_conversion_id: int = 1
         self.active_worker_ids: Set[int] = set()
 
+    def reset_active_threads(self) -> None:
+        """Reset active calculation threads list."""
+        self._active_calc_threads = []
+
     def _safe_disconnect(self, signal: Any) -> None:
         """Safely disconnect a signal, silently ignoring RuntimeError."""
         try:

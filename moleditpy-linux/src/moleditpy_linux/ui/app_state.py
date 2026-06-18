@@ -57,6 +57,7 @@ class StateManager:
         self.has_unsaved_changes = False
         self._preserved_plugin_data: Dict[str, Any] = {}
         self.dragged_atom_info: Optional[Dict[str, Any]] = None
+        self._saved_state: Optional[Dict[str, Any]] = None
 
     def get_current_state(self) -> Dict[str, Any]:
         atoms = {

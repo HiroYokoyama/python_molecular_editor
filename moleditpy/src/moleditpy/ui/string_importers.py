@@ -206,4 +206,3 @@ class StringImporterManager:
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             self.host.statusBar().showMessage(f"Error loading from InChI: {e}")
-

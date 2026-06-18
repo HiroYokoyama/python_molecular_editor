@@ -664,4 +664,3 @@ class UIManager(QObject):
                 return
             # Show initial ratio
             self.on_splitter_moved(0, 0)
-

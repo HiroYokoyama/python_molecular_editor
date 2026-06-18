@@ -22,23 +22,28 @@ def _make_ui_manager():
 
     def set_scene_mode(mode):
         host.init_manager.scene.mode = mode
+
     host.set_scene_mode.side_effect = set_scene_mode
 
     def set_scene_atom_symbol(symbol):
         host.init_manager.scene.current_atom_symbol = symbol
+
     host.set_scene_atom_symbol.side_effect = set_scene_atom_symbol
 
     def set_scene_bond_properties(order, stereo=0):
         host.init_manager.scene.bond_order = order
         host.init_manager.scene.bond_stereo = stereo
+
     host.set_scene_bond_properties.side_effect = set_scene_bond_properties
 
     def update_status_message(msg):
         pass
+
     host.update_status_message.side_effect = update_status_message
 
     def set_settings_dirty(val):
         host.init_manager.settings_dirty = val
+
     host.set_settings_dirty.side_effect = set_settings_dirty
 
     return UIManager(host)

@@ -270,6 +270,33 @@ class MainWindow(QMainWindow):
         """Set 2D-to-3D atom ID mapping."""
         self.view_3d_manager.atom_id_to_rdkit_idx_map = mapping
 
+    def save_state_snapshot(self) -> None:
+        """Create a deep copy snapshot of the current state for undo/redo comparison."""
+        import copy
+        try:
+            self.state_manager._saved_state = copy.deepcopy(
+                self.state_manager.get_current_state()
+            )
+        except Exception:
+            # Safe defensive fallback catching Exception
+            pass
+
+    def update_window_title(self) -> None:
+        """Update main window title to reflect file path and save status."""
+        self.state_manager.update_window_title()
+
+    def set_show_chiral_labels(self, value: bool) -> None:
+        """Set show chiral labels on 3D viewer."""
+        self.view_3d_manager.show_chiral_labels = value
+
+    def set_plotter(self, plotter: Optional[CustomQtInteractor]) -> None:
+        """Set the 3D viewer plotter."""
+        self.view_3d_manager.plotter = plotter
+
+    def reset_active_calc_threads(self) -> None:
+        """Reset active calculation threads list."""
+        self.compute_manager.reset_active_threads()
+
     # --- Core Proxy Properties (Legacy Plugin Support Only. Bypassed by Core Logics) ---
     @property
     def current_mol(self) -> Optional[Chem.Mol]:
