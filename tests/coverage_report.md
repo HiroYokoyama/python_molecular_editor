@@ -1,8 +1,8 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage (Full)**: **80.21%**
+- **Overall Project Coverage**: **80.21%**
 
-### Full Application Breakdown
+### Coverage Breakdown
 
 | File | Stmts | Miss | Cover |
 | :--- | :--- | :--- | :--- |

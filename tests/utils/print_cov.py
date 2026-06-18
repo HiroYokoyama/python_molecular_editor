@@ -175,12 +175,12 @@ markdown_lines = []
 markdown_lines.append("# MoleditPy Coverage Report")
 markdown_lines.append("")
 markdown_lines.append(
-    f"- **Overall Project Coverage (Full)**: **{full_totals['percent_covered']:.2f}%**"
+    f"- **Overall Project Coverage**: **{full_totals['percent_covered']:.2f}%**"
 )
 markdown_lines.append("")
 
 markdown_lines.extend(
-    build_table(full_files, full_totals, "Full Application Breakdown")
+    build_table(full_files, full_totals, "Coverage Breakdown")
 )
 
 markdown_lines.append("## Test Suite Status")

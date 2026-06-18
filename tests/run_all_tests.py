@@ -166,7 +166,7 @@ def print_coverage_summary(base_dir):
                 print("\n" + "=" * 50)
                 print("             COVERAGE REPORT SUMMARY")
                 print("=" * 50)
-                print(f" Overall Project Coverage (Full): {full_cov:.2f}%")
+                print(f" Overall Project Coverage: {full_cov:.2f}%")
                 print("=" * 50)
     except Exception as e:
         print(f"Warning: Could not read or print coverage report: {e}")
