@@ -352,7 +352,6 @@ def test_save_project_success_state_update(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
     io.host.state_manager.has_unsaved_changes = True
-    io.host.state_manager.update_window_title = MagicMock()
 
     save_path = str(tmp_path / "saved.pmeprj")
 
@@ -371,5 +370,5 @@ def test_save_project_success_state_update(mock_parser_host, tmp_path):
 
         assert io.host.state_manager.has_unsaved_changes is False
         assert io.host.init_manager.current_file_path == save_path
-        assert io.host.state_manager.update_window_title.called
+        assert io.host.update_window_title.called
         assert io.host.state_manager._saved_state is not None
