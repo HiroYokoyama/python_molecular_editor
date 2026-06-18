@@ -142,9 +142,9 @@ class MainInitManager:
         self.host.initial_settings = self.settings.copy()
         self.host.setWindowTitle("MoleditPy Ver. " + VERSION)
         self.host.setGeometry(100, 100, 1400, 800)
-        self.host.state_manager.data = MolecularData()
-        self.host.view_3d_manager.current_mol = None
-        self.host.ui_manager.is_2d_editable = True
+        self.host.set_molecule_data(MolecularData())
+        self.host.set_current_molecule(None)
+        self.host.set_is_2d_editable(True)
         self.host.is_xyz_derived = (
             False  # Flag indicating if the molecule is derived from XYZ
         )
@@ -156,9 +156,9 @@ class MainInitManager:
         self.mode_actions: Dict[str, Any] = {}
 
         # Variable tracking the saved state
-        self.host.state_manager.has_unsaved_changes = False
+        self.host.set_has_unsaved_changes(False)
         self.settings_dirty = True
-        self.host.init_manager.current_file_path = None
+        self.current_file_path = None
         self.host.initialization_complete = False
         self.host._ih_update_counter = 0
 
@@ -279,11 +279,7 @@ class MainInitManager:
         self.halt_ids: set[Any] = set()
         self.next_conversion_id = 1
         self.active_worker_ids: set[int] = set()
-        # Track active threads for diagnostics/cleanup (weak references ok)
-        try:
-            self.host.compute_manager._active_calc_threads = []
-        except (AttributeError, RuntimeError, ValueError, TypeError):
-            self.host.compute_manager._active_calc_threads = []
+        self.host.reset_active_calc_threads()
 
     def load_command_line_file(self, file_path: str) -> None:
         """Open file specified by command-line argument"""
@@ -604,13 +600,13 @@ class MainInitManager:
         self.host.initial_settings = self.host.init_manager.settings.copy()
 
         # 5. Apply loaded settings to application state
-        self.host.view_3d_manager.show_chiral_labels = (
-            self.host.init_manager.settings.get("show_chiral_labels", False)
+        self.host.set_show_chiral_labels(
+            self.settings.get("show_chiral_labels", False)
         )
         # Apply optimization method
-        if "optimization_method" in self.host.init_manager.settings:
-            self.host.init_manager.optimization_method = (
-                self.host.init_manager.settings["optimization_method"]
+        if "optimization_method" in self.settings:
+            self.optimization_method = (
+                self.settings["optimization_method"]
             )
 
     def save_settings(self) -> None:
@@ -1091,14 +1087,15 @@ class MainInitManager:
                 f"Suppressed exception: {e}"
             )  # Suppress non-critical UI/menu initialization errors
 
-        left_buttons_layout.addWidget(self.host.init_manager.convert_button)
+        left_buttons_layout.addWidget(self.convert_button)
         left_layout.addLayout(left_buttons_layout)
 
     def _init_right_panel(self, right_layout: Any) -> None:
         """Initialize the right panel (3D view and buttons)."""
-        self.host.view_3d_manager.plotter = CustomQtInteractor(
+        plotter = CustomQtInteractor(
             right_layout.parentWidget(), main_window=self.host, lighting="none"
         )
+        self.host.set_plotter(plotter)
         self.host.view_3d_manager.plotter.setAcceptDrops(False)
         self.host.view_3d_manager.plotter.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding

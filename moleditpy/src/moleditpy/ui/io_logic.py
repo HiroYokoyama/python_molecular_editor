@@ -368,14 +368,8 @@ class IOManager:
 
             self.host.set_has_unsaved_changes(False)
             self.host.set_current_file_path(file_path)
-            self.host.state_manager.update_window_title()
-            try:
-                self.host.state_manager._saved_state = copy.deepcopy(
-                    self.host.state_manager.get_current_state()
-                )
-            except Exception:
-                # Safe defensive fallback catching Exception
-                pass
+            self.host.update_window_title()
+            self.host.save_state_snapshot()
             self.host.update_status_message(f"Project saved to {file_path}")
         except (OSError, IOError) as e:
             self.host.statusBar().showMessage(f"File I/O error: {e}")
@@ -502,9 +496,9 @@ class IOManager:
             self.host.ui_manager.restore_ui_for_editing()
             self.host.state_manager.load_from_json_data(json_data)
             self.host.state_manager.reset_undo_stack()
-            self.host.state_manager.has_unsaved_changes = False
-            self.host.init_manager.current_file_path = file_path
-            self.host.state_manager.update_window_title()
+            self.host.set_has_unsaved_changes(False)
+            self.host.set_current_file_path(file_path)
+            self.host.update_window_title()
             self.host.statusBar().showMessage(f"PME Project loaded from {file_path}")
 
             # Reset camera/zoom after drawing
@@ -557,14 +551,8 @@ class IOManager:
 
             self.host.set_has_unsaved_changes(False)
             self.host.set_current_file_path(file_path)
-            self.host.state_manager.update_window_title()
-            try:
-                self.host.state_manager._saved_state = copy.deepcopy(
-                    self.host.state_manager.get_current_state()
-                )
-            except Exception:
-                # Safe defensive fallback catching Exception
-                pass
+            self.host.update_window_title()
+            self.host.save_state_snapshot()
             self.host.statusBar().showMessage(f"Project saved to {file_path}")
         except (OSError, IOError) as e:
             self.host.update_status_message(f"File I/O error: {e}")
@@ -830,8 +818,8 @@ class IOManager:
                 AllChem.EmbedMolecule(mol)
 
             self.host.edit_actions_manager.clear_all(skip_check=True)
-            self.host.view_3d_manager.current_mol = mol
-            self.host.view_3d_manager.atom_id_to_rdkit_idx_map = {}
+            self.host.set_current_molecule(mol)
+            self.host.set_atom_id_to_rdkit_idx_map({})
             self.host.is_xyz_derived = False
             self.host.view_3d_manager.draw_molecule_3d(mol)
 
@@ -984,9 +972,9 @@ class IOManager:
             self.host.ui_manager.restore_ui_for_editing()
             self.host.state_manager.set_state_from_data(loaded_data)
             self.host.state_manager.reset_undo_stack()
-            self.host.state_manager.has_unsaved_changes = False
-            self.host.init_manager.current_file_path = file_path
-            self.host.state_manager.update_window_title()
+            self.host.set_has_unsaved_changes(False)
+            self.host.set_current_file_path(file_path)
+            self.host.update_window_title()
             self.host.statusBar().showMessage(f"Project loaded from {file_path}")
 
             # Reset camera/zoom after drawing
@@ -1041,4 +1029,3 @@ def _set_mol_prop_safe(mol: Any, key: str, val: Any) -> None:
             mol.SetIntProp(key, val)
         elif isinstance(val, float):
             mol.SetDoubleProp(key, val)
-
