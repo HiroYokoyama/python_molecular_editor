@@ -136,16 +136,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if clicked_atom_idx is not None:
                 if clicked_atom_idx in move_group_dialog.group_atoms:
                     # Preparation for group drag
-                    move_group_dialog._is_dragging_group_vtk = True
-                    move_group_dialog._drag_atom_idx = clicked_atom_idx
-                    move_group_dialog._drag_start_pos = click_pos
-                    move_group_dialog._mouse_moved = False
+                    move_group_dialog.is_dragging_group_vtk = True
+                    move_group_dialog.drag_atom_idx_vtk = clicked_atom_idx
+                    move_group_dialog.drag_start_pos_vtk = click_pos
+                    move_group_dialog.mouse_moved_vtk = False
                     # Save initial positions
-                    move_group_dialog._initial_positions = {}
+                    move_group_dialog.initial_positions = {}
                     conf = mw.view_3d_manager.current_mol.GetConformer()
                     for atom_idx in move_group_dialog.group_atoms:
                         pos = conf.GetAtomPosition(atom_idx)
-                        move_group_dialog._initial_positions[atom_idx] = np.array(
+                        move_group_dialog.initial_positions[atom_idx] = np.array(
                             [pos.x, pos.y, pos.z]
                         )
                     mw.view_3d_manager.plotter.setCursor(
@@ -353,24 +353,24 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 clicked_atom_idx is not None
                 and clicked_atom_idx in move_group_dialog.group_atoms
             ):
-                move_group_dialog._is_rotating_group_vtk = True
-                move_group_dialog._rotation_start_pos = click_pos
-                move_group_dialog._rotation_mouse_moved = False
-                move_group_dialog._rotation_atom_idx = (
+                move_group_dialog.is_rotating_group_vtk = True
+                move_group_dialog.rotation_start_pos = click_pos
+                move_group_dialog.rotation_mouse_moved = False
+                move_group_dialog.rotation_atom_idx = (
                     clicked_atom_idx  # Record grabbed atom
                 )
 
                 # Save initial positions and centroid
-                move_group_dialog._initial_positions = {}
+                move_group_dialog.initial_positions = {}
                 conf = mw.view_3d_manager.current_mol.GetConformer()
                 centroid = np.zeros(3)
                 for atom_idx in move_group_dialog.group_atoms:
                     pos = conf.GetAtomPosition(atom_idx)
                     pos_array = np.array([pos.x, pos.y, pos.z])
-                    move_group_dialog._initial_positions[atom_idx] = pos_array
+                    move_group_dialog.initial_positions[atom_idx] = pos_array
                     centroid += pos_array
                 centroid /= len(move_group_dialog.group_atoms)
-                move_group_dialog._group_centroid = centroid
+                move_group_dialog.group_centroid = centroid
 
                 mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
                 return  # Disable camera rotation
@@ -398,38 +398,38 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         except (AttributeError, RuntimeError, TypeError):
             logging.error("Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
-            move_group_dialog, "_is_dragging_group_vtk", False
+            move_group_dialog, "is_dragging_group_vtk", False
         ):
             # Dragging group - record offset
             interactor = self.GetInteractor()
             current_pos = interactor.GetEventPosition()
 
-            if move_group_dialog._drag_start_pos is None:
+            if move_group_dialog.drag_start_pos_vtk is None:
                 return
 
-            dx = current_pos[0] - move_group_dialog._drag_start_pos[0]
-            dy = current_pos[1] - move_group_dialog._drag_start_pos[1]
+            dx = current_pos[0] - move_group_dialog.drag_start_pos_vtk[0]
+            dy = current_pos[1] - move_group_dialog.drag_start_pos_vtk[1]
 
             if abs(dx) > 5 or abs(dy) > 5:
-                move_group_dialog._mouse_moved = True
+                move_group_dialog.mouse_moved_vtk = True
 
             return  # Disable camera rotation
 
         # Group rotation handling
         if move_group_dialog and getattr(
-            move_group_dialog, "_is_rotating_group_vtk", False
+            move_group_dialog, "is_rotating_group_vtk", False
         ):
             interactor = self.GetInteractor()
             current_pos = interactor.GetEventPosition()
 
-            if move_group_dialog._rotation_start_pos is None:
+            if move_group_dialog.rotation_start_pos is None:
                 return
 
-            dx = current_pos[0] - move_group_dialog._rotation_start_pos[0]
-            dy = current_pos[1] - move_group_dialog._rotation_start_pos[1]
+            dx = current_pos[0] - move_group_dialog.rotation_start_pos[0]
+            dy = current_pos[1] - move_group_dialog.rotation_start_pos[1]
 
             if abs(dx) > 5 or abs(dy) > 5:
-                move_group_dialog._rotation_mouse_moved = True
+                move_group_dialog.rotation_mouse_moved = True
 
             return  # Disable camera rotation
 
@@ -496,26 +496,26 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # Prevent multi-click issues
         if move_group_dialog:
             if getattr(
-                move_group_dialog, "_is_dragging_group_vtk", False
-            ) and not getattr(move_group_dialog, "_mouse_moved", False):
+                move_group_dialog, "is_dragging_group_vtk", False
+            ) and not getattr(move_group_dialog, "mouse_moved_vtk", False):
                 # No drag = click only -> toggle
-                clicked_atom = getattr(move_group_dialog, "_drag_atom_idx", None)
+                clicked_atom = getattr(move_group_dialog, "drag_atom_idx_vtk", None)
                 if clicked_atom is not None:
                     try:
                         move_group_dialog.on_atom_picked(clicked_atom)
                     except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                         logging.error(f"Error in toggle: {e}")
                 # Reset if multi-clicked without drag
-                move_group_dialog._is_dragging_group_vtk = False
-                move_group_dialog._drag_start_pos = None
-                move_group_dialog._mouse_moved = False
-                if hasattr(move_group_dialog, "_initial_positions"):  # Safe
-                    delattr(move_group_dialog, "_initial_positions")
+                move_group_dialog.is_dragging_group_vtk = False
+                move_group_dialog.drag_start_pos_vtk = None
+                move_group_dialog.mouse_moved_vtk = False
+                if hasattr(move_group_dialog, "initial_positions"):  # Safe
+                    delattr(move_group_dialog, "initial_positions")
 
         if move_group_dialog and getattr(
-            move_group_dialog, "_is_dragging_group_vtk", False
+            move_group_dialog, "is_dragging_group_vtk", False
         ):
-            if getattr(move_group_dialog, "_mouse_moved", False):
+            if getattr(move_group_dialog, "mouse_moved_vtk", False):
                 # Update coordinates on release if dragged
                 try:
                     interactor = self.GetInteractor()
@@ -524,8 +524,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     conf = mw.view_3d_manager.current_mol.GetConformer()
 
                     # Initial position of dragged atom
-                    drag_atom_initial_pos = move_group_dialog._initial_positions[
-                        move_group_dialog._drag_atom_idx
+                    drag_atom_initial_pos = move_group_dialog.initial_positions[
+                        move_group_dialog.drag_atom_idx_vtk
                     ]
 
                     # screen to world conversion
@@ -560,7 +560,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                     # Move entire group
                     for atom_idx in move_group_dialog.group_atoms:
-                        initial_pos = move_group_dialog._initial_positions[atom_idx]
+                        initial_pos = move_group_dialog.initial_positions[atom_idx]
                         new_pos = initial_pos + translation_vector
                         conf.SetAtomPosition(
                             atom_idx,
@@ -587,7 +587,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     logging.exception("Error finalizing group drag")
             else:
                 # No drag = click only -> toggle
-                clicked_atom = getattr(move_group_dialog, "_drag_atom_idx", None)
+                clicked_atom = getattr(move_group_dialog, "drag_atom_idx_vtk", None)
                 if clicked_atom is not None:
                     try:
                         move_group_dialog.on_atom_picked(clicked_atom)
@@ -596,7 +596,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         # Background click: deselect Move Group
         if move_group_dialog and not getattr(
-            move_group_dialog, "_is_dragging_group_vtk", False
+            move_group_dialog, "is_dragging_group_vtk", False
         ):
             if not self._mouse_moved_during_drag and self._mouse_press_pos is not None:
                 # Background click: deselect
@@ -772,13 +772,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # Clear Move Group state
         try:
             if move_group_dialog:
-                move_group_dialog._is_dragging_group_vtk = False
-                move_group_dialog._drag_start_pos = None
-                move_group_dialog._mouse_moved = False
-                if hasattr(move_group_dialog, "_initial_positions"):  # Safe
-                    delattr(move_group_dialog, "_initial_positions")
-                if hasattr(move_group_dialog, "_drag_atom_idx"):  # Safe
-                    delattr(move_group_dialog, "_drag_atom_idx")
+                move_group_dialog.is_dragging_group_vtk = False
+                move_group_dialog.drag_start_pos_vtk = None
+                move_group_dialog.mouse_moved_vtk = False
+                if hasattr(move_group_dialog, "initial_positions"):  # Safe
+                    delattr(move_group_dialog, "initial_positions")
+                if hasattr(move_group_dialog, "drag_atom_idx_vtk"):  # Safe
+                    delattr(move_group_dialog, "drag_atom_idx_vtk")
         except (AttributeError, RuntimeError, ValueError, TypeError):
             logging.error("Caught exception in " + __file__, exc_info=True)
 
@@ -822,16 +822,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     renderer = mw.view_3d_manager.plotter.renderer
                     current_pos = interactor.GetEventPosition()
                     conf = mw.view_3d_manager.current_mol.GetConformer()
-                    centroid = move_group_dialog._group_centroid
+                    centroid = move_group_dialog.group_centroid
 
                     # Save initial grabbed atom index
-                    if not hasattr(move_group_dialog, "_rotation_atom_idx"):
-                        move_group_dialog._rotation_atom_idx = next(
+                    if not hasattr(move_group_dialog, "rotation_atom_idx"):
+                        move_group_dialog.rotation_atom_idx = next(
                             iter(move_group_dialog.group_atoms)
                         )
 
-                    grabbed_atom_idx = move_group_dialog._rotation_atom_idx
-                    grabbed_initial_pos = move_group_dialog._initial_positions[
+                    grabbed_atom_idx = move_group_dialog.rotation_atom_idx
+                    grabbed_initial_pos = move_group_dialog.initial_positions[
                         grabbed_atom_idx
                     ]
 
@@ -897,7 +897,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                             # Rotate group around centroid
                             for atom_idx in move_group_dialog.group_atoms:
-                                initial_pos = move_group_dialog._initial_positions[
+                                initial_pos = move_group_dialog.initial_positions[
                                     atom_idx
                                 ]
                                 # Relative position from centroid
@@ -928,15 +928,15 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     logging.exception("Error finalizing group rotation")
 
             # Reset state
-            move_group_dialog._is_rotating_group_vtk = False
-            move_group_dialog._rotation_start_pos = None
-            move_group_dialog._rotation_mouse_moved = False
-            if hasattr(move_group_dialog, "_initial_positions"):  # Safe
-                delattr(move_group_dialog, "_initial_positions")
-            if hasattr(move_group_dialog, "_group_centroid"):  # Safe
-                delattr(move_group_dialog, "_group_centroid")
-            if hasattr(move_group_dialog, "_rotation_atom_idx"):  # Safe
-                delattr(move_group_dialog, "_rotation_atom_idx")
+            move_group_dialog.is_rotating_group_vtk = False
+            move_group_dialog.rotation_start_pos = None
+            move_group_dialog.rotation_mouse_moved = False
+            if hasattr(move_group_dialog, "initial_positions"):  # Safe
+                delattr(move_group_dialog, "initial_positions")
+            if hasattr(move_group_dialog, "group_centroid"):  # Safe
+                delattr(move_group_dialog, "group_centroid")
+            if hasattr(move_group_dialog, "rotation_atom_idx"):  # Safe
+                delattr(move_group_dialog, "rotation_atom_idx")
 
             return
 

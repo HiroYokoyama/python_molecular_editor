@@ -200,7 +200,7 @@ class TestEditActionsExtended:
         mol = Chem.MolFromSmiles("C")
         mol.SetProp("_xyz_skip_checks", "1")
         mol._xyz_skip_checks = True
-        mol._xyz_atom_data = {}
+        mol.xyz_atom_data = {}
         manager.host.is_xyz_derived = True
         manager.host.chem_check_failed = False
 
@@ -208,6 +208,7 @@ class TestEditActionsExtended:
 
         assert not mol.HasProp("_xyz_skip_checks")
         assert not hasattr(mol, "_xyz_skip_checks")
+        assert not hasattr(mol, "xyz_atom_data")
         assert manager.host.is_xyz_derived is False
         manager.host.init_manager.optimize_3d_button.setEnabled.assert_called_with(True)
 

@@ -65,7 +65,7 @@ class DummyHost:
     def __init__(self):
         self.statusBar_mock = MagicMock()
         self.is_xyz_derived = False
-        self._template_dialog = None
+        self.template_dialog = None
 
         self.init_manager = MagicMock()
         self.init_manager.settings_dir = os.path.join(
@@ -236,7 +236,7 @@ class TestOpenTemplateDialog:
 
 class TestOpenTemplateDialogAndActivate:
     def test_creates_new_dialog_when_none_exists(self, dm):
-        dm.host._template_dialog = None
+        dm.host.template_dialog = None
         with patch("moleditpy.ui.dialog_logic.UserTemplateDialog") as MockUT:
             instance = MagicMock()
             MockUT.return_value = instance
@@ -248,7 +248,7 @@ class TestOpenTemplateDialogAndActivate:
     def test_raises_existing_visible_dialog(self, dm):
         existing = MagicMock()
         existing.isHidden.return_value = False
-        dm.host._template_dialog = existing
+        dm.host.template_dialog = existing
         with patch("moleditpy.ui.dialog_logic.UserTemplateDialog") as MockUT:
             dm.open_template_dialog_and_activate()
         MockUT.assert_not_called()
@@ -256,7 +256,7 @@ class TestOpenTemplateDialogAndActivate:
         existing.activateWindow.assert_called_once()
 
     def test_on_finished_sets_mode_when_template_selected(self, dm):
-        dm.host._template_dialog = None
+        dm.host.template_dialog = None
         captured_cb = []
 
         with patch("moleditpy.ui.dialog_logic.UserTemplateDialog") as MockUT:
@@ -266,7 +266,7 @@ class TestOpenTemplateDialogAndActivate:
             dm.open_template_dialog_and_activate()
 
         # Simulate template selection on the newly stored dialog
-        dm.host._template_dialog.selected_template = {"name": "benzene"}
+        dm.host.template_dialog.selected_template = {"name": "benzene"}
         assert captured_cb, "finished.connect was never called"
         captured_cb[0]()
 
@@ -274,7 +274,7 @@ class TestOpenTemplateDialogAndActivate:
         dm.host.statusBar_mock.showMessage.assert_called_once()
 
     def test_on_finished_noop_when_no_template_selected(self, dm):
-        dm.host._template_dialog = None
+        dm.host.template_dialog = None
         captured_cb = []
 
         with patch("moleditpy.ui.dialog_logic.UserTemplateDialog") as MockUT:
@@ -283,7 +283,7 @@ class TestOpenTemplateDialogAndActivate:
             instance.finished.connect.side_effect = lambda cb: captured_cb.append(cb)
             dm.open_template_dialog_and_activate()
 
-        dm.host._template_dialog.selected_template = None
+        dm.host.template_dialog.selected_template = None
         captured_cb[0]()
         dm.host.ui_manager.set_mode.assert_not_called()
 

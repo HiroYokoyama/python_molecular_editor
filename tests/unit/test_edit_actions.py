@@ -14,7 +14,7 @@ class DummyEditActions(EditActionsManager):
         self.edit_actions_manager.undo_stack = MagicMock()
         self.is_xyz_derived = False
         self.main_window_edit_actions = self
-        self._ih_update_counter = 0
+        self.ih_update_counter = 0
 
     def __getattr__(self, name):
         return getattr(self._host, name)

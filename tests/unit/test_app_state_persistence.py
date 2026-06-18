@@ -43,7 +43,7 @@ class DummyMainWindow(StateManager):
         self.is_2d_editable = True
         self.edit_actions_manager.undo_stack = []
         self.edit_actions_manager.redo_stack = []
-        self._is_restoring_state = False
+        self.is_restoring_state = False
         self.initialization_complete = True
         self._preserved_plugin_data = {}
         self.init_manager.formula_label = MagicMock()

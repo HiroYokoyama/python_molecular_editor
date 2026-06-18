@@ -246,7 +246,7 @@ def test_drop_event_valid_files(
 ):
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
-    mock_plugin_manager._compute_sha256 = MagicMock(return_value="abc")
+    mock_plugin_manager.compute_sha256 = MagicMock(return_value="abc")
 
     mock_plugin_manager.get_plugin_info_safe.return_value = {
         "name": "Dropped",
@@ -292,7 +292,7 @@ def test_drop_event_init_py_package(
 ):
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
-    mock_plugin_manager._compute_sha256 = MagicMock(return_value="abc")
+    mock_plugin_manager.compute_sha256 = MagicMock(return_value="abc")
 
     mock_plugin_manager.get_plugin_info_safe.return_value = {
         "name": "Pkg",
@@ -340,7 +340,7 @@ def test_drop_event_zip_file(
 ):
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
-    mock_plugin_manager._compute_sha256 = MagicMock(return_value="abc")
+    mock_plugin_manager.compute_sha256 = MagicMock(return_value="abc")
     mock_plugin_manager.install_plugin.return_value = (True, "")
     mock_question.return_value = QMessageBox.StandardButton.Yes
 
@@ -365,7 +365,7 @@ def test_drop_event_pure_folder(
 ):
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
-    mock_plugin_manager._compute_sha256 = MagicMock(return_value="abc")
+    mock_plugin_manager.compute_sha256 = MagicMock(return_value="abc")
     mock_plugin_manager.install_plugin.return_value = (True, "Installed folder")
     mock_question.return_value = QMessageBox.StandardButton.Yes
 

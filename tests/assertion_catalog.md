@@ -2159,6 +2159,7 @@ _No description provided._
 
 - assert not mol.HasProp('_xyz_skip_checks')
 - assert not hasattr(mol, '_xyz_skip_checks')
+- assert not hasattr(mol, 'xyz_atom_data')
 - assert manager.host.is_xyz_derived is False
 - manager.host.init_manager.optimize_3d_button.setEnabled.assert_called_with(True)
 
@@ -3108,7 +3109,7 @@ _No description provided._
 ### test_mainwindow_is_restoring_state_default
 _No description provided._
 
-- assert mw._is_restoring_state is False
+- assert mw.is_restoring_state is False
 
 ### test_mainwindow_start_calculation_signal_exists
 _No description provided._
@@ -3962,6 +3963,13 @@ _No description provided._
 - assert plotter.camera_position == [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
 - plotter.render.assert_called()
 
+## tests/unit/test_no_external_private_calls.py
+
+### TestNoExternalPrivateCalls.test_no_external_private_calls
+_No description provided._
+
+- self.assertTrue(os.path.isdir(pkg_dir), f'Directory not found: {pkg_dir}')
+
 ## tests/unit/test_parser_robustness.py
 
 ### test_set_mol_prop_safe_robustness
@@ -4608,7 +4616,7 @@ _install_plugin accepts a .zip file; extracted package is discovered._
 ### test_compute_sha256
 _Test SHA-256 calculation for files and directories._
 
-- assert pm._compute_sha256('/non/existent/path') == 'N/A'
+- assert pm.compute_sha256('/non/existent/path') == 'N/A'
 - assert sha1 != 'N/A'
 - assert len(sha1) == 64
 - assert sha_dir != 'N/A'

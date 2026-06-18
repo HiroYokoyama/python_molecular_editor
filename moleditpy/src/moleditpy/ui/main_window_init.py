@@ -151,8 +151,8 @@ class MainInitManager:
         # Chemical check flags: whether a chemical/sanitization check was attempted and whether it failed
         self.host.chem_check_tried = False
         self.host.chem_check_failed = False
-        self.host._template_dialog = None
-        self.host._picking_consumed = False
+        self.host.template_dialog = None
+        self.host.picking_consumed = False
         self.mode_actions: Dict[str, Any] = {}
 
         # Variable tracking the saved state
@@ -160,7 +160,7 @@ class MainInitManager:
         self.settings_dirty = True
         self.current_file_path = None
         self.host.initialization_complete = False
-        self.host._ih_update_counter = 0
+        self.host.ih_update_counter = 0
 
         # Initialization of the plugin manager
         if safe_mode:

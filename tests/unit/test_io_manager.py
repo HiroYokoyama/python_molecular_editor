@@ -52,7 +52,7 @@ class DummyHost:
         self.settings = {}
         self.is_xyz_derived = False
         self.initialization_complete = True
-        self._is_restoring_state = False
+        self.is_restoring_state = False
 
         # Child managers
         self.init_manager = MagicMock()

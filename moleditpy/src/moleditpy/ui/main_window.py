@@ -73,17 +73,17 @@ class MainWindow(QMainWindow):
         QMainWindow.__init__(self)
 
         # Initialize properties
-        self._is_restoring_state = False
+        self.is_restoring_state = False
 
         # Type annotations for static analysis / mypy
         self.initial_settings: Any
         self.is_xyz_derived: bool
         self.chem_check_tried: bool
         self.chem_check_failed: bool
-        self._template_dialog: Any
-        self._picking_consumed: bool
+        self.template_dialog: Any
+        self.picking_consumed: bool
         self.initialization_complete: bool
-        self._ih_update_counter: int
+        self.ih_update_counter: int
         self.plugin_manager: Any
         self.redraw_menu_action: Any
         self.translation_action: Any
@@ -110,10 +110,10 @@ class MainWindow(QMainWindow):
         self.is_xyz_derived = False
         self.chem_check_tried = False
         self.chem_check_failed = False
-        self._template_dialog = None
-        self._picking_consumed = False
+        self.template_dialog = None
+        self.picking_consumed = False
         self.initialization_complete = False
-        self._ih_update_counter = 0
+        self.ih_update_counter = 0
         self.plugin_manager = None
         self.redraw_menu_action = None
         self.translation_action = None
@@ -269,7 +269,7 @@ class MainWindow(QMainWindow):
         import copy
 
         try:
-            self.state_manager._saved_state = copy.deepcopy(
+            self.state_manager.saved_state = copy.deepcopy(
                 self.state_manager.get_current_state()
             )
         except Exception:

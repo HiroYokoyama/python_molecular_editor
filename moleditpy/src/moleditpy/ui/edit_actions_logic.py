@@ -133,7 +133,7 @@ class EditActionsManager:
 
     def push_undo_state(self) -> None:
         """Saves current molecular state to undo stack for history tracking."""
-        if getattr(self.host, "_is_restoring_state", False):
+        if getattr(self.host, "is_restoring_state", False):
             return
 
         current_state_for_comparison = {
@@ -151,7 +151,7 @@ class EditActionsManager:
                 k: (v["order"], v.get("stereo", 0))
                 for k, v in self.host.state_manager.data.bonds.items()
             },
-            "_next_atom_id": self.host.state_manager.data._next_atom_id,
+            "_next_atom_id": self.host.state_manager.data.next_atom_id,
             "mol_3d": self.host.view_3d_manager.current_mol.ToBinary()
             if self.host.view_3d_manager.current_mol
             else None,
@@ -219,11 +219,11 @@ class EditActionsManager:
         if len(self.undo_stack) > 1:
             self.redo_stack.append(self.undo_stack.pop())
             state = self.undo_stack[-1]
-            self.host._is_restoring_state = True
+            self.host.is_restoring_state = True
             try:
                 self.host.state_manager.set_state_from_data(state)
             finally:
-                self.host._is_restoring_state = False
+                self.host.is_restoring_state = False
 
             # Re-evaluate menu states based on 3D structure after Undo
             if (
@@ -252,11 +252,11 @@ class EditActionsManager:
         if self.redo_stack:
             state = self.redo_stack.pop()
             self.undo_stack.append(state)
-            self.host._is_restoring_state = True
+            self.host.is_restoring_state = True
             try:
                 self.host.state_manager.set_state_from_data(state)
             finally:
-                self.host._is_restoring_state = False
+                self.host.is_restoring_state = False
 
             # Re-evaluate menu states based on 3D structure after Redo
             if (
@@ -1036,7 +1036,7 @@ class EditActionsManager:
         # If the global counter changed since this closure was
         # created, bail out  Ethe update is stale.
         try:
-            if my_token != getattr(self.host, "_ih_update_counter", None):
+            if my_token != getattr(self.host, "ih_update_counter", None):
                 return
         except (AttributeError, RuntimeError, ValueError, TypeError):
             return
@@ -1123,12 +1123,12 @@ class EditActionsManager:
 
         try:
             try:
-                self.host._ih_update_counter += 1
+                self.host.ih_update_counter += 1
             except (AttributeError, RuntimeError, ValueError, TypeError):
-                self.host._ih_update_counter = (
-                    getattr(self.host, "_ih_update_counter", 0) or 1
+                self.host.ih_update_counter = (
+                    getattr(self.host, "ih_update_counter", 0) or 1
                 )
-            my_token = self.host._ih_update_counter
+            my_token = self.host.ih_update_counter
 
             mol = None
             try:
@@ -1547,7 +1547,7 @@ class EditActionsManager:
                         target.ClearProp("_xyz_skip_checks")
             # Remove attribute-style markers
             target.__dict__.pop("_xyz_skip_checks", None)
-            target.__dict__.pop("_xyz_atom_data", None)
+            target.__dict__.pop("xyz_atom_data", None)
 
         if hasattr(self.host.view_3d_manager, "reset_zoom"):
             self.host.view_3d_manager.reset_zoom()

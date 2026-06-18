@@ -80,7 +80,7 @@ def test_mainwindow_all_managers_assigned(app):
 
 def test_mainwindow_is_restoring_state_default(app):
     mw = _make_window()
-    assert mw._is_restoring_state is False
+    assert mw.is_restoring_state is False
 
 
 def test_mainwindow_start_calculation_signal_exists(app):

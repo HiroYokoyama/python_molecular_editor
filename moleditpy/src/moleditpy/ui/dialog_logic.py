@@ -139,8 +139,7 @@ class DialogManager:
 
         Used in the main window.
         """
-        # Check for existing dialog
-        _template_dialog = getattr(self.host, "_template_dialog", None)
+        _template_dialog = getattr(self.host, "template_dialog", None)
         if _template_dialog and not _template_dialog.isHidden():
             # Bring existing dialog to front
             _template_dialog.raise_()
@@ -148,30 +147,30 @@ class DialogManager:
             return
 
         # Create new dialog
-        self.host._template_dialog = UserTemplateDialog(self.host, self.host)
-        self.host._template_dialog.show()
+        self.host.template_dialog = UserTemplateDialog(self.host, self.host)
+        self.host.template_dialog.show()
 
         # Activate if a template is selected after dialog is closed
         def on_dialog_finished() -> None:
             if (
-                hasattr(self.host._template_dialog, "selected_template")
-                and self.host._template_dialog.selected_template
+                hasattr(self.host.template_dialog, "selected_template")
+                and self.host.template_dialog.selected_template
             ):
-                template_name = self.host._template_dialog.selected_template.get(
+                template_name = self.host.template_dialog.selected_template.get(
                     "name", "user_template"
                 )
                 mode_name = f"template_user_{template_name}"
 
                 # Store template data for the scene to use
                 self.host.set_scene_user_template_data(
-                    self.host._template_dialog.selected_template
+                    self.host.template_dialog.selected_template
                 )
                 self.host.ui_manager.set_mode(mode_name)
 
                 # Update status
                 self.host.update_status_message(f"Template mode: {template_name}")
 
-        self.host._template_dialog.finished.connect(on_dialog_finished)
+        self.host.template_dialog.finished.connect(on_dialog_finished)
 
     def save_2d_as_template(self) -> None:
         """Save current 2D structure as a template"""

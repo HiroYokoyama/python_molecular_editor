@@ -175,7 +175,7 @@ class View3DManager:
         self._drawing_3d = True
 
         try:
-            View3DManager._draw_standard_3d_style_body(self, mol, style_override)
+            self._draw_standard_3d_style_body(mol, style_override)
             # Ensure background and axes are reapplied after plotter.clear()
             self.apply_3d_settings(redraw=False)
         finally:

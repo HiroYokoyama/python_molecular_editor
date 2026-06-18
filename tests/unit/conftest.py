@@ -143,7 +143,7 @@ def mock_parser_host(app):
     host.is_xyz_derived = False
     host.compute_manager.active_worker_ids = set()
     host.compute_manager.halt_ids = set()
-    host._ih_update_counter = 0
+    host.ih_update_counter = 0
 
     # Status Bar
     host.statusBar_mock = MagicMock()
@@ -157,7 +157,7 @@ def mock_parser_host(app):
             "2d_structure": {
                 "atoms": [],
                 "bonds": [],
-                "next_atom_id": host.state_manager.data._next_atom_id,
+                "next_atom_id": host.state_manager.data.next_atom_id,
             },
         }
         for aid, data in host.state_manager.data.atoms.items():

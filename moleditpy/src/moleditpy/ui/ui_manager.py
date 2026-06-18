@@ -509,7 +509,7 @@ class UIManager(QObject):
 
     def enter_3d_viewer_mode(self) -> None:
         """Switch the application UI layout to 3D viewer mode (Public API)."""
-        self._enter_3d_viewer_ui_mode()
+        self.enter_3d_viewer_ui_mode()
 
     def enable_3d_features(self, enabled: bool) -> None:
         """Enable or disable 3D UI features (Public API)."""
@@ -523,7 +523,7 @@ class UIManager(QObject):
         """Initialize the 3D interaction picker (Public API)."""
         self._setup_3d_picker()
 
-    def _enter_3d_viewer_ui_mode(self) -> None:
+    def enter_3d_viewer_ui_mode(self) -> None:
         """Set UI mode to 3D viewer."""
         self.is_2d_editable = False
         self.host.init_manager.cleanup_button.setEnabled(False)
@@ -540,7 +540,7 @@ class UIManager(QObject):
         self.host.ui_manager.minimize_2d_panel()
 
         # Collectively enable 3D-related features
-        self.host.ui_manager._enable_3d_features(True)
+        self.enable_3d_features(True)
 
     def restore_ui_for_editing(self) -> None:
         """Enables all 2D editing UI elements."""

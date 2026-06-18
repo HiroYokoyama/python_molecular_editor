@@ -35,12 +35,12 @@ class MolecularData:
     atoms: Dict[int, Dict[str, Any]]
     bonds: Dict[Tuple[int, int], Dict[str, Any]]
     adjacency_list: Dict[int, List[int]]
-    _next_atom_id: int
+    next_atom_id: int
 
     def __init__(self) -> None:
         self.atoms = {}
         self.bonds = {}
-        self._next_atom_id = 0
+        self.next_atom_id = 0
         self.adjacency_list = {}
 
     def add_atom(
@@ -50,7 +50,7 @@ class MolecularData:
         charge: int = 0,
         radical: int = 0,
     ) -> int:
-        atom_id = self._next_atom_id
+        atom_id = self.next_atom_id
         # Internalize position as raw floats to decouple from UI types (QPointF)
         if hasattr(pos, "x") and hasattr(pos, "y"):
             raw_pos = PointTuple((float(pos.x()), float(pos.y())))
@@ -65,7 +65,7 @@ class MolecularData:
             "radical": radical,
         }
         self.adjacency_list[atom_id] = []
-        self._next_atom_id += 1
+        self.next_atom_id += 1
         return atom_id
 
     def set_atom_pos(self, atom_id: int, pos: Union[Any, Tuple[float, float]]) -> None:

@@ -33,7 +33,7 @@ except ImportError:
 
 
 class PluginManager:
-    def _compute_sha256(self, path: str) -> str:
+    def compute_sha256(self, path: str) -> str:
         """Computes SHA-256 for a file or a directory (concatenated hashes of all files)."""
         if os.path.isfile(path):
             return self._sha256_for_file(path)

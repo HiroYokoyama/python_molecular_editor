@@ -59,8 +59,8 @@ class AnalysisWindow(QDialog):
                 # (Avoids inaccuracies from bond estimation)
 
                 # Retrieve original atomic data from XYZ file
-                if hasattr(self.mol, "_xyz_atom_data"):
-                    xyz_atoms = self.mol._xyz_atom_data
+                if hasattr(self.mol, "xyz_atom_data"):
+                    xyz_atoms = self.mol.xyz_atom_data
                 else:
                     # Fallback: Retrieve from RDKit object
                     xyz_atoms = [

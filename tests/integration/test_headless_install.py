@@ -37,7 +37,7 @@ def test_headless_install_success(tmp_path, capsys):
             "version": "0.0.1",
             "description": "Integration test for CLI",
         }
-        mock_pm._compute_sha256.return_value = "fake-sha256"
+        mock_pm.compute_sha256.return_value = "fake-sha256"
         mock_pm.install_plugin.return_value = (True, "Success")
 
         # Run main() which handles the install-plugin arg
@@ -66,7 +66,7 @@ def test_headless_install_abort(tmp_path, capsys):
         mock_pm = MockPM.return_value
         mock_pm.plugin_dir = str(tmp_path)
         mock_pm.get_plugin_info_safe.return_value = {"name": "Abort"}
-        mock_pm._compute_sha256.return_value = "fake-sha256"
+        mock_pm.compute_sha256.return_value = "fake-sha256"
 
         with pytest.raises(SystemExit) as cm:
             main()

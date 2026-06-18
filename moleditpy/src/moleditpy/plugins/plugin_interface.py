@@ -175,8 +175,8 @@ class PluginContext:
         if mw is not None and hasattr(mw, "ui_manager"):
             if hasattr(mw.ui_manager, "enter_3d_viewer_mode"):
                 mw.ui_manager.enter_3d_viewer_mode()
-            elif hasattr(mw.ui_manager, "_enter_3d_viewer_ui_mode"):
-                mw.ui_manager._enter_3d_viewer_ui_mode()
+            elif hasattr(mw.ui_manager, "enter_3d_viewer_ui_mode"):
+                mw.ui_manager.enter_3d_viewer_ui_mode()
 
     @property
     def current_mol(self) -> Any:

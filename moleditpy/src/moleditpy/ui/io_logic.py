@@ -223,7 +223,7 @@ class IOManager:
                                 raise e
 
                 if final_mol:
-                    final_mol._xyz_atom_data = atoms_data
+                    final_mol.xyz_atom_data = atoms_data
             return final_mol
 
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:

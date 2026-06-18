@@ -57,7 +57,7 @@ class StateManager:
         self.has_unsaved_changes = False
         self._preserved_plugin_data: Dict[str, Any] = {}
         self.dragged_atom_info: Optional[Dict[str, Any]] = None
-        self._saved_state: Optional[Dict[str, Any]] = None
+        self.saved_state: Optional[Dict[str, Any]] = None
 
     def get_current_state(self) -> Dict[str, Any]:
         atoms = {
@@ -76,7 +76,7 @@ class StateManager:
         state = {
             "atoms": atoms,
             "bonds": bonds,
-            "_next_atom_id": self.data._next_atom_id,
+            "_next_atom_id": self.data.next_atom_id,
         }
 
         state["version"] = VERSION
@@ -199,7 +199,7 @@ class StateManager:
             }
             self.host.init_manager.scene.addItem(atom_item)
 
-        self.data._next_atom_id = loaded_data.get(
+        self.data.next_atom_id = loaded_data.get(
             "_next_atom_id",
             max(self.data.atoms.keys()) + 1 if self.data.atoms else 0,
         )
@@ -445,7 +445,7 @@ class StateManager:
             json_data["2d_structure"] = {
                 "atoms": atoms_2d,
                 "bonds": bonds_2d,
-                "next_atom_id": self.host.state_manager.data._next_atom_id,
+                "next_atom_id": self.host.state_manager.data.next_atom_id,
             }
 
         # 3D data
@@ -678,7 +678,7 @@ class StateManager:
 
             # Restore next_atom_id
 
-            self.data._next_atom_id = structure_2d.get(
+            self.data.next_atom_id = structure_2d.get(
                 "next_atom_id",
                 max([atom["id"] for atom in atoms_2d]) + 1 if atoms_2d else 0,
             )

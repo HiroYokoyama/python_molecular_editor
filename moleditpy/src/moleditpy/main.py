@@ -103,7 +103,7 @@ def main() -> None:
             from .plugins.plugin_manager import PluginManager
 
         pm = PluginManager()
-        sha256 = pm._compute_sha256(plugin_path)
+        sha256 = pm.compute_sha256(plugin_path)
 
         # Extract metadata
         metadata_file = plugin_path

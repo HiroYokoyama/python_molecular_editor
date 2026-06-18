@@ -78,8 +78,8 @@ class Dialog3DPickingMixin:
                 ):
                     atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
                     if atom:
-                        if hasattr(self.main_window, "_picking_consumed"):
-                            self.main_window._picking_consumed = True
+                        if hasattr(self.main_window, "picking_consumed"):
+                            self.main_window.picking_consumed = True
 
                         def _deferred_pick() -> None:
                             try:
@@ -161,8 +161,8 @@ class Dialog3DPickingMixin:
         if plotter is not None and plotter.interactor is not None:
             plotter.interactor.installEventFilter(self)
             self.picking_enabled = True
-        if hasattr(self.main_window, "_picking_consumed"):
-            self.main_window._picking_consumed = False
+        if hasattr(self.main_window, "picking_consumed"):
+            self.main_window.picking_consumed = False
 
     def disable_picking(self) -> None:
         """Disable atom selection in the 3D view."""
@@ -172,8 +172,8 @@ class Dialog3DPickingMixin:
                 plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
         self._consume_next_left_release = False
-        if hasattr(self.main_window, "_picking_consumed"):
-            self.main_window._picking_consumed = False
+        if hasattr(self.main_window, "picking_consumed"):
+            self.main_window.picking_consumed = False
 
     def clear_atom_labels(self) -> None:
         """Remove all label actors from the plotter."""
