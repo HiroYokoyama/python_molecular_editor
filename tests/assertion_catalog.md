@@ -4312,9 +4312,8 @@ _Test register_load_handler delegation._
 - mock_manager.register_load_handler.assert_called_once_with('TestPlugin', callback)
 
 ### TestPluginInterface.test_register_3d_context_menu
-_Test deprecated register_3d_context_menu._
+_Test deprecated register_3d_context_menu emits DeprecationWarning._
 
-- assert 'deprecated' in captured.out or 'deprecated' in captured.err
 
 ### TestPluginInterface.test_register_3d_style
 _Test register_3d_style delegation._

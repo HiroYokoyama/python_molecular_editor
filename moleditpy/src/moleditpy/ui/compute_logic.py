@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 import contextlib
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, TYPE_CHECKING
 
 from PyQt6.QtCore import QThread, QTimer, QPoint
 from PyQt6.QtGui import QAction, QColor
@@ -41,10 +41,17 @@ except ImportError:
     )
 
 
+if TYPE_CHECKING:
+    try:
+        from .main_window import MainWindow
+    except ImportError:
+        from moleditpy.ui.main_window import MainWindow
+
+
 class ComputeManager:
     """Independent manager for molecular computations, ported from MainWindowCompute mixin."""
 
-    def __init__(self, host: Any) -> None:
+    def __init__(self, host: MainWindow) -> None:
         self._calculating_text_actor = None
         self.original_atom_properties = {}
         self.host = host
@@ -441,9 +448,10 @@ class ComputeManager:
                 atom_idx = prob.GetAtomIdx()
                 rd_atom = mol.GetAtomWithIdx(atom_idx)
                 orig_id = rd_atom.GetIntProp("_original_atom_id")
-                item = self.host.state_manager.data.atoms[orig_id]["item"]
-                item.has_problem = True
-                item.update()
+                item = self.host.init_manager.scene.atom_items.get(orig_id)
+                if item:
+                    item.has_problem = True
+                    item.update()
         self.host.init_manager.view_2d.setFocus()
 
     def _setup_mol_block_for_worker(self, mol: Any) -> str:
@@ -615,7 +623,7 @@ class ComputeManager:
         )
         if problem_atom_ids:
             for aid in problem_atom_ids:
-                item = self.host.state_manager.data.atoms[aid].get("item")
+                item = self.host.init_manager.scene.atom_items.get(aid)
                 if item:
                     item.has_problem = True
                     item.update()
@@ -666,5 +674,6 @@ class ComputeManager:
                     stack.append(neighbor)
 
         for aid in connected:
-            item = self.host.state_manager.data.atoms[aid]["item"]
-            item.setSelected(True)
+            item = self.host.init_manager.scene.atom_items.get(aid)
+            if item:
+                item.setSelected(True)

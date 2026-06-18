@@ -42,8 +42,18 @@ class DummyHost:
         # Shortcuts for frequently accessed items on managers
         self.init_manager.scene = MagicMock()
         self.state_manager.data = MagicMock()
+        self.init_manager.scene.data = self.state_manager.data
         self.init_manager.view_2d = MagicMock()
         self.view_3d_manager.plotter = MagicMock()
+
+        from moleditpy.ui.molecule_scene import SceneItemDict
+
+        self.init_manager.scene.atom_items = SceneItemDict(
+            self.init_manager.scene, self.state_manager.data.atoms
+        )
+        self.init_manager.scene.bond_items = SceneItemDict(
+            self.init_manager.scene, self.state_manager.data.bonds
+        )
 
         # Action mocks on init_manager
         self.init_manager.cut_action = MagicMock()

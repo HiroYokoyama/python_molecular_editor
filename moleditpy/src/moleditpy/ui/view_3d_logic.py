@@ -18,6 +18,11 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 if TYPE_CHECKING:
     from .custom_qt_interactor import CustomQtInteractor
 
+    try:
+        from .main_window import MainWindow
+    except ImportError:
+        from moleditpy.ui.main_window import MainWindow
+
 import numpy as np
 import vtk
 
@@ -48,7 +53,7 @@ class View3DManager:
         None  # Class-level reference for plugin patching accessibility
     )
 
-    def __init__(self, host: Any) -> None:
+    def __init__(self, host: MainWindow) -> None:
         self._plugin_bond_color_overrides = {}
         self._plugin_color_overrides = {}
         self.host = host
@@ -1319,9 +1324,9 @@ class View3DManager:
         Prefer 3D (self.host.view_3d_manager.current_mol) if available; otherwise use RDKit mol from 2D.
         """
         # First clear labels from all items
-        for atom_data in self.host.state_manager.data.atoms.values():
-            if atom_data.get("item"):
-                atom_data["item"].chiral_label = None
+        for item in self.host.init_manager.scene.atom_items.values():
+            if item:
+                item.chiral_label = None
 
         if not self.show_chiral_labels:
             self.host.init_manager.scene.update()
@@ -1364,14 +1369,9 @@ class View3DManager:
             for idx, label in chiral_centers:
                 if idx in rdkit_idx_to_my_id:
                     atom_id = rdkit_idx_to_my_id[idx]
-                    if (
-                        atom_id in self.host.state_manager.data.atoms
-                        and self.host.state_manager.data.atoms[atom_id].get("item")
-                    ):
-                        # 'R' / 'S' / '?'
-                        self.host.state_manager.data.atoms[atom_id][
-                            "item"
-                        ].chiral_label = label
+                    item = self.host.init_manager.scene.atom_items.get(atom_id)
+                    if item:
+                        item.chiral_label = label
 
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Update chiral labels error: {e}")

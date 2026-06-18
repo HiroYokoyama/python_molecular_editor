@@ -645,12 +645,12 @@ class IOManager:
                     elif bond.GetStereo() == Chem.BondStereo.STEREOE:
                         stereo = 4
                 self.host.init_manager.scene.create_bond(
-                    self.host.state_manager.data.atoms[
+                    self.host.init_manager.scene.atom_items[
                         rdkit_idx_to_my_id[bond.GetBeginAtomIdx()]
-                    ]["item"],
-                    self.host.state_manager.data.atoms[
+                    ],
+                    self.host.init_manager.scene.atom_items[
                         rdkit_idx_to_my_id[bond.GetEndAtomIdx()]
-                    ]["item"],
+                    ],
                     bond_order=int(bond.GetBondTypeAsDouble()),
                     bond_stereo=stereo,
                 )

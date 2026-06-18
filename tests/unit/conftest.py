@@ -221,6 +221,14 @@ def mock_parser_host(app):
     host.check_unsaved_changes.return_value = True
 
     # Scene helpers
+    from moleditpy.ui.molecule_scene import SceneItemDict
+
+    host.init_manager.scene.atom_items = SceneItemDict(
+        host.init_manager.scene, host.state_manager.data.atoms
+    )
+    host.init_manager.scene.bond_items = SceneItemDict(
+        host.init_manager.scene, host.state_manager.data.bonds
+    )
     host.init_manager.scene.find_bond_between.return_value = None
 
     def default_create_atom(symbol, pos, charge=0, radical=0):

@@ -12,12 +12,11 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import contextlib
-import io
+import json
 import copy
 import logging
 import math
-import pickle
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 import numpy as np
 
@@ -109,13 +108,20 @@ except ImportError:
     from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 
+if TYPE_CHECKING:
+    try:
+        from .main_window import MainWindow
+    except ImportError:
+        from moleditpy.ui.main_window import MainWindow
+
+
 # --- Class Definition ---
 class EditActionsManager:
     """Independent manager for molecular editing actions, ported from MainWindowEditActions mixin."""
 
     _cls = None
 
-    def __init__(self, host: Any) -> None:
+    def __init__(self, host: MainWindow) -> None:
         self.dragged_atom_info = None
         self.host = host
         # State variables previously held by mixin
@@ -274,14 +280,10 @@ class EditActionsManager:
 
     def update_undo_redo_actions(self) -> None:
         """Enable or disable Undo/Redo UI actions based on stack counts."""
-        if hasattr(self.host.init_manager, "undo_action"):
+        if self.host.init_manager.undo_action:
             self.host.init_manager.undo_action.setEnabled(len(self.undo_stack) > 1)
-        else:
-            logging.error("REPORT ERROR: Missing attribute 'undo_action' on object")
-        if hasattr(self.host.init_manager, "redo_action"):
+        if self.host.init_manager.redo_action:
             self.host.init_manager.redo_action.setEnabled(len(self.redo_stack) > 0)
-        else:
-            logging.error("REPORT ERROR: Missing attribute 'redo_action' on object")
 
     def copy_selection(self) -> None:
         """Copy selected atoms and bonds to clipboard"""
@@ -331,12 +333,23 @@ class EditActionsManager:
                         }
                     )
 
-            # Serialize data to byte array using pickle
-            data_to_pickle = {"atoms": fragment_atoms, "bonds": fragment_bonds}
+            # Serialize data to a JSON byte array.
+            # Each atom's rel_pos (QPointF) is stored as a plain [x, y] list so
+            # that the clipboard payload contains only safe, human-readable data.
+            data_to_json = {
+                "atoms": [
+                    {
+                        "symbol": a["symbol"],
+                        "rel_pos": [a["rel_pos"].x(), a["rel_pos"].y()],
+                        "charge": a["charge"],
+                        "radical": a["radical"],
+                    }
+                    for a in fragment_atoms
+                ],
+                "bonds": fragment_bonds,
+            }
             byte_array = QByteArray()
-            buffer = io.BytesIO()
-            pickle.dump(data_to_pickle, buffer)
-            byte_array.append(buffer.getvalue())
+            byte_array.append(json.dumps(data_to_json).encode("utf-8"))
 
             # Set clipboard with custom MIME type
             mime_data = QMimeData()
@@ -381,10 +394,9 @@ class EditActionsManager:
                 return
 
             byte_array = mime_data.data(CLIPBOARD_MIME_TYPE)
-            buffer = io.BytesIO(byte_array.data())
             try:
-                fragment_data = pickle.load(buffer)
-            except pickle.UnpicklingError:
+                fragment_data = json.loads(bytes(byte_array.data()).decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError, KeyError):
                 self.host.statusBar().showMessage(
                     "Error: Invalid clipboard data format"
                 )
@@ -397,14 +409,16 @@ class EditActionsManager:
 
             new_atoms = []
             for atom_data in fragment_data["atoms"]:
-                pos = paste_center_pos + atom_data["rel_pos"]
+                # rel_pos was serialized as [x, y]; reconstruct as QPointF offset.
+                rp = atom_data["rel_pos"]
+                pos = paste_center_pos + QPointF(float(rp[0]), float(rp[1]))
                 new_id = self.host.init_manager.scene.create_atom(
                     atom_data["symbol"],
                     pos,
                     charge=atom_data.get("charge", 0),
                     radical=atom_data.get("radical", 0),
                 )
-                new_item = self.host.state_manager.data.atoms[new_id]["item"]
+                new_item = self.host.init_manager.scene.atom_items[new_id]
                 new_atoms.append(new_item)
                 new_item.setSelected(True)
 
@@ -443,7 +457,7 @@ class EditActionsManager:
                 try:
                     if atom_data.get("symbol") != "H":
                         continue
-                    item = atom_data.get("item")
+                    item = self.host.init_manager.scene.atom_items.get(atom_id)
                     # Only collect live AtomItem wrappers
                     if item is None:
                         continue
@@ -618,7 +632,7 @@ class EditActionsManager:
                 if implicit_h <= 0:
                     continue
 
-                parent_item = self.host.state_manager.data.atoms[orig_id]["item"]
+                parent_item = self.host.init_manager.scene.atom_items.get(orig_id)
                 parent_pos = parent_item.pos()
 
                 # Determine angles based on neighbors to avoid collisions
@@ -634,11 +648,12 @@ class EditActionsManager:
                                 neigh = self.host.state_manager.data.atoms[a2]
                                 if neigh.get("symbol") == "H":
                                     continue
-                                if neigh.get("item") is None:
+                                neigh_item = (
+                                    self.host.init_manager.scene.atom_items.get(a2)
+                                )
+                                if neigh_item is None or sip_isdeleted_safe(neigh_item):
                                     continue
-                                if sip_isdeleted_safe(neigh.get("item")):
-                                    continue
-                                vec = neigh["item"].pos() - parent_pos
+                                vec = neigh_item.pos() - parent_pos
                                 neighbor_angles.append(math.atan2(vec.y(), vec.x()))
                             elif (
                                 a2 == orig_id
@@ -647,11 +662,12 @@ class EditActionsManager:
                                 neigh = self.host.state_manager.data.atoms[a1]
                                 if neigh.get("symbol") == "H":
                                     continue
-                                if neigh.get("item") is None:
+                                neigh_item = (
+                                    self.host.init_manager.scene.atom_items.get(a1)
+                                )
+                                if neigh_item is None or sip_isdeleted_safe(neigh_item):
                                     continue
-                                if sip_isdeleted_safe(neigh.get("item")):
-                                    continue
-                                vec = neigh["item"].pos() - parent_pos
+                                vec = neigh_item.pos() - parent_pos
                                 neighbor_angles.append(math.atan2(vec.y(), vec.x()))
                         except (AttributeError, RuntimeError, ValueError, TypeError):
                             continue
@@ -727,7 +743,7 @@ class EditActionsManager:
                     # Create new hydrogen atom
                     try:
                         new_id = self.host.init_manager.scene.create_atom("H", pos)
-                        new_item = self.host.state_manager.data.atoms[new_id]["item"]
+                        new_item = self.host.init_manager.scene.atom_items[new_id]
                         # Set bond_stereo (plain, wedge, dash)
                         stereo = _choose_stereo(h_idx)
                         self.host.init_manager.scene.create_bond(
@@ -802,9 +818,9 @@ class EditActionsManager:
             # If no selection, rotate everything
             if not target_atoms:
                 target_atoms = [
-                    data["item"]
-                    for data in self.host.state_manager.data.atoms.values()
-                    if data.get("item") and not sip_isdeleted_safe(data["item"])
+                    item
+                    for item in self.host.init_manager.scene.atom_items.values()
+                    if not sip_isdeleted_safe(item)
                 ]
 
             if not target_atoms:
@@ -1046,7 +1062,7 @@ class EditActionsManager:
         items_to_update = []
         for atom_id, atom_data in atoms_snapshot.items():
             try:
-                item = atom_data.get("item")
+                item = self.host.init_manager.scene.atom_items.get(atom_id)
                 if not item:
                     continue
 
@@ -1194,23 +1210,22 @@ class EditActionsManager:
                     sy = (-(ny - rdkit_cy) * SCALE) + view_center.y()
                     new_pos = QPointF(sx, sy)
 
-                    item = self.host.state_manager.data.atoms[atom_id]["item"]
+                    item = self.host.init_manager.scene.atom_items.get(atom_id)
                     if item:
                         item.setPos(new_pos)
                     # Cache back to model
                     self.host.state_manager.data.set_atom_pos(atom_id, new_pos)
 
             # Update all bond positions
-            for bond_data in self.host.state_manager.data.bonds.values():
-                item = bond_data.get("item") if bond_data else None
-                if not item:
+            for bond_item in self.host.init_manager.scene.bond_items.values():
+                if not bond_item:
                     continue
-                if sip_isdeleted_safe(item):
+                if sip_isdeleted_safe(bond_item):
                     continue
-                if hasattr(item, "scene") and item.scene():
+                if hasattr(bond_item, "scene") and bond_item.scene():
                     # Suppress potential errors if the item is already destroyed during coordinate adjustment
                     with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                        item.update_position()
+                        bond_item.update_position()
 
             # Run overlap resolution
             self.resolve_overlapping_groups()
@@ -1257,11 +1272,7 @@ class EditActionsManager:
         MOVE_DISTANCE = 20
 
         # Safely retrieve item from self.host.state_manager.data.atoms.values()
-        all_atom_items = [
-            data["item"]
-            for data in self.host.state_manager.data.atoms.values()
-            if data and "item" in data
-        ]
+        all_atom_items = list(self.host.init_manager.scene.atom_items.values())
 
         if len(all_atom_items) < 2:
             return  # Step 1-3: Handled by core logic
@@ -1272,8 +1283,8 @@ class EditActionsManager:
         from moleditpy.core.mol_geometry import resolve_2d_overlaps
 
         def has_bond_check(id1: Any, id2: Any) -> Any:
-            item1 = self.host.state_manager.data.atoms[id1]["item"]
-            item2 = self.host.state_manager.data.atoms[id2]["item"]
+            item1 = self.host.init_manager.scene.atom_items.get(id1)
+            item2 = self.host.init_manager.scene.atom_items.get(id2)
             return (
                 self.host.init_manager.scene.find_bond_between(item1, item2) is not None
             )
@@ -1295,21 +1306,21 @@ class EditActionsManager:
         for group_ids, (vx, vy) in move_operations:
             vector = QPointF(vx, vy)
             for atom_id in group_ids:
-                item = self.host.state_manager.data.atoms[atom_id]["item"]
+                item = self.host.init_manager.scene.atom_items.get(atom_id)
                 new_pos = item.pos() + vector
                 item.setPos(new_pos)
                 self.host.state_manager.data.set_atom_pos(atom_id, new_pos)
 
         # Step 5: Update display and state
-        for bond_data in self.host.state_manager.data.bonds.values():
-            item = bond_data.get("item") if bond_data else None
+        for item in self.host.init_manager.scene.bond_items.values():
             if not item:
                 continue
             try:
                 if sip_isdeleted_safe(item):
                     continue
                 if hasattr(item, "scene") and item.scene():
-                    item.update_position()
+                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                        item.update_position()
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(f"Bond position update suppressed: {e}")
 

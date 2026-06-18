@@ -46,6 +46,11 @@ python tests/run_all_tests.py --unit
 python tests/run_all_tests.py --integration
 ```
 
+Speed up dev testing (fail fast / exit on first failure):
+```bash
+python tests/run_all_tests.py --unit --no-cov --no-report -x
+```
+
 ## Linting
 
 ```bash

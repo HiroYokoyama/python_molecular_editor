@@ -198,6 +198,12 @@ if __name__ == "__main__":
         help="Generate reports without running tests",
     )
     parser.add_argument(
+        "-x",
+        "--exitfirst",
+        action="store_true",
+        help="Exit instantly on first error or failure",
+    )
+    parser.add_argument(
         "--catalog-only", action="store_true", help="Update ONLY the assertion catalog"
     )
     parser.add_argument(
@@ -210,6 +216,9 @@ if __name__ == "__main__":
     args, extra_pytest_args = parser.parse_known_args()
     if extra_pytest_args and extra_pytest_args[0] == "--":
         extra_pytest_args = extra_pytest_args[1:]
+
+    if args.exitfirst:
+        extra_pytest_args.append("-x")
 
     # Handle --catalog-only early
     if args.catalog_only:

@@ -13,6 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import base64
+import re
 import binascii
 import copy
 import logging
@@ -47,11 +48,20 @@ except (AttributeError, RuntimeError, TypeError, ImportError):
     from moleditpy.core.molecular_data import MolecularData
 
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    try:
+        from .main_window import MainWindow
+    except ImportError:
+        from moleditpy.ui.main_window import MainWindow
+
+
 # --- Class Definition ---
 class StateManager:
     _cls = None
 
-    def __init__(self, host: Any) -> None:
+    def __init__(self, host: MainWindow) -> None:
         self.host = host
         self.data: MolecularData  # Dynamically assigned in main_window_init.py
         self.has_unsaved_changes = False
@@ -130,8 +140,6 @@ class StateManager:
                 return (0, 0, 0)
             try:
                 parts = []
-                import re
-
                 for p in v_str.split("."):
                     m = re.match(r"(\d+)", p)
                     parts.append(int(m.group(1)) if m else 0)
@@ -189,14 +197,14 @@ class StateManager:
             atom_item = AtomItem(
                 atom_id, data["symbol"], pos_q, charge=charge, radical=radical
             )
-            # Store raw tuple in data
             self.host.state_manager.data.atoms[atom_id] = {
                 "symbol": data["symbol"],
                 "pos": raw_pos,
-                "item": atom_item,
                 "charge": charge,
                 "radical": radical,
+                "item": atom_item,
             }
+            self.host.init_manager.scene.atom_items[atom_id] = atom_item
             self.host.init_manager.scene.addItem(atom_item)
 
         self.data.next_atom_id = loaded_data.get(
@@ -207,8 +215,13 @@ class StateManager:
         for key_tuple, data in raw_bonds.items():
             id1, id2 = key_tuple
             if id1 in self.data.atoms and id2 in self.data.atoms:
-                atom1_item = self.data.atoms[id1]["item"]
-                atom2_item = self.data.atoms[id2]["item"]
+                scene = self.host.init_manager.scene
+                if hasattr(scene, "atom_items") and isinstance(scene.atom_items, dict):
+                    atom1_item = scene.atom_items[id1]
+                    atom2_item = scene.atom_items[id2]
+                else:
+                    atom1_item = self.data.atoms[id1].get("item")
+                    atom2_item = self.data.atoms[id2].get("item")
                 bond_item = BondItem(
                     atom1_item, atom2_item, data.get("order", 1), data.get("stereo", 0)
                 )
@@ -217,13 +230,13 @@ class StateManager:
                     "stereo": data.get("stereo", 0),
                     "item": bond_item,
                 }
+                self.host.init_manager.scene.bond_items[key_tuple] = bond_item
                 atom1_item.bonds.append(bond_item)
                 atom2_item.bonds.append(bond_item)
                 self.host.init_manager.scene.addItem(bond_item)
 
-        for atom_data in self.data.atoms.values():
-            if atom_data["item"]:
-                atom_data["item"].update_style()
+        for atom_item in self.host.init_manager.scene.atom_items.values():
+            atom_item.update_style()
         self.host.init_manager.scene.update_all_items()
         mol_3d_data = loaded_data.get("mol_3d")
         if mol_3d_data is not None:
@@ -670,10 +683,11 @@ class StateManager:
                 self.data.atoms[atom_id] = {
                     "symbol": symbol,
                     "pos": raw_pos,
-                    "item": atom_item,
                     "charge": charge,
                     "radical": radical,
+                    "item": atom_item,
                 }
+                self.host.init_manager.scene.atom_items[atom_id] = atom_item
                 self.host.init_manager.scene.addItem(atom_item)
 
             # Restore next_atom_id
@@ -689,8 +703,15 @@ class StateManager:
                 atom2_id = bond_data["atom2"]
 
                 if atom1_id in self.data.atoms and atom2_id in self.data.atoms:
-                    atom1_item = self.data.atoms[atom1_id]["item"]
-                    atom2_item = self.data.atoms[atom2_id]["item"]
+                    scene = self.host.init_manager.scene
+                    if hasattr(scene, "atom_items") and isinstance(
+                        scene.atom_items, dict
+                    ):
+                        atom1_item = scene.atom_items[atom1_id]
+                        atom2_item = scene.atom_items[atom2_id]
+                    else:
+                        atom1_item = self.data.atoms[atom1_id].get("item")
+                        atom2_item = self.data.atoms[atom2_id].get("item")
 
                     bond_order = bond_data["order"]
                     stereo = bond_data.get("stereo", 0)
@@ -704,14 +725,17 @@ class StateManager:
 
                     self.data.bonds[(atom1_id, atom2_id)] = {
                         "order": bond_order,
-                        "item": bond_item,
                         "stereo": stereo,
+                        "item": bond_item,
                     }
+                    self.host.init_manager.scene.bond_items[(atom1_id, atom2_id)] = (
+                        bond_item
+                    )
                     self.host.init_manager.scene.addItem(bond_item)
 
             # Update all AtomItem styles
-            for atom in self.data.atoms.values():
-                atom["item"].update_style()
+            for atom_item in self.host.init_manager.scene.atom_items.values():
+                atom_item.update_style()
             self.host.init_manager.scene.update_all_items()
         # Restore 3D data
         structure_3d = json_data.get("3d_structure")

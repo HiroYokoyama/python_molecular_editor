@@ -46,8 +46,44 @@ class TemplateMixin:
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
 
+    @property
+    def atom_items(self) -> Any:
+        if not hasattr(self, "_atom_items"):
+            data = getattr(self, "data", None)
+            atoms_dict = getattr(data, "atoms", None) if data else None
+            try:
+                from .molecule_scene import SceneItemDict
+
+                self._atom_items = SceneItemDict(self, atoms_dict)
+            except ImportError:
+                self._atom_items = {}
+        return self._atom_items
+
+    @atom_items.setter
+    def atom_items(self, val: Any) -> None:
+        self._atom_items = val
+
+    @property
+    def bond_items(self) -> Any:
+        if not hasattr(self, "_bond_items"):
+            data = getattr(self, "data", None)
+            bonds_dict = getattr(data, "bonds", None) if data else None
+            try:
+                from .molecule_scene import SceneItemDict
+
+                self._bond_items = SceneItemDict(self, bonds_dict)
+            except ImportError:
+                self._bond_items = {}
+        return self._bond_items
+
+    @bond_items.setter
+    def bond_items(self, val: Any) -> None:
+        self._bond_items = val
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.template_context = {}
+        self.template_preview = None
+        self.template_preview_points = []
         super().__init__(*args, **kwargs)
 
     def clear_template_preview(self) -> None:
@@ -279,9 +315,8 @@ class TemplateMixin:
                 nearby = None
                 best_d = float("inf")
 
-                for atom_data in self.data.atoms.values():
-                    a_item = atom_data.get("item")
-                    if not a_item or a_item in mapped_atoms:
+                for a_item in self.atom_items.values():
+                    if a_item in mapped_atoms:
                         continue
                     try:
                         d = dist_pts(p, a_item.pos())
@@ -298,7 +333,7 @@ class TemplateMixin:
         for i, p in enumerate(points):
             if atom_items[i] is None:
                 atom_id = self.create_atom(symbol, p)
-                atom_items[i] = self.data.atoms[atom_id]["item"]
+                atom_items[i] = self.atom_items[atom_id]
 
         # --- 4) Determine bond array for the template (benzene rotation alignment processing) ---
         template_bonds_to_use = list(bonds_info)
@@ -483,9 +518,8 @@ class TemplateMixin:
                             continue
                         nearby = None
                         best_d = float("inf")
-                        for atom_data in self.data.atoms.values():
-                            a_item = atom_data.get("item")
-                            if not a_item or a_item in mapped_atoms:
+                        for a_item in self.atom_items.values():
+                            if a_item in mapped_atoms:
                                 continue
                             try:
                                 d = math.hypot(
@@ -616,8 +650,8 @@ class TemplateMixin:
 
                     if not existing_bond:
                         # Use the centralized create_bond method
-                        atom1_item = self.data.atoms[atom1_id]["item"]
-                        atom2_item = self.data.atoms[atom2_id]["item"]
+                        atom1_item = self.atom_items.get(atom1_id)
+                        atom2_item = self.atom_items.get(atom2_id)
                         if atom1_item and atom2_item:
                             self.create_bond(
                                 atom1_item,
@@ -628,8 +662,9 @@ class TemplateMixin:
 
         # Update atom visuals
         for atom_id in atom_id_map.values():
-            if atom_id in self.data.atoms and self.data.atoms[atom_id]["item"]:
-                self.data.atoms[atom_id]["item"].update_style()
+            item = self.atom_items.get(atom_id)
+            if item:
+                item.update_style()
 
     def update_user_template_preview(
         self, pos: QPointF, alt_pressed: Optional[bool] = None
@@ -1200,7 +1235,7 @@ class KeyboardMixin:
                     else:
                         # Create new atom and bond
                         new_atom_id = self.create_atom("C", target_pos)
-                        new_atom_item = self.data.atoms[new_atom_id]["item"]
+                        new_atom_item = self.atom_items[new_atom_id]
                         self.create_bond(
                             start_atom,
                             new_atom_item,
@@ -1375,6 +1410,7 @@ class SceneQueryMixin:
     ) -> Any:
         atom_id = self.data.add_atom(symbol, pos, charge=charge, radical=radical)
         atom_item = AtomItem(atom_id, symbol, pos, charge=charge, radical=radical)
+        self.atom_items[atom_id] = atom_item
         self.data.atoms[atom_id]["item"] = atom_item
         self.addItem(atom_item)
         return atom_id
@@ -1404,31 +1440,14 @@ class SceneQueryMixin:
             )
             if status == "created":
                 bond_item = BondItem(start_atom, end_atom, order_to_use, stereo_to_use)
+                self.bond_items[key] = bond_item
                 self.data.bonds[key]["item"] = bond_item
-                if hasattr(start_atom, "bonds"):
-                    start_atom.bonds.append(bond_item)
-                else:
-                    logging.error(
-                        "REPORT ERROR: Missing attribute 'bonds' on start_atom"
-                    )
-                if hasattr(end_atom, "bonds"):
-                    end_atom.bonds.append(bond_item)
-                else:
-                    logging.error("REPORT ERROR: Missing attribute 'bonds' on end_atom")
+                start_atom.bonds.append(bond_item)
+                end_atom.bonds.append(bond_item)
                 self.addItem(bond_item)
 
-            if hasattr(start_atom, "update_style"):
-                start_atom.update_style()
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'update_style' on start_atom"
-                )
-            if hasattr(end_atom, "update_style"):
-                end_atom.update_style()
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'update_style' on end_atom"
-                )
+            start_atom.update_style()
+            end_atom.update_style()
 
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error creating bond: {e}", exc_info=True)
@@ -1456,6 +1475,20 @@ class SceneQueryMixin:
                 if hasattr(atom, "bonds") and atom.bonds:
                     for b in list(atom.bonds):
                         bonds_to_delete.add(b)
+
+            # Remove from scene-level item caches
+            for bond in list(bonds_to_delete):
+                a1 = getattr(bond, "atom1", None)
+                a2 = getattr(bond, "atom2", None)
+                if a1 and a2:
+                    self.bond_items.pop((a1.atom_id, a2.atom_id), None)
+                    self.bond_items.pop((a2.atom_id, a1.atom_id), None)
+                    self.data.bonds.get((a1.atom_id, a2.atom_id), {}).pop("item", None)
+                    self.data.bonds.get((a2.atom_id, a1.atom_id), {}).pop("item", None)
+            for atom in list(atoms_to_delete):
+                if hasattr(atom, "atom_id"):
+                    self.atom_items.pop(atom.atom_id, None)
+                    self.data.atoms.get(atom.atom_id, {}).pop("item", None)
 
             # Determine surviving atoms whose bond lists need pruning
             atoms_to_update = set()
