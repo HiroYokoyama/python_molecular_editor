@@ -614,7 +614,9 @@ class PluginManager:
                                     selected_indices.append(i)
                             except (RuntimeError, ValueError, TypeError):
                                 continue
-        except ImportError:
+        except (
+            ImportError
+        ):  # [OPTIONAL DEP] importlib.metadata unavailable (<3.8); silently skip.
             pass
         except Exception as e:
             logging.error(f"Error retrieving selected atom indices: {e}")
@@ -697,8 +699,7 @@ class PluginManager:
                                     RuntimeError,
                                     ValueError,
                                     TypeError,
-                                ):
-                                    # Fallback for complex AST structures during metadata extraction
+                                ):  # [AST PARSE] Complex/unexpected AST node shapes during metadata extraction; skip gracefully.
                                     pass
 
                         if val is not None:

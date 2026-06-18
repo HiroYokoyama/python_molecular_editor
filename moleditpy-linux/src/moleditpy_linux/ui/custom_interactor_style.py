@@ -689,18 +689,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         RuntimeError,
                                         ValueError,
                                         TypeError,
-                                    ):
-                                        # Suppress non-critical assignment noise
-                                        # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
+                                    ):  # [VTK SYNC] atom_positions_3d update may race with VTK teardown; skip safely.
                                         pass
                             except (
                                 AttributeError,
                                 RuntimeError,
                                 TypeError,
                                 ValueError,
-                            ):
-                                # Suppress non-critical coordinate sync noise
-                                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
+                            ):  # [VTK SYNC] Outer drag-loop coordinate sync may race with VTK teardown; skip safely.
                                 pass
                         conf = mw.view_3d_manager.current_mol.GetConformer()
                         pos_count = (

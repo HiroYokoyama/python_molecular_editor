@@ -35,6 +35,8 @@ from PyQt6.QtWidgets import (
 class PluginManagerWindow(QDialog):
     def __init__(self, plugin_manager: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
+        self.btn_remove = None
+        self.table = None
         self.plugin_manager = plugin_manager
         self.setWindowTitle("Plugin Manager")
         self.resize(800, 500)

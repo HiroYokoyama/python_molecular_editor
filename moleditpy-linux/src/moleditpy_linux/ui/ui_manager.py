@@ -49,6 +49,7 @@ except ImportError:
 class UIManager(QObject):
     def __init__(self, host: Any = None) -> None:
         super().__init__()
+        self.is_2d_editable = False
         if host is not None:
             self.host = host
 

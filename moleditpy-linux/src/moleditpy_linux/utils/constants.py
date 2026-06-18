@@ -23,7 +23,7 @@ def _get_version():
 
         try:
             return version("MoleditPy-linux")
-        except PackageNotFoundError:
+        except PackageNotFoundError:  # [OPTIONAL] Package not installed in editable mode; fall through to pyproject.toml.
             pass
     except ImportError:
         pass
@@ -39,7 +39,9 @@ def _get_version():
                         if line.strip().startswith("version ="):
                             return line.split("=")[1].strip().strip('"').strip("'")
             current_dir = os.path.dirname(current_dir)
-    except Exception:
+    except (
+        Exception
+    ):  # [FALLBACK] pyproject.toml may not exist in installed wheels; return "Unknown".
         pass
 
     return "Unknown"

@@ -585,9 +585,7 @@ class ExportManager:
                                     RuntimeError,
                                     ValueError,
                                     TypeError,
-                                ):
-                                    # Fail silently and fall through to default mesh addition
-                                    # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
+                                ):  # [PYVISTA] Mesh color extraction may fail on headless/incomplete meshes; fall through to default.
                                     pass
                             if colors is not None and colors.size > 0:
                                 # Normalize float colors to 0-255

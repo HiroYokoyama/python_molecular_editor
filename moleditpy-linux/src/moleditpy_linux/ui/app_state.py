@@ -774,8 +774,7 @@ class StateManager:
                                                 ValueError,
                                                 TypeError,
                                                 IndexError,
-                                            ):
-                                                # Safe defensive fallback catching RuntimeError, ValueError, TypeError, IndexError
+                                            ):  # [RDKIT GUARD] RDKit atom property assignment may fail on invalid ids; skip silently.
                                                 pass
                                 self.host.set_3d_atom_positions(positions_3d)
 

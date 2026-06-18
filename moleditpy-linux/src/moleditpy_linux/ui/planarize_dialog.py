@@ -44,6 +44,11 @@ class PlanarizeDialog(BasePickingDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
+        self.apply_button = None
+        self.clear_button = None
+        self.picker_connection = None
+        self.select_all_button = None
+        self.selection_label = None
         self.selected_atoms: set[int] = set()
 
         if preselected_atoms:
@@ -170,9 +175,7 @@ class PlanarizeDialog(BasePickingDialog):
             centroid = np.mean(selected_positions, axis=0)
             centered_positions = selected_positions - centroid
 
-            from moleditpy_linux.core.mol_geometry import (
-                calculate_best_fit_plane_projection,
-            )
+            from moleditpy_linux.core.mol_geometry import calculate_best_fit_plane_projection
 
             # Get normal of the least-squares plane via SVD
             u, s, vh = np.linalg.svd(centered_positions, full_matrices=False)

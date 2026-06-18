@@ -56,6 +56,8 @@ class View3DManager:
     )
 
     def __init__(self, host: Any) -> None:
+        self._plugin_bond_color_overrides = {}
+        self._plugin_color_overrides = {}
         self.host = host
         # State variables previously held by mixin
         self._drawing_3d: bool = False
@@ -299,9 +301,7 @@ class View3DManager:
                         TypeError,
                         ValueError,
                         KeyError,
-                    ):
-                        # Suppress traceback
-                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, KeyError
+                    ):  # [COLOR] QColor parse may fail on invalid hex; skip atom color override silently.
                         pass
 
         # Define common mesh properties
@@ -677,9 +677,7 @@ class View3DManager:
                         TypeError,
                         ValueError,
                         KeyError,
-                    ):
-                        # Suppress traceback
-                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, KeyError
+                    ):  # [COLOR] QColor parse may fail on invalid hex; skip bond color override silently.
                         pass
 
                 # Determine effective uniform color for this bond

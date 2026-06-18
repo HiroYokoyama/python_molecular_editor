@@ -176,6 +176,28 @@ class MainInitManager:
         # Dictionary holding data for plugins that haven't been loaded
         self._preserved_plugin_data: Dict[str, Any] = {}
 
+        self._plugin_menubar_separator_added = False
+        self.active_worker_ids = set()
+        self.analysis_action = None
+        self.atom_index_base_0_action = None
+        self.atom_index_base_1_action = None
+        self.atom_index_base_menu = None
+        self.conv_actions = None
+        self.edit_3d_action = None
+        self.halt_ids = set()
+        self.measurement_action = None
+        self.next_conversion_id = 1
+        self.opt3d_actions = None
+        self.opt3d_method_labels = None
+        self.paste_action = None
+        self.plugin_menu = None
+        self.show_atom_coords_action = None
+        self.show_atom_symbol_action = None
+        self.show_index_action = None
+        self.show_original_id_action = None
+        self.show_xyz_index_action = None
+        self.toggle_chiral_action = None
+        self.view_2d = None
         self.init_ui()
         self.init_worker_thread()
         self.host.ui_manager._setup_3d_picker()

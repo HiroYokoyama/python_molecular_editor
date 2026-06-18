@@ -338,7 +338,6 @@ class IOManager:
 
     def save_project_as(self) -> None:
         """Save As (Ctrl+Shift+S) — always saves in PMEPRJ format."""
-        import copy
 
         if (
             not self.host.state_manager.data.atoms
@@ -521,7 +520,6 @@ class IOManager:
 
     def save_raw_data(self) -> None:
         """Save as PME Raw (pickle) format."""
-        import copy
 
         if (
             not self.host.state_manager.data.atoms
