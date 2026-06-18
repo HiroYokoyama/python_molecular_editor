@@ -263,6 +263,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     )
                     if atom:
                         if True:
+
                             def _deferred_measure() -> None:
                                 try:
                                     mw.edit_3d_manager.handle_measurement_atom_selection(
