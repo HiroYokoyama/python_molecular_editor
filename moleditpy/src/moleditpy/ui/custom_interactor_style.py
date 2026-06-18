@@ -585,16 +585,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         mw.edit_actions_manager.push_undo_state()
 
                     QTimer.singleShot(0, _deferred_group_redraw)
-                except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                    print(f"Error finalizing group drag: {e}")
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    logging.exception("Error finalizing group drag")
             else:
                 # No drag = click only -> toggle
                 clicked_atom = getattr(move_group_dialog, "_drag_atom_idx", None)
                 if clicked_atom is not None:
                     try:
                         move_group_dialog.on_atom_picked(clicked_atom)
-                    except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                        print(f"Error in toggle: {e}")
+                    except (AttributeError, RuntimeError, TypeError, ValueError):
+                        logging.exception("Error in toggle")
 
         # Background click: deselect Move Group
         if move_group_dialog and not getattr(
@@ -747,8 +747,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     mw.view_3d_manager.show_all_atom_info,
                 ]
 
-                def _deferred_updates(calls=_update_calls):
-                    for fn in calls:
+                def _deferred_updates():
+                    for fn in _update_calls:
                         try:
                             fn()
                         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -926,8 +926,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             mw.view_3d_manager.update_chiral_labels()
                             move_group_dialog.show_atom_labels()
                             mw.edit_actions_manager.push_undo_state()
-                except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                    print(f"Error finalizing group rotation: {e}")
+                except (AttributeError, RuntimeError, TypeError, ValueError):
+                    logging.exception("Error finalizing group rotation")
 
             # Reset state
             move_group_dialog._is_rotating_group_vtk = False

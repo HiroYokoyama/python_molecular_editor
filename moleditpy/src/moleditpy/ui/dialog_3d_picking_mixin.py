@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
+import logging
 from PyQt6.QtCore import QEvent, Qt, QObject, QPoint
 from PyQt6.QtGui import QMouseEvent
 from typing import Any, Optional, TYPE_CHECKING
@@ -99,8 +100,8 @@ class Dialog3DPickingMixin:
                 # Clicked something other than an atom
                 return False
 
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                print(f"Error in eventFilter: {e}")
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                logging.exception("Error in eventFilter")
                 return False
 
         # Add movement tracking for smart selection

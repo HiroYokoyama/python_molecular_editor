@@ -152,8 +152,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             else:
                 self.ff_combo.setCurrentText("MMFF94s")
 
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            print(f"Could not set default force field: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            logging.exception("Could not set default force field")
 
     def init_ui(self) -> None:
         self.setWindowTitle("Constrained Optimization")
@@ -569,7 +569,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Failed to add constraints: {e}")
-            print(e)
+            logging.error("Failed to add constraints", exc_info=True)
             return
 
         # Execute optimization
@@ -626,7 +626,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     constrained_method_name
                 )
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                print(f"Failed to set last_successful_optimization_method: {e}")
+                logging.warning("Failed to set last_successful_optimization_method: %s", e)
 
             # Save constraints list to MainWindow on success (same logic as reject)
             try:
@@ -658,7 +658,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     self.main_window.state_manager.update_window_title()
 
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                print(f"Failed to save constraints post-optimization: {e}")
+                logging.warning("Failed to save constraints post-optimization: %s", e)
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             QMessageBox.critical(self, "Error", f"Optimization failed: {e}")
@@ -697,7 +697,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 self.main_window.state_manager.update_window_title()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            print(f"Failed to save constraints to main window: {e}")
+            logging.warning("Failed to save constraints to main window: %s", e)
 
         super().reject()
 
@@ -732,8 +732,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 texts.append(f"A{i + 1}")
             elif atom_idx is not None:
                 # Log invalid index (for debugging)
-                print(
-                    f"Warning: Invalid atom index {atom_idx} in show_selection_labels"
+                logging.warning(
+                    "Invalid atom index %s in show_selection_labels",
+                    atom_idx,
                 )
 
         if positions:

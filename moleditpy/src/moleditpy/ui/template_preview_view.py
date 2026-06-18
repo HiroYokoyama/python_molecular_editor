@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Optional
 
 from PyQt6.QtCore import Qt, QTimer
@@ -47,8 +48,8 @@ class TemplatePreviewView(QGraphicsView):
                 self.fitInView(
                     self.original_scene_rect, Qt.AspectRatioMode.KeepAspectRatio
                 )
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            print(f"Warning: Failed to refit template preview: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            logging.exception("Failed to refit template preview")
 
     def showEvent(self, event: Optional[QShowEvent]) -> None:
         """Handle the show event to ensure the preview fits correctly upon display."""
@@ -86,5 +87,5 @@ class TemplatePreviewView(QGraphicsView):
                         padded_rect, Qt.AspectRatioMode.KeepAspectRatio
                     ),
                 )
-        except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            print(f"Warning: Failed to redraw template preview: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            logging.exception("Failed to redraw template preview")

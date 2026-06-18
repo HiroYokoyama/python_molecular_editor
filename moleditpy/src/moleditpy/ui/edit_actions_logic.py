@@ -356,9 +356,9 @@ class EditActionsManager:
                 f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds."
             )
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error during copy operation: {e}")
-            self.host.statusBar().showMessage(f"Error during copy operation: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            logging.exception("Error during copy operation")
+            self.host.statusBar().showMessage("Error during copy operation.")
 
     def cut_selection(self) -> None:
         """Cut selected items (copy then delete)"""
@@ -374,9 +374,9 @@ class EditActionsManager:
                 self.host.edit_actions_manager.push_undo_state()
                 self.host.statusBar().showMessage("Cut selection.", 2000)
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error during cut operation: {e}")
-            self.host.statusBar().showMessage(f"Error during cut operation: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            logging.exception("Error during cut operation")
+            self.host.statusBar().showMessage("Error during cut operation.")
 
     def paste_from_clipboard(self) -> None:
         """Paste molecular fragment from clipboard"""
@@ -434,9 +434,9 @@ class EditActionsManager:
                 2000,
             )
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error during paste operation: {e}")
-            self.host.statusBar().showMessage(f"Error during paste operation: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            logging.exception("Error during paste operation")
+            self.host.statusBar().showMessage("Error during paste operation.")
         self.host.ui_manager.activate_select_mode()
         self.host.init_manager.scene.update_all_items()
 
@@ -570,11 +570,11 @@ class EditActionsManager:
                         "Failed to remove hydrogen atoms or none found."
                     )
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error during hydrogen removal: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            logging.exception("Error during hydrogen removal")
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 # Suppress transient errors during UI status reporting.
-                self.host.statusBar().showMessage(f"Error removing hydrogen atoms: {e}")
+                self.host.statusBar().showMessage("Error removing hydrogen atoms.")
 
     def add_hydrogen_atoms(self) -> None:
         """Compute and add explicit hydrogens in 2D view using RDKit."""
@@ -744,7 +744,7 @@ class EditActionsManager:
                         added_items.append(new_item)
                         added_count += 1
                     except (AttributeError, RuntimeError, ValueError) as e:
-                        print(f"Failed to add H for atom {orig_id}: {e}")
+                        logging.warning("Failed to add H for atom %s: %s", orig_id, e)
 
             if added_count > 0:
                 self.host.init_manager.scene.update_all_items()
@@ -762,9 +762,9 @@ class EditActionsManager:
                     "No implicit hydrogens found to add.", 2000
                 )
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error during hydrogen addition: {e}")
-            self.host.statusBar().showMessage(f"Error adding hydrogen atoms: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            logging.exception("Error during hydrogen addition")
+            self.host.statusBar().showMessage("Error adding hydrogen atoms.")
 
     def update_edit_menu_actions(self) -> None:
         """Update edit menu based on selection and clipboard"""
@@ -855,9 +855,9 @@ class EditActionsManager:
                 f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees."
             )
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error rotating molecule: {e}")
-            self.host.statusBar().showMessage(f"Error rotating: {e}")
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            logging.exception("Error rotating molecule")
+            self.host.statusBar().showMessage("Error rotating molecule.")
 
     def select_all(self) -> None:
         for item in self.host.init_manager.scene.items():

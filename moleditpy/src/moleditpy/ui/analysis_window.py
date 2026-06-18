@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
+import logging
 from typing import Dict, Optional
 
 from PyQt6.QtCore import Qt
@@ -118,8 +119,9 @@ class AnalysisWindow(QDialog):
                         exact_mw += exact_mass * count
                     except (ValueError, RuntimeError):
                         # Skip unrecognized elements
-                        print(
-                            f"Warning: Unknown element {symbol}, skipping in mass calculation"
+                        logging.warning(
+                            "Unknown element %s, skipping in mass calculation",
+                            symbol,
                         )
                         continue
 

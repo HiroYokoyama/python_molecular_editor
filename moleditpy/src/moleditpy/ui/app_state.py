@@ -566,10 +566,10 @@ class StateManager:
                         pass
 
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                    print(f"Warning: Could not generate molecular identifiers: {e}")
+                    logging.warning("Could not generate molecular identifiers: %s", e)
 
             except (AttributeError, RuntimeError, ValueError) as e:
-                print(f"Warning: Could not process 3D molecular data: {e}")
+                logging.warning("Could not process 3D molecular data: %s", e)
         else:
             # Record if no 3D data
             json_data["3d_structure"] = None

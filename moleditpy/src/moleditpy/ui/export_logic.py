@@ -699,8 +699,8 @@ class ExportManager:
 
             return meshes_with_colors
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error in export_from_3d_view_with_colors: {e}")
+        except (AttributeError, RuntimeError, ValueError):
+            logging.exception("Error in export_from_3d_view_with_colors")
             return []
 
     def export_2d_png(self) -> None:

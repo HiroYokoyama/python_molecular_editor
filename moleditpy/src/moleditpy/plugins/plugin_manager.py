@@ -66,7 +66,10 @@ class PluginManager:
                     hasher.update(rel_path.encode("utf-8", errors="replace"))
                     hasher.update(b"\0")
                     with open(file_path, "rb") as f:
-                        for chunk in iter(lambda: f.read(8192), b""):
+                        while True:
+                            chunk = f.read(8192)
+                            if not chunk:
+                                break
                             hasher.update(chunk)
                     hasher.update(b"\0")
             return hasher.hexdigest()
@@ -390,8 +393,7 @@ class PluginManager:
                         SyntaxError,
                     ) as e:
                         status = f"Error (Autorun): {e}"
-                        # Autorun errors are stored in plugin status
-                        print(f"Plugin {plugin_name} autorun error: {e}")
+                        logging.exception("Plugin %s autorun error", plugin_name)
                 elif not has_run:
                     status = "No Entry Point"
 
