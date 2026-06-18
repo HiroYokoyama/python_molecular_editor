@@ -37,6 +37,7 @@ This fixture file sets up the test environment for `pytest`.
       * **3D Conversion**: Mocks the `CalculationWorker` thread. When a 2D-to-3D conversion is triggered, it immediately calls the `on_calculation_finished` slot with a dummy RDKit molecule, bypassing the actual computation.
       * **PyVista/VTK**: Replaces the `CustomQtInteractor` (the 3D viewport) with a `DummyPlotter` (a simple `QWidget`) to prevent an actual 3D window from launching.
       * **Dialogs**: Mocks all blocking dialogs (`QMessageBox`, `QFileDialog`, `QInputDialog`, `QDialog.exec`) to return default "success" values (e.g., "Yes" to questions, a fake path for file dialogs).
+      * **MainWindow Property Proxies**: Patches the `MainWindow` class at startup with custom property descriptors (like `initial_settings`, `scene`, `data`, `undo_stack`). These properties proxy read/write calls to the correct manager classes. If the managers are not yet instantiated during the constructor's execution, the proxies safely fall back to the instance's local `__dict__` dictionary to avoid `AttributeError` crashes during initialization.
 
 ### `test_plugin_manager.py`
 
