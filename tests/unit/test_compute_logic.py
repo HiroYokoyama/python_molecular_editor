@@ -398,7 +398,6 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
     AllChem.EmbedMolecule(mol, randomSeed=42)
     compute.current_mol = mol
     compute.optimization_method = "UFF_RDKIT"
-    compute.host._temp_optimization_method = "MMFF_RDKIT"
 
     with (
         patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
@@ -406,7 +405,7 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
         patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
         MockWorker.return_value
-        compute.optimize_3d_structure()
+        compute.optimize_3d_structure("MMFF_RDKIT")
 
         # In the new async implementation, it should create a worker
         assert MockWorker.called
@@ -971,7 +970,6 @@ def test_trigger_conversion_uses_default_when_temp_mode_is_none(mock_parser_host
     compute = DummyCompute(mock_parser_host)
     compute.data.atoms = {1: {"symbol": "C", "item": MagicMock()}}
     compute.settings["3d_conversion_mode"] = "fallback"
-    compute.host._temp_conv_mode = None
     mol = Chem.MolFromSmiles("C")
 
     with (
@@ -983,7 +981,7 @@ def test_trigger_conversion_uses_default_when_temp_mode_is_none(mock_parser_host
         ),
         patch.object(compute, "_start_calculation_worker") as mock_start,
     ):
-        compute.trigger_conversion()
+        compute.trigger_conversion(None)
 
     options = mock_start.call_args[0][1]
     assert options["conversion_mode"] == "fallback"
@@ -1067,9 +1065,7 @@ def test_on_calculation_error_uff_fallback_temporary(mock_parser_host):
         with patch.object(compute, "optimize_3d_structure") as mock_optimize:
             compute.on_calculation_error((worker_id, "Optimization with MMFF94 failed"))
 
-            # Check if temp override was set
-            assert compute._temp_optimization_method == "UFF_RDKIT"
-            # Check if optimize was called
-            assert mock_optimize.called
+            # Check if optimize was called with UFF_RDKIT
+            mock_optimize.assert_called_once_with("UFF_RDKIT")
             # Check if persistent method remains unchanged
             assert compute.optimization_method == "MMFF_RDKIT"

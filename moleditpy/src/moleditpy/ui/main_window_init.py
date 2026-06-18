@@ -164,13 +164,13 @@ class MainInitManager:
 
         # Initialization of the plugin manager
         if safe_mode:
-            print("Safe mode: plugins disabled.")
+            logging.info("Safe mode: plugins disabled.")
             self.host.plugin_manager = None
         else:
             try:
                 self.host.plugin_manager = PluginManager()
             except (AttributeError, RuntimeError, ValueError) as e:
-                print(f"Failed to initialize PluginManager: {e}")
+                logging.error(f"Failed to initialize PluginManager: {e}")
                 self.host.plugin_manager = None
 
         # Dictionary holding data for plugins that haven't been loaded
@@ -214,7 +214,7 @@ class MainInitManager:
                 for atom in warmup_mol.GetAtoms():
                     atom.GetNumImplicitHs()
         except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"RDKit warm-up failed: {e}")
+            logging.error(f"RDKit warm-up failed: {e}")
 
         self.host.state_manager.reset_undo_stack()
         self.scene.selectionChanged.connect(
@@ -265,7 +265,7 @@ class MainInitManager:
             self.host.setWindowIcon(app_icon)
             QApplication.instance().setWindowIcon(app_icon)
         else:
-            print(f"Warning: Icon file not found: {icon_path}")
+            logging.warning(f"Warning: Icon file not found: {icon_path}")
 
         self._init_main_layout()
         self._init_toolbars()
@@ -442,7 +442,7 @@ class MainInitManager:
                         "REPORT ERROR: Missing attribute 'CPK_COLORS_PV' on constants module"
                     )
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-            print(f"Failed to update CPK colors from settings: {e}")
+            logging.error(f"Failed to update CPK colors from settings: {e}")
 
     def open_settings_dialog(self) -> None:
         dialog = SettingsDialog(self.settings, self.host)
@@ -620,7 +620,7 @@ class MainInitManager:
             self.settings_dirty = False
             self.host.initial_settings = self.settings.copy()
         except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error saving settings: {e}")
+            logging.error(f"Error saving settings: {e}")
 
     def update_plugin_menu(self, plugin_menu: QMenu) -> None:
         """Discovers plugins and updates the plugin menu actions."""

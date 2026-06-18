@@ -1101,8 +1101,7 @@ _Test that M CFG lines are injected for E/Z stereo bonds._
 ### test_on_calculation_error_uff_fallback_temporary
 _Verify that UFF fallback uses _temp_optimization_method and doesn't change persistent setting._
 
-- assert compute._temp_optimization_method == 'UFF_RDKIT'
-- assert mock_optimize.called
+- mock_optimize.assert_called_once_with('UFF_RDKIT')
 - assert compute.optimization_method == 'MMFF_RDKIT'
 
 ## tests/unit/test_constants.py

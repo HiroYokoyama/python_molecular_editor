@@ -46,7 +46,6 @@ class ComputeManager:
 
     def __init__(self, host: Any) -> None:
         self._calculating_text_actor = None
-        self._temp_optimization_method = None
         self.original_atom_properties = {}
         self.host = host
         self.last_successful_optimization_method: Optional[str] = None
@@ -203,8 +202,7 @@ class ComputeManager:
         menu.exec(self.host.init_manager.convert_button.mapToGlobal(pos))
 
     def _trigger_conversion_with_temp_mode(self, mode_key: str) -> None:
-        self.host._temp_conv_mode = mode_key
-        QTimer.singleShot(0, self.trigger_conversion)
+        QTimer.singleShot(0, lambda: self.trigger_conversion(conversion_mode=mode_key))
 
     def show_optimize_menu(self, pos: QPoint) -> None:
         """Temporary 3D optimization menu (right-click)."""
@@ -236,10 +234,13 @@ class ComputeManager:
         menu.exec(self.host.init_manager.optimize_3d_button.mapToGlobal(pos))
 
     def _trigger_optimize_with_temp_method(self, method_key: str) -> None:
-        self.host._temp_optimization_method = method_key
-        QTimer.singleShot(0, self.optimize_3d_structure)
+        QTimer.singleShot(0, lambda: self.optimize_3d_structure(method_key))
 
-    def trigger_conversion(self) -> None:
+    def trigger_conversion(
+        self,
+        conversion_mode: Optional[str] = None,
+        optimization_method: Optional[str] = None,
+    ) -> None:
         """Main entry point for 2D to 3D conversion."""
         self.last_successful_optimization_method = None
         self.host.set_constraints_3d([])
@@ -305,11 +306,9 @@ class ComputeManager:
         self.host.view_3d_manager.plotter.render()
 
         options = {
-            "conversion_mode": self.host.__dict__.pop("_temp_conv_mode", None)
+            "conversion_mode": conversion_mode
             or self.host.init_manager.settings.get("3d_conversion_mode", "fallback"),
-            "optimization_method": self.host.__dict__.pop(
-                "_temp_optimization_method", None
-            )
+            "optimization_method": optimization_method
             or getattr(self.host.init_manager, "optimization_method", "MMFF_RDKIT"),
             "optimize_intermolecular_interaction_rdkit": self.host.init_manager.settings.get(
                 "optimize_intermolecular_interaction_rdkit", True
@@ -333,7 +332,7 @@ class ComputeManager:
         self._remove_calculating_text()
         self.host.statusBar().showMessage("Halted")
 
-    def optimize_3d_structure(self) -> None:
+    def optimize_3d_structure(self, method_key: Optional[str] = None) -> None:
         """Optimize 3D structure."""
         if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("No 3D molecule to optimize.")
@@ -345,7 +344,7 @@ class ComputeManager:
             )
             return
 
-        method = self.host.__dict__.pop("_temp_optimization_method", None) or getattr(
+        method = method_key or getattr(
             self.host.init_manager, "optimization_method", "MMFF_RDKIT"
         )
         method = method.upper() if method else "MMFF_RDKIT"
@@ -584,8 +583,7 @@ class ComputeManager:
                     QMessageBox.StandardButton.No,
                 )
                 if reply == QMessageBox.StandardButton.Yes:
-                    self._temp_optimization_method = "UFF_RDKIT"
-                    self.optimize_3d_structure()
+                    self.optimize_3d_structure("UFF_RDKIT")
                     return
             except (TypeError, RuntimeError):
                 # Safe defensive fallback catching TypeError, RuntimeError

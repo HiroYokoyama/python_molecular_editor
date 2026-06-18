@@ -104,8 +104,6 @@ class MainWindow(QMainWindow):
         self.constrained_opt_action: Any
         self.intermolecular_rdkit_action: Any
         self.atom_id_to_rdkit_idx_map: dict[int, int]
-        self._temp_conv_mode: Any
-        self._temp_optimization_method: Any
 
         # Initialize ad-hoc attributes directly in __dict__ at startup.
         # This bypasses class-level property descriptors mocked by testing fixtures
@@ -138,8 +136,6 @@ class MainWindow(QMainWindow):
         self.__dict__["constrained_opt_action"] = None
         self.__dict__["intermolecular_rdkit_action"] = None
         self.__dict__["atom_id_to_rdkit_idx_map"] = {}
-        self.__dict__["_temp_conv_mode"] = None
-        self.__dict__["_temp_optimization_method"] = None
 
         self.export_manager = ExportManager(self)
         self.view_3d_manager = View3DManager(self)

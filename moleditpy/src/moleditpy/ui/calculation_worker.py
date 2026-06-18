@@ -824,11 +824,17 @@ class CalculationWorker(QObject):
                 success = self._run_obabel_workflow(mol_block, options, helpers)
                 if success:
                     return
+                if mode == "obabel":
+                    raise RuntimeError("Open Babel 3D conversion failed.")
 
             # 7. Final Fallback to Direct
             if mode == "fallback":
                 _safe_status("Falling back to direct conversion...")
                 self._run_direct_workflow(mol_block, mol, options, helpers)
+                return
+
+            # 8. Unhandled conversion mode
+            raise ValueError(f"Unknown or unhandled conversion mode: {mode}")
 
         except WorkerHaltError:
             # Swallow here; the loop has already been notified
