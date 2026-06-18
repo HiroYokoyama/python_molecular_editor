@@ -209,3 +209,76 @@ def test_custom_interactor_style_move_selected_atoms_no_bfs(app, mock_parser_hos
         callback()
 
         mock_dialog.on_atom_picked.assert_called_once_with(1)
+
+
+def test_custom_interactor_style_right_click_rotation(app, mock_parser_host):
+    """Verify right-click triggers group rotation and release finalizes it."""
+    interactor_style = CustomInteractorStyle(mock_parser_host)
+
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (100, 100)
+    interactor_style.GetInteractor = MagicMock(return_value=mock_interactor)
+
+    mock_dialog = MagicMock()
+    mock_dialog.isVisible.return_value = True
+    type(mock_dialog).__name__ = "MoveGroupDialog"
+    mock_dialog.group_atoms = {0, 1}
+    mock_dialog.is_rotating_group_vtk = False
+    mock_dialog.rotation_mouse_moved = False
+    mock_dialog.rotation_start_pos = None
+
+    # Mock RDKit Mol and Conformer
+    mock_mol = MagicMock()
+    mock_conformer = MagicMock()
+    mock_pos0 = MagicMock(x=0.0, y=0.0, z=0.0)
+    mock_pos1 = MagicMock(x=2.0, y=0.0, z=0.0)
+    mock_conformer.GetAtomPosition.side_effect = (
+        lambda idx: mock_pos0 if idx == 0 else mock_pos1
+    )
+    mock_mol.GetConformer.return_value = mock_conformer
+    mock_parser_host.view_3d_manager.current_mol = mock_mol
+
+    import numpy as np
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=0,
+        ),
+    ):
+        mock_qapp.topLevelWidgets.return_value = [mock_dialog]
+
+        # 1. Test right-click press starts rotation
+        interactor_style.on_right_button_down(None, None)
+        assert mock_dialog.is_rotating_group_vtk is True
+        assert mock_dialog.rotation_start_pos == (100, 100)
+        assert mock_dialog.rotation_atom_idx == 0
+        assert mock_dialog.group_centroid is not None
+
+        # 2. Test right-click release with no movement resets state
+        mock_dialog.rotation_mouse_moved = False
+        interactor_style.on_right_button_up(None, None)
+        assert mock_dialog.is_rotating_group_vtk is False
+        assert mock_dialog.rotation_start_pos is None
+
+        # 3. Test right-click release with movement applies rotation
+        mock_dialog.is_rotating_group_vtk = True
+        mock_dialog.rotation_mouse_moved = True
+        mock_dialog.rotation_start_pos = (100, 100)
+        mock_dialog.rotation_atom_idx = 0
+        mock_dialog.initial_positions = {
+            0: np.array([0.0, 0.0, 0.0]),
+            1: np.array([2.0, 0.0, 0.0]),
+        }
+        mock_dialog.group_centroid = np.array([1.0, 0.0, 0.0])
+
+        # Mock renderer methods to return coordinate tuples
+        mock_renderer = mock_parser_host.view_3d_manager.plotter.renderer
+        mock_renderer.GetDisplayPoint.return_value = (100.0, 100.0, 0.5)
+        mock_renderer.GetWorldPoint.return_value = (1.0, 1.0, 0.0, 1.0)
+
+        interactor_style.on_right_button_up(None, None)
+        assert mock_dialog.is_rotating_group_vtk is False
+        assert mock_dialog.rotation_start_pos is None
+        mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()

@@ -1400,6 +1400,19 @@ _Verify that clicking outside selection in MoveSelectedAtomsDialog toggles only 
 - mock_timer.assert_called_once()
 - mock_dialog.on_atom_picked.assert_called_once_with(1)
 
+### test_custom_interactor_style_right_click_rotation
+_Verify right-click triggers group rotation and release finalizes it._
+
+- assert mock_dialog.is_rotating_group_vtk is True
+- assert mock_dialog.rotation_start_pos == (100, 100)
+- assert mock_dialog.rotation_atom_idx == 0
+- assert mock_dialog.group_centroid is not None
+- assert mock_dialog.is_rotating_group_vtk is False
+- assert mock_dialog.rotation_start_pos is None
+- assert mock_dialog.is_rotating_group_vtk is False
+- assert mock_dialog.rotation_start_pos is None
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+
 ## tests/unit/test_dialog_3d_picking_mixin.py
 
 ### test_init_defaults

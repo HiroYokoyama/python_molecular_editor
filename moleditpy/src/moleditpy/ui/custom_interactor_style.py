@@ -812,10 +812,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         except (AttributeError, RuntimeError, TypeError):
             logging.error("Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
-            move_group_dialog, "_is_rotating_group_vtk", False
+            move_group_dialog, "is_rotating_group_vtk", False
         ):
             # Maintain selection on rotate release
-            if getattr(move_group_dialog, "_rotation_mouse_moved", False):
+            if getattr(move_group_dialog, "rotation_mouse_moved", False):
                 # Apply rotation on release if moved
                 try:
                     interactor = self.GetInteractor()
