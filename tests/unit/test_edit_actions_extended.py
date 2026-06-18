@@ -162,21 +162,21 @@ class TestEditActionsExtended:
 
     def test_apply_chem_check_force_skip(self, manager):
         mol = Chem.MolFromSmiles("C")
-        manager._apply_chem_check_and_set_flags(mol, force_skip=True)
+        manager.apply_chem_check_and_set_flags(mol, force_skip=True)
         assert manager.host.chem_check_tried is False
         assert manager.host.chem_check_failed is False
 
     def test_apply_chem_check_settings_skip(self, manager):
         manager.host.init_manager.settings["skip_chemistry_checks"] = True
         mol = Chem.MolFromSmiles("C")
-        manager._apply_chem_check_and_set_flags(mol)
+        manager.apply_chem_check_and_set_flags(mol)
         assert manager.host.chem_check_tried is False
         assert manager.host.chem_check_failed is False
 
     def test_apply_chem_check_success(self, manager):
         manager.host.init_manager.settings["skip_chemistry_checks"] = False
         mol = Chem.MolFromSmiles("C")
-        manager._apply_chem_check_and_set_flags(mol)
+        manager.apply_chem_check_and_set_flags(mol)
         assert manager.host.chem_check_tried is True
         assert manager.host.chem_check_failed is False
 
@@ -186,7 +186,7 @@ class TestEditActionsExtended:
         with patch(
             "rdkit.Chem.SanitizeMol", side_effect=ValueError("Invalid molecule")
         ):
-            manager._apply_chem_check_and_set_flags(mol, source_desc="Test")
+            manager.apply_chem_check_and_set_flags(mol, source_desc="Test")
 
         assert manager.host.chem_check_tried is True
         assert manager.host.chem_check_failed is True
@@ -371,7 +371,7 @@ class TestEditActionsExtended:
         # Should log error but not crash when sanitization fails
         with patch("rdkit.Chem.SanitizeMol", side_effect=ValueError("Invalid module")):
             with patch("moleditpy.ui.edit_actions_logic.logging.error") as mock_log:
-                manager._apply_chem_check_and_set_flags(mol)
+                manager.apply_chem_check_and_set_flags(mol)
                 mock_log.assert_called()
 
     def test_clear_xyz_flags_current_mol(self, manager):

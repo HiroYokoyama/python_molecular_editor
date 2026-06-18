@@ -176,7 +176,7 @@ class MainInitManager:
         # Dictionary holding data for plugins that haven't been loaded
         self._preserved_plugin_data: Dict[str, Any] = {}
 
-        self._plugin_menubar_separator_added = False
+        self.plugin_menubar_separator_added = False
         self.active_worker_ids = set()
         self.analysis_action = None
         self.atom_index_base_0_action = None
@@ -643,8 +643,8 @@ class MainInitManager:
 
         # Integrate
         self._update_style_menu_with_plugins()
-        self._add_registered_plugin_actions()
-        self._add_plugin_toolbar_actions()
+        self.add_registered_plugin_actions()
+        self.add_plugin_toolbar_actions()
         self._add_legacy_plugin_actions(plugin_menu, plugins)
         self._integrate_plugin_export_actions()
         self._integrate_plugin_file_openers()
@@ -732,19 +732,19 @@ class MainInitManager:
         except Exception as e:
             logging.warning("Plugin Installer: menu cleanup error: %s", e)
 
-        self._plugin_menubar_separator_added = False
+        self.plugin_menubar_separator_added = False
 
         try:
-            self._add_registered_plugin_actions()
+            self.add_registered_plugin_actions()
         except Exception as e:
             logging.warning("Plugin Installer: menu rebuild error: %s", e)
 
         try:
-            self._add_plugin_toolbar_actions()
+            self.add_plugin_toolbar_actions()
         except Exception as e:
             logging.warning("Plugin Installer: toolbar rebuild error: %s", e)
 
-    def _add_registered_plugin_actions(self) -> None:
+    def add_registered_plugin_actions(self) -> None:
         """Add actions that have been explicitly registered via the plugin manager."""
         PLUGIN_ACTION_TAG = "plugin_managed"
         if not self.host.plugin_manager.menu_actions:
@@ -768,9 +768,9 @@ class MainInitManager:
 
             if not current_menu:
                 # Add a separator before the first plugin-owned top-level menu
-                if not getattr(self, "_plugin_menubar_separator_added", False):
+                if not getattr(self, "plugin_menubar_separator_added", False):
                     self.host.menuBar().addSeparator()
-                    self._plugin_menubar_separator_added = True
+                    self.plugin_menubar_separator_added = True
                 current_menu = self.host.menuBar().addMenu(top_level_title)
 
             for part in parts[1:-1]:
@@ -800,7 +800,7 @@ class MainInitManager:
             action.setData(PLUGIN_ACTION_TAG)
             current_menu.addAction(action)
 
-    def _add_plugin_toolbar_actions(self) -> None:
+    def add_plugin_toolbar_actions(self) -> None:
         """Add toolbar actions registered by plugins."""
         if not hasattr(self, "plugin_toolbar"):
             return

@@ -1481,7 +1481,7 @@ class EditActionsManager:
 
                         moved = True
 
-    def _apply_chem_check_and_set_flags(
+    def apply_chem_check_and_set_flags(
         self, mol: Any, source_desc: Optional[str] = None, force_skip: bool = False
     ) -> None:
         """Central helper to apply chemical sanitization (or skip it) and set

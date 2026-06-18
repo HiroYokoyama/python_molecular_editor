@@ -83,7 +83,7 @@ def test_plugin_toolbar_actions_visibility(window, qtbot):
 
     # 1. Empty plugins -> Toolbar hidden
     window.plugin_manager.toolbar_actions = []
-    window.init_manager._add_plugin_toolbar_actions()
+    window.init_manager.add_plugin_toolbar_actions()
     assert window.init_manager.plugin_toolbar.isHidden()
 
     # 2. With plugins -> Toolbar shown
@@ -91,7 +91,7 @@ def test_plugin_toolbar_actions_visibility(window, qtbot):
     window.plugin_manager.toolbar_actions = [
         {"text": "ToolBtn", "callback": mock_cb, "icon": None, "tooltip": "Hint"}
     ]
-    window.init_manager._add_plugin_toolbar_actions()
+    window.init_manager.add_plugin_toolbar_actions()
     assert not window.init_manager.plugin_toolbar.isHidden()
 
     # Verify action
