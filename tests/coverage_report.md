@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **80.38%**
+- **Overall Project Coverage**: **80.40%**
 
 ### Coverage Breakdown
 
@@ -11,13 +11,13 @@
 | moleditpy\src\moleditpy\core\mol_geometry.py            |    260 |     19 |   92.7% |
 | moleditpy\src\moleditpy\core\molecular_data.py          |    307 |     38 |   87.6% |
 | moleditpy\src\moleditpy\plugins\plugin_interface.py     |    128 |      0 |  100.0% |
-| moleditpy\src\moleditpy\plugins\plugin_manager.py       |    370 |     15 |   95.9% |
+| moleditpy\src\moleditpy\plugins\plugin_manager.py       |    369 |     12 |   96.7% |
 | moleditpy\src\moleditpy\plugins\plugin_manager_window.py |    185 |      2 |   98.9% |
 | moleditpy\src\moleditpy\ui\__init__.py                  |      7 |      3 |   57.1% |
 | moleditpy\src\moleditpy\ui\about_dialog.py              |     67 |     15 |   77.6% |
 | moleditpy\src\moleditpy\ui\align_plane_dialog.py        |    158 |     20 |   87.3% |
 | moleditpy\src\moleditpy\ui\alignment_dialog.py          |    157 |     17 |   89.2% |
-| moleditpy\src\moleditpy\ui\analysis_window.py           |    116 |     25 |   78.4% |
+| moleditpy\src\moleditpy\ui\analysis_window.py           |    117 |     25 |   78.6% |
 | moleditpy\src\moleditpy\ui\angle_dialog.py              |    267 |     31 |   88.4% |
 | moleditpy\src\moleditpy\ui\app_state.py                 |    420 |     95 |   77.4% |
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    311 |     46 |   85.2% |
@@ -31,7 +31,7 @@
 | moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py |    472 |    120 |   74.6% |
 | moleditpy\src\moleditpy\ui\custom_interactor_style.py   |    473 |    337 |   28.8% |
 | moleditpy\src\moleditpy\ui\custom_qt_interactor.py      |     44 |     35 |   20.5% |
-| moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    139 |     21 |   84.9% |
+| moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    140 |     21 |   85.0% |
 | moleditpy\src\moleditpy\ui\dialog_logic.py              |    253 |     43 |   83.0% |
 | moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    271 |     35 |   87.1% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    246 |     41 |   83.3% |
@@ -41,7 +41,7 @@
 | moleditpy\src\moleditpy\ui\io_logic.py                  |    628 |    127 |   79.8% |
 | moleditpy\src\moleditpy\ui\main_window.py               |    206 |     31 |   85.0% |
 | moleditpy\src\moleditpy\ui\main_window_init.py          |   1275 |    172 |   86.5% |
-| moleditpy\src\moleditpy\ui\mirror_dialog.py             |     71 |      7 |   90.1% |
+| moleditpy\src\moleditpy\ui\mirror_dialog.py             |     72 |      7 |   90.3% |
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    973 |    180 |   81.5% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    539 |    133 |   75.3% |
 | moleditpy\src\moleditpy\ui\move_group_dialog.py         |    392 |    135 |   65.6% |
@@ -51,7 +51,7 @@
 | moleditpy\src\moleditpy\ui\settings_dialog.py           |    115 |     11 |   90.4% |
 | moleditpy\src\moleditpy\ui\string_importers.py          |    127 |     27 |   78.7% |
 | moleditpy\src\moleditpy\ui\template_preview_item.py     |    105 |      5 |   95.2% |
-| moleditpy\src\moleditpy\ui\template_preview_view.py     |     45 |      4 |   91.1% |
+| moleditpy\src\moleditpy\ui\template_preview_view.py     |     46 |      4 |   91.3% |
 | moleditpy\src\moleditpy\ui\translation_dialog.py        |    279 |     23 |   91.8% |
 | moleditpy\src\moleditpy\ui\ui_manager.py                |    388 |    118 |   69.6% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    369 |     85 |   77.0% |
@@ -65,7 +65,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      0 |  100.0% |
-| **TOTAL** | **15871** | **3114** | **80.38%** |
+| **TOTAL** | **15874** | **3111** | **80.40%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

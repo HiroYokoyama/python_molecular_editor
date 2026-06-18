@@ -105,37 +105,35 @@ class MainWindow(QMainWindow):
         self.intermolecular_rdkit_action: Any
         self.atom_id_to_rdkit_idx_map: dict[int, int]
 
-        # Initialize ad-hoc attributes directly in __dict__ at startup.
-        # This bypasses class-level property descriptors mocked by testing fixtures
-        # (before managers exist) and prevents overwriting values set during manager instantiation.
-        self.__dict__["initial_settings"] = None
-        self.__dict__["is_xyz_derived"] = False
-        self.__dict__["chem_check_tried"] = False
-        self.__dict__["chem_check_failed"] = False
-        self.__dict__["_template_dialog"] = None
-        self.__dict__["_picking_consumed"] = False
-        self.__dict__["initialization_complete"] = False
-        self.__dict__["_ih_update_counter"] = 0
-        self.__dict__["plugin_manager"] = None
-        self.__dict__["redraw_menu_action"] = None
-        self.__dict__["translation_action"] = None
-        self.__dict__["move_selected_atoms_action"] = None
-        self.__dict__["move_group_action"] = None
-        self.__dict__["align_menu"] = None
-        self.__dict__["align_x_action"] = None
-        self.__dict__["align_y_action"] = None
-        self.__dict__["align_z_action"] = None
-        self.__dict__["alignplane_xy_action"] = None
-        self.__dict__["alignplane_xz_action"] = None
-        self.__dict__["alignplane_yz_action"] = None
-        self.__dict__["mirror_action"] = None
-        self.__dict__["planarize_action"] = None
-        self.__dict__["bond_length_action"] = None
-        self.__dict__["angle_action"] = None
-        self.__dict__["dihedral_action"] = None
-        self.__dict__["constrained_opt_action"] = None
-        self.__dict__["intermolecular_rdkit_action"] = None
-        self.__dict__["atom_id_to_rdkit_idx_map"] = {}
+        # Initialize ad-hoc attributes at startup.
+        self.initial_settings = None
+        self.is_xyz_derived = False
+        self.chem_check_tried = False
+        self.chem_check_failed = False
+        self._template_dialog = None
+        self._picking_consumed = False
+        self.initialization_complete = False
+        self._ih_update_counter = 0
+        self.plugin_manager = None
+        self.redraw_menu_action = None
+        self.translation_action = None
+        self.move_selected_atoms_action = None
+        self.move_group_action = None
+        self.align_menu = None
+        self.align_x_action = None
+        self.align_y_action = None
+        self.align_z_action = None
+        self.alignplane_xy_action = None
+        self.alignplane_xz_action = None
+        self.alignplane_yz_action = None
+        self.mirror_action = None
+        self.planarize_action = None
+        self.bond_length_action = None
+        self.angle_action = None
+        self.dihedral_action = None
+        self.constrained_opt_action = None
+        self.intermolecular_rdkit_action = None
+        self.atom_id_to_rdkit_idx_map = {}
 
         self.export_manager = ExportManager(self)
         self.view_3d_manager = View3DManager(self)

@@ -666,14 +666,16 @@ def window(app, qtbot, monkeypatch):
 
         def _get_safe(self, manager_name, attr_name, default=None):
             manager = getattr(self, manager_name, None)
-            if manager:
+            if manager is not None:
                 return getattr(manager, attr_name, default)
-            return default
+            return self.__dict__.get(attr_name, default)
 
         def _set_safe(self, manager_name, attr_name, value):
             manager = getattr(self, manager_name, None)
-            if manager:
+            if manager is not None:
                 setattr(manager, attr_name, value)
+            else:
+                self.__dict__[attr_name] = value
 
         # Standard attributes
         cls.host = property(lambda self: self)
@@ -700,40 +702,40 @@ def window(app, qtbot, monkeypatch):
             lambda self, v: _set_safe(self, "init_manager", "settings_dirty", v),
         )
         cls.initial_settings = property(
-            lambda self: self.init_manager.initial_settings,
-            lambda self, v: setattr(self.init_manager, "initial_settings", v),
+            lambda self: _get_safe(self, "init_manager", "initial_settings"),
+            lambda self, v: _set_safe(self, "init_manager", "initial_settings", v),
         )
         cls.scene = property(
-            lambda self: self.init_manager.scene,
-            lambda self, v: setattr(self.init_manager, "scene", v),
+            lambda self: _get_safe(self, "init_manager", "scene"),
+            lambda self, v: _set_safe(self, "init_manager", "scene", v),
         )
 
         # StateManager proxies
         cls.data = property(
-            lambda self: self.state_manager.data,
-            lambda self, v: setattr(self.state_manager, "data", v),
+            lambda self: _get_safe(self, "state_manager", "data"),
+            lambda self, v: _set_safe(self, "state_manager", "data", v),
         )
         cls.undo_stack = property(
-            lambda self: self.state_manager.undo_stack,
-            lambda self, v: setattr(self.state_manager, "undo_stack", v),
+            lambda self: _get_safe(self, "state_manager", "undo_stack"),
+            lambda self, v: _set_safe(self, "state_manager", "undo_stack", v),
         )
         cls.has_unsaved_changes = property(
-            lambda self: self.state_manager.has_unsaved_changes,
-            lambda self, v: setattr(self.state_manager, "has_unsaved_changes", v),
+            lambda self: _get_safe(self, "state_manager", "has_unsaved_changes"),
+            lambda self, v: _set_safe(self, "state_manager", "has_unsaved_changes", v),
         )
 
         # Edit3DManager proxies
         cls.measurement_mode = property(
-            lambda self: self.edit_3d_manager.measurement_mode,
-            lambda self, v: setattr(self.edit_3d_manager, "measurement_mode", v),
+            lambda self: _get_safe(self, "edit_3d_manager", "measurement_mode"),
+            lambda self, v: _set_safe(self, "edit_3d_manager", "measurement_mode", v),
         )
         cls.is_3d_edit_mode = property(
-            lambda self: self.edit_3d_manager.is_3d_edit_mode,
-            lambda self, v: setattr(self.edit_3d_manager, "is_3d_edit_mode", v),
+            lambda self: _get_safe(self, "edit_3d_manager", "is_3d_edit_mode"),
+            lambda self, v: _set_safe(self, "edit_3d_manager", "is_3d_edit_mode", v),
         )
         cls.active_3d_dialogs = property(
-            lambda self: self.edit_3d_manager.active_3d_dialogs,
-            lambda self, v: setattr(self.edit_3d_manager, "active_3d_dialogs", v),
+            lambda self: _get_safe(self, "edit_3d_manager", "active_3d_dialogs"),
+            lambda self, v: _set_safe(self, "edit_3d_manager", "active_3d_dialogs", v),
         )
         cls.close_all_3d_edit_dialogs = (
             lambda self: self.edit_3d_manager.close_all_3d_edit_dialogs()
@@ -747,12 +749,14 @@ def window(app, qtbot, monkeypatch):
 
         # View3DManager proxies
         cls.atom_info_display_mode = property(
-            lambda self: self.view_3d_manager.atom_info_display_mode,
-            lambda self, v: setattr(self.view_3d_manager, "atom_info_display_mode", v),
+            lambda self: _get_safe(self, "view_3d_manager", "atom_info_display_mode"),
+            lambda self, v: _set_safe(
+                self, "view_3d_manager", "atom_info_display_mode", v
+            ),
         )
         cls.current_atom_info_labels = property(
-            lambda self: self.view_3d_manager.current_atom_info_labels,
-            lambda self, v: setattr(
+            lambda self: _get_safe(self, "view_3d_manager", "current_atom_info_labels"),
+            lambda self, v: _set_safe(
                 self.view_3d_manager, "current_atom_info_labels", v
             ),
         )
@@ -760,12 +764,12 @@ def window(app, qtbot, monkeypatch):
             lambda self, mode: self.view_3d_manager.toggle_atom_info_display(mode)
         )
         cls.current_mol = property(
-            lambda self: self.view_3d_manager.current_mol,
-            lambda self, v: setattr(self.view_3d_manager, "current_mol", v),
+            lambda self: _get_safe(self, "view_3d_manager", "current_mol"),
+            lambda self, v: _set_safe(self, "view_3d_manager", "current_mol", v),
         )
         cls.atom_positions_3d = property(
-            lambda self: self.view_3d_manager.atom_positions_3d,
-            lambda self, v: setattr(self.view_3d_manager, "atom_positions_3d", v),
+            lambda self: _get_safe(self, "view_3d_manager", "atom_positions_3d"),
+            lambda self, v: _set_safe(self, "view_3d_manager", "atom_positions_3d", v),
         )
 
         # UIManager proxies
@@ -775,44 +779,44 @@ def window(app, qtbot, monkeypatch):
 
         # Additional proxies for integration tests
         cls.import_menu = property(
-            lambda self: self.init_manager.import_menu,
-            lambda self, v: setattr(self.init_manager, "import_menu", v),
+            lambda self: _get_safe(self, "init_manager", "import_menu"),
+            lambda self, v: _set_safe(self, "init_manager", "import_menu", v),
         )
         cls.opt3d_actions = property(
-            lambda self: self.init_manager.opt3d_actions,
-            lambda self, v: setattr(self.init_manager, "opt3d_actions", v),
+            lambda self: _get_safe(self, "init_manager", "opt3d_actions"),
+            lambda self, v: _set_safe(self, "init_manager", "opt3d_actions", v),
         )
         cls.conv_actions = property(
-            lambda self: self.init_manager.conv_actions,
-            lambda self, v: setattr(self.init_manager, "conv_actions", v),
+            lambda self: _get_safe(self, "init_manager", "conv_actions"),
+            lambda self, v: _set_safe(self, "init_manager", "conv_actions", v),
         )
         cls.plugin_menu = property(
-            lambda self: self.init_manager.plugin_menu,
-            lambda self, v: setattr(self.init_manager, "plugin_menu", v),
+            lambda self: _get_safe(self, "init_manager", "plugin_menu"),
+            lambda self, v: _set_safe(self, "init_manager", "plugin_menu", v),
         )
         cls.style_button = property(
-            lambda self: self.init_manager.style_button,
-            lambda self, v: setattr(self.init_manager, "style_button", v),
+            lambda self: _get_safe(self, "init_manager", "style_button"),
+            lambda self, v: _set_safe(self, "init_manager", "style_button", v),
         )
         cls.optimize_3d_button = property(
-            lambda self: self.init_manager.optimize_3d_button,
-            lambda self, v: setattr(self.init_manager, "optimize_3d_button", v),
+            lambda self: _get_safe(self, "init_manager", "optimize_3d_button"),
+            lambda self, v: _set_safe(self, "init_manager", "optimize_3d_button", v),
         )
         cls.export_button = property(
-            lambda self: self.init_manager.export_button,
-            lambda self, v: setattr(self.init_manager, "export_button", v),
+            lambda self: _get_safe(self, "init_manager", "export_button"),
+            lambda self, v: _set_safe(self, "init_manager", "export_button", v),
         )
         cls.analysis_action = property(
-            lambda self: self.init_manager.analysis_action,
-            lambda self, v: setattr(self.init_manager, "analysis_action", v),
+            lambda self: _get_safe(self, "init_manager", "analysis_action"),
+            lambda self, v: _set_safe(self, "init_manager", "analysis_action", v),
         )
         cls.cleanup_button = property(
-            lambda self: self.init_manager.cleanup_button,
-            lambda self, v: setattr(self.init_manager, "cleanup_button", v),
+            lambda self: _get_safe(self, "init_manager", "cleanup_button"),
+            lambda self, v: _set_safe(self, "init_manager", "cleanup_button", v),
         )
         cls.convert_button = property(
-            lambda self: self.init_manager.convert_button,
-            lambda self, v: setattr(self.init_manager, "convert_button", v),
+            lambda self: _get_safe(self, "init_manager", "convert_button"),
+            lambda self, v: _set_safe(self, "init_manager", "convert_button", v),
         )
 
         # EditActionsManager proxies (accept and ignore triggered bool arg)
