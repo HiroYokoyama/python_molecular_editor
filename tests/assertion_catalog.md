@@ -4924,7 +4924,7 @@ _Verify that application state is updated correctly after a successful save._
 
 - assert io.host.state_manager.has_unsaved_changes is False
 - assert io.host.init_manager.current_file_path == save_path
-- assert io.host.state_manager.update_window_title.called
+- assert io.host.update_window_title.called
 - assert io.host.state_manager._saved_state is not None
 
 ## tests/unit/test_project_io_raw.py

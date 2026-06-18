@@ -59,6 +59,12 @@ except ImportError:
 class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene):
     def __init__(self, data: Any, window: Any) -> None:
         super().__init__()
+        self._deleted_items = []
+        self.initial_positions_in_event = {}
+        self.template_context = {}
+        self.template_preview = None
+        self.template_preview_points = []
+        self.was_selected_on_press = False
         self.data, self.window = data, window
         self.mode: str = "select"
         self.current_atom_symbol: str = "C"

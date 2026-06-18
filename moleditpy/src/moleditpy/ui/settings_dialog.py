@@ -36,6 +36,14 @@ except ImportError:
 class SettingsDialog(QDialog):
     def __init__(self, current_settings: Any, parent: Any = None) -> None:
         super().__init__(parent)
+        self.tab_2d = None
+        self.tab_bs = None
+        self.tab_cpk = None
+        self.tab_other = None
+        self.tab_scene = None
+        self.tab_stick = None
+        self.tab_wf = None
+        self.tab_widget = None
         self.setWindowTitle("Settings")
         self.setMinimumSize(650, 750)
         self.parent_window = parent

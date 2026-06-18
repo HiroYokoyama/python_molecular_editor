@@ -155,7 +155,9 @@ def main() -> None:
             from PyQt6.QtCore import QTimer
 
             QTimer.singleShot(100, lambda: window.setWindowIcon(window.windowIcon()))
-        except Exception:  # [COSMETIC] Icon refresh is best-effort; Qt timing errors are non-fatal.
+        except (
+            Exception
+        ):  # [COSMETIC] Icon refresh is best-effort; Qt timing errors are non-fatal.
             pass
 
     sys.exit(app.exec())

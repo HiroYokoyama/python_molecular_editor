@@ -56,6 +56,8 @@ class View3DManager:
     )
 
     def __init__(self, host: Any) -> None:
+        self._plugin_bond_color_overrides = {}
+        self._plugin_color_overrides = {}
         self.host = host
         # State variables previously held by mixin
         self._drawing_3d: bool = False

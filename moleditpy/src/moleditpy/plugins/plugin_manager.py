@@ -614,7 +614,9 @@ class PluginManager:
                                     selected_indices.append(i)
                             except (RuntimeError, ValueError, TypeError):
                                 continue
-        except ImportError:  # [OPTIONAL DEP] importlib.metadata unavailable (<3.8); silently skip.
+        except (
+            ImportError
+        ):  # [OPTIONAL DEP] importlib.metadata unavailable (<3.8); silently skip.
             pass
         except Exception as e:
             logging.error(f"Error retrieving selected atom indices: {e}")

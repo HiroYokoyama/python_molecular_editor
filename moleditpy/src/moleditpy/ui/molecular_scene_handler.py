@@ -46,6 +46,10 @@ class TemplateMixin:
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
 
+    def __init__(self, *args, **kwargs) -> None:
+        self.template_context = {}
+        super().__init__(*args, **kwargs)
+
     def clear_template_preview(self) -> None:
         """Remove all ghost lines for template preview."""
         for item in list(self.items()):
@@ -722,6 +726,14 @@ class KeyboardMixin:
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
 
+    def __init__(self, *args, **kwargs) -> None:
+        self.initial_positions_in_event = {}
+        self.placement_direction_clockwise = True
+        self.start_atom = None
+        self.start_pos = None
+        self.temp_line = None
+        super().__init__(*args, **kwargs)
+
     temp_line: Optional[QGraphicsLineItem]
 
     def _calculate_new_atom_position(
@@ -1348,6 +1360,12 @@ class SceneQueryMixin:
     """
     Mixin class for spatial queries and basic item lifecycle.
     """
+
+    def __init__(self, *args, **kwargs) -> None:
+        self._deleted_items = []
+        self._ih_update_counter = 0
+        self.data_changed_in_event = False
+        super().__init__(*args, **kwargs)
 
     # -------------------------------------------------------------------------
     # CUT AND PASTE THE FOLLOWING METHODS FROM molecule_scene.py HERE:

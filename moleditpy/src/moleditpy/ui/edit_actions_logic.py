@@ -124,6 +124,7 @@ class EditActionsManager:
     _cls = None
 
     def __init__(self, host: Any) -> None:
+        self.dragged_atom_info = None
         self.host = host
         # State variables previously held by mixin
         self.last_rotation_angle: float = 0

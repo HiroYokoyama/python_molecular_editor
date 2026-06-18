@@ -39,7 +39,9 @@ def _get_version():
                         if line.strip().startswith("version ="):
                             return line.split("=")[1].strip().strip('"').strip("'")
             current_dir = os.path.dirname(current_dir)
-    except Exception:  # [FALLBACK] pyproject.toml may not exist in installed wheels; return "Unknown".
+    except (
+        Exception
+    ):  # [FALLBACK] pyproject.toml may not exist in installed wheels; return "Unknown".
         pass
 
     return "Unknown"

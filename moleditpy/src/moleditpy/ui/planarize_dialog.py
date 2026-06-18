@@ -44,6 +44,11 @@ class PlanarizeDialog(BasePickingDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
+        self.apply_button = None
+        self.clear_button = None
+        self.picker_connection = None
+        self.select_all_button = None
+        self.selection_label = None
         self.selected_atoms: set[int] = set()
 
         if preselected_atoms:

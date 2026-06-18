@@ -56,6 +56,18 @@ class AngleDialog(GeometryBaseDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
+        self._baseline_positions = None
+        self._snapshot_positions = None
+        self.angle_input = None
+        self.angle_label = None
+        self.angle_slider = None
+        self.apply_button = None
+        self.both_groups_radio = None
+        self.clear_button = None
+        self.picker_connection = None
+        self.rotate_atom_radio = None
+        self.rotate_group_radio = None
+        self.selection_label = None
         self.atom1_idx: Optional[int] = None
         self.atom2_idx: Optional[int] = None  # vertex atom
         self.atom3_idx: Optional[int] = None
