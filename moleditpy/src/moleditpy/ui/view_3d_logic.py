@@ -299,9 +299,7 @@ class View3DManager:
                         TypeError,
                         ValueError,
                         KeyError,
-                    ):
-                        # Suppress traceback
-                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, KeyError
+                    ):  # [COLOR] QColor parse may fail on invalid hex; skip atom color override silently.
                         pass
 
         # Define common mesh properties
@@ -677,9 +675,7 @@ class View3DManager:
                         TypeError,
                         ValueError,
                         KeyError,
-                    ):
-                        # Suppress traceback
-                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, KeyError
+                    ):  # [COLOR] QColor parse may fail on invalid hex; skip bond color override silently.
                         pass
 
                 # Determine effective uniform color for this bond
