@@ -75,6 +75,72 @@ class MainWindow(QMainWindow):
         # Initialize properties
         self._is_restoring_state = False
 
+        # Type annotations for static analysis / mypy
+        self.initial_settings: Any
+        self.is_xyz_derived: bool
+        self.chem_check_tried: bool
+        self.chem_check_failed: bool
+        self._template_dialog: Any
+        self._picking_consumed: bool
+        self.initialization_complete: bool
+        self._ih_update_counter: int
+        self.plugin_manager: Any
+        self.redraw_menu_action: Any
+        self.translation_action: Any
+        self.move_selected_atoms_action: Any
+        self.move_group_action: Any
+        self.align_menu: Any
+        self.align_x_action: Any
+        self.align_y_action: Any
+        self.align_z_action: Any
+        self.alignplane_xy_action: Any
+        self.alignplane_xz_action: Any
+        self.alignplane_yz_action: Any
+        self.mirror_action: Any
+        self.planarize_action: Any
+        self.bond_length_action: Any
+        self.angle_action: Any
+        self.dihedral_action: Any
+        self.constrained_opt_action: Any
+        self.intermolecular_rdkit_action: Any
+        self.atom_id_to_rdkit_idx_map: dict[int, int]
+        self._temp_conv_mode: Any
+        self._temp_optimization_method: Any
+
+        # Initialize ad-hoc attributes directly in __dict__ at startup.
+        # This bypasses class-level property descriptors mocked by testing fixtures
+        # (before managers exist) and prevents overwriting values set during manager instantiation.
+        self.__dict__["initial_settings"] = None
+        self.__dict__["is_xyz_derived"] = False
+        self.__dict__["chem_check_tried"] = False
+        self.__dict__["chem_check_failed"] = False
+        self.__dict__["_template_dialog"] = None
+        self.__dict__["_picking_consumed"] = False
+        self.__dict__["initialization_complete"] = False
+        self.__dict__["_ih_update_counter"] = 0
+        self.__dict__["plugin_manager"] = None
+        self.__dict__["redraw_menu_action"] = None
+        self.__dict__["translation_action"] = None
+        self.__dict__["move_selected_atoms_action"] = None
+        self.__dict__["move_group_action"] = None
+        self.__dict__["align_menu"] = None
+        self.__dict__["align_x_action"] = None
+        self.__dict__["align_y_action"] = None
+        self.__dict__["align_z_action"] = None
+        self.__dict__["alignplane_xy_action"] = None
+        self.__dict__["alignplane_xz_action"] = None
+        self.__dict__["alignplane_yz_action"] = None
+        self.__dict__["mirror_action"] = None
+        self.__dict__["planarize_action"] = None
+        self.__dict__["bond_length_action"] = None
+        self.__dict__["angle_action"] = None
+        self.__dict__["dihedral_action"] = None
+        self.__dict__["constrained_opt_action"] = None
+        self.__dict__["intermolecular_rdkit_action"] = None
+        self.__dict__["atom_id_to_rdkit_idx_map"] = {}
+        self.__dict__["_temp_conv_mode"] = None
+        self.__dict__["_temp_optimization_method"] = None
+
         self.export_manager = ExportManager(self)
         self.view_3d_manager = View3DManager(self)
         self.edit_3d_manager = Edit3DManager(self)

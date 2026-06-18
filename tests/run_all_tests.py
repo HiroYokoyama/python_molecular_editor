@@ -142,6 +142,41 @@ def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
         return 1
 
 
+def print_coverage_summary(base_dir):
+    """Prints the coverage summary of core and full coverage from the markdown report or JSON files."""
+    try:
+        report_path = os.path.join(base_dir, "tests", "coverage_report.md")
+        if os.path.exists(report_path):
+            print("\n" + "=" * 80)
+            print("                     COVERAGE REPORT")
+            print("=" * 80)
+            with open(report_path, "r", encoding="utf-8") as f:
+                print(f.read())
+            print("=" * 80)
+        else:
+            import json
+
+            cov_core_path = os.path.join(base_dir, "tests", "cov_core.json")
+            cov_full_path = os.path.join(base_dir, "tests", "cov_full.json")
+            if os.path.exists(cov_core_path) and os.path.exists(cov_full_path):
+                with open(cov_core_path, "r") as f:
+                    core_data = json.load(f)
+                with open(cov_full_path, "r") as f:
+                    full_data = json.load(f)
+
+                core_cov = core_data["totals"]["percent_covered"]
+                full_cov = full_data["totals"]["percent_covered"]
+
+                print("\n" + "=" * 50)
+                print("             COVERAGE REPORT SUMMARY")
+                print("=" * 50)
+                print(f" Overall Project Coverage (Full): {full_cov:.2f}%")
+                print(f" Core Molecular Logic Coverage:   {core_cov:.2f}%")
+                print("=" * 50)
+    except Exception as e:
+        print(f"Warning: Could not read or print coverage report: {e}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Unified Test Suite Runner")
     parser.add_argument(
@@ -215,6 +250,7 @@ if __name__ == "__main__":
             ],
             cwd=BASE_DIR,
         )
+        print_coverage_summary(BASE_DIR)
         if not args.skip_catalog:
             subprocess.run(
                 [
@@ -306,6 +342,7 @@ if __name__ == "__main__":
                 ],
                 cwd=BASE_DIR,
             )
+            print_coverage_summary(BASE_DIR)
             if not args.skip_catalog:
                 subprocess.run(
                     [

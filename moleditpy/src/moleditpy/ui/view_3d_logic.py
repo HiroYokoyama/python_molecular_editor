@@ -274,6 +274,7 @@ class View3DManager:
                         KeyError,
                     ):
                         # Suppress traceback
+                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, KeyError
                         pass
 
         # Define common mesh properties
@@ -653,6 +654,7 @@ class View3DManager:
                         KeyError,
                     ):
                         # Suppress traceback
+                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, KeyError
                         pass
 
                 # Determine effective uniform color for this bond
@@ -1288,6 +1290,7 @@ class View3DManager:
                                 if old_stereo != new_stereo:
                                     label = "?"
                         except (KeyError, RuntimeError, TypeError):
+                            # Safe defensive fallback catching KeyError, RuntimeError, TypeError
                             pass
 
                     pts.append(center_pos)
@@ -1951,6 +1954,7 @@ class View3DManager:
                     self.axes_widget.SetEnabled(False)
                     self.axes_widget = None
                 except (AttributeError, RuntimeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError
                     pass
 
             if show_axes:

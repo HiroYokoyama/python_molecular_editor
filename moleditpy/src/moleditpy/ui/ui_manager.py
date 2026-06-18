@@ -240,6 +240,7 @@ class UIManager(QObject):
                 self.host.init_manager.save_settings()
                 self.host.init_manager.settings_dirty = False
         except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, OSError
             pass
 
         # 2. Handle unsaved changes
@@ -272,6 +273,7 @@ class UIManager(QObject):
                     try:
                         widget.close()
                     except (RuntimeError, TypeError):
+                        # Safe defensive fallback catching RuntimeError, TypeError
                         pass
 
             # Stop calculation threads
@@ -289,8 +291,10 @@ class UIManager(QObject):
                     else:
                         logging.error("REPORT ERROR: Missing attribute 'wait' on thr")
                 except (RuntimeError, TypeError):
+                    # Safe defensive fallback catching RuntimeError, TypeError
                     pass
         except (AttributeError, RuntimeError, TypeError, ValueError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
             pass
 
         return True
@@ -323,6 +327,7 @@ class UIManager(QObject):
                 if hasattr(interactor_style, "reset_interactor_state"):
                     interactor_style.reset_interactor_state()
             except (AttributeError, RuntimeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
         self.host.init_manager.view_2d.setFocus()
 
@@ -496,6 +501,7 @@ class UIManager(QObject):
                     obj.setEnabled(enabled)
             except (AttributeError, RuntimeError, TypeError, ValueError):
                 # Suppress non-critical 3D feature state update errors if widgets are not fully initialized
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
                 pass
 
         # Always enable these core 3D interactors

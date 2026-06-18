@@ -58,6 +58,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         try:
             self.StopState()
         except (AttributeError, RuntimeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError
             pass
 
         # Reset all custom flags
@@ -73,10 +74,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             try:
                 mw.dragged_atom_info = None
             except (AttributeError, RuntimeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
             try:
                 mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ArrowCursor)
             except (AttributeError, RuntimeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
 
     def _stop_vtk_left_button_state(self) -> None:
@@ -84,6 +87,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         try:
             self.StopState()
         except (AttributeError, RuntimeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError
             pass
 
     def on_left_button_down(self, obj: Any, event: Any) -> None:
@@ -158,6 +162,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             try:
                                 dlg.on_atom_picked(idx)
                             except (AttributeError, RuntimeError):
+                                # Safe defensive fallback catching AttributeError, RuntimeError
                                 pass
 
                         QTimer.singleShot(0, _deferred_toggle)
@@ -218,6 +223,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             dlg.show_atom_labels()
                             dlg.update_display()
                         except (AttributeError, RuntimeError):
+                            # Safe defensive fallback catching AttributeError, RuntimeError
                             pass
 
                     QTimer.singleShot(0, _deferred_move_group_update)
@@ -266,6 +272,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         idx
                                     )
                                 except (AttributeError, RuntimeError):
+                                    # Safe defensive fallback catching AttributeError, RuntimeError
                                     pass
 
                             QTimer.singleShot(0, _deferred_measure)
@@ -602,6 +609,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         dlg.clear_atom_labels()
                         dlg.update_display()
                     except (AttributeError, RuntimeError):
+                        # Safe defensive fallback catching AttributeError, RuntimeError
                         pass
 
                 QTimer.singleShot(0, _deferred_clear_move_group)
@@ -617,6 +625,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 try:
                     mw.edit_3d_manager.clear_measurement_selection()
                 except (AttributeError, RuntimeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError
                     pass
 
             QTimer.singleShot(0, _deferred_clear_measurement)
@@ -682,6 +691,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         TypeError,
                                     ):
                                         # Suppress non-critical assignment noise
+                                        # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                                         pass
                             except (
                                 AttributeError,
@@ -690,6 +700,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 ValueError,
                             ):
                                 # Suppress non-critical coordinate sync noise
+                                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
                                 pass
                         conf = mw.view_3d_manager.current_mol.GetConformer()
                         pos_count = (

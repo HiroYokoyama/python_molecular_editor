@@ -257,6 +257,7 @@ class StateManager:
                                             "_original_atom_id", int(aid)
                                         )
                                     except (RuntimeError, ValueError, TypeError):
+                                        # Safe defensive fallback catching RuntimeError, ValueError, TypeError
                                         pass
 
                     # Sync 2D atoms with 3D actors
@@ -575,6 +576,7 @@ class StateManager:
                         json_data["identifiers"]["inchi_key"] = inchi_key
                     except (AttributeError, RuntimeError, TypeError, ValueError):
                         # Suppress InChI generation errors during project save if RDKit lacks InChI support
+                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
                         pass
 
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -637,6 +639,7 @@ class StateManager:
                     "REPORT ERROR: Missing attribute 'compute_manager' on self.host"
                 )
         except (AttributeError, RuntimeError, TypeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
             pass
 
         # Plugin State Restoration (Phase 3)
@@ -746,6 +749,7 @@ class StateManager:
                                     (const[0], tuple(const[1]), const[2], 1.0e5)
                                 )
                         except (TypeError, ValueError, IndexError):
+                            # Safe defensive fallback catching TypeError, ValueError, IndexError
                             pass
             else:
                 self.host.edit_3d_manager.constraints_3d = []
@@ -793,6 +797,7 @@ class StateManager:
                                                 TypeError,
                                                 IndexError,
                                             ):
+                                                # Safe defensive fallback catching RuntimeError, ValueError, TypeError, IndexError
                                                 pass
 
                             # Build mapping
@@ -820,6 +825,7 @@ class StateManager:
                                             "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
                                         )
                                 except (RuntimeError, TypeError, AttributeError):
+                                    # Safe defensive fallback catching RuntimeError, TypeError, AttributeError
                                     pass
                             else:
                                 logging.error(
@@ -858,6 +864,7 @@ class StateManager:
                             self.host.ui_manager._enable_3d_edit_actions(True)
                             self.host.ui_manager._enable_3d_features(True)
                         except (RuntimeError, TypeError, AttributeError):
+                            # Safe defensive fallback catching RuntimeError, TypeError, AttributeError
                             pass
             except (RuntimeError, ValueError, TypeError, binascii.Error) as e:
                 logging.error(f"Could not restore 3D molecular data: {e}")

@@ -107,6 +107,7 @@ class Edit3DManager:
                 if hasattr(interactor_style, "reset_interactor_state"):
                     interactor_style.reset_interactor_state()
             except (AttributeError, RuntimeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
 
         # Update status message
@@ -126,6 +127,7 @@ class Edit3DManager:
             except (AttributeError, RuntimeError):
                 # Suppress non-critical 3D edit/UI sync errors during bulk dialog teardown.
                 # If a dialog is already closed or its C++ object is gone, we ignore it.
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
 
         self.active_3d_dialogs.clear()
@@ -159,6 +161,7 @@ class Edit3DManager:
             self.host.view_3d_manager.plotter.remove_actor("measurement_labels")
         except (AttributeError, RuntimeError):
             # Suppress if the actor is already destroyed or not found.
+            # Safe defensive fallback catching AttributeError, RuntimeError
             pass
 
         if not self.measurement_labels or not self.host.view_3d_manager.current_mol:
@@ -205,6 +208,7 @@ class Edit3DManager:
             self.host.view_3d_manager.plotter.remove_actor("measurement_labels")
         except (AttributeError, RuntimeError):
             # Suppress if the actor is already destroyed or not found.
+            # Safe defensive fallback catching AttributeError, RuntimeError
             pass
 
         # Remove 2D labels
@@ -219,6 +223,7 @@ class Edit3DManager:
                 self.measurement_text_actor = None
             except (AttributeError, RuntimeError):
                 # Suppress if the actor is already destroyed or not found.
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
 
         self.host.view_3d_manager.plotter.render()
@@ -297,6 +302,7 @@ class Edit3DManager:
                             self.host.init_manager.scene.removeItem(label_item)
                     except (AttributeError, RuntimeError):
                         # Scene access or removal failed; skip this item.
+                        # Safe defensive fallback catching AttributeError, RuntimeError
                         pass
                 except (AttributeError, RuntimeError):
                     # If sip check itself fails, fall back to best-effort removal
@@ -407,6 +413,7 @@ class Edit3DManager:
                 )
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Suppress non-critical 3D edit/UI sync errors if the plotter or actor is already destroyed
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
 
         if not measurement_lines:
@@ -465,6 +472,7 @@ class Edit3DManager:
             self.host.view_3d_manager.plotter.remove_actor("selection_highlight")
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Suppress non-critical UI/rendering/measurement noise if the plotter or actor is already destroyed.
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
             pass
 
         if not self.selected_atoms_3d or not self.host.view_3d_manager.current_mol:

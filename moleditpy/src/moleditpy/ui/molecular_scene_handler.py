@@ -465,6 +465,7 @@ class TemplateMixin:
                             points[best_idx] = ex_pos
                             used_indices.add(best_idx)
                     except (AttributeError, TypeError, IndexError):
+                        # Safe defensive fallback catching AttributeError, TypeError, IndexError
                         pass
 
                 # Map unmapped points to other unmapped nearby atoms in the scene
@@ -1500,6 +1501,7 @@ class SceneQueryMixin:
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Suppress non-critical internal update counter increment errors.
                 # This counter is only used for UI throttling and is non-critical for data integrity.
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
             # 4. Remove graphic items from the scene
             current_scene_items = set(self.items())

@@ -548,6 +548,7 @@ class BondItem(QGraphicsItem):
                         except (AttributeError, RuntimeError, TypeError, ValueError):
                             # Silent failure for non-critical 2D atom font setting
                             # If we can't get custom settings, we just use defaults.
+                            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
                             pass
 
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
@@ -609,6 +610,7 @@ class BondItem(QGraphicsItem):
             except (AttributeError, RuntimeError, TypeError, ValueError):
                 # Silent failure for non-critical hover highlight drawing.
                 # If highlight fails, it's just a visual artifact.
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
                 pass
 
         painter.restore()

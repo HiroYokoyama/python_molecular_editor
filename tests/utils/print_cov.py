@@ -1,6 +1,11 @@
 """Run unit + integration + GUI tests with combined coverage and generate coverage_report.md."""
 
-import subprocess, json, sys, os, tempfile, argparse
+import subprocess
+import json
+import sys
+import os
+import tempfile
+import argparse
 
 # Adjusted for tests/utils/ location
 UTILS = os.path.dirname(os.path.abspath(__file__))

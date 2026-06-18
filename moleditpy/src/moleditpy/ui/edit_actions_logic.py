@@ -535,6 +535,7 @@ class EditActionsManager:
                     QApplication.processEvents()
                 except RuntimeError:
                     # Suppress non-critical error
+                    # Safe defensive fallback catching RuntimeError
                     pass
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
@@ -781,6 +782,7 @@ class EditActionsManager:
                 self.host.init_manager.paste_action.setEnabled(False)
         except RuntimeError:
             # Suppress non-critical error
+            # Safe defensive fallback catching RuntimeError
             pass
 
     def open_rotate_2d_dialog(self) -> None:

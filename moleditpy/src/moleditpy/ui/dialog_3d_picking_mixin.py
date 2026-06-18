@@ -84,6 +84,7 @@ class Dialog3DPickingMixin:
                             try:
                                 target.on_atom_picked(idx)
                             except (AttributeError, RuntimeError):
+                                # Safe defensive fallback catching AttributeError, RuntimeError
                                 pass
 
                         from PyQt6.QtCore import QTimer
@@ -136,6 +137,7 @@ class Dialog3DPickingMixin:
                             try:
                                 target.clear_selection()
                             except (AttributeError, RuntimeError):
+                                # Safe defensive fallback catching AttributeError, RuntimeError
                                 pass
 
                         from PyQt6.QtCore import QTimer
@@ -181,6 +183,7 @@ class Dialog3DPickingMixin:
                     if label_actor is not None:
                         plotter.remove_actor(label_actor)
                 except (AttributeError, RuntimeError, TypeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                     pass
         self.selection_labels = []
 
@@ -219,6 +222,7 @@ class Dialog3DPickingMixin:
                 try:
                     plotter.camera_position = cam
                 except (AttributeError, RuntimeError, TypeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                     pass
 
     def show_atom_labels_for(
@@ -257,4 +261,5 @@ class Dialog3DPickingMixin:
             try:
                 plotter.camera_position = cam
             except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                 pass

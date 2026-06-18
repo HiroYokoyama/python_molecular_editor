@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import (
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
 from unittest.mock import MagicMock, patch
-from unittest.mock import MagicMock, patch
 
 
 @pytest.fixture(autouse=True)

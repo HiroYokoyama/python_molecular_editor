@@ -302,6 +302,7 @@ class ColorSettingsDialog(QDialog):
                     del settings["cpk_colors"]
                 except KeyError:
                     # Suppress if cpk_colors key is already missing or removed during reset.
+                    # Safe defensive fallback catching KeyError
                     pass
         if self.changed_cpk:
             cdict = settings.get("cpk_colors", {}).copy()
@@ -350,11 +351,13 @@ class ColorSettingsDialog(QDialog):
                     try:
                         it.update_style()
                     except (AttributeError, RuntimeError, TypeError):
+                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                         pass
                 elif hasattr(it, "update"):
                     try:
                         it.update()
                     except (AttributeError, RuntimeError, TypeError):
+                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                         pass
                 else:
                     logging.error("REPORT ERROR: Missing attribute 'update' on it")

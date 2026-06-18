@@ -57,6 +57,7 @@ class ComputeManager:
         try:
             signal.disconnect()
         except RuntimeError:
+            # Safe defensive fallback catching RuntimeError
             pass
 
     def _remove_calculating_text(self) -> None:
@@ -537,6 +538,7 @@ class ComputeManager:
                     method_key, method_key
                 )
         except (AttributeError, TypeError):
+            # Safe defensive fallback catching AttributeError, TypeError
             pass
 
         # Update 3D interactive features (hovers, menus)
@@ -589,6 +591,7 @@ class ComputeManager:
                     self.optimize_3d_structure()
                     return
             except (TypeError, RuntimeError):
+                # Safe defensive fallback catching TypeError, RuntimeError
                 pass
 
         with contextlib.suppress(TypeError, RuntimeError):

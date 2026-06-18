@@ -58,6 +58,7 @@ class GeometryBaseDialog(BasePickingDialog):
             slider.setValue(int(round(f_val * scale)))
             slider.blockSignals(False)
         except (ValueError, TypeError):
+            # Safe defensive fallback catching ValueError, TypeError
             pass
 
     def on_slider_pressed(self) -> None:

@@ -65,6 +65,7 @@ class IOManager:
                 if name:
                     return str(name)
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
             pass
         return "untitled"
 
@@ -76,6 +77,7 @@ class IOManager:
             if cur_path:
                 return os.path.join(os.path.dirname(cur_path), basename)
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
             pass
         return basename
 
@@ -152,6 +154,7 @@ class IOManager:
                     elif isinstance(val, float):
                         m.SetDoubleProp(key, val)
                 except (RuntimeError, TypeError, ValueError):
+                    # Safe defensive fallback catching RuntimeError, TypeError, ValueError
                     pass
 
             def _process(charge_val: int, use_rd_determine: bool = True) -> Any:
@@ -290,6 +293,7 @@ class IOManager:
                             mol.AddBond(i, j, Chem.BondType.SINGLE)
                             bonds_added.append((i, j, distance))
                         except (RuntimeError, ValueError, TypeError):
+                            # Safe defensive fallback catching RuntimeError, ValueError, TypeError
                             pass
 
         return len(bonds_added)
@@ -370,6 +374,7 @@ class IOManager:
                     self.host.state_manager.get_current_state()
                 )
             except Exception:
+                # Safe defensive fallback catching Exception
                 pass
             self.host.statusBar().showMessage(f"Project saved to {file_path}")
         except (OSError, IOError) as e:
@@ -558,6 +563,7 @@ class IOManager:
                     self.host.state_manager.get_current_state()
                 )
             except Exception:
+                # Safe defensive fallback catching Exception
                 pass
             self.host.statusBar().showMessage(f"Project saved to {file_path}")
         except (OSError, IOError) as e:
@@ -942,7 +948,9 @@ class IOManager:
                     symbol = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
                         i
                     ).GetSymbol()
-                    xyz_lines.append(f"  {symbol:<5}{pos.x:>15.8f}{pos.y:>15.8f}{pos.z:>15.8f}")
+                    xyz_lines.append(
+                        f"  {symbol:<5}{pos.x:>15.8f}{pos.y:>15.8f}{pos.z:>15.8f}"
+                    )
 
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write("\n".join(xyz_lines) + "\n")
@@ -1006,6 +1014,7 @@ class IOManager:
             else:
                 mol.SetProp(prop_name, str(value))
         except Exception:
+            # Safe defensive fallback catching Exception
             pass
 
     def _get_mol_prop(self, mol: Any, prop_name: str, default: Any = None) -> Any:

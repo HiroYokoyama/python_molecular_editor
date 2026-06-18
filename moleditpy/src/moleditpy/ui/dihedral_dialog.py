@@ -258,6 +258,7 @@ class DihedralDialog(GeometryBaseDialog):
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -318,6 +319,7 @@ class DihedralDialog(GeometryBaseDialog):
                 else:
                     self.dihedral_slider.setEnabled(True)
             except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                 pass
 
             # Add labels
