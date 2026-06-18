@@ -966,6 +966,29 @@ def test_trigger_conversion_to_mol_block_priority(mock_parser_host):
             assert sent_block == custom_block
 
 
+def test_trigger_conversion_uses_default_when_temp_mode_is_none(mock_parser_host):
+    """Preinitialized temp conversion mode should not suppress the saved setting."""
+    compute = DummyCompute(mock_parser_host)
+    compute.data.atoms = {1: {"symbol": "C", "item": MagicMock()}}
+    compute.settings["3d_conversion_mode"] = "fallback"
+    compute.host._temp_conv_mode = None
+    mol = Chem.MolFromSmiles("C")
+
+    with (
+        patch.object(compute.data, "to_rdkit_mol", return_value=mol),
+        patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
+        patch("rdkit.Chem.SanitizeMol"),
+        patch.object(
+            compute.data, "to_mol_block", return_value=Chem.MolToMolBlock(mol)
+        ),
+        patch.object(compute, "_start_calculation_worker") as mock_start,
+    ):
+        compute.trigger_conversion()
+
+    options = mock_start.call_args[0][1]
+    assert options["conversion_mode"] == "fallback"
+
+
 def test_trigger_conversion_ez_stereo_injection(mock_parser_host):
     """Test that M CFG lines are injected for E/Z stereo bonds."""
     compute = DummyCompute(mock_parser_host)

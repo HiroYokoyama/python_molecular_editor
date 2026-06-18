@@ -685,6 +685,11 @@ _No description provided._
 
 - assert any(('No atoms to convert' in str(val) for val in error_captor.emitted_values))
 
+### test_calculation_worker_none_conversion_mode_defaults_to_fallback
+_Explicit None should behave like an omitted conversion mode._
+
+- assert mock_rdkit.called
+
 ### test_calculation_worker_safe_helpers_halted
 _Test that safe helpers don't emit finished if halted._
 
@@ -1081,6 +1086,11 @@ _Test that data.to_mol_block() is used preferentially over RDKit's generation._
 - assert len(args) >= 2
 - assert call_args is not None
 - assert sent_block == custom_block
+
+### test_trigger_conversion_uses_default_when_temp_mode_is_none
+_Preinitialized temp conversion mode should not suppress the saved setting._
+
+- assert options['conversion_mode'] == 'fallback'
 
 ### test_trigger_conversion_ez_stereo_injection
 _Test that M CFG lines are injected for E/Z stereo bonds._

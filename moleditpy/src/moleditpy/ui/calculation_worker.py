@@ -526,7 +526,7 @@ def _perform_direct_conversion(
         if _check_halted():
             raise WorkerHaltError("Halted")
 
-        opt_method = (options or {}).get("optimization_method", "MMFF94s_RDKIT")
+        opt_method = (options or {}).get("optimization_method") or "MMFF94s_RDKIT"
         backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
         method_key = (
             "UFF"
@@ -573,7 +573,7 @@ def _perform_optimize_only(
 ) -> None:
     """Perform optimization on an existing 3D structure."""
     _safe_status("Optimizing existing 3D structure...")
-    opt_method = str((options or {}).get("optimization_method", "MMFF_RDKIT")).upper()
+    opt_method = str((options or {}).get("optimization_method") or "MMFF_RDKIT").upper()
     backend = "OBABEL" if "OBABEL" in opt_method else "RDKIT"
     method_key = (
         "UFF"
@@ -789,7 +789,7 @@ class CalculationWorker(QObject):
 
             # 1. Prepare Molecule (Parsing & Stereo)
             mol, ex_stereo = self._prepare_molecule_for_calc(mol_block, helpers)
-            mode = options.get("conversion_mode", "fallback")
+            mode = options.get("conversion_mode") or "fallback"
 
             # 2. Optimization Only Mode
             if mode == "optimize_only":
@@ -939,7 +939,7 @@ class CalculationWorker(QObject):
             b.SetStereo(s)
 
         _adjust_collision_avoidance(mol, _check_halted, _safe_status)
-        opt_method = options.get("optimization_method", "MMFF94s_RDKIT")
+        opt_method = options.get("optimization_method") or "MMFF94s_RDKIT"
         backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
         method_key = (
             "UFF"
@@ -1011,7 +1011,7 @@ class CalculationWorker(QObject):
         )
         # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
         _safe_status = helpers["status"]
-        opt_method = (options or {}).get("optimization_method", "MMFF94s_RDKIT")
+        opt_method = (options or {}).get("optimization_method") or "MMFF94s_RDKIT"
         if (options or {}).get("do_optimize", True):
             opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
             _safe_status(f"Process completed (Direct 2D->3D Conversion / {opt_label}).")

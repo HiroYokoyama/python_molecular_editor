@@ -305,10 +305,8 @@ class ComputeManager:
         self.host.view_3d_manager.plotter.render()
 
         options = {
-            "conversion_mode": self.host.__dict__.pop(
-                "_temp_conv_mode",
-                self.host.init_manager.settings.get("3d_conversion_mode", "fallback"),
-            ),
+            "conversion_mode": self.host.__dict__.pop("_temp_conv_mode", None)
+            or self.host.init_manager.settings.get("3d_conversion_mode", "fallback"),
             "optimization_method": self.host.__dict__.pop(
                 "_temp_optimization_method", None
             )
