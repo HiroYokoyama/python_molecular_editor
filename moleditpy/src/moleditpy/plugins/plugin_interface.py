@@ -164,6 +164,20 @@ class PluginContext:
         """
         self._manager.show_status_message(message, timeout)
 
+    def rebuild_menus(self) -> None:
+        """Rebuild plugin-managed menus and toolbars to apply changes immediately (Public API)."""
+        if hasattr(self._manager, "rebuild_plugin_menus"):
+            self._manager.rebuild_plugin_menus()
+
+    def enter_3d_viewer_mode(self) -> None:
+        """Switch the application UI layout to 3D viewer mode (Public API)."""
+        mw = self.get_main_window()
+        if mw is not None and hasattr(mw, "ui_manager"):
+            if hasattr(mw.ui_manager, "enter_3d_viewer_mode"):
+                mw.ui_manager.enter_3d_viewer_mode()
+            elif hasattr(mw.ui_manager, "_enter_3d_viewer_ui_mode"):
+                mw.ui_manager._enter_3d_viewer_ui_mode()
+
     @property
     def current_mol(self) -> Any:
         """

@@ -441,6 +441,12 @@ class PluginManager:
                 f"Error running plugin '{getattr(module, 'PLUGIN_NAME', 'Unknown')}':\n{e}",
             )
 
+    def rebuild_plugin_menus(self) -> None:
+        """Rebuild all plugin menus and toolbars by delegating to the init_manager."""
+        if self.main_window and hasattr(self.main_window, "init_manager"):
+            if hasattr(self.main_window.init_manager, "rebuild_plugin_menus"):
+                self.main_window.init_manager.rebuild_plugin_menus()
+
     # --- Registration Callbacks ---
     def register_menu_action(
         self,

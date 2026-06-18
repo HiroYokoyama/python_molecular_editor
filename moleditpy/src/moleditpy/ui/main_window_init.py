@@ -709,6 +709,41 @@ class MainInitManager:
                     style_menu.addAction(action)
                     style_group.addAction(action)
 
+    def rebuild_plugin_menus(self) -> None:
+        """Rebuild all plugin-managed menus and toolbars cleanly."""
+        PLUGIN_ACTION_TAG = "plugin_managed"
+
+        def _clean_menu(menu):
+            for action in list(menu.actions()):
+                submenu = action.menu()
+                if submenu is not None:
+                    _clean_menu(submenu)
+                    has_content = any(not a.isSeparator() for a in submenu.actions())
+                    if not has_content:
+                        menu.removeAction(action)
+                elif action.data() == PLUGIN_ACTION_TAG:
+                    menu.removeAction(action)
+
+        try:
+            for top_action in list(self.host.menuBar().actions()):
+                top_menu = top_action.menu()
+                if top_menu is not None:
+                    _clean_menu(top_menu)
+        except Exception as e:
+            logging.warning("Plugin Installer: menu cleanup error: %s", e)
+
+        self._plugin_menubar_separator_added = False
+
+        try:
+            self._add_registered_plugin_actions()
+        except Exception as e:
+            logging.warning("Plugin Installer: menu rebuild error: %s", e)
+
+        try:
+            self._add_plugin_toolbar_actions()
+        except Exception as e:
+            logging.warning("Plugin Installer: toolbar rebuild error: %s", e)
+
     def _add_registered_plugin_actions(self) -> None:
         """Add actions that have been explicitly registered via the plugin manager."""
         PLUGIN_ACTION_TAG = "plugin_managed"
