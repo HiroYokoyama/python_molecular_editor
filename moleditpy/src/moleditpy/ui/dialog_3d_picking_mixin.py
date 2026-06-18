@@ -81,9 +81,9 @@ class Dialog3DPickingMixin:
                         if hasattr(self.main_window, "_picking_consumed"):
                             self.main_window._picking_consumed = True
 
-                        def _deferred_pick(idx=int(closest_atom_idx), target=self):
+                        def _deferred_pick() -> None:
                             try:
-                                target.on_atom_picked(idx)
+                                self.on_atom_picked(int(closest_atom_idx))
                             except (AttributeError, RuntimeError):
                                 # Safe defensive fallback catching AttributeError, RuntimeError
                                 pass
@@ -134,9 +134,9 @@ class Dialog3DPickingMixin:
                     # Pure click (no drag) on background -> Clear selection
                     if hasattr(self, "clear_selection"):
 
-                        def _deferred_clear(target=self):
+                        def _deferred_clear() -> None:
                             try:
-                                target.clear_selection()
+                                self.clear_selection()
                             except (AttributeError, RuntimeError):
                                 # Safe defensive fallback catching AttributeError, RuntimeError
                                 pass

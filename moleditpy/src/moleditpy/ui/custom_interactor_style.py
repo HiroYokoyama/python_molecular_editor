@@ -156,11 +156,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 else:
                     if type(move_group_dialog).__name__ == "MoveSelectedAtomsDialog":
                         # For MoveSelectedAtomsDialog, we toggle ONLY the clicked atom, no BFS!
-                        def _deferred_toggle(
-                            idx=clicked_atom_idx, dlg=move_group_dialog
-                        ):
+                        def _deferred_toggle() -> None:
                             try:
-                                dlg.on_atom_picked(idx)
+                                move_group_dialog.on_atom_picked(clicked_atom_idx)
                             except (AttributeError, RuntimeError):
                                 # Safe defensive fallback catching AttributeError, RuntimeError
                                 pass
@@ -218,10 +216,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                     move_group_dialog.selected_atoms.add(clicked_atom_idx)
 
-                    def _deferred_move_group_update(dlg=move_group_dialog):
+                    def _deferred_move_group_update() -> None:
                         try:
-                            dlg.show_atom_labels()
-                            dlg.update_display()
+                            move_group_dialog.show_atom_labels()
+                            move_group_dialog.update_display()
                         except (AttributeError, RuntimeError):
                             # Safe defensive fallback catching AttributeError, RuntimeError
                             pass
@@ -265,11 +263,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     )
                     if atom:
                         if True:
-
-                            def _deferred_measure(idx=int(closest_atom_idx)):
+                            def _deferred_measure() -> None:
                                 try:
                                     mw.edit_3d_manager.handle_measurement_atom_selection(
-                                        idx
+                                        closest_atom_idx
                                     )
                                 except (AttributeError, RuntimeError):
                                     # Safe defensive fallback catching AttributeError, RuntimeError
@@ -578,10 +575,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     _grp_mol = mw.view_3d_manager.current_mol
                     _grp_dlg = move_group_dialog
 
-                    def _deferred_group_redraw(mol=_grp_mol, dlg=_grp_dlg):
-                        mw.view_3d_manager.draw_molecule_3d(mol)
+                    def _deferred_group_redraw() -> None:
+                        mw.view_3d_manager.draw_molecule_3d(_grp_mol)
                         mw.view_3d_manager.update_chiral_labels()
-                        dlg.show_atom_labels()
+                        _grp_dlg.show_atom_labels()
                         mw.edit_actions_manager.push_undo_state()
 
                     QTimer.singleShot(0, _deferred_group_redraw)
@@ -602,12 +599,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         ):
             if not self._mouse_moved_during_drag and self._mouse_press_pos is not None:
                 # Background click: deselect
-                def _deferred_clear_move_group(dlg=move_group_dialog):
+                def _deferred_clear_move_group() -> None:
                     try:
-                        dlg.group_atoms.clear()
-                        dlg.selected_atoms.clear()
-                        dlg.clear_atom_labels()
-                        dlg.update_display()
+                        move_group_dialog.group_atoms.clear()
+                        move_group_dialog.selected_atoms.clear()
+                        move_group_dialog.clear_atom_labels()
+                        move_group_dialog.update_display()
                     except (AttributeError, RuntimeError):
                         # Safe defensive fallback catching AttributeError, RuntimeError
                         pass
@@ -621,7 +618,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             and self._mouse_press_pos is not None
         ):
             # Background click -> clear selection
-            def _deferred_clear_measurement():
+            def _deferred_clear_measurement() -> None:
                 try:
                     mw.edit_3d_manager.clear_measurement_selection()
                 except (AttributeError, RuntimeError):
@@ -723,9 +720,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     # callback to prevent re-entrant plotter.render() deadlock.
                     _atom_mol = mw.view_3d_manager.current_mol
 
-                    def _deferred_atom_redraw(mol=_atom_mol):
+                    def _deferred_atom_redraw() -> None:
                         try:
-                            mw.view_3d_manager.draw_molecule_3d(mol)
+                            mw.view_3d_manager.draw_molecule_3d(_atom_mol)
                         except (AttributeError, RuntimeError, ValueError, TypeError):
                             logging.error(
                                 "Caught exception in " + __file__, exc_info=True
@@ -747,7 +744,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     mw.view_3d_manager.show_all_atom_info,
                 ]
 
-                def _deferred_updates():
+                def _deferred_updates() -> None:
                     for fn in _update_calls:
                         try:
                             fn()

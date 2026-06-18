@@ -46,7 +46,7 @@ class TemplateMixin:
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.template_context = {}
         super().__init__(*args, **kwargs)
 
@@ -726,7 +726,7 @@ class KeyboardMixin:
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.initial_positions_in_event = {}
         self.placement_direction_clockwise = True
         self.start_atom = None
@@ -1361,7 +1361,7 @@ class SceneQueryMixin:
     Mixin class for spatial queries and basic item lifecycle.
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self._deleted_items = []
         self._ih_update_counter = 0
         self.data_changed_in_event = False
