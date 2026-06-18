@@ -200,7 +200,7 @@ class MainInitManager:
         self.view_2d = None
         self.init_ui()
         self.init_worker_thread()
-        self.host.ui_manager._setup_3d_picker()
+        self.host.ui_manager.setup_3d_picker()
         # Install event filter to capture window close events (handled in UIManager)
         self.host.installEventFilter(self.host.ui_manager)
 
@@ -291,7 +291,7 @@ class MainInitManager:
         self._init_help_menu(menu_bar)
 
         # Consistently set initial state for 3D-related features
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_features(False)
 
         # Finally, populate plugins now that all menus are created
         self.update_plugin_menu(self.plugin_menu)

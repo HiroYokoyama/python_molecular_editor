@@ -511,6 +511,18 @@ class UIManager(QObject):
         """Switch the application UI layout to 3D viewer mode (Public API)."""
         self._enter_3d_viewer_ui_mode()
 
+    def enable_3d_features(self, enabled: bool) -> None:
+        """Enable or disable 3D UI features (Public API)."""
+        self._enable_3d_features(enabled)
+
+    def enable_3d_edit_actions(self, enabled: bool) -> None:
+        """Enable or disable 3D editing actions (Public API)."""
+        self._enable_3d_edit_actions(enabled)
+
+    def setup_3d_picker(self) -> None:
+        """Initialize the 3D interaction picker (Public API)."""
+        self._setup_3d_picker()
+
     def _enter_3d_viewer_ui_mode(self) -> None:
         """Set UI mode to 3D viewer."""
         self.is_2d_editable = False

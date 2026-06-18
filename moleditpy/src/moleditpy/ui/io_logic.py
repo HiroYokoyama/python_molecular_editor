@@ -744,18 +744,18 @@ class IOManager:
             )
             QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
 
-            if hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):
-                self.host.ui_manager._enter_3d_viewer_ui_mode()
+            if hasattr(self.host.ui_manager, "enter_3d_viewer_mode"):
+                self.host.ui_manager.enter_3d_viewer_mode()
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute '_enter_3d_viewer_ui_mode' on object"
+                    "REPORT ERROR: Missing attribute 'enter_3d_viewer_mode' on object"
                 )
 
-            if hasattr(self.host.ui_manager, "_enable_3d_features"):
-                self.host.ui_manager._enable_3d_features(True)
+            if hasattr(self.host.ui_manager, "enable_3d_features"):
+                self.host.ui_manager.enable_3d_features(True)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute '_enable_3d_features' on object"
+                    "REPORT ERROR: Missing attribute 'enable_3d_features' on object"
                 )
 
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
@@ -827,12 +827,12 @@ class IOManager:
             )
             QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
 
-            self.host.ui_manager._enter_3d_viewer_ui_mode()
-            if hasattr(self.host.ui_manager, "_enable_3d_features"):
-                self.host.ui_manager._enable_3d_features(True)
+            self.host.ui_manager.enter_3d_viewer_mode()
+            if hasattr(self.host.ui_manager, "enable_3d_features"):
+                self.host.ui_manager.enable_3d_features(True)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute '_enable_3d_features' on object"
+                    "REPORT ERROR: Missing attribute 'enable_3d_features' on object"
                 )
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
                 self.host.view_3d_manager.update_atom_id_menu_text()

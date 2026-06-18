@@ -127,8 +127,8 @@ class ComputeManager:
                 )
 
             # ui_manager and its methods are guaranteed on the host
-            self.host.ui_manager._enable_3d_features(has_mol)
-            self.host.ui_manager._enable_3d_edit_actions(has_mol)
+            self.host.ui_manager.enable_3d_features(has_mol)
+            self.host.ui_manager.enable_3d_edit_actions(has_mol)
 
             if hasattr(self.host.init_manager, "analysis_action"):
                 self.host.init_manager.analysis_action.setEnabled(has_mol)
@@ -286,7 +286,7 @@ class ComputeManager:
         self._safe_disconnect(self.host.init_manager.convert_button.clicked)
         self.host.init_manager.convert_button.clicked.connect(self.halt_conversion)
         self.host.init_manager.cleanup_button.setEnabled(False)
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_features(False)
         self.host.clear_3d_view()
 
         # Add 'Calculating...' overlay
@@ -391,7 +391,7 @@ class ComputeManager:
                 "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
             )
 
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_features(False)
         # Re-enable the button so it can be clicked to Halt
         if hasattr(self.host.init_manager, "optimize_3d_button"):
             self.host.init_manager.optimize_3d_button.setEnabled(True)

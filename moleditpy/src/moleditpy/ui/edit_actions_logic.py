@@ -230,9 +230,9 @@ class EditActionsManager:
                 self.host.view_3d_manager.current_mol
                 and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0
             ):
-                self.host.ui_manager._enable_3d_edit_actions(True)
+                self.host.ui_manager.enable_3d_edit_actions(True)
             else:
-                self.host.ui_manager._enable_3d_edit_actions(False)
+                self.host.ui_manager.enable_3d_edit_actions(False)
 
         self.update_undo_redo_actions()
         if hasattr(self.host.state_manager, "update_realtime_info"):
@@ -263,9 +263,9 @@ class EditActionsManager:
                 self.host.view_3d_manager.current_mol
                 and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0
             ):
-                self.host.ui_manager._enable_3d_edit_actions(True)
+                self.host.ui_manager.enable_3d_edit_actions(True)
             else:
-                self.host.ui_manager._enable_3d_edit_actions(False)
+                self.host.ui_manager.enable_3d_edit_actions(False)
 
         self.update_undo_redo_actions()
         if hasattr(self.host.state_manager, "update_realtime_info"):
@@ -899,7 +899,7 @@ class EditActionsManager:
         self.host.set_constraints_3d([])
 
         # Disable 3D features
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_features(False)
 
         # Reset undo/redo stack
         self.host.state_manager.reset_undo_stack()
@@ -922,7 +922,7 @@ class EditActionsManager:
             self.host.init_manager.view_2d.viewport().update()
 
         # Disable 3D features
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_features(False)
 
         # Redraw 3D plotter
         self.host.view_3d_manager.plotter.render()
@@ -961,7 +961,7 @@ class EditActionsManager:
         # Clear 3D data and disable 3D-related menus
         self.host.clear_3d_view()
         # Disable 3D features
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_features(False)
 
         if push_to_undo:
             self.host.edit_actions_manager.push_undo_state()

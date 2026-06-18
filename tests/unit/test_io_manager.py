@@ -393,8 +393,8 @@ class TestLoadXYZFor3DViewing:
         with patch("moleditpy.ui.io_logic.QTimer"):
             io.load_xyz_for_3d_viewing(file_path=str(xyz))
 
-        host.ui_manager._enter_3d_viewer_ui_mode.assert_called_once()
-        host.ui_manager._enable_3d_features.assert_called_once_with(True)
+        host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+        host.ui_manager.enable_3d_features.assert_called_once_with(True)
 
     def test_is_xyz_derived_with_skip_prop(self, qapp, tmp_path):
         """is_xyz_derived=True when _xyz_skip_checks property is set on mol."""

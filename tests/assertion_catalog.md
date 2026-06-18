@@ -2846,8 +2846,8 @@ _load_xyz_file returning None shows error on status bar._
 ### TestLoadXYZFor3DViewing.test_ui_modes_enabled_on_success
 _3D viewer UI mode methods are called after successful load._
 
-- host.ui_manager._enter_3d_viewer_ui_mode.assert_called_once()
-- host.ui_manager._enable_3d_features.assert_called_once_with(True)
+- host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+- host.ui_manager.enable_3d_features.assert_called_once_with(True)
 
 ### TestLoadXYZFor3DViewing.test_is_xyz_derived_with_skip_prop
 _is_xyz_derived=True when _xyz_skip_checks property is set on mol._

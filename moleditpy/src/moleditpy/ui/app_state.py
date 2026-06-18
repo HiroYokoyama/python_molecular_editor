@@ -277,29 +277,29 @@ class StateManager:
                     ):
                         self.host.view_3d_manager.plotter.reset_camera()
 
-                    self.host.ui_manager._enable_3d_features(True)
+                    self.host.ui_manager.enable_3d_features(True)
                     self.host.view_3d_manager.setup_3d_hover()
                 else:
                     self.host.clear_3d_view()
-                    self.host.ui_manager._enable_3d_features(False)
+                    self.host.ui_manager.enable_3d_features(False)
             except (RuntimeError, ValueError, TypeError) as e:
                 logging.error(f"Could not load 3D model from state data: {e}")
                 self.host.update_status_message(f"Error loading 3D model: {e}", 5000)
                 self.host.set_current_molecule(None)
-                self.host.ui_manager._enable_3d_features(False)
+                self.host.ui_manager.enable_3d_features(False)
 
         else:
             self.host.clear_3d_view()
             self.host.init_manager.analysis_action.setEnabled(False)
             self.host.init_manager.optimize_3d_button.setEnabled(False)
             # Disable 3D features
-            self.host.ui_manager._enable_3d_features(False)
+            self.host.ui_manager.enable_3d_features(False)
 
         self.host.edit_actions_manager.update_implicit_hydrogens()
         self.host.view_3d_manager.update_chiral_labels()
 
         if loaded_data.get("is_3d_viewer_mode", False):
-            self.host.ui_manager._enter_3d_viewer_ui_mode()
+            self.host.ui_manager.enter_3d_viewer_mode()
             self.host.statusBar().showMessage("Project loaded in 3D Viewer Mode.")
         else:
             self.host.ui_manager.restore_ui_for_editing()
@@ -308,7 +308,7 @@ class StateManager:
                 self.host.view_3d_manager.current_mol
                 and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0
             ):
-                self.host.ui_manager._enable_3d_edit_actions(True)
+                self.host.ui_manager.enable_3d_edit_actions(True)
 
         # Update labels after undo/redo
         self.host.edit_3d_manager.update_2d_measurement_labels()
@@ -610,8 +610,8 @@ class StateManager:
         """Restore state from JSON."""
         self.dragged_atom_info = None
         self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
-        self.host.ui_manager._enable_3d_edit_actions(False)
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_edit_actions(False)
+        self.host.ui_manager.enable_3d_features(False)
 
         # 3D viewer mode
         is_3d_mode = json_data.get("is_3d_viewer_mode", False)
@@ -822,9 +822,9 @@ class StateManager:
 
                         # Switch UI in Viewer mode
                         if is_3d_mode and hasattr(
-                            self.host.ui_manager, "_enter_3d_viewer_ui_mode"
+                            self.host.ui_manager, "enter_3d_viewer_mode"
                         ):
-                            self.host.ui_manager._enter_3d_viewer_ui_mode()
+                            self.host.ui_manager.enter_3d_viewer_mode()
                         else:
                             self.host.set_is_2d_editable(True)
 
@@ -839,8 +839,8 @@ class StateManager:
 
                         # Enable 3D-related UI
                         try:
-                            self.host.ui_manager._enable_3d_edit_actions(True)
-                            self.host.ui_manager._enable_3d_features(True)
+                            self.host.ui_manager.enable_3d_edit_actions(True)
+                            self.host.ui_manager.enable_3d_features(True)
                         except (RuntimeError, TypeError, AttributeError):
                             # Safe defensive fallback catching RuntimeError, TypeError, AttributeError
                             pass
