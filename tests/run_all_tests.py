@@ -143,7 +143,7 @@ def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
 
 
 def print_coverage_summary(base_dir):
-    """Prints the coverage summary of core and full coverage from the markdown report or JSON files."""
+    """Prints the coverage summary from the markdown report or JSON files."""
     try:
         report_path = os.path.join(base_dir, "tests", "coverage_report.md")
         if os.path.exists(report_path):
