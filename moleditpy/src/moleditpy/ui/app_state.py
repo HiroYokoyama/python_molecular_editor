@@ -850,7 +850,3 @@ class StateManager:
 
 
 StateManager._cls = StateManager  # type: ignore[assignment]
-
-
-# Backward-compat aliases
-MainWindowAppState = StateManager

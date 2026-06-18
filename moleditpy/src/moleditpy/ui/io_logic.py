@@ -1042,6 +1042,3 @@ def _set_mol_prop_safe(mol: Any, key: str, val: Any) -> None:
         elif isinstance(val, float):
             mol.SetDoubleProp(key, val)
 
-
-# Backward-compat aliases
-IOManager = IOManager

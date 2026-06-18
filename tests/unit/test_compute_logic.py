@@ -632,7 +632,7 @@ def test_molecular_data_radical_transfer():
 
 def test_app_state_radical_and_constraint_preservation(mock_parser_host):
     """Test that radicals and constraints are preserved through state round-trip."""
-    from moleditpy.ui.app_state import MainWindowAppState
+    from moleditpy.ui.app_state import StateManager
     from moleditpy.core.molecular_data import MolecularData
     from moleditpy.ui.atom_item import AtomItem
     from PyQt6.QtCore import QPointF
@@ -649,8 +649,8 @@ def test_app_state_radical_and_constraint_preservation(mock_parser_host):
 
     compute.constraints_3d = [("DISTANCE", (0, 1), 1.5, 1e5)]
 
-    # MainWindowAppState is a mixin class, we call its methods by passing 'compute' as self
-    state = MainWindowAppState.get_current_state(compute)
+    # StateManager is the canonical class; call its methods by passing 'compute' as self
+    state = StateManager.get_current_state(compute)
 
     # Verify state content
     assert state["atoms"][0]["radical"] == 2
@@ -663,7 +663,7 @@ def test_app_state_radical_and_constraint_preservation(mock_parser_host):
     # Mock scene.addItem as it is called in set_state_from_data
     compute.scene = MagicMock()
 
-    MainWindowAppState.set_state_from_data(compute, state)
+    StateManager.set_state_from_data(compute, state)
 
     # Verify restoration
     assert 0 in compute.data.atoms
@@ -674,7 +674,7 @@ def test_app_state_radical_and_constraint_preservation(mock_parser_host):
 
 def test_app_state_original_atom_id_preservation(mock_parser_host):
     """Test that _original_atom_id is preserved in 3D molecule state round-trip."""
-    from moleditpy.ui.app_state import MainWindowAppState
+    from moleditpy.ui.app_state import StateManager
 
     compute = DummyCompute(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
@@ -683,12 +683,12 @@ def test_app_state_original_atom_id_preservation(mock_parser_host):
     compute.current_mol = mol
 
     # Get state
-    state = MainWindowAppState.get_current_state(compute)
+    state = StateManager.get_current_state(compute)
     assert 123 in state["mol_3d_atom_ids"]
 
     # Clear and Restore
     compute.current_mol = None
-    MainWindowAppState.set_state_from_data(compute, state)
+    StateManager.set_state_from_data(compute, state)
 
     # Verify restoration
     assert compute.current_mol is not None

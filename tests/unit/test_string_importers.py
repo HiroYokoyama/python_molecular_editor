@@ -2,12 +2,12 @@
 
 from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
-from moleditpy.ui.string_importers import MainWindowStringImporters
+from moleditpy.ui.string_importers import StringImporterManager
 from PyQt6.QtCore import QPointF, QTimer
 from unittest.mock import patch
 
 
-class DummyImporter(MainWindowStringImporters):
+class DummyImporter(StringImporterManager):
     """Thin wrapper to call importer methods with a mocked host."""
 
     def __init__(self, host):
