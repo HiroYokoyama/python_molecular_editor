@@ -52,7 +52,7 @@ python tests/run_all_tests.py --integration
 pylint moleditpy/src/moleditpy/
 ```
 
-Target score: > 9.0/10. PEP 8 compliance required. Type hints required in core logic modules.
+Target score: > 9.0/10. PEP 8 compliance required. Type hints required for all functions and methods.
 
 ## Scope
 
@@ -61,7 +61,7 @@ All code changes go inside `moleditpy/` only. Never edit `moleditpy-linux/` — 
 ## Code Quality Standards
 
 - Pylint > 9.0/10, PEP 8
-- Type hints in `core/` and any new logic modules
+- Type hints required for all functions and methods
 - **Full Application coverage around 80%** (tracked in `tests/coverage_report.md`)
 - All new public methods in `plugins/` must have tests
 - Error handling: use `logging.exception()` or `logging.error()` in `except` blocks — never `print`, never bare `pass`
