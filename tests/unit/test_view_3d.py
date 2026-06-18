@@ -13,6 +13,13 @@ def _make_view3d(mock_host):
     view3d._drawing_3d = False
     view3d.current_3d_style = "Ball and Stick"
     view3d.atom_info_display_mode = None
+    view3d._3d_color_map = {}
+    view3d._plugin_color_overrides = {}
+    view3d._plugin_bond_color_overrides = {}
+    view3d.atom_positions_3d = None
+    view3d.atom_label_legend_names = []
+    view3d.current_atom_info_labels = None
+    view3d.axes_widget = None
     return view3d
 
 

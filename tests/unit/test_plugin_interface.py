@@ -143,12 +143,13 @@ class TestPluginInterface:
             "TestPlugin", callback
         )
 
-    def test_register_3d_context_menu(self, mock_manager, capsys):
-        """Test deprecated register_3d_context_menu."""
+    def test_register_3d_context_menu(self, mock_manager):
+        """Test deprecated register_3d_context_menu emits DeprecationWarning."""
+        import pytest
+
         ctx = PluginContext(mock_manager, "TestPlugin")
-        ctx.register_3d_context_menu(MagicMock(), "Label")
-        captured = capsys.readouterr()
-        assert "deprecated" in captured.out or "deprecated" in captured.err
+        with pytest.warns(DeprecationWarning, match="deprecated"):
+            ctx.register_3d_context_menu(MagicMock(), "Label")
 
     def test_register_3d_style(self, mock_manager):
         """Test register_3d_style delegation."""

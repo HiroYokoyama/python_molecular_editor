@@ -404,15 +404,9 @@ class IOManager:
         elif file_path.lower().endswith(".pmeraw"):
             self.load_raw_data(file_path)
         else:
-            try:
-                self.load_json_data(file_path)
-            except Exception:
-                try:
-                    self.load_raw_data(file_path)
-                except Exception:
-                    self.host.statusBar().showMessage(
-                        "Error: Unable to determine file format or file corrupted."
-                    )
+            self.host.statusBar().showMessage(
+                "Error: Unable to determine file format or file corrupted."
+            )
 
     def save_as_json(self) -> None:
         """Save as PME Project (JSON) format."""

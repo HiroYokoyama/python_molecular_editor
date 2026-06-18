@@ -30,12 +30,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 
 try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
+    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
+    from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
@@ -619,12 +616,8 @@ class UIManager(QObject):
         if not isinstance(splitter, QSplitter):
             return None
 
-        if _sip_isdeleted is not None:
-            try:
-                if _sip_isdeleted(splitter):
-                    return None
-            except (AttributeError, RuntimeError, TypeError):
-                return None
+        if sip_isdeleted_safe(splitter):
+            return None
 
         return splitter
 

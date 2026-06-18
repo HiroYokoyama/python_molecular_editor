@@ -34,14 +34,6 @@ except ImportError:
 
 
 try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
-
-try:
     from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 except ImportError:
     from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe

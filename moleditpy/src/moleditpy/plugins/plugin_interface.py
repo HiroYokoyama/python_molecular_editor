@@ -324,8 +324,12 @@ class PluginContext:
 
     def register_3d_context_menu(self, callback: Callable, label: str) -> None:
         """Deprecated: This method does nothing. Kept for backward compatibility."""
-        print(
-            f"Warning: Plugin '{self._plugin_name}' uses deprecated 'register_3d_context_menu'. This API has been removed."
+        import warnings
+
+        warnings.warn(
+            f"Plugin '{self._plugin_name}' uses deprecated 'register_3d_context_menu'. This API has been removed.",
+            category=DeprecationWarning,
+            stacklevel=2,
         )
 
     def register_3d_style(

@@ -73,14 +73,6 @@ except ImportError:
 
 
 try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except (AttributeError, RuntimeError, TypeError):
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
-
-try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .color_settings_dialog import ColorSettingsDialog
     from ..utils.constants import DEFAULT_CPK_COLORS, NUM_DASHES, VERSION

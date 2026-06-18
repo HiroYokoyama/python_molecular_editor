@@ -21,13 +21,6 @@ if TYPE_CHECKING:
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QMainWindow
 
-try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)

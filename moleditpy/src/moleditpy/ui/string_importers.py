@@ -22,14 +22,6 @@ from rdkit.Chem import AllChem
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import QInputDialog
 
-try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
-
 
 # --- Classes ---
 class StringImporterManager:
