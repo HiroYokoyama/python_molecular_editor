@@ -2,36 +2,6 @@
 source = moleditpy
 
 [report]
-# ---------------------------------------------------------------------------
-# "Core" = all application modules that have corresponding unit tests.
-# This is the full tested surface area (~9700 statements).
-# Coverage target: >= 70%
-#
-# Excluded = pure UI layout, hardware-dependent 3D rendering, and modules
-# with no unit tests (covered only by manual/GUI tests).
-# ---------------------------------------------------------------------------
-omit =
-    # Entry point (no logic)
-    moleditpy/src/moleditpy/__main__.py
-
-    # Modules with no unit tests — covered by GUI tests or manual checklist
-    moleditpy/src/moleditpy/ui/__init__.py
-    moleditpy/src/moleditpy/ui/main_window.py
-    moleditpy/src/moleditpy/ui/analysis_window.py
-    moleditpy/src/moleditpy/ui/geometry_base_dialog.py
-    moleditpy/src/moleditpy/ui/mirror_dialog.py
-    moleditpy/src/moleditpy/ui/planarize_dialog.py
-    moleditpy/src/moleditpy/ui/translation_dialog.py
-    moleditpy/src/moleditpy/ui/constrained_optimization_dialog.py
-    moleditpy/src/moleditpy/ui/periodic_table_dialog.py
-
-    # 3D hardware / PyVista — requires GPU/display, not unit-testable
-    moleditpy/src/moleditpy/ui/custom_interactor_style.py
-    moleditpy/src/moleditpy/ui/custom_qt_interactor.py
-
-    # Platform/system utilities (OS detection, no unit tests)
-    moleditpy/src/moleditpy/utils/system_utils.py
-
 exclude_lines =
     pragma: no cover
     def __repr__
@@ -40,3 +10,4 @@ exclude_lines =
     raise NotImplementedError
     if 0:
     if TYPE_CHECKING:
+

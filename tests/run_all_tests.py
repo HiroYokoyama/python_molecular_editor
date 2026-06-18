@@ -156,22 +156,17 @@ def print_coverage_summary(base_dir):
         else:
             import json
 
-            cov_core_path = os.path.join(base_dir, "tests", "cov_core.json")
             cov_full_path = os.path.join(base_dir, "tests", "cov_full.json")
-            if os.path.exists(cov_core_path) and os.path.exists(cov_full_path):
-                with open(cov_core_path, "r") as f:
-                    core_data = json.load(f)
+            if os.path.exists(cov_full_path):
                 with open(cov_full_path, "r") as f:
                     full_data = json.load(f)
 
-                core_cov = core_data["totals"]["percent_covered"]
                 full_cov = full_data["totals"]["percent_covered"]
 
                 print("\n" + "=" * 50)
                 print("             COVERAGE REPORT SUMMARY")
                 print("=" * 50)
                 print(f" Overall Project Coverage (Full): {full_cov:.2f}%")
-                print(f" Core Molecular Logic Coverage:   {core_cov:.2f}%")
                 print("=" * 50)
     except Exception as e:
         print(f"Warning: Could not read or print coverage report: {e}")
