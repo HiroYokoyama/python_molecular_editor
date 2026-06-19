@@ -218,7 +218,7 @@ def pick_atom_index_from_screen_vectorized(
         for i in range(4):
             for j in range(4):
                 matrix[i, j] = vtk_matrix.GetElement(i, j)
-    except Exception:
+    except (RuntimeError, TypeError, ValueError):
         return None
 
     # 2. Convert all N world coordinates to homogeneous coordinates (N, 4)
@@ -236,7 +236,7 @@ def pick_atom_index_from_screen_vectorized(
     # 5. Transform NDC to Screen/Display Coordinates
     try:
         size = renderer.GetSize()  # (width, height)
-    except Exception:
+    except (RuntimeError, TypeError, ValueError):
         return None
 
     # VTK display space coordinates: X: [0, W], Y: [0, H]
@@ -257,7 +257,7 @@ def pick_atom_index_from_screen_vectorized(
             pixel_scale = size[1] / (
                 2.0 * np.abs(w.flatten()) * np.tan(view_angle_rad / 2.0)
             )
-    except Exception:
+    except (RuntimeError, TypeError, ValueError):
         pixel_scale = 20.0  # Safe fallback scale
 
     # Pre-calculate world radii for all atoms
@@ -300,7 +300,7 @@ def pick_atom_index_from_screen(
         )
         if best_idx is not None:
             return best_idx
-    except Exception as e:
+    except (RuntimeError, TypeError, ValueError) as e:
         logging.debug("Vectorized picking failed, falling back to sequential: %s", e)
 
     return pick_atom_index_from_screen_sequential(

@@ -118,7 +118,7 @@ class IOManager:
                 try:
                     Chem.Atom(symbol)
                 except (RuntimeError, ValueError):
-                    settings = getattr(self.host.init_manager, "settings", {}) or {}
+                    settings = self.host.init_manager.settings
                     if settings.get("skip_chemistry_checks", False):
                         symbol = "C"
                     else:
@@ -139,7 +139,7 @@ class IOManager:
                 conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
             mol.AddConformer(conf)
 
-            settings = getattr(self.host.init_manager, "settings", {}) or {}
+            settings = self.host.init_manager.settings
             skip_checks = bool(settings.get("skip_chemistry_checks", False))
 
             def _set_prop(m: Any, key: str, val: Any) -> None:
@@ -175,7 +175,7 @@ class IOManager:
                 _set_prop(final_mol, "_xyz_skip_checks", 1)
             else:
                 final_mol = None
-                settings = getattr(self.host.init_manager, "settings", {}) or {}
+                settings = self.host.init_manager.settings
                 # First try with charge 0 (per user's 'first try with 0 then ask' requirement)
                 # but only if "Always ask" is not explicitly enabled in settings.
                 if not settings.get("always_ask_charge", False):

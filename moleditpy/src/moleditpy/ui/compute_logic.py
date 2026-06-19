@@ -383,7 +383,7 @@ class ComputeManager:
         self.host.init_manager.scene.clear_all_problem_flags()
         try:
             Chem.SanitizeMol(mol)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logging.error(f"Sanitization failed: {e}")
             self.host.statusBar().showMessage("Error: Invalid chemical structure.")
             return None
@@ -597,7 +597,7 @@ class ComputeManager:
                 if all(mol.GetAtomWithIdx(i).GetIsAromatic() for i in ring):
                     aromatic_rings.append(ring)
             self.host.init_manager.scene.set_aromatic_rings(aromatic_rings)
-        except Exception as e:
+        except (RuntimeError, AttributeError) as e:
             logging.debug(f"Aromatic ring update failed: {e}")
 
     def select_connected_atoms(self) -> None:

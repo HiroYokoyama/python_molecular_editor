@@ -276,7 +276,7 @@ class MainWindow(QMainWindow):
             self.state_manager.saved_state = copy.deepcopy(
                 self.state_manager.get_current_state()
             )
-        except Exception as e:
+        except (RuntimeError, TypeError, ValueError, AttributeError) as e:
             logging.error(f"save_state_snapshot failed: {e}")
 
     def update_window_title(self) -> None:
@@ -317,12 +317,12 @@ class MainWindow(QMainWindow):
 
     @property
     def data(self) -> MolecularData:
-        """Proxy for state data. Not for core logic use."""
+        """Proxy for molecular data (read)."""
         return self.state_manager.data  # type: ignore[return-value, no-any-return]
 
     @property
     def scene(self) -> Optional[MoleculeScene]:
-        """Proxy for 2D scene. Not for core logic use."""
+        """Proxy for 2D scene (read)."""
         return self.init_manager.scene
 
     @property

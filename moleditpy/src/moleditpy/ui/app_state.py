@@ -207,7 +207,7 @@ class StateManager:
                             self.host.compute_manager.create_atom_id_mapping()
                             self.host.view_3d_manager.update_atom_id_menu_text()
                             self.host.view_3d_manager.update_atom_id_menu_state()
-                        except Exception as e:
+                        except (RuntimeError, AttributeError) as e:
                             logging.debug(
                                 f"Partial failure during ID mapping restoration: {e}"
                             )
@@ -216,8 +216,8 @@ class StateManager:
                     self.host.view_3d_manager.draw_molecule_3d(
                         self.host.current_mol
                     )
-                    if self.host.view_3d_manager.plotter:
-                        self.host.view_3d_manager.plotter.reset_camera()
+                    if self.host.plotter:
+                        self.host.plotter.reset_camera()
 
                     self.host.ui_manager.enable_3d_features(True)
                     self.host.view_3d_manager.setup_3d_hover()
@@ -279,7 +279,7 @@ class StateManager:
             return True  # Saved or no changes
 
         if (
-            not self.host.state_manager.data.atoms
+            not self.data.atoms
             and self.host.current_mol is None
         ):
             return True  # Empty document
@@ -347,9 +347,9 @@ class StateManager:
         }
 
         # 2D data
-        if self.host.state_manager.data.atoms:
+        if self.data.atoms:
             atoms_2d = []
-            for atom_id, data in self.host.state_manager.data.atoms.items():
+            for atom_id, data in self.data.atoms.items():
                 pos = data["pos"]
                 atom_data = {
                     "id": atom_id,
@@ -365,7 +365,7 @@ class StateManager:
             for (
                 atom1_id,
                 atom2_id,
-            ), bond_data in self.host.state_manager.data.bonds.items():
+            ), bond_data in self.data.bonds.items():
                 bond_info = {
                     "atom1": atom1_id,
                     "atom2": atom2_id,
@@ -377,7 +377,7 @@ class StateManager:
             json_data["2d_structure"] = {
                 "atoms": atoms_2d,
                 "bonds": bonds_2d,
-                "next_atom_id": self.host.state_manager.data.next_atom_id,
+                "next_atom_id": self.data.next_atom_id,
             }
 
         # 3D data
@@ -651,8 +651,8 @@ class StateManager:
                         else:
                             self.host.set_is_2d_editable(True)
 
-                        if self.host.view_3d_manager.plotter:
-                            self.host.view_3d_manager.plotter.reset_camera()
+                        if self.host.plotter:
+                            self.host.plotter.reset_camera()
 
                         # Enable 3D-related UI
                         try:

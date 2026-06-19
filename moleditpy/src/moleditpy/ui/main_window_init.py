@@ -363,7 +363,7 @@ class MainInitManager:
             self.host.view_3d_manager.apply_3d_settings()
 
             # Redraw if molecule exists
-            mol = getattr(self.host.view_3d_manager, "current_mol", None)
+            mol = self.host.current_mol
             if mol:
                 self.host.view_3d_manager.draw_molecule_3d(mol)
 
@@ -1658,7 +1658,7 @@ class MainInitManager:
                 self.settings["3d_conversion_mode"] = mode
                 self.settings_dirty = True
                 self.host.statusBar().showMessage(f"3D conversion mode set to: {mode}")
-            except Exception as e:
+            except (RuntimeError, AttributeError, KeyError) as e:
                 logging.debug(f"Suppressed exception: {e}")
 
         conv_options = [

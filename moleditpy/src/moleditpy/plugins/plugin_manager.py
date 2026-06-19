@@ -625,7 +625,7 @@ class PluginManager:
             ImportError
         ):  # [OPTIONAL DEP] importlib.metadata unavailable (<3.8); silently skip.
             pass
-        except Exception as e:
+        except (RuntimeError, AttributeError) as e:
             logging.error(f"Error retrieving selected atom indices: {e}")
 
         return selected_indices
