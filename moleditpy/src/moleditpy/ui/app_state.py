@@ -101,13 +101,13 @@ class StateManager:
 
         state["version"] = VERSION
 
-        if self.host.current_mol:
-            state["mol_3d"] = self.host.current_mol.ToBinary()
+        if self.host.view_3d_manager.current_mol:
+            state["mol_3d"] = self.host.view_3d_manager.current_mol.ToBinary()
             # RDKit binary serialization does not preserve custom properties like _original_atom_id.
             # We store them separately to ensure we can restore the 2D-3D link after undo/redo.
             mol_3d_atom_ids = []
-            for i in range(self.host.current_mol.GetNumAtoms()):
-                atom = self.host.current_mol.GetAtomWithIdx(i)
+            for i in range(self.host.view_3d_manager.current_mol.GetNumAtoms()):
+                atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(i)
                 if atom and atom.HasProp("_original_atom_id"):
                     try:
                         mol_3d_atom_ids.append(atom.GetIntProp("_original_atom_id"))
