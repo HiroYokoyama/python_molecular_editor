@@ -18,10 +18,7 @@ from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QPolygonF
 from PyQt6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 
-try:
-    from ..utils.constants import CPK_COLORS
-except ImportError:
-    from moleditpy_linux.utils.constants import CPK_COLORS
+from ..utils.constants import CPK_COLORS
 
 
 class TemplatePreviewItem(QGraphicsItem):

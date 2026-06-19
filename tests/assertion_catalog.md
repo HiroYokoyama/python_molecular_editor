@@ -1041,7 +1041,7 @@ _Test early exits in trigger_conversion (empty mol, etc.)._
 ### test_check_chemistry_problems_fallback
 _Test the manual valence check when RDKit fails._
 
-- assert compute.data.atoms[0]['item'].has_problem == True
+- assert mock_item.has_problem == True
 - assert any(('chemistry problems found' in msg for msg in msgs))
 
 ### test_trigger_conversion_happy_path
@@ -2768,7 +2768,7 @@ _Verify remove_hydrogen_atoms finds and deletes H items using app logic._
 
 - actions.scene.delete_items.assert_called()
 - assert h_item in deleted_set
-- assert actions.data.atoms[c_id]['item'] not in deleted_set
+- assert actions.scene.atom_items[c_id] not in deleted_set
 
 ## tests/unit/test_io.py
 
@@ -5262,9 +5262,9 @@ _No description provided._
 ### test_double_click_select_component
 _No description provided._
 
-- assert scene.data.atoms[id1]['item'].setSelected.called
-- assert scene.data.atoms[id2]['item'].setSelected.called
-- assert scene.data.atoms[id3]['item'].setSelected.called
+- assert scene.atom_items[id1].setSelected.called
+- assert scene.atom_items[id2].setSelected.called
+- assert scene.atom_items[id3].setSelected.called
 - assert not atom_iso.setSelected.called
 
 ### test_scene_key_event_dispatch
@@ -7160,7 +7160,7 @@ _MoleculeScene: Test for drawing an atom upon clicking._
 
 - assert len(window.state_manager.data.atoms) == 1
 - assert window.state_manager.data.atoms[atom_id]['symbol'] == 'N'
-- assert window.state_manager.data.atoms[atom_id]['item'].pos() == click_pos
+- assert window.init_manager.scene.atom_items[atom_id].pos() == click_pos
 
 ### test_draw_bond_on_drag
 _MoleculeScene: Test for drawing a bond upon dragging._
@@ -7430,8 +7430,8 @@ _Implicit Hydrogens: Test for automatic updates after drawing operations._
 - assert atom_item.implicit_h_count == 4
 - assert len(window.state_manager.data.atoms) == 2
 - assert len(window.state_manager.data.bonds) == 1
-- assert window.state_manager.data.atoms[0]['item'].implicit_h_count == 3
-- assert window.state_manager.data.atoms[1]['item'].implicit_h_count == 3
+- assert window.init_manager.scene.atom_items[0].implicit_h_count == 3
+- assert window.init_manager.scene.atom_items[1].implicit_h_count == 3
 
 ### test_drag_drop_mol_file_on_3d_view
 _D&D: Drag & Drop of .mol file onto 3D view area (Mock)._

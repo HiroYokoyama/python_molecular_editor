@@ -23,29 +23,14 @@ from PyQt6.QtWidgets import (
     QGraphicsScene,
 )
 
-try:
-    from .atom_item import AtomItem
-    from .bond_item import BondItem
-    from .template_preview_item import TemplatePreviewItem
-except ImportError:
-    from moleditpy.ui.atom_item import AtomItem
-    from moleditpy.ui.bond_item import BondItem
-    from moleditpy.ui.template_preview_item import TemplatePreviewItem
+from .atom_item import AtomItem
+from .bond_item import BondItem
+from .template_preview_item import TemplatePreviewItem
 
 
-try:
-    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-except ImportError:
-    from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
-try:
-    from .molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMixin
-except ImportError:
-    from moleditpy.ui.molecular_scene_handler import (
-        TemplateMixin,
-        KeyboardMixin,
-        SceneQueryMixin,
-    )
+from .molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMixin
 
 
 class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene):

@@ -20,32 +20,17 @@ from PyQt6.QtGui import QAction, QColor
 from PyQt6.QtWidgets import QMenu, QMessageBox, QWidget
 from rdkit import Chem
 
-try:
-    from . import OBABEL_AVAILABLE
-except ImportError:
-    from moleditpy_linux.ui import OBABEL_AVAILABLE
+from . import OBABEL_AVAILABLE
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .calculation_worker import CalculationWorker
-    from .mol_geometry import (
-        identify_valence_problems,
-        inject_ez_stereo_to_mol_block,
-    )
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy_linux.ui.calculation_worker import CalculationWorker
-    from moleditpy_linux.core.mol_geometry import (
-        identify_valence_problems,
-        inject_ez_stereo_to_mol_block,
-    )
+from .calculation_worker import CalculationWorker
+from ..core.mol_geometry import (
+    identify_valence_problems,
+    inject_ez_stereo_to_mol_block,
+)
 
 
 if TYPE_CHECKING:
-    try:
-        from .main_window import MainWindow
-    except ImportError:
-        from moleditpy_linux.ui.main_window import MainWindow
+    from .main_window import MainWindow
 
 
 class ComputeManager:

@@ -15,10 +15,7 @@ from typing import Any, Optional
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QDialog, QGridLayout, QPushButton
 
-try:
-    from ..utils.constants import CPK_COLORS
-except ImportError:
-    from moleditpy.utils.constants import CPK_COLORS
+from ..utils.constants import CPK_COLORS
 
 from PyQt6.QtCore import pyqtSignal
 

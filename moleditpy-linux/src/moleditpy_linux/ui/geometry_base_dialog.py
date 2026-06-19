@@ -16,10 +16,7 @@ from typing import TYPE_CHECKING, Optional, Union
 from PyQt6.QtWidgets import QLineEdit, QSlider, QWidget
 from rdkit import Chem
 
-try:
-    from .base_picking_dialog import BasePickingDialog
-except ImportError:
-    from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
+from .base_picking_dialog import BasePickingDialog
 
 if TYPE_CHECKING:
     from .main_window import MainWindow

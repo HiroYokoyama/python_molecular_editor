@@ -30,10 +30,7 @@ except ImportError:
 
 from PyQt6.QtWidgets import QApplication
 
-try:
-    from .ui.main_window import MainWindow
-except ImportError:
-    from moleditpy.ui.main_window import MainWindow
+from .ui.main_window import MainWindow
 
 
 def setup_logging() -> None:

@@ -29,10 +29,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 
-try:
-    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-except ImportError:
-    from moleditpy_linux.utils.sip_isdeleted_safe import sip_isdeleted_safe
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)

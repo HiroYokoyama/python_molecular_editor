@@ -24,10 +24,7 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
-try:
-    from .base_picking_dialog import BasePickingDialog
-except ImportError:
-    from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
+from .base_picking_dialog import BasePickingDialog
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -175,9 +172,7 @@ class PlanarizeDialog(BasePickingDialog):
             centroid = np.mean(selected_positions, axis=0)
             centered_positions = selected_positions - centroid
 
-            from moleditpy_linux.core.mol_geometry import (
-                calculate_best_fit_plane_projection,
-            )
+            from moleditpy_linux.core.mol_geometry import calculate_best_fit_plane_projection
 
             # Get normal of the least-squares plane via SVD
             u, s, vh = np.linalg.svd(centered_positions, full_matrices=False)

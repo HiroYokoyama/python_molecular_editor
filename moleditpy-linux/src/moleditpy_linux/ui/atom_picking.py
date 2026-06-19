@@ -17,10 +17,7 @@ import logging
 
 import numpy as np
 
-try:
-    from ..utils.constants import VDW_RADII, pt
-except ImportError:
-    from moleditpy_linux.utils.constants import VDW_RADII, pt
+from ..utils.constants import VDW_RADII, pt
 
 
 def _world_to_display(renderer: Any, pos: Any) -> Optional[tuple[float, float, float]]:

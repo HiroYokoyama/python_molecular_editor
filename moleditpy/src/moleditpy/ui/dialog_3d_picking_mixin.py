@@ -17,10 +17,7 @@ from PyQt6.QtCore import QEvent, Qt, QObject, QPoint
 from PyQt6.QtGui import QMouseEvent
 from typing import Any, Optional, TYPE_CHECKING
 
-try:
-    from .atom_picking import pick_atom_index_from_screen
-except ImportError:
-    from moleditpy.ui.atom_picking import pick_atom_index_from_screen
+from .atom_picking import pick_atom_index_from_screen
 
 if TYPE_CHECKING:
     from .main_window import MainWindow

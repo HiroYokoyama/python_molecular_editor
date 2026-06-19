@@ -20,10 +20,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 import numpy as np
 
-try:
-    from .mol_geometry import identify_valence_problems
-except ImportError:
-    from moleditpy.core.mol_geometry import identify_valence_problems
+from ..core.mol_geometry import identify_valence_problems
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from PyQt6.QtCore import QByteArray, QMimeData, QPointF, Qt, QTimer
@@ -89,30 +86,15 @@ class Rotate2DDialog(QDialog):
         return self.angle_spin.value()
 
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .atom_item import AtomItem
-    from .bond_item import BondItem
-    from .constants import CLIPBOARD_MIME_TYPE
-    from .molecular_data import MolecularData
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.atom_item import AtomItem
-    from moleditpy.ui.bond_item import BondItem
-    from moleditpy.utils.constants import CLIPBOARD_MIME_TYPE
-    from moleditpy.core.molecular_data import MolecularData
-
-try:
-    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-except ImportError:
-    from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
+from .atom_item import AtomItem
+from .bond_item import BondItem
+from ..utils.constants import CLIPBOARD_MIME_TYPE
+from ..core.molecular_data import MolecularData
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 
 if TYPE_CHECKING:
-    try:
-        from .main_window import MainWindow
-    except ImportError:
-        from moleditpy.ui.main_window import MainWindow
+    from .main_window import MainWindow
 
 
 # --- Class Definition ---

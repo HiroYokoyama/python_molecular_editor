@@ -32,30 +32,16 @@ from rdkit.Chem import Descriptors, rdMolDescriptors
 from PyQt6.QtCore import QDateTime, QPointF, Qt
 from PyQt6.QtWidgets import QMessageBox
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .atom_item import AtomItem
-    from .bond_item import BondItem
-    from ..utils.constants import VERSION
-except (ImportError, AttributeError):
-    # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.atom_item import AtomItem
-    from moleditpy.ui.bond_item import BondItem
-    from moleditpy.utils.constants import VERSION
-
-try:
-    from .molecular_data import MolecularData
-except (AttributeError, RuntimeError, TypeError, ImportError):
-    from moleditpy.core.molecular_data import MolecularData
+from .atom_item import AtomItem
+from .bond_item import BondItem
+from ..utils.constants import VERSION
+from ..core.molecular_data import MolecularData
 
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    try:
-        from .main_window import MainWindow
-    except ImportError:
-        from moleditpy.ui.main_window import MainWindow
+    from .main_window import MainWindow
 
 
 # --- Class Definition ---

@@ -27,10 +27,7 @@ from .settings_tabs.settings_2d_tab import Settings2DTab
 from .settings_tabs.settings_3d_tabs import Settings3DSceneTab, SettingsModelTab
 from .settings_tabs.settings_other_tab import SettingsOtherTab
 
-try:
-    from ..utils.default_settings import DEFAULT_SETTINGS
-except ImportError:
-    from moleditpy.utils.default_settings import DEFAULT_SETTINGS
+from ..utils.default_settings import DEFAULT_SETTINGS
 
 
 class SettingsDialog(QDialog):

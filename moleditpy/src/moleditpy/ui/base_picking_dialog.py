@@ -19,10 +19,7 @@ from PyQt6.QtGui import QCloseEvent, QKeyEvent
 from PyQt6.QtWidgets import QDialog, QWidget
 from rdkit import Chem, Geometry
 
-try:
-    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
-except ImportError:
-    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 if TYPE_CHECKING:
     from .main_window import MainWindow

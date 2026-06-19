@@ -19,25 +19,12 @@ from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QApplication
 
-try:
-    from .atom_item import AtomItem
-    from .bond_item import BondItem
-except ImportError:
-    from moleditpy.ui.atom_item import AtomItem
-    from moleditpy.ui.bond_item import BondItem
+from .atom_item import AtomItem
+from .bond_item import BondItem
 
-try:
-    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-except ImportError:
-    from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
-try:
-    from ..utils.constants import DEFAULT_BOND_LENGTH, SUM_TOLERANCE
-except ImportError:
-    from moleditpy.utils.constants import (
-        DEFAULT_BOND_LENGTH,
-        SUM_TOLERANCE,
-    )
+from ..utils.constants import DEFAULT_BOND_LENGTH, SUM_TOLERANCE
 
 
 class TemplateMixin:

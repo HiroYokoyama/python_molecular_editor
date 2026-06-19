@@ -26,10 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-try:
-    from ..utils.constants import CPK_COLORS, DEFAULT_CPK_COLORS
-except (AttributeError, RuntimeError, TypeError):
-    from moleditpy_linux.utils.constants import CPK_COLORS, DEFAULT_CPK_COLORS
+from ..utils.constants import CPK_COLORS, DEFAULT_CPK_COLORS
 
 
 class ColorSettingsDialog(QDialog):

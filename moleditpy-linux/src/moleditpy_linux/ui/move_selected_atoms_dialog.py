@@ -26,14 +26,9 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-try:
-    from .atom_picking import pick_atom_index_from_screen
-    from .base_picking_dialog import BasePickingDialog
-    from ..utils.constants import VDW_RADII
-except ImportError:
-    from moleditpy_linux.ui.atom_picking import pick_atom_index_from_screen
-    from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
-    from moleditpy_linux.utils.constants import VDW_RADII
+from .atom_picking import pick_atom_index_from_screen
+from .base_picking_dialog import BasePickingDialog
+from ..utils.constants import VDW_RADII
 
 
 class MoveSelectedAtomsDialog(BasePickingDialog):

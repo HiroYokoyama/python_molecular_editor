@@ -64,10 +64,7 @@ except ImportError:
     from moleditpy_linux.ui.user_template_dialog import UserTemplateDialog
 
 # Import VERSION from constants
-try:
-    from .constants import VERSION
-except ImportError:
-    from moleditpy_linux.utils.constants import VERSION
+from ..utils.constants import VERSION
 
 
 class DialogManager:

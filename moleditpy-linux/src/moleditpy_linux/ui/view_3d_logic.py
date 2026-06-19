@@ -36,14 +36,8 @@ from PyQt6.QtGui import QColor, QTransform
 from PyQt6.QtWidgets import QGraphicsView
 
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .constants import CPK_COLORS_PV, VDW_RADII, pt
-    from .template_preview_item import TemplatePreviewItem
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy_linux.utils.constants import CPK_COLORS_PV, VDW_RADII, pt
-    from moleditpy_linux.ui.template_preview_item import TemplatePreviewItem
+from ..utils.constants import CPK_COLORS_PV, VDW_RADII, pt
+from .template_preview_item import TemplatePreviewItem
 
 
 class View3DManager:

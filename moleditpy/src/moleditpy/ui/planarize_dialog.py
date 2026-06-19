@@ -24,10 +24,7 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
-try:
-    from .base_picking_dialog import BasePickingDialog
-except ImportError:
-    from moleditpy.ui.base_picking_dialog import BasePickingDialog
+from .base_picking_dialog import BasePickingDialog
 
 if TYPE_CHECKING:
     from .main_window import MainWindow

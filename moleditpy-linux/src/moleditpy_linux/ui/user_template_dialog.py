@@ -30,10 +30,7 @@ from PyQt6.QtWidgets import (
 
 from .template_preview_view import TemplatePreviewView
 
-try:
-    from ..utils.constants import CPK_COLORS, VERSION
-except ImportError:
-    from moleditpy_linux.utils.constants import CPK_COLORS, VERSION
+from ..utils.constants import CPK_COLORS, VERSION
 import json
 import logging
 import os

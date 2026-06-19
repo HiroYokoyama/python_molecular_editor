@@ -29,12 +29,8 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
-try:
-    from .geometry_base_dialog import GeometryBaseDialog
-    from ..core.mol_geometry import calc_distance, get_connected_group
-except ImportError:
-    from moleditpy.ui.geometry_base_dialog import GeometryBaseDialog
-    from moleditpy.core.mol_geometry import calc_distance, get_connected_group
+from .geometry_base_dialog import GeometryBaseDialog
+from ..core.mol_geometry import calc_distance, get_connected_group
 
 if TYPE_CHECKING:
     from .main_window import MainWindow

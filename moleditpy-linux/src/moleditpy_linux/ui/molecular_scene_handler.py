@@ -19,25 +19,12 @@ from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QApplication
 
-try:
-    from .atom_item import AtomItem
-    from .bond_item import BondItem
-except ImportError:
-    from moleditpy_linux.ui.atom_item import AtomItem
-    from moleditpy_linux.ui.bond_item import BondItem
+from .atom_item import AtomItem
+from .bond_item import BondItem
 
-try:
-    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-except ImportError:
-    from moleditpy_linux.utils.sip_isdeleted_safe import sip_isdeleted_safe
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
-try:
-    from ..utils.constants import DEFAULT_BOND_LENGTH, SUM_TOLERANCE
-except ImportError:
-    from moleditpy_linux.utils.constants import (
-        DEFAULT_BOND_LENGTH,
-        SUM_TOLERANCE,
-    )
+from ..utils.constants import DEFAULT_BOND_LENGTH, SUM_TOLERANCE
 
 
 class TemplateMixin:
@@ -45,40 +32,6 @@ class TemplateMixin:
     Mixin class that handles all template and fragment insertion logic for MoleculeScene.
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
-
-    @property
-    def atom_items(self) -> Any:
-        if not hasattr(self, "_atom_items"):
-            data = getattr(self, "data", None)
-            atoms_dict = getattr(data, "atoms", None) if data else None
-            try:
-                from .molecule_scene import SceneItemDict
-
-                self._atom_items = SceneItemDict(self, atoms_dict)
-            except ImportError:
-                self._atom_items = {}
-        return self._atom_items
-
-    @atom_items.setter
-    def atom_items(self, val: Any) -> None:
-        self._atom_items = val
-
-    @property
-    def bond_items(self) -> Any:
-        if not hasattr(self, "_bond_items"):
-            data = getattr(self, "data", None)
-            bonds_dict = getattr(data, "bonds", None) if data else None
-            try:
-                from .molecule_scene import SceneItemDict
-
-                self._bond_items = SceneItemDict(self, bonds_dict)
-            except ImportError:
-                self._bond_items = {}
-        return self._bond_items
-
-    @bond_items.setter
-    def bond_items(self, val: Any) -> None:
-        self._bond_items = val
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.template_context = {}
@@ -1413,7 +1366,6 @@ class SceneQueryMixin:
         atom_id = self.data.add_atom(symbol, pos, charge=charge, radical=radical)
         atom_item = AtomItem(atom_id, symbol, pos, charge=charge, radical=radical)
         self.atom_items[atom_id] = atom_item
-        self.data.atoms[atom_id]["item"] = atom_item
         self.addItem(atom_item)
         return atom_id
 
@@ -1443,7 +1395,6 @@ class SceneQueryMixin:
             if status == "created":
                 bond_item = BondItem(start_atom, end_atom, order_to_use, stereo_to_use)
                 self.bond_items[key] = bond_item
-                self.data.bonds[key]["item"] = bond_item
                 start_atom.bonds.append(bond_item)
                 end_atom.bonds.append(bond_item)
                 self.addItem(bond_item)
@@ -1485,12 +1436,9 @@ class SceneQueryMixin:
                 if a1 and a2:
                     self.bond_items.pop((a1.atom_id, a2.atom_id), None)
                     self.bond_items.pop((a2.atom_id, a1.atom_id), None)
-                    self.data.bonds.get((a1.atom_id, a2.atom_id), {}).pop("item", None)
-                    self.data.bonds.get((a2.atom_id, a1.atom_id), {}).pop("item", None)
             for atom in list(atoms_to_delete):
                 if hasattr(atom, "atom_id"):
                     self.atom_items.pop(atom.atom_id, None)
-                    self.data.atoms.get(atom.atom_id, {}).pop("item", None)
 
             # Determine surviving atoms whose bond lists need pruning
             atoms_to_update = set()

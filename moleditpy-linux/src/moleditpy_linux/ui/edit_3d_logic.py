@@ -24,31 +24,13 @@ from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import QGraphicsTextItem
 
 
-try:
-    from .mol_geometry import (
-        calc_angle_deg,
-        calc_distance,
-        calculate_dihedral as _calculate_dihedral,
-    )
-except ImportError:
-    from moleditpy_linux.core.mol_geometry import (
-        calc_angle_deg,
-        calc_distance,
-        calculate_dihedral as _calculate_dihedral,
-    )
-
-# RDKit imports (explicit to satisfy flake8 and used features)
-try:
-    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-except ImportError:
-    from moleditpy_linux.utils.sip_isdeleted_safe import sip_isdeleted_safe
-
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .constants import VDW_RADII
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy_linux.utils.constants import VDW_RADII
+from ..core.mol_geometry import (
+    calc_angle_deg,
+    calc_distance,
+    calculate_dihedral as _calculate_dihedral,
+)
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
+from ..utils.constants import VDW_RADII
 
 
 # --- Classes ---

@@ -26,10 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-try:
-    from ..utils.constants import VERSION
-except ImportError:
-    from moleditpy_linux.utils.constants import VERSION
+from ..utils.constants import VERSION
 
 
 class AboutDialog(QDialog):

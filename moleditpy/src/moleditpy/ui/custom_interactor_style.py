@@ -21,10 +21,7 @@ from PyQt6.QtWidgets import QApplication
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera  # pylint: disable=no-name-in-module
 
 
-try:
-    from .atom_picking import pick_atom_index_from_screen
-except ImportError:
-    from moleditpy.ui.atom_picking import pick_atom_index_from_screen
+from .atom_picking import pick_atom_index_from_screen
 
 from rdkit import Geometry
 
