@@ -26,22 +26,13 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QGraphicsItem, QWidget
 
-try:
-    from ..utils.constants import (
-        ATOM_RADIUS,
-        CPK_COLORS,
-        DESIRED_ATOM_PIXEL_RADIUS,
-        FONT_FAMILY,
-        FONT_WEIGHT_BOLD,
-    )
-except ImportError:
-    from moleditpy.utils.constants import (
-        ATOM_RADIUS,
-        CPK_COLORS,
-        DESIRED_ATOM_PIXEL_RADIUS,
-        FONT_FAMILY,
-        FONT_WEIGHT_BOLD,
-    )
+from ..utils.constants import (
+    ATOM_RADIUS,
+    CPK_COLORS,
+    DESIRED_ATOM_PIXEL_RADIUS,
+    FONT_FAMILY,
+    FONT_WEIGHT_BOLD,
+)
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 

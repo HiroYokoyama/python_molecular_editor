@@ -17,11 +17,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     from .custom_qt_interactor import CustomQtInteractor
-
-    try:
-        from .main_window import MainWindow
-    except ImportError:
-        from moleditpy.ui.main_window import MainWindow
+    from .main_window import MainWindow
 
 import numpy as np
 import vtk

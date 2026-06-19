@@ -23,38 +23,20 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QMainWindow, QMessageBox
 
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .app_state import StateManager
-    from .compute_logic import ComputeManager
-    from .dialog_logic import DialogManager
-    from .edit_3d_logic import Edit3DManager
-    from .edit_actions_logic import EditActionsManager
-    from .io_logic import IOManager
-    from .export_logic import ExportManager
-    from .main_window_init import MainInitManager
-    from .string_importers import StringImporterManager
-    from .ui_manager import UIManager
-    from .view_3d_logic import View3DManager
-    from .molecule_scene import MoleculeScene
-    from ..core.molecular_data import MolecularData
-    from .custom_qt_interactor import CustomQtInteractor
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.app_state import StateManager
-    from moleditpy.ui.compute_logic import ComputeManager
-    from moleditpy.ui.dialog_logic import DialogManager
-    from moleditpy.ui.edit_3d_logic import Edit3DManager
-    from moleditpy.ui.edit_actions_logic import EditActionsManager
-    from moleditpy.ui.io_logic import IOManager
-    from moleditpy.ui.export_logic import ExportManager
-    from moleditpy.ui.main_window_init import MainInitManager
-    from moleditpy.ui.string_importers import StringImporterManager
-    from moleditpy.ui.ui_manager import UIManager
-    from moleditpy.ui.view_3d_logic import View3DManager
-    from moleditpy.ui.molecule_scene import MoleculeScene
-    from moleditpy.core.molecular_data import MolecularData
-    from moleditpy.ui.custom_qt_interactor import CustomQtInteractor
+from .app_state import StateManager
+from .compute_logic import ComputeManager
+from .dialog_logic import DialogManager
+from .edit_3d_logic import Edit3DManager
+from .edit_actions_logic import EditActionsManager
+from .io_logic import IOManager
+from .export_logic import ExportManager
+from .main_window_init import MainInitManager
+from .string_importers import StringImporterManager
+from .ui_manager import UIManager
+from .view_3d_logic import View3DManager
+from .molecule_scene import MoleculeScene
+from ..core.molecular_data import MolecularData
+from .custom_qt_interactor import CustomQtInteractor
 
 
 class MainWindow(QMainWindow):

@@ -17,14 +17,7 @@ import logging
 import os
 from typing import Any
 
-try:
-    from .utils.constants import VERSION
-except ImportError:
-    # Add the parent directory (src) to sys.path so 'moleditpy.*' imports work
-    src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    if src_dir not in sys.path:
-        sys.path.insert(0, src_dir)
-    from moleditpy.utils.constants import VERSION
+from .utils.constants import VERSION
 
 # VERSION is resolved above (before Qt) so --version works without launching the app.
 

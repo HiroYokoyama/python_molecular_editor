@@ -29,26 +29,15 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene, QWidget
 
-try:
-    from ..utils.constants import (
-        DESIRED_BOND_PIXEL_WIDTH,
-        EZ_LABEL_BOX_SIZE,
-        EZ_LABEL_MARGIN,
-        EZ_LABEL_TEXT_OUTLINE,
-        FONT_FAMILY,
-        FONT_WEIGHT_BOLD,
-        HOVER_PEN_WIDTH,
-    )
-except ImportError:
-    from moleditpy.utils.constants import (
-        DESIRED_BOND_PIXEL_WIDTH,
-        EZ_LABEL_BOX_SIZE,
-        EZ_LABEL_MARGIN,
-        EZ_LABEL_TEXT_OUTLINE,
-        FONT_FAMILY,
-        FONT_WEIGHT_BOLD,
-        HOVER_PEN_WIDTH,
-    )
+from ..utils.constants import (
+    DESIRED_BOND_PIXEL_WIDTH,
+    EZ_LABEL_BOX_SIZE,
+    EZ_LABEL_MARGIN,
+    EZ_LABEL_TEXT_OUTLINE,
+    FONT_FAMILY,
+    FONT_WEIGHT_BOLD,
+    HOVER_PEN_WIDTH,
+)
 
 
 class BondItem(QGraphicsItem):

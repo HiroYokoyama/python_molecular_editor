@@ -34,14 +34,7 @@ from PyQt6.QtWidgets import (
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry, rdMolTransforms, Descriptors
 
-try:
-    from ..utils.constants import COVALENT_RADII, VERSION
-except ImportError:
-    try:
-        from moleditpy.utils.constants import COVALENT_RADII, VERSION
-    except ImportError:
-        COVALENT_RADII = {}
-        VERSION = "unknown"
+from ..utils.constants import COVALENT_RADII, VERSION
 
 
 class IOManager:

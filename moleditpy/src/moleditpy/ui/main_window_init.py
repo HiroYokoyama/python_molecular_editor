@@ -55,16 +55,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-try:
-    from .. import OBABEL_AVAILABLE
-    from ..utils.default_settings import DEFAULT_SETTINGS
-    from ..plugins.plugin_manager import PluginManager
-    from ..utils.system_utils import detect_system_dark_mode
-except ImportError:
-    from moleditpy import OBABEL_AVAILABLE
-    from moleditpy.utils.default_settings import DEFAULT_SETTINGS
-    from moleditpy.plugins.plugin_manager import PluginManager
-    from moleditpy.utils.system_utils import detect_system_dark_mode
+from .. import OBABEL_AVAILABLE
+from ..utils.default_settings import DEFAULT_SETTINGS
+from ..plugins.plugin_manager import PluginManager
+from ..utils.system_utils import detect_system_dark_mode
 
 try:
     import winreg
@@ -72,26 +66,14 @@ except ImportError:
     winreg = None  # type: ignore[assignment]
 
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .color_settings_dialog import ColorSettingsDialog
-    from ..utils.constants import DEFAULT_CPK_COLORS, NUM_DASHES, VERSION
-    from .custom_qt_interactor import CustomQtInteractor
-    from ..core.molecular_data import MolecularData
-    from .molecule_scene import MoleculeScene
-    from .plugin_menu_manager import PluginMenuManager
-    from .settings_dialog import SettingsDialog
-    from .zoomable_view import ZoomableView
-except (AttributeError, RuntimeError, TypeError):
-    # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.color_settings_dialog import ColorSettingsDialog
-    from moleditpy.utils.constants import NUM_DASHES, VERSION
-    from moleditpy.ui.custom_qt_interactor import CustomQtInteractor
-    from moleditpy.core.molecular_data import MolecularData
-    from moleditpy.ui.molecule_scene import MoleculeScene
-    from moleditpy.ui.plugin_menu_manager import PluginMenuManager
-    from moleditpy.ui.settings_dialog import SettingsDialog
-    from moleditpy.ui.zoomable_view import ZoomableView
+from .color_settings_dialog import ColorSettingsDialog
+from ..utils.constants import DEFAULT_CPK_COLORS, NUM_DASHES, VERSION
+from .custom_qt_interactor import CustomQtInteractor
+from ..core.molecular_data import MolecularData
+from .molecule_scene import MoleculeScene
+from .plugin_menu_manager import PluginMenuManager
+from .settings_dialog import SettingsDialog
+from .zoomable_view import ZoomableView
 
 
 class MainInitManager:

@@ -31,12 +31,7 @@ from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .custom_interactor_style import CustomInteractorStyle
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
+from .custom_interactor_style import CustomInteractorStyle
 
 
 # --- Classes ---

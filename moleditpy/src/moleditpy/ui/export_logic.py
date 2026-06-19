@@ -26,14 +26,8 @@ from PyQt6.QtSvg import QSvgGenerator
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .atom_item import AtomItem
-    from .bond_item import BondItem
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.atom_item import AtomItem
-    from moleditpy.ui.bond_item import BondItem
+from .atom_item import AtomItem
+from .bond_item import BondItem
 
 
 # --- Class Definition ---

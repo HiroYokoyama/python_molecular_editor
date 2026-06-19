@@ -25,10 +25,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry
 from rdkit.DistanceGeometry import DoTriangleSmoothing
 
-try:
-    from .. import OBABEL_AVAILABLE
-except ImportError:
-    from moleditpy import OBABEL_AVAILABLE
+from .. import OBABEL_AVAILABLE
 
 # Only import pybel on demand
 if OBABEL_AVAILABLE:

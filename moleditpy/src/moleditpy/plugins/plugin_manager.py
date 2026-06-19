@@ -25,11 +25,7 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QMessageBox
 
-try:
-    from .plugin_interface import PluginContext
-except ImportError:
-    # Fallback if running as script
-    from moleditpy.plugins.plugin_interface import PluginContext
+from .plugin_interface import PluginContext
 
 
 class PluginManager:

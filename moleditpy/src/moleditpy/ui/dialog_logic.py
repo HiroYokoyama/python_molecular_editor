@@ -22,46 +22,23 @@ from PyQt6.QtWidgets import QInputDialog, QMessageBox, QDialog
 from PyQt6.QtCore import Qt
 
 
-try:
-    # package relative imports (preferred when running as python -m moleditpy)
-    from .about_dialog import AboutDialog
-    from .align_plane_dialog import AlignPlaneDialog
-    from .alignment_dialog import AlignmentDialog
-    from .analysis_window import AnalysisWindow
-    from .angle_dialog import AngleDialog
-    from .bond_length_dialog import BondLengthDialog
-    from .constrained_optimization_dialog import ConstrainedOptimizationDialog
-    from .dihedral_dialog import DihedralDialog
-    from .mirror_dialog import MirrorDialog
-    from .move_group_dialog import MoveGroupDialog
-    from .move_selected_atoms_dialog import MoveSelectedAtomsDialog
-    from .periodic_table_dialog import PeriodicTableDialog
-    from .planarize_dialog import PlanarizeDialog
-    from .settings_dialog import SettingsDialog
-    from .color_settings_dialog import ColorSettingsDialog
-    from .translation_dialog import TranslationDialog
-    from .user_template_dialog import UserTemplateDialog
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.about_dialog import AboutDialog
-    from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
-    from moleditpy.ui.alignment_dialog import AlignmentDialog
-    from moleditpy.ui.analysis_window import AnalysisWindow
-    from moleditpy.ui.angle_dialog import AngleDialog
-    from moleditpy.ui.bond_length_dialog import BondLengthDialog
-    from moleditpy.ui.constrained_optimization_dialog import (
-        ConstrainedOptimizationDialog,
-    )
-    from moleditpy.ui.dihedral_dialog import DihedralDialog
-    from moleditpy.ui.mirror_dialog import MirrorDialog
-    from moleditpy.ui.move_group_dialog import MoveGroupDialog
-    from moleditpy.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
-    from moleditpy.ui.periodic_table_dialog import PeriodicTableDialog
-    from moleditpy.ui.planarize_dialog import PlanarizeDialog
-    from moleditpy.ui.settings_dialog import SettingsDialog
-    from moleditpy.ui.color_settings_dialog import ColorSettingsDialog
-    from moleditpy.ui.translation_dialog import TranslationDialog
-    from moleditpy.ui.user_template_dialog import UserTemplateDialog
+from .about_dialog import AboutDialog
+from .align_plane_dialog import AlignPlaneDialog
+from .alignment_dialog import AlignmentDialog
+from .analysis_window import AnalysisWindow
+from .angle_dialog import AngleDialog
+from .bond_length_dialog import BondLengthDialog
+from .constrained_optimization_dialog import ConstrainedOptimizationDialog
+from .dihedral_dialog import DihedralDialog
+from .mirror_dialog import MirrorDialog
+from .move_group_dialog import MoveGroupDialog
+from .move_selected_atoms_dialog import MoveSelectedAtomsDialog
+from .periodic_table_dialog import PeriodicTableDialog
+from .planarize_dialog import PlanarizeDialog
+from .settings_dialog import SettingsDialog
+from .color_settings_dialog import ColorSettingsDialog
+from .translation_dialog import TranslationDialog
+from .user_template_dialog import UserTemplateDialog
 
 # Import VERSION from constants
 from ..utils.constants import VERSION
