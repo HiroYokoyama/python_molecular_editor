@@ -1719,7 +1719,7 @@ class View3DManager:
                             except (AttributeError, RuntimeError, TypeError) as e:
                                 logging.debug(f"Failed to set bold font: {e}")
                         else:
-                            logging.error(
+                            logging.debug(
                                 "DIAGNOSTIC WARNING: Missing attribute 'GetTextProperty' on actor"
                             )
                     except (AttributeError, RuntimeError, TypeError) as e:
@@ -1973,7 +1973,7 @@ class View3DManager:
             if hasattr(self.plotter, "update"):
                 self.plotter.update()
             else:
-                logging.error(
+                logging.debug(
                     "DIAGNOSTIC WARNING: Missing attribute 'update' on object"
                 )
         except (AttributeError, RuntimeError, TypeError) as e:

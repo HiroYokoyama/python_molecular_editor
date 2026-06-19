@@ -11,9 +11,7 @@ def test_bond_stereo_toggle_keys(window, qtbot):
     # Create two atoms and a double bond
     a1_id = scene.create_atom("C", QPointF(0, 0))
     a2_id = scene.create_atom("C", QPointF(50, 0))
-    scene.create_bond(
-        scene.atom_items[a1_id], scene.atom_items[a2_id], bond_order=2
-    )
+    scene.create_bond(scene.atom_items[a1_id], scene.atom_items[a2_id], bond_order=2)
 
     bond_key = (min(a1_id, a2_id), max(a1_id, a2_id))
     bond_item = scene.bond_items[bond_key]

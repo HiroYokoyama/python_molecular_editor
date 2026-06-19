@@ -44,8 +44,7 @@ class UIManager(QObject):
     def __init__(self, host: Any = None) -> None:
         super().__init__()
         self.is_2d_editable = False
-        if host is not None:
-            self.host = host
+        self.host = host
 
     def update_status_bar(self, message: str) -> None:
         """Update status bar with worker messages."""
@@ -269,13 +268,13 @@ class UIManager(QObject):
                     if hasattr(thr, "quit"):
                         thr.quit()
                     else:
-                        logging.error(
+                        logging.debug(
                             "DIAGNOSTIC WARNING: Missing attribute 'quit' on thr"
                         )
                     if hasattr(thr, "wait"):
                         thr.wait(200)
                     else:
-                        logging.error(
+                        logging.debug(
                             "DIAGNOSTIC WARNING: Missing attribute 'wait' on thr"
                         )
                 except (RuntimeError, TypeError):
@@ -628,7 +627,7 @@ class UIManager(QObject):
                         except (AttributeError, RuntimeError, TypeError):
                             return
                 else:
-                    logging.error(
+                    logging.debug(
                         "DIAGNOSTIC WARNING: Missing attribute 'handle' on object"
                     )
 

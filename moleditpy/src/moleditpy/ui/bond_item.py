@@ -245,7 +245,7 @@ class BondItem(QGraphicsItem):
                 bond_offset = scene.get_setting(key, 3.5)
                 wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
             else:
-                logging.error(
+                logging.debug(
                     f"DIAGNOSTIC WARNING: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )
 
@@ -265,7 +265,7 @@ class BondItem(QGraphicsItem):
                     font_size = scene.get_setting("atom_font_size_2d", 20)
                     font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
                 else:
-                    logging.error(
+                    logging.debug(
                         f"DIAGNOSTIC WARNING: Missing attribute 'get_setting' on scene of type {type(scene)}"
                     )
 
@@ -379,7 +379,7 @@ class BondItem(QGraphicsItem):
                     painter.setPen(pen)
                     painter.setBrush(QBrush(bond_color))
                 else:
-                    logging.error(
+                    logging.debug(
                         f"DIAGNOSTIC WARNING: Missing attribute 'get_setting' on scene of type {type(scene)}"
                     )
         except (AttributeError, RuntimeError, TypeError, ValueError):
@@ -470,7 +470,7 @@ class BondItem(QGraphicsItem):
                         )
                         bond_offset = scene.get_setting(key, 3.5)
                     else:
-                        logging.error(
+                        logging.debug(
                             f"DIAGNOSTIC WARNING: Missing attribute 'get_setting' on scene of type {type(scene)}"
                         )
 

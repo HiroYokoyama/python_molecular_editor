@@ -5,6 +5,7 @@ from rdkit.Chem import AllChem
 from moleditpy.ui.app_state import StateManager
 from PyQt6.QtCore import QPointF
 
+
 def _make_state_manager(host):
     """Create a StateManager with host properly set."""
     sm = StateManager(host)

@@ -382,7 +382,7 @@ class MoveGroupDialog(BasePickingDialog):
                                     )
                                 return True
                             else:
-                                logging.error(
+                                logging.debug(
                                     "DIAGNOSTIC WARNING: Missing attribute 'clicked_atom_for_toggle' on self"
                                 )
 

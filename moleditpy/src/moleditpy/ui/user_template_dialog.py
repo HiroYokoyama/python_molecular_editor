@@ -115,7 +115,7 @@ class UserTemplateDialog(QDialog):
         if hasattr(self, "delete_button"):
             self.delete_button.setEnabled(False)
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'delete_button' on self"
             )
 
@@ -148,7 +148,7 @@ class UserTemplateDialog(QDialog):
                 if hasattr(scene, "clear_template_preview"):
                     scene.clear_template_preview()
                 else:
-                    logging.error(
+                    logging.debug(
                         "DIAGNOSTIC WARNING: Missing attribute 'clear_template_preview' on scene"
                     )
 
@@ -186,7 +186,7 @@ class UserTemplateDialog(QDialog):
                         elif hasattr(child, "refit_view"):
                             child.refit_view()
                         else:
-                            logging.error(
+                            logging.debug(
                                 "DIAGNOSTIC WARNING: Missing attribute 'refit_view' on child"
                             )
         except (AttributeError, RuntimeError, ValueError) as e:

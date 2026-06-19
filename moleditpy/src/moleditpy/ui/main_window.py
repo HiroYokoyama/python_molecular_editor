@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 # PyQt6 Modules
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QMainWindow
+from PyQt6.QtWidgets import QMainWindow, QMessageBox
 
 
 try:
@@ -38,7 +38,7 @@ try:
     from .molecule_scene import MoleculeScene
     from ..core.molecular_data import MolecularData
     from .custom_qt_interactor import CustomQtInteractor
-except (AttributeError, RuntimeError, TypeError, ImportError):
+except ImportError:
     # Fallback to absolute imports for script-style execution
     from moleditpy.ui.app_state import StateManager
     from moleditpy.ui.compute_logic import ComputeManager
@@ -244,6 +244,10 @@ class MainWindow(QMainWindow):
         """Show a message in the main window's status bar."""
         if self.statusBar():
             self.statusBar().showMessage(message, timeout)
+
+    def warning_message_box(self, title: str, message: str) -> None:
+        """Show a modal warning dialog."""
+        QMessageBox.warning(self, title, message)
 
     def set_last_successful_optimization_method(self, method: Optional[str]) -> None:
         """Set the last successful 3D optimization method."""

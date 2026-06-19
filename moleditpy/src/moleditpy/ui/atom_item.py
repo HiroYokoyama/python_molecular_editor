@@ -42,16 +42,7 @@ except ImportError:
         FONT_FAMILY,
         FONT_WEIGHT_BOLD,
     )
-from PyQt6 import sip
-
-
-def sip_isdeleted_safe(obj: Any) -> bool:
-    try:
-        return sip.isdeleted(obj)
-    except (AttributeError, TypeError, ImportError, RuntimeError):
-        # If the object does not support sip.isdeleted or is already in a state
-        # where the check fails, we assume it's unsafe or "deleted" for our purposes.
-        return True
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 
 class AtomItem(QGraphicsItem):
@@ -93,7 +84,7 @@ class AtomItem(QGraphicsItem):
                 font_size = scene.get_setting("atom_font_size_2d", 20)
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             else:
-                logging.error(
+                logging.debug(
                     f"DIAGNOSTIC WARNING: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )
 
@@ -120,7 +111,7 @@ class AtomItem(QGraphicsItem):
                 font_size = scene.get_setting("atom_font_size_2d", 20)
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             else:
-                logging.error(
+                logging.debug(
                     f"DIAGNOSTIC WARNING: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )
 

@@ -23,7 +23,7 @@ import pyvista as pv
 from PyQt6.QtCore import QRectF, QSize, Qt
 from PyQt6.QtGui import QBrush, QImage, QPainter
 from PyQt6.QtSvg import QSvgGenerator
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 
 try:
@@ -524,7 +524,7 @@ class ExportManager:
                                 vtk_color = actor.prop.GetColor()
                                 color = [int(c * 255) for c in vtk_color]
                             else:
-                                logging.error(
+                                logging.debug(
                                     "DIAGNOSTIC WARNING: Missing color attribute on actor/property"
                                 )
                         except (AttributeError, RuntimeError, TypeError):
@@ -725,8 +725,6 @@ class ExportManager:
             return
 
         is_transparent = reply == QMessageBox.StandardButton.Yes
-
-        QApplication.processEvents()
 
         items_to_restore = {}
         original_background = None

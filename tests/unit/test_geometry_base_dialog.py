@@ -231,7 +231,7 @@ class TestLoggingErrorFallback:
         # Delete update_chiral_labels if it exists (MagicMock dynamically generates it)
         if hasattr(dlg.main_window.view_3d_manager, "update_chiral_labels"):
             del dlg.main_window.view_3d_manager.update_chiral_labels
-        with patch("moleditpy.ui.geometry_base_dialog.logging.error") as mock_log:
+        with patch("moleditpy.ui.geometry_base_dialog.logging.debug") as mock_log:
             dlg.on_slider_released()
             mock_log.assert_called_once_with(
                 "DIAGNOSTIC WARNING: Missing attribute 'update_chiral_labels' on object"
@@ -246,7 +246,7 @@ class TestLoggingErrorFallback:
         inp = _input()
         if hasattr(dlg.main_window.view_3d_manager, "update_chiral_labels"):
             del dlg.main_window.view_3d_manager.update_chiral_labels
-        with patch("moleditpy.ui.geometry_base_dialog.logging.error") as mock_log:
+        with patch("moleditpy.ui.geometry_base_dialog.logging.debug") as mock_log:
             dlg.on_slider_value_changed_click(150, inp, scale=100.0)
             mock_log.assert_called_once_with(
                 "DIAGNOSTIC WARNING: Missing attribute 'update_chiral_labels' on object"

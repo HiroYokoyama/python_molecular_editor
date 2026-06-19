@@ -97,9 +97,7 @@ def test_benzene_fusion_rotation(mock_parser_host):
     scene = setup_scene_with_view(mock_parser_host)
     id1 = scene.create_atom("C", QPointF(-10, 0))
     id2 = scene.create_atom("C", QPointF(10, 0))
-    scene.create_bond(
-        scene.atom_items[id1], scene.atom_items[id2], bond_order=2
-    )
+    scene.create_bond(scene.atom_items[id1], scene.atom_items[id2], bond_order=2)
     points = [QPointF(10, 0), QPointF(-10, 0)] + [
         QPointF(
             20 * math.cos(math.radians(i * 60)), 20 * math.sin(math.radians(i * 60))
@@ -113,9 +111,7 @@ def test_benzene_fusion_rotation(mock_parser_host):
         existing_items=[scene.atom_items[id2], scene.atom_items[id1]],
     )
     assert len(scene.data.atoms) == 6
-    eb = scene.find_bond_between(
-        scene.atom_items[id1], scene.atom_items[id2]
-    )
+    eb = scene.find_bond_between(scene.atom_items[id1], scene.atom_items[id2])
     assert eb.order == 2
 
 
@@ -149,9 +145,7 @@ def test_double_click_select_component(mock_dbl, mock_parser_host):
     for aid, it in scene.atom_items.items():
         it.__class__ = AtomItem
         it.setSelected = MagicMock()
-    with patch.object(
-        MoleculeScene, "itemAt", return_value=scene.atom_items[id1]
-    ):
+    with patch.object(MoleculeScene, "itemAt", return_value=scene.atom_items[id1]):
         _orig_isinstance = isinstance
 
         def mock_isinstance(obj, types):

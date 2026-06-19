@@ -161,7 +161,7 @@ class SettingsDialog(QDialog):
         if hasattr(self.parent_window.init_manager, "settings_dirty"):
             self.parent_window.init_manager.settings_dirty = True
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'settings_dirty' on object"
             )
 
@@ -169,21 +169,21 @@ class SettingsDialog(QDialog):
         if hasattr(self.parent_window, "init_manager"):
             self.parent_window.init_manager.save_settings()
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'init_manager' on self.parent_window"
             )
 
         if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
             self.parent_window.view_3d_manager.apply_3d_settings()
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'apply_3d_settings' on object"
             )
 
         if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
             self.parent_window.init_manager.update_cpk_colors_from_settings()
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'update_cpk_colors_from_settings' on object"
             )
 
@@ -205,7 +205,7 @@ class SettingsDialog(QDialog):
                 elif hasattr(item, "update"):
                     item.update()
                 else:
-                    logging.error(
+                    logging.debug(
                         "DIAGNOSTIC WARNING: Missing attribute 'update' on item"
                     )
 

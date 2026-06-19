@@ -154,7 +154,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
             self.main_window.view_3d_manager.update_chiral_labels()
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'update_chiral_labels' on object"
             )
 
@@ -164,7 +164,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
             self.main_window.edit_actions_manager.push_undo_state()
             self._molecule_modified = False
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'state_manager' on self.main_window"
             )
 

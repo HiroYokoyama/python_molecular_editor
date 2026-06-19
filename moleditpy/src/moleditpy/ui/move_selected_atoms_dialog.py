@@ -410,7 +410,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                                 logging.debug(f"Failed to reset cursor to arrow: {e}")
                             return True
                         else:
-                            logging.error(
+                            logging.debug(
                                 "DIAGNOSTIC WARNING: Missing attribute 'clicked_atom_for_toggle' on self"
                             )
 

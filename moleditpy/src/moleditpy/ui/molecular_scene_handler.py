@@ -59,7 +59,7 @@ class TemplateMixin:
         if hasattr(self, "template_preview"):
             self.template_preview.hide()
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'template_preview' on self"
             )
 
@@ -1282,8 +1282,6 @@ class KeyboardMixin:
                 # Force redraw
                 if self.views():
                     self.views()[0].viewport().update()
-                    QApplication.processEvents()
-
                     event.accept()
                     return
 
@@ -1329,7 +1327,7 @@ class KeyboardMixin:
                     event.accept()
                     return
                 else:
-                    logging.error(
+                    logging.debug(
                         "DIAGNOSTIC WARNING: Missing attribute 'set_mode_and_update_toolbar' on object"
                     )
 
@@ -1470,7 +1468,7 @@ class SceneQueryMixin:
                 if hasattr(atom, "update_style"):
                     atom.update_style()
                 else:
-                    logging.error(
+                    logging.debug(
                         "DIAGNOSTIC WARNING: Missing attribute 'update_style' on atom"
                     )
 
@@ -1540,7 +1538,7 @@ class SceneQueryMixin:
                 if hasattr(atom, "update_style"):
                     atom.update_style()
                 else:
-                    logging.error(
+                    logging.debug(
                         "DIAGNOSTIC WARNING: Missing attribute 'update_style' on atom"
                     )
 
@@ -1604,7 +1602,7 @@ class SceneQueryMixin:
                             f"Warning: Bond {id1}-{id2} not found in model.", 3000
                         )
                     else:
-                        logging.error(
+                        logging.debug(
                             "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
                         )
                     return
@@ -1621,7 +1619,7 @@ class SceneQueryMixin:
             if hasattr(self.window, "statusBar"):
                 self.window.statusBar().showMessage(f"Error: {e}", 5000)
             else:
-                logging.error(
+                logging.debug(
                     "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
                 )
             self.update_all_items()

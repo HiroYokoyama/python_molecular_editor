@@ -266,7 +266,7 @@ class MainInitManager:
         if self.toolbar is not None and self.toolbar_bottom is not None:
             self._setup_action_groups(self.toolbar, self.toolbar_bottom)
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Toolbars not initialized before setup_action_groups"
             )
 
@@ -430,7 +430,7 @@ class MainInitManager:
                             c.blueF(),
                         ]
                 else:
-                    logging.error(
+                    logging.debug(
                         "DIAGNOSTIC WARNING: Missing attribute 'CPK_COLORS_PV' on constants module"
                     )
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
@@ -513,7 +513,7 @@ class MainInitManager:
                     # Use case-insensitive comparison for robustness
                     action.setChecked(key.upper() == current_method)
             else:
-                logging.error(
+                logging.debug(
                     "DIAGNOSTIC WARNING: Missing attribute 'opt3d_actions' on self"
                 )
 
@@ -554,7 +554,7 @@ class MainInitManager:
                         if hasattr(item, "update_style"):
                             item.update_style()
                         else:
-                            logging.error(
+                            logging.debug(
                                 "DIAGNOSTIC WARNING: Missing attribute 'update_style' on item"
                             )
                 self.scene.update()
@@ -1050,7 +1050,7 @@ class MainInitManager:
             self.plugin_toolbar.clear()
             self.plugin_toolbar.hide()
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'plugin_toolbar' on self"
             )
 

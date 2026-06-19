@@ -40,6 +40,15 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
+from .atom_item import AtomItem
+from .bond_item import BondItem
+from ..utils.constants import CLIPBOARD_MIME_TYPE
+from ..core.molecular_data import MolecularData
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
+
+if TYPE_CHECKING:
+    from .main_window import MainWindow
+
 
 class Rotate2DDialog(QDialog):
     def __init__(
@@ -84,17 +93,6 @@ class Rotate2DDialog(QDialog):
 
     def get_angle(self) -> float:
         return self.angle_spin.value()
-
-
-from .atom_item import AtomItem
-from .bond_item import BondItem
-from ..utils.constants import CLIPBOARD_MIME_TYPE
-from ..core.molecular_data import MolecularData
-from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-
-
-if TYPE_CHECKING:
-    from .main_window import MainWindow
 
 
 # --- Class Definition ---
@@ -499,12 +497,6 @@ class EditActionsManager:
                     # Continue with next batch on unexpected errors
                     continue
 
-                try:
-                    QApplication.processEvents()
-                except RuntimeError:
-                    # Suppress non-critical error
-                    # Safe defensive fallback catching RuntimeError
-                    pass
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
             try:
@@ -897,9 +889,6 @@ class EditActionsManager:
         self.host.view_3d_manager.update_atom_id_menu_text()
         self.host.view_3d_manager.update_atom_id_menu_state()
 
-        # Force UI event processing
-        QApplication.processEvents()
-
         # Call plugin document reset handlers
         if self.host.plugin_manager:
             self.host.plugin_manager.invoke_document_reset_handlers()
@@ -1064,7 +1053,7 @@ class EditActionsManager:
                         # Suppress transient errors during item update.
                         it.update()
                 else:
-                    logging.error("REPORT ERROR: Missing attribute 'update' on it")
+                    logging.warning("REPORT ERROR: Missing attribute 'update' on it")
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Ignore any unexpected errors when touching the item
                 continue

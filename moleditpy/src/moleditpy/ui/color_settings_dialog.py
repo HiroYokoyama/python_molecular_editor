@@ -285,7 +285,7 @@ class ColorSettingsDialog(QDialog):
             )
             self.bs_button.setToolTip(hexv)
         else:
-            logging.error("DIAGNOSTIC WARNING: Missing attribute 'bs_button' on self")
+            logging.debug("DIAGNOSTIC WARNING: Missing attribute 'bs_button' on self")
 
     def apply_changes(self) -> None:
         if not self.parent_window or not hasattr(self.parent_window, "init_manager"):
@@ -311,14 +311,14 @@ class ColorSettingsDialog(QDialog):
             if hasattr(self.parent_window, "init_manager"):
                 self.parent_window.init_manager.save_settings()
             else:
-                logging.error(
+                logging.debug(
                     "DIAGNOSTIC WARNING: Missing attribute 'init_manager' on self.parent_window"
                 )
 
         if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
             self.parent_window.init_manager.update_cpk_colors_from_settings()
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'update_cpk_colors_from_settings' on object"
             )
 
@@ -328,7 +328,7 @@ class ColorSettingsDialog(QDialog):
             if hasattr(vm, "apply_3d_settings"):
                 vm.apply_3d_settings(redraw=False)
             else:
-                logging.error(
+                logging.debug(
                     "DIAGNOSTIC WARNING: Missing attribute 'apply_3d_settings' on vm"
                 )
 
@@ -336,7 +336,7 @@ class ColorSettingsDialog(QDialog):
             if mol and hasattr(vm, "draw_molecule_3d"):
                 vm.draw_molecule_3d(mol)
         else:
-            logging.error(
+            logging.debug(
                 "DIAGNOSTIC WARNING: Missing attribute 'view_3d_manager' on self.parent_window"
             )
 
@@ -357,7 +357,7 @@ class ColorSettingsDialog(QDialog):
                         # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                         pass
                 else:
-                    logging.error(
+                    logging.debug(
                         "DIAGNOSTIC WARNING: Missing attribute 'update' on it"
                     )
 
@@ -391,7 +391,7 @@ class ColorSettingsDialog(QDialog):
                     if hasattr(w, "update_ui_from_settings"):
                         w.update_ui_from_settings(settings)
                     else:
-                        logging.error(
+                        logging.debug(
                             "DIAGNOSTIC WARNING: Missing attribute 'update_ui_from_settings' on w"
                         )
 
@@ -402,7 +402,7 @@ class ColorSettingsDialog(QDialog):
             if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
                 self.parent_window.view_3d_manager.apply_3d_settings()
             else:
-                logging.error(
+                logging.debug(
                     "DIAGNOSTIC WARNING: Missing attribute 'apply_3d_settings' on object"
                 )
 
@@ -417,14 +417,14 @@ class ColorSettingsDialog(QDialog):
             ):
                 self.parent_window.init_manager.update_cpk_colors_from_settings()
             else:
-                logging.error(
+                logging.debug(
                     "DIAGNOSTIC WARNING: Missing attribute 'update_cpk_colors_from_settings' on object"
                 )
 
             if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
                 self.parent_window.view_3d_manager.apply_3d_settings()
             else:
-                logging.error(
+                logging.debug(
                     "DIAGNOSTIC WARNING: Missing attribute 'apply_3d_settings' on object"
                 )
 
@@ -456,6 +456,6 @@ class ColorSettingsDialog(QDialog):
                 )
                 self.bs_button.setToolTip(hexv)
             else:
-                logging.error(
+                logging.debug(
                     "DIAGNOSTIC WARNING: Missing attribute 'bs_button' on self"
                 )

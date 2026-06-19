@@ -45,7 +45,6 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.template_preview = None
         self.template_preview_points = []
         self.was_selected_on_press = False
-        self.data, self.window = data, window
         self.mode: str = "select"
         self.current_atom_symbol: str = "C"
         self.bond_order: int = 1
@@ -97,7 +96,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         """Update the positions of all bonds connected to the specified atom list."""
         bonds_to_update = set()
         for atom in atoms:
-            if hasattr(atom, "bonds"):
+            if hasattr(
+                atom, "bonds"
+            ):  # guard: non-AtomItem QGraphicsItems may be passed
                 bonds_to_update.update(atom.bonds)
 
         for bond in bonds_to_update:
@@ -311,7 +312,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             if sb:
                                 sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
                         else:
-                            logging.error(
+                            logging.debug(
                                 "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
                             )
                         self.update_all_items()  # Redraw even on error to maintain consistency
@@ -472,9 +473,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 # Complete event processing here to prevent selection of underlying items
                 self.start_atom = None
                 self.press_pos = None
-                if self.data_changed_in_event:
-                    self.update_all_items()
-                    self.window.edit_actions_manager.push_undo_state()
+                self.update_all_items()
+                self.window.edit_actions_manager.push_undo_state()
                 return
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
@@ -503,8 +503,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.start_atom = None
             self.start_pos = None
             self.press_pos = None
-            if self.data_changed_in_event:
-                self.window.edit_actions_manager.push_undo_state()
+            self.window.edit_actions_manager.push_undo_state()
             return
         elif (
             (self.mode == "charge_plus" or self.mode == "charge_minus")
@@ -522,8 +521,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.start_atom = None
             self.start_pos = None
             self.press_pos = None
-            if self.data_changed_in_event:
-                self.window.edit_actions_manager.push_undo_state()
+            self.window.edit_actions_manager.push_undo_state()
             return
 
         elif (
@@ -534,8 +532,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             b = released_item
             if self.mode == "bond_2_5":
                 try:
-                    if hasattr(b, "order") and b.order == 2:
-                        current_stereo = getattr(b, "stereo", 0)
+                    if b.order == 2:
+                        current_stereo = b.stereo
                         if current_stereo not in [3, 4]:
                             new_stereo = 3  # None -> Z
                         elif current_stereo == 3:
@@ -543,12 +541,14 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         else:  # current_stereo == 4
                             new_stereo = 0  # E -> None
 
-                        if hasattr(self, "update_bond_stereo"):
+                        if hasattr(
+                            self, "update_bond_stereo"
+                        ):  # guard: mixin may not be composed yet
                             self.update_bond_stereo(b, new_stereo)
                             self.update_all_items()  # Force redraw
                             self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
                         else:
-                            logging.error(
+                            logging.debug(
                                 "DIAGNOSTIC WARNING: Missing attribute 'update_bond_stereo' on self"
                             )
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -563,7 +563,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                                 f"Error changing E/Z stereochemistry: {e}", 5000
                             )
                     else:
-                        logging.error(
+                        logging.debug(
                             "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
                         )
                     self.update_all_items()  # Redraw even on error to maintain consistency
@@ -734,7 +734,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             if self.views():
                 self.views()[0].viewport().update()
 
-        if getattr(self, "data_changed_in_event", False):
+        if self.data_changed_in_event:
             self.update_all_items()
 
         self.start_atom = None
@@ -743,7 +743,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.temp_line = None
         # Clear template context but NOT the template data itself to allow multiple placements
         self.template_context = {}
-        if getattr(self, "data_changed_in_event", False):
+        if self.data_changed_in_event:
             self.window.edit_actions_manager.push_undo_state()
 
     def mouseDoubleClickEvent(self, event: Any) -> None:
@@ -878,14 +878,14 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     if hasattr(obj, "hide"):
                         obj.hide()
                     else:
-                        logging.error(
+                        logging.debug(
                             "DIAGNOSTIC WARNING: Missing attribute 'hide' on obj"
                         )
                     if hasattr(obj, "bonds") and obj.bonds is not None:
                         if hasattr(obj.bonds, "clear"):
                             obj.bonds.clear()
                         else:
-                            logging.error(
+                            logging.debug(
                                 "DIAGNOSTIC WARNING: Missing attribute 'clear' on object"
                             )
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:

@@ -45,6 +45,33 @@ if TYPE_CHECKING:
 
 
 # --- Class Definition ---
+def _serialize_constraints(constraints: list) -> list:
+    """Convert internal constraint tuples to JSON-serializable lists."""
+    result = []
+    for const in constraints:
+        if len(const) == 4:
+            result.append([const[0], list(const[1]), const[2], const[3]])
+        else:
+            result.append([const[0], list(const[1]), const[2], 1.0e5])
+    return result
+
+
+def _deserialize_constraints(raw: list) -> list:
+    """Convert JSON-loaded constraint lists back to internal tuples."""
+    result = []
+    for const in raw:
+        if not isinstance(const, (list, tuple)):
+            continue
+        try:
+            if len(const) == 4:
+                result.append((const[0], tuple(const[1]), const[2], const[3]))
+            elif len(const) == 3:
+                result.append((const[0], tuple(const[1]), const[2], 1.0e5))
+        except (TypeError, ValueError, IndexError) as e:
+            logging.debug(f"Failed to parse constraint {const}: {e}")
+    return result
+
+
 class StateManager:
     _cls = None
 
@@ -96,20 +123,9 @@ class StateManager:
 
         state["is_3d_viewer_mode"] = not self.host.ui_manager.is_2d_editable
 
-        json_safe_constraints = []
-        constraints = self.host.edit_3d_manager.constraints_3d
-        for const in constraints:
-            # (Type, (Idx...), Value, Force) -> [Type, [Idx...], Value, Force]
-            if len(const) == 4:
-                json_safe_constraints.append(
-                    [const[0], list(const[1]), const[2], const[3]]
-                )
-            else:
-                # Backward compatibility
-                json_safe_constraints.append(
-                    [const[0], list(const[1]), const[2], 1.0e5]
-                )
-        state["constraints_3d"] = json_safe_constraints
+        state["constraints_3d"] = _serialize_constraints(
+            self.host.edit_3d_manager.constraints_3d
+        )
 
         return state
 
@@ -147,24 +163,12 @@ class StateManager:
         raw_atoms = loaded_data.get("atoms", {})
         raw_bonds = loaded_data.get("bonds", {})
 
-        # Restore constraints
         loaded_constraints = loaded_data.get("constraints_3d", [])
-        constraints = []
-        if loaded_constraints and isinstance(loaded_constraints, list):
-            for const in loaded_constraints:
-                if isinstance(const, (list, tuple)):
-                    try:
-                        if len(const) == 4:
-                            constraints.append(
-                                (const[0], tuple(const[1]), const[2], const[3])
-                            )
-                        elif len(const) == 3:
-                            constraints.append(
-                                (const[0], tuple(const[1]), const[2], 1.0e5)
-                            )
-                    except (TypeError, ValueError, IndexError) as e:
-                        logging.debug(f"Failed to parse constraint {const}: {e}")
-        self.host.set_constraints_3d(constraints)
+        self.host.set_constraints_3d(
+            _deserialize_constraints(loaded_constraints)
+            if isinstance(loaded_constraints, list)
+            else []
+        )
 
         for atom_id, data in raw_atoms.items():
             raw_pos = tuple(data["pos"])
@@ -483,20 +487,11 @@ class StateManager:
                     }
                     bonds_3d.append(bond_3d)
 
-                # Convert constraints to JSON compatible format
-                json_safe_constraints = []
                 try:
-                    for const in self.host.edit_3d_manager.constraints_3d:
-                        if len(const) == 4:
-                            json_safe_constraints.append(
-                                [const[0], list(const[1]), const[2], const[3]]
-                            )
-                        else:
-                            json_safe_constraints.append(
-                                [const[0], list(const[1]), const[2], 1.0e5]
-                            )
+                    json_safe_constraints = _serialize_constraints(
+                        self.host.edit_3d_manager.constraints_3d
+                    )
                 except (AttributeError, TypeError, KeyError, ValueError):
-                    # Reset constraints if serialization fails
                     json_safe_constraints = []
 
                 json_data["3d_structure"] = {
@@ -693,25 +688,12 @@ class StateManager:
         # Restore 3D data
         structure_3d = json_data.get("3d_structure")
         if isinstance(structure_3d, dict):
-            # Restore constraints
             loaded_constraints = structure_3d.get("constraints_3d", [])
-            constraints = []
-            if loaded_constraints and isinstance(loaded_constraints, list):
-                for const in loaded_constraints:
-                    if isinstance(const, (list, tuple)):
-                        try:
-                            if len(const) == 4:
-                                constraints.append(
-                                    (const[0], tuple(const[1]), const[2], const[3])
-                                )
-                            elif len(const) == 3:
-                                constraints.append(
-                                    (const[0], tuple(const[1]), const[2], 1.0e5)
-                                )
-                        except (TypeError, ValueError, IndexError):
-                            # Safe defensive fallback catching TypeError, ValueError, IndexError
-                            pass
-            self.host.set_constraints_3d(constraints)
+            self.host.set_constraints_3d(
+                _deserialize_constraints(loaded_constraints)
+                if isinstance(loaded_constraints, list)
+                else []
+            )
             try:
                 # Restore binary data
                 mol_base64 = structure_3d.get("mol_binary_base64")
