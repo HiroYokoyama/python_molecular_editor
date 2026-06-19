@@ -325,7 +325,7 @@ class IOManager:
                 )
             except (OSError, IOError) as e:
                 self.host.update_status_message(f"File I/O error: {e}")
-            except Exception as e:
+            except (json.JSONDecodeError, TypeError, ValueError, RuntimeError) as e:
                 self.host.update_status_message(f"Error saving project: {e}")
         else:
             self.save_project_as()
@@ -366,7 +366,7 @@ class IOManager:
             self.host.update_status_message(f"Project saved to {file_path}")
         except (OSError, IOError) as e:
             self.host.statusBar().showMessage(f"File I/O error: {e}")
-        except Exception as e:
+        except (json.JSONDecodeError, TypeError, ValueError, RuntimeError) as e:
             self.host.statusBar().showMessage(f"Error saving project: {e}")
 
     def open_project(self) -> None:
@@ -436,7 +436,7 @@ class IOManager:
             self.host.update_status_message(f"PME Project saved to {file_path}")
         except (OSError, IOError) as e:
             self.host.update_status_message(f"File I/O error: {e}")
-        except Exception as e:
+        except (json.JSONDecodeError, TypeError, ValueError, RuntimeError) as e:
             self.host.update_status_message(f"Error saving PME Project file: {e}")
 
     def load_json_data(self, file_path: Optional[str] = None) -> None:
@@ -501,7 +501,7 @@ class IOManager:
             self.host.statusBar().showMessage(f"Invalid JSON format: {e}")
         except (OSError, IOError) as e:
             self.host.statusBar().showMessage(f"File I/O error: {e}")
-        except Exception as e:
+        except (TypeError, ValueError, RuntimeError, AttributeError, KeyError) as e:
             self.host.statusBar().showMessage(
                 f"Data corruption in PME Project file: {e}"
             )
@@ -542,7 +542,7 @@ class IOManager:
             self.host.statusBar().showMessage(f"Project saved to {file_path}")
         except (OSError, IOError) as e:
             self.host.update_status_message(f"File I/O error: {e}")
-        except Exception as e:
+        except (pickle.PicklingError, TypeError, ValueError, RuntimeError) as e:
             self.host.statusBar().showMessage(f"Export error: {e}")
 
     def load_mol_file(self, file_path: Optional[str] = None) -> None:
@@ -653,7 +653,7 @@ class IOManager:
             self.host.init_manager.scene.update_all_items()
             self.host.edit_actions_manager.push_undo_state()
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
-        except Exception as e:
+        except (OSError, IOError, ValueError, RuntimeError, AttributeError, KeyError) as e:
             self.host.statusBar().showMessage(f"Error loading file: {e}")
 
     def save_as_mol(self) -> None:
@@ -681,7 +681,7 @@ class IOManager:
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write("\n".join(lines))
                 self.host.statusBar().showMessage(f"2D data saved to {file_path}")
-        except Exception as e:
+        except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
             self.host.statusBar().showMessage(f"Error saving MOL: {e}")
 
     def load_xyz_for_3d_viewing(self, file_path: Optional[str] = None) -> None:
@@ -741,7 +741,7 @@ class IOManager:
             self.host.set_current_file_path(file_path)
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
-        except Exception as e:
+        except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
             if self.host.statusBar():
                 self.host.statusBar().showMessage(f"XYZ Load failed: {e}")
 
@@ -798,7 +798,7 @@ class IOManager:
             self.host.set_current_file_path(file_path)
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
-        except Exception as e:
+        except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
             self.host.statusBar().showMessage(f"3D MOL Load failed: {e}")
 
     def save_3d_as_mol(self) -> None:
@@ -824,7 +824,7 @@ class IOManager:
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write("\n".join(lines))
                 self.host.statusBar().showMessage(f"3D data saved to {file_path}")
-            except Exception as e:
+            except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
                 self.host.statusBar().showMessage(f"Error saving 3D MOL: {e}")
 
     def save_as_xyz(self) -> None:
@@ -860,7 +860,7 @@ class IOManager:
                         charge = Chem.GetFormalCharge(
                             self.host.view_3d_manager.current_mol
                         )
-                    except Exception as e:
+                    except (RuntimeError, ValueError, AttributeError) as e:
                         logging.warning("Could not compute formal charge: %s", e)
 
                 multiplicity = 1
@@ -871,7 +871,7 @@ class IOManager:
                         )
                         + 1
                     )
-                except Exception as e:
+                except (RuntimeError, ValueError, AttributeError) as e:
                     logging.warning("Could not compute multiplicity: %s", e)
 
                 xyz_lines.append(
@@ -889,7 +889,7 @@ class IOManager:
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write("\n".join(xyz_lines) + "\n")
                 self.host.statusBar().showMessage(f"Successfully saved to {file_path}")
-            except Exception as e:
+            except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
                 self.host.statusBar().showMessage(f"Error saving XYZ: {e}")
 
     def load_raw_data(self, file_path: Optional[str] = None) -> None:
@@ -935,7 +935,7 @@ class IOManager:
             self.host.statusBar().showMessage(f"File I/O error: {e}")
         except pickle.UnpicklingError as e:
             self.host.statusBar().showMessage(f"Invalid project file format: {e}")
-        except Exception as e:
+        except (TypeError, ValueError, RuntimeError, AttributeError) as e:
             self.host.statusBar().showMessage(f"Error loading project file: {e}")
 
     def _set_mol_prop(self, mol: Any, prop_name: str, value: Any) -> None:
@@ -947,8 +947,7 @@ class IOManager:
                 mol.SetDoubleProp(prop_name, value)
             else:
                 mol.SetProp(prop_name, str(value))
-        except Exception:
-            # Safe defensive fallback catching Exception
+        except (RuntimeError, ValueError, AttributeError, TypeError):
             pass
 
     def _get_mol_prop(self, mol: Any, prop_name: str, default: Any = None) -> Any:
@@ -959,10 +958,10 @@ class IOManager:
             for getter in [mol.GetIntProp, mol.GetDoubleProp, mol.GetProp]:
                 try:
                     return getter(prop_name)
-                except Exception:
+                except (RuntimeError, ValueError, AttributeError, TypeError):
                     continue
             return default
-        except Exception:
+        except (RuntimeError, ValueError, AttributeError, TypeError):
             return default
 
 
