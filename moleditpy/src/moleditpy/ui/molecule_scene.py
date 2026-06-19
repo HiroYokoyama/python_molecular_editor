@@ -817,6 +817,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
         if self.data_changed_in_event:
             self.update_all_items()
+            self.window.edit_actions_manager.push_undo_state()
 
         self.start_atom = None
         self.start_pos = None
@@ -824,8 +825,6 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.temp_line = None
         # Clear template context but NOT the template data itself to allow multiple placements
         self.template_context = {}
-        if self.data_changed_in_event:
-            self.window.edit_actions_manager.push_undo_state()
 
     def mouseDoubleClickEvent(self, event: Any) -> None:
         """Handle double click events."""

@@ -41,7 +41,7 @@ except ImportError:
 
 # --- Classes ---
 class UIManager(QObject):
-    def __init__(self, host: Any = None) -> None:
+    def __init__(self, host: Any) -> None:
         super().__init__()
         self.is_2d_editable = False
         self.host = host

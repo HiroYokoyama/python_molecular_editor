@@ -101,13 +101,13 @@ class StateManager:
 
         state["version"] = VERSION
 
-        if self.host.view_3d_manager.current_mol:
-            state["mol_3d"] = self.host.view_3d_manager.current_mol.ToBinary()
+        if self.host.current_mol:
+            state["mol_3d"] = self.host.current_mol.ToBinary()
             # RDKit binary serialization does not preserve custom properties like _original_atom_id.
             # We store them separately to ensure we can restore the 2D-3D link after undo/redo.
             mol_3d_atom_ids = []
-            for i in range(self.host.view_3d_manager.current_mol.GetNumAtoms()):
-                atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(i)
+            for i in range(self.host.current_mol.GetNumAtoms()):
+                atom = self.host.current_mol.GetAtomWithIdx(i)
                 if atom and atom.HasProp("_original_atom_id"):
                     try:
                         mol_3d_atom_ids.append(atom.GetIntProp("_original_atom_id"))
@@ -177,19 +177,19 @@ class StateManager:
                 self.host.set_current_molecule(Chem.Mol(mol_3d_data))
                 # Debug: check if 3D structure is valid
                 if (
-                    self.host.view_3d_manager.current_mol
-                    and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0
+                    self.host.current_mol
+                    and self.host.current_mol.GetNumAtoms() > 0
                 ):
                     # Restore _original_atom_id if present in saved state
                     mol_3d_atom_ids = loaded_data.get("mol_3d_atom_ids")
                     if (
                         mol_3d_atom_ids
                         and len(mol_3d_atom_ids)
-                        == self.host.view_3d_manager.current_mol.GetNumAtoms()
+                        == self.host.current_mol.GetNumAtoms()
                     ):
                         for i, aid in enumerate(mol_3d_atom_ids):
                             if aid is not None:
-                                rd_atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
+                                rd_atom = self.host.current_mol.GetAtomWithIdx(
                                     i
                                 )
                                 if rd_atom:
@@ -214,7 +214,7 @@ class StateManager:
 
                     # draw_molecule_3d will use restored IDs
                     self.host.view_3d_manager.draw_molecule_3d(
-                        self.host.view_3d_manager.current_mol
+                        self.host.current_mol
                     )
                     if self.host.view_3d_manager.plotter:
                         self.host.view_3d_manager.plotter.reset_camera()
@@ -247,8 +247,8 @@ class StateManager:
             self.host.ui_manager.restore_ui_for_editing()
             # Enable 3D edit features even in 2D editor mode if 3D molecule exists
             if (
-                self.host.view_3d_manager.current_mol
-                and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0
+                self.host.current_mol
+                and self.host.current_mol.GetNumAtoms() > 0
             ):
                 self.host.ui_manager.enable_3d_edit_actions(True)
 
@@ -280,7 +280,7 @@ class StateManager:
 
         if (
             not self.host.state_manager.data.atoms
-            and self.host.view_3d_manager.current_mol is None
+            and self.host.current_mol is None
         ):
             return True  # Empty document
 
@@ -382,20 +382,20 @@ class StateManager:
 
         # 3D data
         if (
-            self.host.view_3d_manager.current_mol
-            and self.host.view_3d_manager.current_mol.GetNumConformers() > 0
+            self.host.current_mol
+            and self.host.current_mol.GetNumConformers() > 0
         ):
             try:
                 # Save as Base64 encoded binary
-                mol_binary = self.host.view_3d_manager.current_mol.ToBinary()
+                mol_binary = self.host.current_mol.ToBinary()
                 mol_base64 = base64.b64encode(mol_binary).decode("ascii")
 
                 # Extract 3D coordinates
                 atoms_3d = []
-                if self.host.view_3d_manager.current_mol.GetNumConformers() > 0:
-                    conf = self.host.view_3d_manager.current_mol.GetConformer()
-                    for i in range(self.host.view_3d_manager.current_mol.GetNumAtoms()):
-                        atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(i)
+                if self.host.current_mol.GetNumConformers() > 0:
+                    conf = self.host.current_mol.GetConformer()
+                    for i in range(self.host.current_mol.GetNumAtoms()):
+                        atom = self.host.current_mol.GetAtomWithIdx(i)
                         pos = conf.GetAtomPosition(i)
 
                         # Try to preserve original editor atom ID (if present) so it can be
@@ -427,7 +427,7 @@ class StateManager:
 
                 # Extract bonds
                 bonds_3d = []
-                for bond in self.host.view_3d_manager.current_mol.GetBonds():
+                for bond in self.host.current_mol.GetBonds():
                     bond_3d = {
                         "atom1": bond.GetBeginAtomIdx(),
                         "atom2": bond.GetEndAtomIdx(),
@@ -448,19 +448,19 @@ class StateManager:
                     "mol_binary_base64": mol_base64,
                     "atoms": atoms_3d,
                     "bonds": bonds_3d,
-                    "num_conformers": self.host.view_3d_manager.current_mol.GetNumConformers(),
+                    "num_conformers": self.host.current_mol.GetNumConformers(),
                     "constraints_3d": json_safe_constraints,
                 }
 
                 # Molecular info
                 json_data["molecular_info"] = {
-                    "num_atoms": self.host.view_3d_manager.current_mol.GetNumAtoms(),
-                    "num_bonds": self.host.view_3d_manager.current_mol.GetNumBonds(),
+                    "num_atoms": self.host.current_mol.GetNumAtoms(),
+                    "num_bonds": self.host.current_mol.GetNumBonds(),
                     "molecular_weight": Descriptors.MolWt(
-                        self.host.view_3d_manager.current_mol
+                        self.host.current_mol
                     ),
                     "formula": rdMolDescriptors.CalcMolFormula(
-                        self.host.view_3d_manager.current_mol
+                        self.host.current_mol
                     ),
                 }
 
@@ -468,18 +468,18 @@ class StateManager:
                 try:
                     json_data["identifiers"] = {
                         "smiles": Chem.MolToSmiles(
-                            self.host.view_3d_manager.current_mol
+                            self.host.current_mol
                         ),
                         "canonical_smiles": Chem.MolToSmiles(
-                            self.host.view_3d_manager.current_mol, canonical=True
+                            self.host.current_mol, canonical=True
                         ),
                     }
 
                     # Attempt InChI generation
                     try:
-                        inchi = Chem.MolToInchi(self.host.view_3d_manager.current_mol)
+                        inchi = Chem.MolToInchi(self.host.current_mol)
                         inchi_key = Chem.MolToInchiKey(
-                            self.host.view_3d_manager.current_mol
+                            self.host.current_mol
                         )
                         json_data["identifiers"]["inchi"] = inchi
                         json_data["identifiers"]["inchi_key"] = inchi_key
@@ -594,9 +594,9 @@ class StateManager:
                 if mol_base64:
                     mol_binary = base64.b64decode(mol_base64.encode("ascii"))
                     self.host.set_current_molecule(Chem.Mol(mol_binary))
-                    if self.host.view_3d_manager.current_mol:
+                    if self.host.current_mol:
                         # Set 3D coordinates
-                        if self.host.view_3d_manager.current_mol.GetNumConformers() > 0:
+                        if self.host.current_mol.GetNumConformers() > 0:
                             atoms_3d = structure_3d.get("atoms", [])
                             # Ensure numpy array size matches atoms in file
                             num_atoms_file = len(atoms_3d)
@@ -614,7 +614,7 @@ class StateManager:
                                         original_id = atom_data.get("original_id")
                                         if original_id is not None:
                                             try:
-                                                rd_atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
+                                                rd_atom = self.host.current_mol.GetAtomWithIdx(
                                                     idx
                                                 )
                                                 if rd_atom:
@@ -642,7 +642,7 @@ class StateManager:
 
                         # Always show 3D if 3D molecule exists
                         self.host.view_3d_manager.draw_molecule_3d(
-                            self.host.view_3d_manager.current_mol
+                            self.host.current_mol
                         )
 
                         # Switch UI in Viewer mode

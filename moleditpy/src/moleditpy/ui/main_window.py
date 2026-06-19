@@ -299,15 +299,15 @@ class MainWindow(QMainWindow):
         """Clear undo/redo history and push current state as the initial entry."""
         self.edit_actions_manager.reset_history()
 
-    # --- Core Proxy Properties (Legacy Plugin Support Only. Bypassed by Core Logics) ---
+    # --- Core Proxy Properties ---
     @property
     def current_mol(self) -> Optional[Chem.Mol]:
-        """Proxy for current molecule. Not for core logic use."""
+        """Proxy for current 3D molecule (read/write)."""
         return self.view_3d_manager.current_mol
 
     @current_mol.setter
     def current_mol(self, value: Any) -> None:
-        """Proxy for current molecule setter. Not for core logic use."""
+        """Proxy for current 3D molecule (read/write)."""
         self.view_3d_manager.current_mol = value
 
     @property
