@@ -183,7 +183,7 @@ class MainInitManager:
         self.measurement_action = None
         self.next_conversion_id = 1
         self.opt3d_actions = None
-        self.opt3d_method_labels = None
+        self.opt3d_method_labels: dict = {}
         self.paste_action = None
         self.plugin_menu = None
         self.show_atom_coords_action = None

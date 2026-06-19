@@ -278,7 +278,7 @@ class ComputeManager:
             "conversion_mode": conversion_mode
             or self.host.init_manager.settings.get("3d_conversion_mode", "fallback"),
             "optimization_method": optimization_method
-            or getattr(self.host.init_manager, "optimization_method", "MMFF_RDKIT"),
+            or self.host.init_manager.optimization_method,
             "optimize_intermolecular_interaction_rdkit": self.host.init_manager.settings.get(
                 "optimize_intermolecular_interaction_rdkit", True
             ),
@@ -487,11 +487,9 @@ class ComputeManager:
             if mol and mol.HasProp("_pme_optimization_method"):
                 method_key = mol.GetProp("_pme_optimization_method")
             if not method_key:
-                method_key = getattr(self, "optimization_method", None) or getattr(
-                    self.host.init_manager, "optimization_method", None
-                )
+                method_key = self.host.init_manager.optimization_method
             if method_key:
-                labels = getattr(self.host.init_manager, "opt3d_method_labels", {})
+                labels = self.host.init_manager.opt3d_method_labels or {}
                 self.last_successful_optimization_method = labels.get(
                     method_key, method_key
                 )

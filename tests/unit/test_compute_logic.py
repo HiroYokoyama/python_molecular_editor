@@ -7,10 +7,6 @@ from unittest.mock import MagicMock, patch
 
 
 class DummyCompute(ComputeManager):
-    opt3d_method_labels = (
-        None  # Prevent __getattr__ from shadowing init_manager.opt3d_method_labels
-    )
-
     def __init__(self, host):
         self._host = host
         ComputeManager.__init__(self, host)
