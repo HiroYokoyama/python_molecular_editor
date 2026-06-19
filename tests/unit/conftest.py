@@ -135,7 +135,9 @@ def mock_parser_host(app):
             }
 
     scene.restore_atoms_and_bonds.side_effect = mock_restore_atoms_and_bonds
-    scene.restore_atoms_and_bonds_from_json.side_effect = mock_restore_atoms_and_bonds_from_json
+    scene.restore_atoms_and_bonds_from_json.side_effect = (
+        mock_restore_atoms_and_bonds_from_json
+    )
 
     # 2. UI and Settings
     host.init_manager.view_2d = MagicMock()

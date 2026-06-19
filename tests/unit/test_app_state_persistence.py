@@ -64,8 +64,12 @@ class DummyMainWindow(StateManager):
                     "stereo": bond_data.get("stereo", 0),
                 }
 
-        self.init_manager.scene.restore_atoms_and_bonds.side_effect = mock_restore_atoms_and_bonds
-        self.init_manager.scene.restore_atoms_and_bonds_from_json.side_effect = mock_restore_atoms_and_bonds_from_json
+        self.init_manager.scene.restore_atoms_and_bonds.side_effect = (
+            mock_restore_atoms_and_bonds
+        )
+        self.init_manager.scene.restore_atoms_and_bonds_from_json.side_effect = (
+            mock_restore_atoms_and_bonds_from_json
+        )
         self.init_manager.view_2d = MagicMock()
         self.init_manager.settings = MagicMock()
         self.view_3d_manager.view_3d = MagicMock()

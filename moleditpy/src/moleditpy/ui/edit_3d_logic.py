@@ -478,5 +478,3 @@ class Edit3DManager:
         """Remove dialog from active list."""
         if dialog in self.active_3d_dialogs:
             self.active_3d_dialogs.remove(dialog)
-
-

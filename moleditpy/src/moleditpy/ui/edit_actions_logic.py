@@ -1481,5 +1481,3 @@ class EditActionsManager:
             self.host.init_manager.optimize_3d_button.setEnabled(
                 not getattr(self.host, "chem_check_failed", False)
             )
-
-

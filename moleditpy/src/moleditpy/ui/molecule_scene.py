@@ -241,9 +241,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             atom_item.update_style()
         self.update_all_items()
 
-    def restore_atoms_and_bonds_from_json(
-        self, atoms_2d: list, bonds_2d: list
-    ) -> None:
+    def restore_atoms_and_bonds_from_json(self, atoms_2d: list, bonds_2d: list) -> None:
         """Restore scene items from PMEPRJ JSON (list-of-dicts format)."""
         for atom_data in atoms_2d:
             atom_id = atom_data["id"]

@@ -656,6 +656,7 @@ def test_app_state_radical_and_constraint_preservation(mock_parser_host):
     compute.data.atoms.clear()
     compute.constraints_3d = []
     compute.scene = MagicMock()
+
     def mock_restore(raw_atoms, raw_bonds):
         for atom_id, data in raw_atoms.items():
             compute.data.atoms[atom_id] = {
@@ -669,6 +670,7 @@ def test_app_state_radical_and_constraint_preservation(mock_parser_host):
                 "order": data.get("order", 1),
                 "stereo": data.get("stereo", 0),
             }
+
     compute.scene.restore_atoms_and_bonds.side_effect = mock_restore
 
     StateManager.set_state_from_data(compute, state)

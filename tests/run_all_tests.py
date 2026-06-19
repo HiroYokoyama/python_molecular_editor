@@ -85,7 +85,9 @@ def _run_once(name, cmd, env):
     return returncode, "".join(output_lines), duration
 
 
-def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True, exitfirst=False):
+def run_suite(
+    name, path, env_vars=None, extra_args=None, enable_cov=True, exitfirst=False
+):
     """Run a test suite in a separate process for isolation."""
     print(
         f"\n>>> Running {name} Tests{' with Coverage' if enable_cov else ''}...",

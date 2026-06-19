@@ -960,5 +960,3 @@ class ExportManager:
             self.host.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
         except (AttributeError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
-
-

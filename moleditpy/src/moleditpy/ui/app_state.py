@@ -664,5 +664,3 @@ class StateManager:
             except (RuntimeError, ValueError, TypeError, binascii.Error) as e:
                 logging.error(f"Could not restore 3D molecular data: {e}")
                 self.host.set_current_molecule(None)
-
-
