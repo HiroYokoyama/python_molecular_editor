@@ -12,6 +12,24 @@ Welcome to the **Version 4.0** of the MoleditPy Plugin API. This version introdu
 
 ---
 
+## What's New in Version 4.0
+
+Compared to Version 3.0, the Version 4.0 API introduces the following key architectural changes and additions:
+
+1. **Decoupled Data Model**:
+   - The core chemistry data model (`MolecularData`, `data.atoms`, `data.bonds`) has been fully decoupled from the 2D visual scene items (`AtomItem`, `BondItem`).
+   - The `'item'` key has been removed from `data.atoms` and `data.bonds`. Visual scene items must now be accessed via `scene.atom_items` and `scene.bond_items` (or using the registry).
+   - `data._next_atom_id` has been cleaned up and renamed to `data.next_atom_id`.
+
+2. **New stable APIs on `PluginContext`**:
+   - Added `enter_3d_mode()` as a clean, stable alias of `enter_3d_viewer_mode()` to switch the application layout to the 3D viewer.
+   - Standardized scene update methods: direct calls to `scene.update_all_items()` and `scene.update_connected_bonds(atoms)` are now standard and preferred over hasattr-guarded checks.
+
+3. **Memory and Signal Safety**:
+   - Preemptive disconnect of event filters/actions will safely ignore errors at log `DEBUG` level to prevent unnecessary warning logs when signals are not yet bound.
+
+---
+
 ## 1. Getting Started
 
 A MoleditPy plugin is either a **single `.py` file** or a **folder package**. Both are placed in your **user plugin directory** and discovered automatically at startup.
