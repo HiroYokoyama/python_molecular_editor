@@ -316,7 +316,8 @@ def test_chiral_labels_logic(app, mock_parser_host, mock_pv):
     atom_item = MagicMock()
     # RDKit idx 1 is the chiral center in C[C@H](F)Cl (atoms: C0, C1, F2, Cl3)
     # Its _original_atom_id is 1+1 = 2
-    mock_parser_host.state_manager.data.atoms = {2: {"item": atom_item, "symbol": "C"}}
+    mock_parser_host.state_manager.data.atoms = {2: {"symbol": "C"}}
+    mock_parser_host.init_manager.scene.atom_items[2] = atom_item
 
     with patch(
         "moleditpy.ui.view_3d_logic.Chem.FindMolChiralCenters", return_value=[(1, "S")]

@@ -30,6 +30,8 @@ class DummyMainWindow(StateManager):
         self.plugin_manager.load_handlers = {}
 
         self.init_manager.scene = MagicMock()
+        self.init_manager.scene.atom_items = {}
+        self.init_manager.scene.bond_items = {}
         self.init_manager.view_2d = MagicMock()
         self.init_manager.settings = MagicMock()
         self.view_3d_manager.view_3d = MagicMock()
@@ -163,10 +165,6 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     aid2 = mw.state_manager.data.add_atom("O", QPointF(30, 40))
     mw.state_manager.data.add_bond(aid1, aid2, order=1)
 
-    # Mock visual items for 2D serialization
-    mw.state_manager.data.atoms[aid1]["item"] = MagicMock(pos=lambda: QPointF(10, 20))
-    mw.state_manager.data.atoms[aid2]["item"] = MagicMock(pos=lambda: QPointF(30, 40))
-
     # 3D structure (Methanol)
     mol = Chem.MolFromSmiles("CO")
     mol = Chem.AddHs(mol)
@@ -234,7 +232,6 @@ def test_undo_state_binary_roundtrip(dummy_window):
 
     # Setup state
     aid = mw.state_manager.data.add_atom("N", QPointF(5, 5))
-    mw.state_manager.data.atoms[aid]["item"] = MagicMock(pos=lambda: QPointF(5, 5))
 
     # 3D with property
     mol = Chem.MolFromSmiles("N")

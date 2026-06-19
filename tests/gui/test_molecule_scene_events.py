@@ -12,11 +12,11 @@ def test_bond_stereo_toggle_keys(window, qtbot):
     a1_id = scene.create_atom("C", QPointF(0, 0))
     a2_id = scene.create_atom("C", QPointF(50, 0))
     scene.create_bond(
-        data.atoms[a1_id]["item"], data.atoms[a2_id]["item"], bond_order=2
+        scene.atom_items[a1_id], scene.atom_items[a2_id], bond_order=2
     )
 
     bond_key = (min(a1_id, a2_id), max(a1_id, a2_id))
-    bond_item = data.bonds[bond_key]["item"]
+    bond_item = scene.bond_items[bond_key]
 
     # Simulate hover
     scene.hovered_item = bond_item
@@ -45,7 +45,7 @@ def test_atom_addition_keys(window, qtbot):
 
     # Place initial atom and select it
     a1_id = scene.create_atom("C", QPointF(0, 0))
-    a1_item = data.atoms[a1_id]["item"]
+    a1_item = scene.atom_items[a1_id]
     a1_item.setSelected(True)
 
     # Press '1' to add a single bond C
@@ -64,7 +64,7 @@ def test_atom_addition_keys(window, qtbot):
     other_atom_ids = [aid for aid in data.atoms if aid != a1_id]
     assert len(other_atom_ids) == 1, "Expected exactly one new atom after pressing '1'"
     new_atom_id = other_atom_ids[0]
-    new_atom_item = data.atoms[new_atom_id]["item"]
+    new_atom_item = scene.atom_items[new_atom_id]
     scene.clearSelection()
     new_atom_item.setSelected(True)
 
@@ -91,8 +91,8 @@ def test_delete_items_keys(window, qtbot):
     # Create some items
     a1_id = scene.create_atom("C", QPointF(0, 0))
     a2_id = scene.create_atom("C", QPointF(50, 0))
-    a1_item = data.atoms[a1_id]["item"]
-    a2_item = data.atoms[a2_id]["item"]
+    a1_item = scene.atom_items[a1_id]
+    a2_item = scene.atom_items[a2_id]
 
     a1_item.setSelected(True)
 
@@ -122,7 +122,7 @@ def test_temp_line_cancellation(window, qtbot):
     data = window.state_manager.data
 
     a1_id = scene.create_atom("C", QPointF(0, 0))
-    a1_item = data.atoms[a1_id]["item"]
+    a1_item = scene.atom_items[a1_id]
 
     # Simulate start of bond drawing
     scene.start_atom = a1_item
@@ -151,7 +151,7 @@ def test_bonding_to_existing_atom(window, qtbot):
     a1_id = scene.create_atom("C", QPointF(0, 0))
     a2_id = scene.create_atom("C", QPointF(0, -DEFAULT_BOND_LENGTH))
 
-    a1_item = data.atoms[a1_id]["item"]
+    a1_item = scene.atom_items[a1_id]
     a1_item.setSelected(True)
 
     # Press '1'. Since (0, -L) is exactly where a2 is, it should bond to a2

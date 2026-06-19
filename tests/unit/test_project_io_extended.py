@@ -264,9 +264,6 @@ def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     # Populate some data
     io.host.state_manager.data.add_atom("C", QPointF(10, 20), charge=1)
-    # Ensure item mock is present for coordinate extraction if needed
-    io.host.state_manager.data.atoms[0]["item"] = MagicMock()
-    io.host.state_manager.data.atoms[0]["item"].pos.return_value = QPointF(10, 20)
 
     project_file = str(tmp_path / "full_cycle.pmeprj")
 

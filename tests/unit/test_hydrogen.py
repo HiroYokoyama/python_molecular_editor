@@ -56,7 +56,7 @@ def test_remove_hydrogen_atoms_app_logic(mock_parser_host):
 
     # Create bond using items (mocked items should exist now)
     actions.scene.create_bond(
-        actions.data.atoms[c_id]["item"], actions.data.atoms[h_id]["item"]
+        actions.scene.atom_items[c_id], actions.scene.atom_items[h_id]
     )
 
     # We need to ensure sip_isdeleted_safe doesn't block deletion in test
@@ -69,6 +69,6 @@ def test_remove_hydrogen_atoms_app_logic(mock_parser_host):
     actions.scene.delete_items.assert_called()
     deleted_set = actions.scene.delete_items.call_args[0][0]
     # In mock_parser_host, host.state_manager.data.atoms[h_id]['item'] is a MagicMock
-    h_item = actions.data.atoms[h_id]["item"]
+    h_item = actions.scene.atom_items[h_id]
     assert h_item in deleted_set
-    assert actions.data.atoms[c_id]["item"] not in deleted_set
+    assert actions.scene.atom_items[c_id] not in deleted_set

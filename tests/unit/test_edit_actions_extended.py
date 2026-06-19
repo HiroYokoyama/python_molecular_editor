@@ -46,14 +46,8 @@ class DummyHost:
         self.init_manager.view_2d = MagicMock()
         self.view_3d_manager.plotter = MagicMock()
 
-        from moleditpy.ui.molecule_scene import SceneItemDict
-
-        self.init_manager.scene.atom_items = SceneItemDict(
-            self.init_manager.scene, self.state_manager.data.atoms
-        )
-        self.init_manager.scene.bond_items = SceneItemDict(
-            self.init_manager.scene, self.state_manager.data.bonds
-        )
+        self.init_manager.scene.atom_items = {}
+        self.init_manager.scene.bond_items = {}
 
         # Action mocks on init_manager
         self.init_manager.cut_action = MagicMock()
@@ -259,8 +253,9 @@ class TestEditActionsExtended:
         atom1.atom_id = 1
         atom1.pos.return_value = QPointF(0, 0)
         manager.host.state_manager.data.atoms = {
-            1: {"item": atom1, "symbol": "C", "pos": QPointF(0, 0)}
+            1: {"symbol": "C", "pos": QPointF(0, 0)}
         }
+        manager.host.init_manager.scene.atom_items = {1: atom1}
 
         with patch(
             "moleditpy.core.mol_geometry.rotate_2d_points", return_value={1: (10, 10)}

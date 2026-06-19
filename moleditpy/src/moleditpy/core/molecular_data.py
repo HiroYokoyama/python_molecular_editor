@@ -60,7 +60,6 @@ class MolecularData:
         self.atoms[atom_id] = {
             "symbol": symbol,
             "pos": raw_pos,
-            "item": None,
             "charge": charge,
             "radical": radical,
         }
@@ -87,7 +86,7 @@ class MolecularData:
             if id1 > id2:
                 id1, id2 = id2, id1
 
-        bond_data = {"order": order, "stereo": stereo, "item": None}
+        bond_data = {"order": order, "stereo": stereo}
 
         # Check if it's a new bond, considering reverse direction keys.
         is_new_bond = (id1, id2) not in self.bonds and (id2, id1) not in self.bonds
@@ -320,89 +319,6 @@ class MolecularData:
         else:
             Chem.AssignStereochemistry(final_mol, cleanIt=False, force=False)
         return final_mol
-
-    def update_ring_info_2d(self) -> None:
-        """Update is_in_ring and ring_center for all BondItems based on 2D topology."""
-        if not self.atoms or not self.bonds:
-            return
-
-        # 1. Generate RDKit molecule for topology analysis
-        mol = self.to_rdkit_mol(use_2d_stereo=False)
-        if not mol:
-            # Fallback: reset all ring info if molecule generation fails
-            for bond_data in self.bonds.values():
-                bond_item = bond_data.get("item")
-                if bond_item:
-                    bond_item.is_in_ring = False
-                    bond_item.ring_center = None
-            return
-
-        # 2. Extract ring information
-        ring_info = mol.GetRingInfo()
-        atom_rings = ring_info.AtomRings()
-        bond_rings = ring_info.BondRings()
-
-        # 3. Create mapping from RDKit atom index to editor atom item
-        rdkit_idx_to_item = {}
-        for atom in mol.GetAtoms():
-            if atom.HasProp("_original_atom_id"):
-                orig_id = atom.GetIntProp("_original_atom_id")
-                if orig_id in self.atoms:
-                    rdkit_idx_to_item[atom.GetIdx()] = self.atoms[orig_id].get("item")
-
-        # 4. Map RDKit bond index to editor bond item
-        rdkit_bond_idx_to_item = {}
-        for bidx, rdkit_bond in enumerate(mol.GetBonds()):
-            a1_idx = rdkit_bond.GetBeginAtomIdx()
-            a2_idx = rdkit_bond.GetEndAtomIdx()
-            if a1_idx in rdkit_idx_to_item and a2_idx in rdkit_idx_to_item:
-                item1 = rdkit_idx_to_item[a1_idx]
-                item2 = rdkit_idx_to_item[a2_idx]
-                if item1 and item2:
-                    id1, id2 = item1.atom_id, item2.atom_id
-                    key = (id1, id2) if (id1, id2) in self.bonds else (id2, id1)
-                    if key in self.bonds:
-                        rdkit_bond_idx_to_item[bidx] = self.bonds[key].get("item")
-
-        # 5. Initialize/Reset all bond items and track best ring size
-        bond_to_best_size = {}  # bond_item_id -> smallest_ring_size_found
-        for bond_data in self.bonds.values():
-            bond_item = bond_data.get("item")
-            if bond_item:
-                bond_item.is_in_ring = False
-                bond_item.ring_center = None
-
-        # 6. Apply ring information
-        for a_ring, b_ring in zip(atom_rings, bond_rings):
-            ring_size = len(a_ring)
-            # Calculate ring center (geometric mean of atom positions)
-            positions = []
-            for aidx in a_ring:
-                item = rdkit_idx_to_item.get(aidx)
-                if item and hasattr(item, "pos"):
-                    pos = item.pos()
-                    if pos is not None:
-                        positions.append(pos)
-
-            if not positions:
-                continue
-
-            center_x = sum(p.x() for p in positions) / len(positions)
-            center_y = sum(p.y() for p in positions) / len(positions)
-            ring_center = (center_x, center_y)
-
-            # Update all bonds in this ring
-            for bidx in b_ring:
-                bond_item = rdkit_bond_idx_to_item.get(bidx)
-                if bond_item:
-                    bond_item.is_in_ring = True
-                    item_id = id(bond_item)
-                    if (
-                        item_id not in bond_to_best_size
-                        or ring_size < bond_to_best_size[item_id]
-                    ):
-                        bond_item.ring_center = ring_center
-                        bond_to_best_size[item_id] = ring_size
 
     def to_mol_block(self) -> Optional[str]:
         mol = self.to_rdkit_mol()

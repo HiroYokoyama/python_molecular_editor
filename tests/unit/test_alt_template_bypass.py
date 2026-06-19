@@ -15,6 +15,8 @@ class MockTemplateScene(TemplateMixin):
         self.items_returned = []
         self.data = MagicMock()
         self.data.atoms = {}
+        self.atom_items = {}
+        self.bond_items = {}
 
     def get_setting(self, key, default=None):
         return self.settings.get(key, default)
@@ -55,7 +57,7 @@ def test_update_template_preview_allows_snapping_but_bypasses_fusing_when_alt_pr
     # Setup database with another atom close to expected preview points, but unclicked
     mock_atom = MagicMock()
     mock_atom.pos.return_value = QPointF(10.5, 20.5)
-    scene.data.atoms = {101: {"item": mock_atom}}
+    scene.atom_items[101] = mock_atom
 
     # Simulate Alt key pressed
     with patch(
@@ -83,15 +85,16 @@ def test_add_molecule_fragment_bypasses_fusing_when_alt_pressed(qapp):
     # Mock an atom in the scene close to one of the points
     mock_atom = MagicMock()
     mock_atom.pos.return_value = QPointF(10, 20)
-    scene.data.atoms = {1: {"item": mock_atom}}
+    scene.atom_items[1] = mock_atom
 
     # Create dummy points for benzene placement
     points = [QPointF(10, 20)] + [QPointF(100, 100)] * 5
     bonds_info = [(0, 1, 1)]
 
-    # Mock create_atom and create_bond
+    # Mock create_atom and create_bond; also set up atom_items so add_molecule_fragment can look up the new atom
+    new_atom_mock = MagicMock()
     scene.create_atom = MagicMock(return_value=99)
-    scene.data.atoms[99] = {"item": MagicMock()}
+    scene.atom_items[99] = new_atom_mock
     scene.create_bond = MagicMock()
 
     # Simulate Alt key pressed

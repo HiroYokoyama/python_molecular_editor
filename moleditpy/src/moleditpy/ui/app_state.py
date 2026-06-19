@@ -194,7 +194,6 @@ class StateManager:
                 "pos": raw_pos,
                 "charge": charge,
                 "radical": radical,
-                "item": atom_item,
             }
             self.host.init_manager.scene.atom_items[atom_id] = atom_item
             self.host.init_manager.scene.addItem(atom_item)
@@ -208,19 +207,14 @@ class StateManager:
             id1, id2 = key_tuple
             if id1 in self.data.atoms and id2 in self.data.atoms:
                 scene = self.host.init_manager.scene
-                if hasattr(scene, "atom_items") and isinstance(scene.atom_items, dict):
-                    atom1_item = scene.atom_items[id1]
-                    atom2_item = scene.atom_items[id2]
-                else:
-                    atom1_item = self.data.atoms[id1].get("item")
-                    atom2_item = self.data.atoms[id2].get("item")
+                atom1_item = scene.atom_items[id1]
+                atom2_item = scene.atom_items[id2]
                 bond_item = BondItem(
                     atom1_item, atom2_item, data.get("order", 1), data.get("stereo", 0)
                 )
                 self.data.bonds[key_tuple] = {
                     "order": data.get("order", 1),
                     "stereo": data.get("stereo", 0),
-                    "item": bond_item,
                 }
                 self.host.init_manager.scene.bond_items[key_tuple] = bond_item
                 atom1_item.bonds.append(bond_item)
@@ -666,7 +660,6 @@ class StateManager:
                     "pos": raw_pos,
                     "charge": charge,
                     "radical": radical,
-                    "item": atom_item,
                 }
                 self.host.init_manager.scene.atom_items[atom_id] = atom_item
                 self.host.init_manager.scene.addItem(atom_item)
@@ -685,14 +678,8 @@ class StateManager:
 
                 if atom1_id in self.data.atoms and atom2_id in self.data.atoms:
                     scene = self.host.init_manager.scene
-                    if hasattr(scene, "atom_items") and isinstance(
-                        scene.atom_items, dict
-                    ):
-                        atom1_item = scene.atom_items[atom1_id]
-                        atom2_item = scene.atom_items[atom2_id]
-                    else:
-                        atom1_item = self.data.atoms[atom1_id].get("item")
-                        atom2_item = self.data.atoms[atom2_id].get("item")
+                    atom1_item = scene.atom_items[atom1_id]
+                    atom2_item = scene.atom_items[atom2_id]
 
                     bond_order = bond_data["order"]
                     stereo = bond_data.get("stereo", 0)
@@ -707,7 +694,6 @@ class StateManager:
                     self.data.bonds[(atom1_id, atom2_id)] = {
                         "order": bond_order,
                         "stereo": stereo,
-                        "item": bond_item,
                     }
                     self.host.init_manager.scene.bond_items[(atom1_id, atom2_id)] = (
                         bond_item

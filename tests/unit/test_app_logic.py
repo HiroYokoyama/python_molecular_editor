@@ -41,16 +41,6 @@ def test_molecular_data_fallback_serialization():
     data.add_bond(0, 1, order=1)
 
     # RDKit might fail to sanitize "X", so to_rdkit_mol returns None
-    from unittest.mock import MagicMock
-
-    item1 = MagicMock()
-    item1.pos.return_value = QPointF(0, 0)
-    data.atoms[0]["item"] = item1
-
-    item2 = MagicMock()
-    item2.pos.return_value = QPointF(10, 0)
-    data.atoms[1]["item"] = item2
-
     # to_mol_block should then use the fallback path
     mol_block = data.to_mol_block()
     # Verify fallback produced valid V2000 structure: 2 atoms, 1 bond

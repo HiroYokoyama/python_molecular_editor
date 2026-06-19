@@ -1,7 +1,6 @@
 """Tests for MolecularData — CRUD operations, adjacency, RDKit round-trip, and value validation."""
 
 import pytest
-from unittest.mock import MagicMock
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
 from moleditpy.core.molecular_data import MolecularData
@@ -408,9 +407,6 @@ def test_to_rdkit_mol_ez_stereo():
     data.add_bond(c1, c2, order=1, stereo=0)
     data.add_bond(c3, c4, order=1, stereo=0)
     data.add_bond(c2, c3, order=2, stereo=3)  # Z
-
-    for atom_id, atom_data in data.atoms.items():
-        atom_data["item"] = MagicMock(atom_id=atom_id)
 
     mol = data.to_rdkit_mol(use_2d_stereo=False)
     assert mol is not None

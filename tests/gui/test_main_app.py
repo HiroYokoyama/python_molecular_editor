@@ -176,7 +176,7 @@ def test_draw_atom_on_click(window, qtbot):
     assert len(window.state_manager.data.atoms) == 1
     atom_id = list(window.state_manager.data.atoms.keys())[0]
     assert window.state_manager.data.atoms[atom_id]["symbol"] == "N"
-    assert window.state_manager.data.atoms[atom_id]["item"].pos() == click_pos
+    assert window.init_manager.scene.atom_items[atom_id].pos() == click_pos
 
 
 @pytest.mark.gui
@@ -190,7 +190,7 @@ def test_draw_bond_on_drag(window, qtbot):
     end_pos = QPointF(50, 0)
     id0 = scene.create_atom("C", start_pos)
     id1 = scene.create_atom("C", end_pos)
-    scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
+    scene.create_bond(scene.atom_items[id0], scene.atom_items[id1])
 
     # Verify atom and bond addition
     assert len(window.state_manager.data.atoms) == 2
@@ -217,10 +217,10 @@ def test_draw_bond_to_existing_atom(window, qtbot):
 
     # 2. Drag from atom 0 to atom 1 in bond mode
     window.ui_manager.set_mode("bond_1_0")
-    start_item = window.state_manager.data.atoms[0]["item"]
+    start_item = window.init_manager.scene.atom_items[0]
 
     drag_scene(
-        qtbot, scene, start_item.pos(), window.state_manager.data.atoms[1]["item"].pos()
+        qtbot, scene, start_item.pos(), window.init_manager.scene.atom_items[1].pos()
     )
 
     # 3. Verify bond addition
@@ -242,7 +242,7 @@ def test_change_atom_symbol_on_click(window, qtbot):
     window.ui_manager.set_mode("atom_O")
 
     # 2. Click existing atom
-    atom_item = window.state_manager.data.atoms[0]["item"]
+    atom_item = window.init_manager.scene.atom_items[0]
     # Change symbol programmatically (simulation of click)
     window.state_manager.data.atoms[0]["symbol"] = "O"
     atom_item.symbol = "O"
@@ -262,14 +262,14 @@ def test_change_bond_order_on_click(window, qtbot):
     # Create a single bond deterministically between two atoms
     id0 = scene.create_atom("C", QPointF(0, 0))
     id1 = scene.create_atom("C", QPointF(50, 0))
-    scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
+    scene.create_bond(scene.atom_items[id0], scene.atom_items[id1])
     assert window.state_manager.data.bonds[(0, 1)]["order"] == 1
 
     # 1. Change mode to "Double Bond"
     window.ui_manager.set_mode("bond_2_0")
 
     # 2. Click existing bond
-    bond_item = window.state_manager.data.bonds[(0, 1)]["item"]
+    bond_item = window.init_manager.scene.bond_items[(0, 1)]
     # Change bond order programmatically (simulation of click)
     bond_item.order = 2
     window.state_manager.data.bonds[(0, 1)]["order"] = 2
@@ -290,7 +290,7 @@ def test_delete_atom_on_right_click(window, qtbot):
     assert len(window.state_manager.data.atoms) == 1
 
     # 1. Right-click existing atom (simulate deletion programmatically)
-    atom_item = window.state_manager.data.atoms[0]["item"]
+    atom_item = window.init_manager.scene.atom_items[0]
     scene.delete_items({atom_item})
     window.edit_actions_manager.push_undo_state()
 
@@ -310,7 +310,7 @@ def test_charge_mode_click(window, qtbot):
     window.ui_manager.set_mode("charge_plus")
 
     # 2. Apply +1 charge to atom (simulation of click)
-    atom_item = window.state_manager.data.atoms[0]["item"]
+    atom_item = window.init_manager.scene.atom_items[0]
     atom_item.charge += 1
     window.state_manager.data.atoms[0]["charge"] = atom_item.charge
     atom_item.update_style()
@@ -340,7 +340,7 @@ def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
     # 1. Draw ethane in 2D (programmatically)
     id1 = scene.create_atom("C", QPointF(0, 0))
     id2 = scene.create_atom("C", QPointF(50, 0))
-    scene.create_bond(scene.data.atoms[id1]["item"], scene.data.atoms[id2]["item"])
+    scene.create_bond(scene.atom_items[id1], scene.atom_items[id2])
     qtbot.wait(50)
     assert len(window.state_manager.data.atoms) == 2
     assert len(window.state_manager.data.bonds) == 1
@@ -501,7 +501,7 @@ def test_copy_paste(window, qtbot, monkeypatch):
     window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
     id1 = scene.create_atom("C", QPointF(50, 0))
-    scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
+    scene.create_bond(scene.atom_items[id0], scene.atom_items[id1])
     assert len(window.state_manager.data.atoms) == 2
     assert len(window.state_manager.data.bonds) == 1
 
@@ -578,7 +578,7 @@ def test_key_press_change_atom(window, qtbot, monkeypatch):
     assert window.state_manager.data.atoms[0]["symbol"] == "C"
 
     # 2. Move cursor over the atom
-    atom_item = window.state_manager.data.atoms[0]["item"]
+    atom_item = window.init_manager.scene.atom_items[0]
     view = scene.views()[0]
     viewport_pos = view.mapFromScene(atom_item.pos())
     # Ensure the global cursor position maps to the atom in the test environment
@@ -609,11 +609,11 @@ def test_key_press_change_bond(window, qtbot, monkeypatch):
     window.ui_manager.set_mode("atom_C")
     id0 = scene.create_atom("C", QPointF(0, 0))
     id1 = scene.create_atom("C", QPointF(50, 0))
-    scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
+    scene.create_bond(scene.atom_items[id0], scene.atom_items[id1])
     assert window.state_manager.data.bonds[(0, 1)]["order"] == 1
 
     # 2. Move cursor over the bond
-    bond_item = window.state_manager.data.bonds[(0, 1)]["item"]
+    bond_item = window.init_manager.scene.bond_items[(0, 1)]
     view = scene.views()[0]
     viewport_pos = view.mapFromScene(bond_item.sceneBoundingRect().center())
     # Ensure the global cursor position maps to the bond in the test environment
@@ -648,7 +648,7 @@ def test_radical_mode_toggle(window, qtbot):
     window.ui_manager.set_mode("radical")
 
     # 2. Click atom (simulation)
-    atom_item = window.state_manager.data.atoms[0]["item"]
+    atom_item = window.init_manager.scene.atom_items[0]
     # Toggle radical programmatically (clicks are flaky in headless tests)
     atom_item.radical = 1
     window.state_manager.data.atoms[0]["radical"] = 1
@@ -682,7 +682,7 @@ def test_delete_key_selection(window, qtbot):
     assert len(window.state_manager.data.atoms) == 1
 
     # 2. Select the atom
-    atom_item = window.state_manager.data.atoms[0]["item"]
+    atom_item = window.init_manager.scene.atom_items[0]
     atom_item.setSelected(True)
     assert len(scene.selectedItems()) == 1
 
@@ -853,10 +853,10 @@ def test_2d_cleanup(window, qtbot, monkeypatch):
     id0 = scene.create_atom("C", QPointF(10, 10))
     id1 = scene.create_atom("C", QPointF(20, 20))
     window.ui_manager.set_mode("bond_1_0")
-    scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
+    scene.create_bond(scene.atom_items[id0], scene.atom_items[id1])
 
-    pos0_before = window.state_manager.data.atoms[0]["item"].pos()
-    pos1_before = window.state_manager.data.atoms[1]["item"].pos()
+    pos0_before = window.init_manager.scene.atom_items[0].pos()
+    pos1_before = window.init_manager.scene.atom_items[1].pos()
 
     # Mock RDKit 2D coordinate calculation (Compute2DCoords)
     # Target coordinates from RDKit mock (RDKit coordinate system)
@@ -899,8 +899,8 @@ def test_2d_cleanup(window, qtbot, monkeypatch):
     qtbot.wait(100)
 
     # 3. Verify coordinates changed
-    pos0_after = window.state_manager.data.atoms[0]["item"].pos()
-    pos1_after = window.state_manager.data.atoms[1]["item"].pos()
+    pos0_after = window.init_manager.scene.atom_items[0].pos()
+    pos1_after = window.init_manager.scene.atom_items[1].pos()
 
     # Sometimes RDKit coordinate generation yields similar coords in some envs;
     # prefer asserting visible success message and that positions are not both unchanged.
@@ -1274,7 +1274,7 @@ def test_implicit_hydrogens_update(window, qtbot):
     qtbot.wait(100)
 
     # 2. Verify 4 implicit hydrogens calculated
-    atom_item = window.state_manager.data.atoms[0]["item"]
+    atom_item = window.init_manager.scene.atom_items[0]
     assert atom_item.implicit_h_count == 4
 
     # 3. Draw second C atom and bond (drag)
@@ -1287,8 +1287,8 @@ def test_implicit_hydrogens_update(window, qtbot):
     qtbot.wait(100)
 
     # 4. Verify implicit hydrogen count reduced to 3 for both atoms
-    assert window.state_manager.data.atoms[0]["item"].implicit_h_count == 3
-    assert window.state_manager.data.atoms[1]["item"].implicit_h_count == 3
+    assert window.init_manager.scene.atom_items[0].implicit_h_count == 3
+    assert window.init_manager.scene.atom_items[1].implicit_h_count == 3
 
 
 @pytest.mark.gui
@@ -1369,7 +1369,7 @@ def test_project_save_load_round_trip(window, qtbot, monkeypatch, tmp_path):
     # Coordinates aligned for easy comparison
     id0 = scene.create_atom("C", QPointF(0, 0))
     id1 = scene.create_atom("N", QPointF(50, 0))
-    scene.create_bond(scene.data.atoms[id0]["item"], scene.data.atoms[id1]["item"])
+    scene.create_bond(scene.atom_items[id0], scene.atom_items[id1])
 
     # Verify initial state
     assert len(window.state_manager.data.atoms) == 2

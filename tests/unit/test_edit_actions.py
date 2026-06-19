@@ -43,8 +43,8 @@ def test_rotate_molecule_2d_basic(mock_parser_host):
     editor = DummyEditActions(mock_parser_host)
     aid1 = mock_parser_host.scene.create_atom("C", QPointF(0, 0))
     aid2 = mock_parser_host.scene.create_atom("C", QPointF(10, 0))
-    a1 = mock_parser_host.data.atoms[aid1]["item"]
-    a2 = mock_parser_host.data.atoms[aid2]["item"]
+    a1 = mock_parser_host.scene.atom_items[aid1]
+    a2 = mock_parser_host.scene.atom_items[aid2]
 
     editor.scene.selectedItems.return_value = []
 
@@ -63,12 +63,12 @@ def test_resolve_overlapping_groups_basic(mock_parser_host):
     editor = DummyEditActions(mock_parser_host)
 
     aid1 = mock_parser_host.scene.create_atom("C", QPointF(0, 0))
-    a1 = mock_parser_host.data.atoms[aid1]["item"]
+    a1 = mock_parser_host.scene.atom_items[aid1]
 
     aid2 = mock_parser_host.scene.create_atom(
         "O", QPointF(0, 0.1)
     )  # Within 0.5 threshold
-    a2 = mock_parser_host.data.atoms[aid2]["item"]
+    a2 = mock_parser_host.scene.atom_items[aid2]
 
     editor.scene.items.return_value = [a1, a2]
 
@@ -85,7 +85,7 @@ def test_update_implicit_hydrogens_main_logic(mock_parser_host):
     """Test calculation of implicit hydrogens for display."""
     editor = DummyEditActions(mock_parser_host)
     aid = mock_parser_host.scene.create_atom("C", QPointF(0, 0))
-    a_item = mock_parser_host.data.atoms[aid]["item"]
+    a_item = mock_parser_host.scene.atom_items[aid]
     # Ensure item.scene() returns something so it's not skipped
     a_item.scene.return_value = MagicMock()
 
@@ -111,7 +111,7 @@ def test_clipboard_copy_serialization(mock_parser_host):
     editor = DummyEditActions(mock_parser_host)
 
     aid = mock_parser_host.scene.create_atom("C", QPointF(0, 0))
-    a_item = mock_parser_host.data.atoms[aid]["item"]
+    a_item = mock_parser_host.scene.atom_items[aid]
     editor.scene.selectedItems.return_value = [a_item]
 
     mock_clipboard = MagicMock()

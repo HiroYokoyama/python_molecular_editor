@@ -48,105 +48,12 @@ except ImportError:
     )
 
 
-class SceneItemDict(dict):
-    def __init__(self, scene: Any, data_dict_ref: Any) -> None:
-        super().__init__()
-        self.scene = scene
-        self.static_data_dict = data_dict_ref
-
-    @property
-    def data_dict_ref(self) -> Optional[dict]:
-        try:
-            data = getattr(self.scene, "data", None)
-            if data is not None:
-                if hasattr(self.scene, "atom_items") and self.scene.atom_items is self:
-                    return getattr(data, "atoms", None)
-                if hasattr(self.scene, "bond_items") and self.scene.bond_items is self:
-                    return getattr(data, "bonds", None)
-                atoms_dict = getattr(data, "atoms", None)
-                bonds_dict = getattr(data, "bonds", None)
-                if self.static_data_dict is atoms_dict:
-                    return atoms_dict
-                if self.static_data_dict is bonds_dict:
-                    return bonds_dict
-        except Exception:
-            pass
-        return self.static_data_dict
-
-    def __getitem__(self, key: Any) -> Any:
-        if super().__contains__(key):
-            return super().__getitem__(key)
-        try:
-            ref = self.data_dict_ref
-            if ref is not None:
-                val = ref[key].get("item")
-                if val is not None:
-                    return val
-        except (KeyError, AttributeError, TypeError):
-            pass
-        raise KeyError(key)
-
-    def get(self, key: Any, default: Any = None) -> Any:
-        try:
-            return self[key]
-        except KeyError:
-            return default
-
-    def __contains__(self, key: Any) -> bool:
-        if super().__contains__(key):
-            return True
-        try:
-            ref = self.data_dict_ref
-            if ref is not None:
-                return ref[key].get("item") is not None
-        except (KeyError, AttributeError, TypeError):
-            return False
-        return False
-
-    def __setitem__(self, key: Any, value: Any) -> None:
-        super().__setitem__(key, value)
-        try:
-            ref = self.data_dict_ref
-            if ref is not None and key in ref:
-                ref[key]["item"] = value
-        except (TypeError, AttributeError):
-            pass
-
-    def pop(self, key: Any, default: Any = None) -> Any:
-        try:
-            ref = self.data_dict_ref
-            if ref is not None and key in ref:
-                ref[key].pop("item", None)
-        except (TypeError, AttributeError):
-            pass
-        return super().pop(key, default)
-
-    def values(self) -> Any:
-        merged = {}
-        try:
-            ref = self.data_dict_ref
-            if ref is not None:
-                for k, v in ref.items():
-                    item = v.get("item")
-                    if item is not None:
-                        merged[k] = item
-        except (AttributeError, TypeError):
-            pass
-        for k, v in self.items():
-            merged[k] = v
-        return merged.values()
-
-
 class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene):
     def __init__(self, data: Any, window: Any) -> None:
         super().__init__()
         self.data, self.window = data, window
-        self.atom_items = SceneItemDict(
-            self, self.data.atoms if hasattr(self.data, "atoms") else None
-        )
-        self.bond_items = SceneItemDict(
-            self, self.data.bonds if hasattr(self.data, "bonds") else None
-        )
+        self.atom_items: Dict[Any, Any] = {}
+        self.bond_items: Dict[Any, Any] = {}
         self._deleted_items = []
         self.initial_positions_in_event = {}
         self.template_context = {}
@@ -327,9 +234,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
     def clear_all_problem_flags(self) -> bool:
         """Reset the has_problem flag for all AtomItems and redraw them."""
         needs_update = False
-        for atom_data in self.data.atoms.values():
-            item = atom_data.get("item")
-            # hasattr is a safety check
+        for item in self.atom_items.values():
             if item and hasattr(item, "has_problem") and item.has_problem:
                 item.has_problem = False
                 item.update()
@@ -405,9 +310,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         if hasattr(item, "stereo") and item.stereo in [3, 4]:
                             item.set_stereo(0)
                             # Also update the data model
-                            for bdata in self.data.bonds.values():
-                                if bdata.get("item") is item:
-                                    bdata["stereo"] = 0
+                            for bond_key, bond_item_check in self.bond_items.items():
+                                if bond_item_check is item:
+                                    self.data.bonds[bond_key]["stereo"] = 0
                                     break
                             self.window.edit_actions_manager.push_undo_state()
                             data_changed = False  # Already added to undo stack, so skip redundant pushes later

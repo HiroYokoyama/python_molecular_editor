@@ -161,7 +161,8 @@ def mock_parser_host(app):
             },
         }
         for aid, data in host.state_manager.data.atoms.items():
-            pos = data["item"].pos()
+            item = host.init_manager.scene.atom_items.get(aid)
+            pos = item.pos() if item else QPointF(0, 0)
             json_data["2d_structure"]["atoms"].append(
                 {
                     "id": aid,
@@ -195,8 +196,8 @@ def mock_parser_host(app):
                 radical=adata.get("radical", 0),
             )
         for bdata in s2d.get("bonds", []):
-            a1 = host.state_manager.data.atoms[bdata["atom1"]]["item"]
-            a2 = host.state_manager.data.atoms[bdata["atom2"]]["item"]
+            a1 = host.init_manager.scene.atom_items[bdata["atom1"]]
+            a2 = host.init_manager.scene.atom_items[bdata["atom2"]]
             host.init_manager.scene.create_bond(
                 a1, a2, bond_order=bdata["order"], bond_stereo=bdata.get("stereo", 0)
             )
@@ -221,14 +222,8 @@ def mock_parser_host(app):
     host.check_unsaved_changes.return_value = True
 
     # Scene helpers
-    from moleditpy.ui.molecule_scene import SceneItemDict
-
-    host.init_manager.scene.atom_items = SceneItemDict(
-        host.init_manager.scene, host.state_manager.data.atoms
-    )
-    host.init_manager.scene.bond_items = SceneItemDict(
-        host.init_manager.scene, host.state_manager.data.bonds
-    )
+    host.init_manager.scene.atom_items = {}
+    host.init_manager.scene.bond_items = {}
     host.init_manager.scene.find_bond_between.return_value = None
 
     def default_create_atom(symbol, pos, charge=0, radical=0):
@@ -244,7 +239,7 @@ def mock_parser_host(app):
         item.has_problem = False
         item.__class__ = AtomItem
         item.scene.return_value = host.init_manager.scene
-        host.state_manager.data.atoms[aid]["item"] = item
+        host.init_manager.scene.atom_items[aid] = item
         return aid
 
     def default_create_bond(a1_item, a2_item, bond_order=1, bond_stereo=0):
