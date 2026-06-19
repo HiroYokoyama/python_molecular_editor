@@ -167,7 +167,11 @@ class ComputeManager:
         menu.exec(self.host.init_manager.convert_button.mapToGlobal(pos))
 
     def _trigger_conversion_with_temp_mode(self, mode_key: str) -> None:
-        QTimer.singleShot(0, lambda: self.trigger_conversion(conversion_mode=mode_key))
+        # Store mode as instance attribute so it reaches trigger_conversion
+        # without passing a kwarg — plugins may wrap trigger_conversion without
+        # forwarding **kwargs, which would cause a TypeError.
+        self._pending_conversion_mode = mode_key
+        QTimer.singleShot(0, self.trigger_conversion)
 
     def show_optimize_menu(self, pos: QPoint) -> None:
         """Temporary 3D optimization menu (right-click)."""
@@ -204,6 +208,9 @@ class ComputeManager:
         optimization_method: Optional[str] = None,
     ) -> None:
         """Main entry point for 2D to 3D conversion."""
+        if conversion_mode is None:
+            conversion_mode = self.__dict__.get("_pending_conversion_mode")
+            self.__dict__.pop("_pending_conversion_mode", None)
         self.last_successful_optimization_method = None
         self.host.set_constraints_3d([])
 

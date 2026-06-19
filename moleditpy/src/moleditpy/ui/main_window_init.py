@@ -79,6 +79,7 @@ try:
     from .custom_qt_interactor import CustomQtInteractor
     from ..core.molecular_data import MolecularData
     from .molecule_scene import MoleculeScene
+    from .plugin_menu_manager import PluginMenuManager
     from .settings_dialog import SettingsDialog
     from .zoomable_view import ZoomableView
 except (AttributeError, RuntimeError, TypeError):
@@ -88,6 +89,7 @@ except (AttributeError, RuntimeError, TypeError):
     from moleditpy.ui.custom_qt_interactor import CustomQtInteractor
     from moleditpy.core.molecular_data import MolecularData
     from moleditpy.ui.molecule_scene import MoleculeScene
+    from moleditpy.ui.plugin_menu_manager import PluginMenuManager
     from moleditpy.ui.settings_dialog import SettingsDialog
     from moleditpy.ui.zoomable_view import ZoomableView
 
@@ -169,6 +171,7 @@ class MainInitManager:
         self._preserved_plugin_data: Dict[str, Any] = {}
 
         self.plugin_menubar_separator_added = False
+        self.plugin_menu_manager = PluginMenuManager(self)
         self.active_worker_ids = set()
         self.analysis_action = None
         self.atom_index_base_0_action = None
@@ -607,368 +610,20 @@ class MainInitManager:
             logging.error(f"Error saving settings: {e}")
 
     def update_plugin_menu(self, plugin_menu: QMenu) -> None:
-        """Discovers plugins and updates the plugin menu actions."""
-        if not self.host.plugin_manager:
-            return
-
-        # Cleanup
-        self._clear_all_plugin_actions(plugin_menu)
-
-        # Re-add Manager
-        manage_plugins_action = QAction("Plugin Manager...", self.host)
-        manage_plugins_action.triggered.connect(
-            lambda: self._show_plugin_manager(plugin_menu)
-        )
-        plugin_menu.addAction(manage_plugins_action)
-        plugin_menu.addSeparator()
-
-        # Discover
-        plugins = self.host.plugin_manager.discover_plugins(self.host)
-
-        # Integrate
-        self._update_style_menu_with_plugins()
-        self.add_registered_plugin_actions()
-        self.add_plugin_toolbar_actions()
-        self._add_legacy_plugin_actions(plugin_menu, plugins)
-        self._integrate_plugin_export_actions()
-        self._integrate_plugin_file_openers()
-        self._integrate_plugin_analysis_tools()
-
-    def _show_plugin_manager(self, plugin_menu: QMenu) -> None:
-        """Displays the plugin manager window and refreshes the menu."""
-        if not self.host.plugin_manager:
-            QMessageBox.information(
-                self.host, "Safe Mode", "Plugins are disabled (safe mode)."
-            )
-            return
-        from ..plugins.plugin_manager_window import PluginManagerWindow
-
-        dlg = PluginManagerWindow(self.host.plugin_manager, self.host)
-        dlg.exec()
-        self.update_plugin_menu(plugin_menu)
-
-    def _clear_all_plugin_actions(self, plugin_menu: QMenu) -> None:
-        """Clear all plugin actions from the plugin menu and other UI components."""
-        PLUGIN_ACTION_TAG = "plugin_managed"
-
-        def clear_menu(menu: Any) -> None:
-            if not menu:
-                return
-            for act in list(menu.actions()):
-                if act.data() == PLUGIN_ACTION_TAG:
-                    menu.removeAction(act)
-                elif act.menu():
-                    clear_menu(act.menu())
-
-        plugin_menu.clear()
-        for top_action in self.host.menuBar().actions():
-            if top_action.menu():
-                clear_menu(top_action.menu())
-
-        if self.export_button and self.export_button.menu():
-            clear_menu(self.export_button.menu())
-
-    def _update_style_menu_with_plugins(self) -> None:
-        """Update the 3D style menu with custom styles from plugins."""
-        if not self.style_button or not self.style_button.menu():
-            return
-
-        style_menu = self.style_button.menu()
-        style_group = next(
-            (a.actionGroup() for a in style_menu.actions() if a.actionGroup()), None
-        )
-
-        if style_group and self.host.plugin_manager.custom_3d_styles:
-            if not style_menu.actions()[-1].isSeparator():
-                style_menu.addSeparator()
-
-            for style_name in self.host.plugin_manager.custom_3d_styles:
-                if not any(a.text() == style_name for a in style_menu.actions()):
-                    action = QAction(style_name, self.host)
-                    action.setCheckable(True)
-                    action.triggered.connect(
-                        lambda checked=False,
-                        s=style_name: self.host.view_3d_manager.set_3d_style(s)
-                    )
-                    style_menu.addAction(action)
-                    style_group.addAction(action)
+        """Discover plugins and populate the Plugin menu."""
+        self.plugin_menu_manager.update_plugin_menu(plugin_menu)
 
     def rebuild_plugin_menus(self) -> None:
-        """Rebuild all plugin-managed menus and toolbars cleanly."""
-        PLUGIN_ACTION_TAG = "plugin_managed"
-
-        def _clean_menu(menu):
-            for action in list(menu.actions()):
-                submenu = action.menu()
-                if submenu is not None:
-                    _clean_menu(submenu)
-                    has_content = any(not a.isSeparator() for a in submenu.actions())
-                    if not has_content:
-                        menu.removeAction(action)
-                elif action.data() == PLUGIN_ACTION_TAG:
-                    menu.removeAction(action)
-
-        try:
-            for top_action in list(self.host.menuBar().actions()):
-                top_menu = top_action.menu()
-                if top_menu is not None:
-                    _clean_menu(top_menu)
-        except Exception as e:
-            logging.warning("Plugin Installer: menu cleanup error: %s", e)
-
-        self.plugin_menubar_separator_added = False
-
-        try:
-            self.add_registered_plugin_actions()
-        except Exception as e:
-            logging.warning("Plugin Installer: menu rebuild error: %s", e)
-
-        try:
-            self.add_plugin_toolbar_actions()
-        except Exception as e:
-            logging.warning("Plugin Installer: toolbar rebuild error: %s", e)
+        """Fully rebuild all plugin-managed UI after install/uninstall."""
+        self.plugin_menu_manager.rebuild_plugin_menus()
 
     def add_registered_plugin_actions(self) -> None:
-        """Add actions that have been explicitly registered via the plugin manager."""
-        PLUGIN_ACTION_TAG = "plugin_managed"
-        if not self.host.plugin_manager.menu_actions:
-            return
-
-        for action_def in self.host.plugin_manager.menu_actions:
-            path = action_def["path"]
-            callback = action_def["callback"]
-            text = action_def["text"]
-
-            parts = path.split("/")
-            top_level_title = parts[0]
-            current_menu = next(
-                (
-                    a.menu()
-                    for a in self.host.menuBar().actions()
-                    if a.menu() and a.text().replace("&", "") == top_level_title
-                ),
-                None,
-            )
-
-            if not current_menu:
-                # Add a separator before the first plugin-owned top-level menu
-                if not getattr(self, "plugin_menubar_separator_added", False):
-                    self.host.menuBar().addSeparator()
-                    self.plugin_menubar_separator_added = True
-                current_menu = self.host.menuBar().addMenu(top_level_title)
-
-            for part in parts[1:-1]:
-                sub = next(
-                    (
-                        a.menu()
-                        for a in current_menu.actions()
-                        if a.menu() and a.text().replace("&", "") == part
-                    ),
-                    None,
-                )
-                current_menu = sub if sub else current_menu.addMenu(part)
-
-            actions = current_menu.actions()
-            if (
-                actions
-                and not actions[-1].isSeparator()
-                and actions[-1].data() != PLUGIN_ACTION_TAG
-            ):
-                sep = current_menu.addSeparator()
-                sep.setData(PLUGIN_ACTION_TAG)
-
-            action = QAction(text or parts[-1], self.host)
-            action.triggered.connect(callback)
-            if action_def.get("shortcut"):
-                action.setShortcut(QKeySequence(action_def["shortcut"]))
-            action.setData(PLUGIN_ACTION_TAG)
-            current_menu.addAction(action)
+        """Add menu actions registered by V3/V4 plugins."""
+        self.plugin_menu_manager.add_registered_plugin_actions()
 
     def add_plugin_toolbar_actions(self) -> None:
-        """Add toolbar actions registered by plugins."""
-        if not hasattr(self, "plugin_toolbar"):
-            return
-
-        self.plugin_toolbar.clear()
-        if self.host.plugin_manager.toolbar_actions:
-            self.plugin_toolbar.show()
-            for action_def in self.host.plugin_manager.toolbar_actions:
-                action = QAction(action_def["text"], self.host)
-                action.triggered.connect(action_def["callback"])
-                if action_def["icon"] and os.path.exists(action_def["icon"]):
-                    action.setIcon(QIcon(action_def["icon"]))
-                if action_def["tooltip"]:
-                    action.setToolTip(action_def["tooltip"])
-                self.plugin_toolbar.addAction(action)
-        else:
-            self.plugin_toolbar.hide()
-
-    def _add_legacy_plugin_actions(
-        self, plugin_menu: QMenu, plugins: List[Any]
-    ) -> None:
-        """Add folder-based legacy plugin actions to the plugin menu."""
-        if not plugins:
-            no_plugin = QAction("(No plugins found)", self.host)
-            no_plugin.setEnabled(False)
-            plugin_menu.addAction(no_plugin)
-            return
-
-        # Categorize
-        categorized: Dict[str, Any] = {}
-        root = []
-        for p in plugins:
-            # If 'run' is detected, add it to the menu via the legacy scanner.
-            # This applies to both pure legacy and dual-mode (V3 + legacy) plugins.
-            if hasattr(p["module"], "run"):
-                cat = p.get("category", p.get("rel_folder", "")).strip()
-                if cat:
-                    categorized.setdefault(cat, []).append(p)
-                else:
-                    root.append(p)
-            # Pure V3 plugins (initialize only) are skipped here and handle their own menu registration.
-
-        # Build categorized menus
-        for cat in sorted(categorized.keys()):
-            current_parent = plugin_menu
-            for part in cat.split(os.sep):
-                sub = next(
-                    (
-                        a.menu()
-                        for a in current_parent.actions()
-                        if a.menu() and a.text().replace("&", "") == part
-                    ),
-                    None,
-                )
-                current_parent = (
-                    sub if sub is not None else current_parent.addMenu(part)
-                )  # type: ignore[assignment]
-
-            for p in sorted(categorized[cat], key=lambda x: x["name"]):
-                a = QAction(p["name"], self.host)
-                a.triggered.connect(
-                    lambda checked,
-                    mod=p["module"]: self.host.plugin_manager.run_plugin(mod, self.host)
-                )
-                current_parent.addAction(a)
-
-        # Add root items
-        for p in sorted(root, key=lambda x: x["name"]):
-            a = QAction(p["name"], self.host)
-            a.triggered.connect(
-                lambda checked, mod=p["module"]: self.host.plugin_manager.run_plugin(
-                    mod, self.host
-                )
-            )
-            plugin_menu.addAction(a)
-
-    def _integrate_plugin_export_actions(self) -> None:
-        """Add plugin-provided export actions to the export menu."""
-        if not self.host.plugin_manager.export_actions:
-            return
-
-        PLUGIN_ACTION_TAG = "plugin_managed"
-        main_export_menu = None
-        for top_action in self.host.menuBar().actions():
-            if top_action.menu() and top_action.text().replace("&", "") == "File":
-                main_export_menu = next(
-                    (
-                        a.menu()
-                        for a in top_action.menu().actions()
-                        if a.menu() and a.text().replace("&", "") == "Export"
-                    ),
-                    None,
-                )
-                if main_export_menu:
-                    break
-
-        targets = []
-        if hasattr(self, "export_button") and self.export_button.menu():
-            targets.append(self.export_button.menu())
-        if main_export_menu:
-            targets.append(main_export_menu)
-
-        for menu in targets:
-            sep = menu.addSeparator()
-            sep.setData(PLUGIN_ACTION_TAG)
-            for exp in self.host.plugin_manager.export_actions:
-                a = QAction(exp["label"], self.host)
-                a.triggered.connect(exp["callback"])
-                a.setData(PLUGIN_ACTION_TAG)
-                menu.addAction(a)
-
-    def _integrate_plugin_file_openers(self) -> None:
-        """Add plugin-provided file openers to the import menu."""
-        if not self.host.plugin_manager.file_openers:
-            return
-
-        import_menu = getattr(self, "import_menu", None) or getattr(
-            self.host, "import_menu", None
-        )
-        if import_menu is None:
-            return
-
-        PLUGIN_ACTION_TAG = "plugin_managed"
-        sep = import_menu.addSeparator()
-        sep.setData(PLUGIN_ACTION_TAG)
-
-        plugin_map: Dict[str, Any] = {}
-        for ext, openers in self.host.plugin_manager.file_openers.items():
-            for info in openers:
-                plugin_map.setdefault(info.get("plugin", "Plugin"), {})[ext] = info[
-                    "callback"
-                ]
-
-        for p_name, ext_map in sorted(plugin_map.items()):
-            exts = sorted(ext_map.keys())
-            ext_str = "/".join(exts)
-            if len(ext_str) > 30:
-                cutoff = ext_str.rfind("/", 0, 30)
-                ext_str = (ext_str[:cutoff] if cutoff != -1 else ext_str[:30]) + "/..."
-
-            filter_str = (
-                f"{p_name} Files ({' '.join(['*' + e for e in exts])});;All Files (*)"
-            )
-
-            def make_cb(m: Any, f: Any, n: Any) -> Any:
-                def _cb() -> None:
-                    fpath, _ = QFileDialog.getOpenFileName(
-                        self.host, f"Import {n} Files", "", f
-                    )
-                    if fpath:
-                        ext = os.path.splitext(fpath)[1].lower()
-                        if ext in m:
-                            m[ext](fpath)
-                            self.current_file_path = fpath
-                            self.host.state_manager.update_window_title()
-
-                return _cb
-
-            a = QAction(f"Import {ext_str} ({p_name})...", self.host)
-            a.triggered.connect(make_cb(ext_map, filter_str, p_name))
-            a.setData(PLUGIN_ACTION_TAG)
-            import_menu.addAction(a)
-
-    def _integrate_plugin_analysis_tools(self) -> None:
-        """Add plugin-provided analysis tools to the analysis menu."""
-        analysis_menu = next(
-            (
-                a.menu()
-                for a in self.host.menuBar().actions()
-                if a.text().replace("&", "") == "Analysis"
-            ),
-            None,
-        )
-        if analysis_menu and self.host.plugin_manager.analysis_tools:
-            PLUGIN_ACTION_TAG = "plugin_managed"
-            sep = analysis_menu.addSeparator()
-            sep.setData(PLUGIN_ACTION_TAG)
-            for tool in self.host.plugin_manager.analysis_tools:
-                a = QAction(
-                    f"{tool['label']} ({tool.get('plugin', 'Plugin')})", self.host
-                )
-                a.triggered.connect(tool["callback"])
-                a.setData(PLUGIN_ACTION_TAG)
-                analysis_menu.addAction(a)
+        """Populate the plugin toolbar from registered actions."""
+        self.plugin_menu_manager.add_plugin_toolbar_actions()
 
     # --- UI Initialization Helpers ---
     def _init_main_layout(self) -> None:
