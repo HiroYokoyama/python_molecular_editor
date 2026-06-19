@@ -264,18 +264,18 @@ class StateManager:
         if self.host.init_manager.current_file_path:
             filename = os.path.basename(self.host.init_manager.current_file_path)
             title = f"{filename} - {base_title}"
-            if self.host.state_manager.has_unsaved_changes:
+            if self.has_unsaved_changes:
                 title = f"*{title}"
         else:
             # Handle as Untitled
             title = f"Untitled - {base_title}"
-            if self.host.state_manager.has_unsaved_changes:
+            if self.has_unsaved_changes:
                 title = f"*{title}"
         self.host.setWindowTitle(title)
 
     def check_unsaved_changes(self) -> bool:
         """Check for unsaved changes and show warning."""
-        if not self.host.state_manager.has_unsaved_changes:
+        if not self.has_unsaved_changes:
             return True  # Saved or no changes
 
         if (
@@ -302,7 +302,7 @@ class StateManager:
             else:
                 self.host.io_manager.save_project()
             return (
-                not self.host.state_manager.has_unsaved_changes
+                not self.has_unsaved_changes
             )  # Return True only if save was successful
         elif reply == QMessageBox.StandardButton.No:
             return True  # Continue without saving
@@ -521,7 +521,7 @@ class StateManager:
                     try:
                         p_state = callback()
                         plugin_data[name] = p_state
-                    except Exception as e:
+                    except (RuntimeError, TypeError, ValueError, AttributeError) as e:
                         logging.error(f"Error saving state for plugin {name}: {e}")
 
         if plugin_data:

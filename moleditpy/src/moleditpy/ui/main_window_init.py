@@ -325,7 +325,7 @@ class MainInitManager:
                     self.current_file_path = file_path
                     self.host.state_manager.update_window_title()
                     return  # Success
-                except Exception as e:
+                except (RuntimeError, TypeError, ValueError, AttributeError) as e:
                     logging.warning(
                         "Plugin opener failed for '%s': %s",
                         opener_info.get("plugin", "Unknown"),
@@ -695,7 +695,7 @@ class MainInitManager:
 
     def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""
-        self.scene = MoleculeScene(self.host.state_manager.data, self.host)
+        self.scene = MoleculeScene(self.host.data, self.host)
         self.scene.setSceneRect(-4000, -4000, 4000, 4000)
         self.scene.setBackgroundBrush(QColor("#FFFFFF"))
 

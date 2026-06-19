@@ -214,7 +214,7 @@ class ComputeManager:
         self.last_successful_optimization_method = None
         self.host.set_constraints_3d([])
 
-        if not self.host.state_manager.data.atoms:
+        if not self.host.data.atoms:
             self.host.clear_3d_view()
             self.host.init_manager.analysis_action.setEnabled(False)
             self.host.update_status_message("3D view cleared.")
@@ -313,14 +313,11 @@ class ComputeManager:
             )
             return
 
-        method = method_key or getattr(
-            self.host.init_manager, "optimization_method", "MMFF_RDKIT"
-        )
+        method = method_key or self.host.init_manager.optimization_method
         method = method.upper() if method else "MMFF_RDKIT"
 
         # Validate method against known labels (from init_manager) and registered plugins
-        _init_mgr = getattr(self.host, "init_manager", None)
-        _init_methods = set(getattr(_init_mgr, "opt3d_method_labels", None) or {})
+        _init_methods = set(self.host.init_manager.opt3d_method_labels or {})
         _plugin_mgr = getattr(self.host, "plugin_manager", None)
         _plugin_methods = set(getattr(_plugin_mgr, "optimization_methods", {}) or {})
         _all_known = _init_methods | _plugin_methods | {"OPTIMIZE_ONLY"}
@@ -364,7 +361,7 @@ class ComputeManager:
         self._start_calculation_worker(mol_block, options, run_id)
 
     def _prepare_rdkit_mol_for_conversion(self) -> Optional[Any]:
-        mol = self.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
+        mol = self.host.data.to_rdkit_mol(use_2d_stereo=False)
         if not mol or mol.GetNumAtoms() == 0:
             self.check_chemistry_problems_fallback()
             return None
@@ -409,11 +406,11 @@ class ComputeManager:
         self.host.init_manager.view_2d.setFocus()
 
     def _setup_mol_block_for_worker(self, mol: Any) -> str:
-        mol_block = self.host.state_manager.data.to_mol_block()
+        mol_block = self.host.data.to_mol_block()
         if not mol_block:
             mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
         return inject_ez_stereo_to_mol_block(  # type: ignore[no-any-return]
-            mol_block, mol, self.host.state_manager.data.bonds
+            mol_block, mol, self.host.data.bonds
         )
 
     def _start_calculation_worker(
@@ -571,7 +568,7 @@ class ComputeManager:
 
     def check_chemistry_problems_fallback(self) -> None:
         problem_atom_ids = identify_valence_problems(
-            self.host.state_manager.data.atoms, self.host.state_manager.data.bonds
+            self.host.data.atoms, self.host.data.bonds
         )
         if problem_atom_ids:
             for aid in problem_atom_ids:
@@ -587,7 +584,7 @@ class ComputeManager:
     def update_aromatic_rings(self) -> None:
         """Update aromatic ring visualization."""
         try:
-            mol = self.host.state_manager.data.to_rdkit_mol()
+            mol = self.host.data.to_rdkit_mol()
             if not mol:
                 return
             Chem.SanitizeMol(mol)
@@ -619,7 +616,7 @@ class ComputeManager:
         stack = list(atom_ids)
         while stack:
             curr = stack.pop()
-            for neighbor in self.host.state_manager.data.adjacency_list.get(curr, []):
+            for neighbor in self.host.data.adjacency_list.get(curr, []):
                 if neighbor not in connected:
                     connected.add(neighbor)
                     stack.append(neighbor)

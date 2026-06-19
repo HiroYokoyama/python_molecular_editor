@@ -216,7 +216,7 @@ class UIManager(QObject):
         """
         # 1. Persist settings
         try:
-            modified = getattr(self.host.init_manager, "settings_dirty", False) or (
+            modified = self.host.init_manager.settings_dirty or (
                 self.host.init_manager.settings != self.host.initial_settings
             )
             if modified:
