@@ -124,6 +124,7 @@ moleditpy --safe           # skip plugin loading
 
 - `docs/ARCHITECTURE.md` — detailed design decisions and manager patterns
 - `docs/CORE_DATA_STRUCTURES.md` — molecular data model internals
-- `docs/PLUGIN_DEVELOPMENT_MANUAL_V3.md` — plugin API for authors
+- `docs/PLUGIN_DEVELOPMENT_MANUAL_V3.md` — plugin API for authors (v3)
+- `docs/PLUGIN_DEVELOPMENT_MANUAL_V4.md` — plugin API for authors (v4)
 - `DESIGN_PRINCIPLES.md` — project philosophy
 - `CONTRIBUTING.md` — full contribution workflow and PR checklist
