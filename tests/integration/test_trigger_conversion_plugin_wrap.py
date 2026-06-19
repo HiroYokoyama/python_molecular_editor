@@ -21,8 +21,6 @@ from moleditpy.ui.compute_logic import ComputeManager
 class _PluginWrappedCompute(ComputeManager):
     """Simulates a plugin that wraps trigger_conversion without forwarding kwargs."""
 
-    opt3d_method_labels = None
-
     def __init__(self, host):
         self._host = host
         ComputeManager.__init__(self, host)
@@ -255,8 +253,6 @@ class TestPluginWrappedTriggerConversion:
         from moleditpy.ui.compute_logic import ComputeManager
 
         class WrapperCompute(ComputeManager):
-            opt3d_method_labels = None
-
             def __init__(self, h):
                 self._host = h
                 ComputeManager.__init__(self, h)
