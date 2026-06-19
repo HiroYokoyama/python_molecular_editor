@@ -32,6 +32,40 @@ class DummyMainWindow(StateManager):
         self.init_manager.scene = MagicMock()
         self.init_manager.scene.atom_items = {}
         self.init_manager.scene.bond_items = {}
+
+        def mock_restore_atoms_and_bonds(raw_atoms, raw_bonds):
+            for atom_id, data in raw_atoms.items():
+                self.data.atoms[atom_id] = {
+                    "symbol": data["symbol"],
+                    "pos": tuple(data["pos"]),
+                    "charge": data.get("charge", 0),
+                    "radical": data.get("radical", 0),
+                }
+            for key_tuple, data in raw_bonds.items():
+                self.data.bonds[key_tuple] = {
+                    "order": data.get("order", 1),
+                    "stereo": data.get("stereo", 0),
+                }
+
+        def mock_restore_atoms_and_bonds_from_json(atoms_2d, bonds_2d):
+            for atom_data in atoms_2d:
+                atom_id = atom_data["id"]
+                self.data.atoms[atom_id] = {
+                    "symbol": atom_data["symbol"],
+                    "pos": (float(atom_data["x"]), float(atom_data["y"])),
+                    "charge": atom_data.get("charge", 0),
+                    "radical": atom_data.get("radical", 0),
+                }
+            for bond_data in bonds_2d:
+                atom1_id = bond_data["atom1"]
+                atom2_id = bond_data["atom2"]
+                self.data.bonds[(atom1_id, atom2_id)] = {
+                    "order": bond_data["order"],
+                    "stereo": bond_data.get("stereo", 0),
+                }
+
+        self.init_manager.scene.restore_atoms_and_bonds.side_effect = mock_restore_atoms_and_bonds
+        self.init_manager.scene.restore_atoms_and_bonds_from_json.side_effect = mock_restore_atoms_and_bonds_from_json
         self.init_manager.view_2d = MagicMock()
         self.init_manager.settings = MagicMock()
         self.view_3d_manager.view_3d = MagicMock()
@@ -149,6 +183,10 @@ class DummyMainWindow(StateManager):
 
     def get_settings(self):
         return self.init_manager.settings
+
+    @property
+    def scene(self):
+        return self.init_manager.scene
 
 
 @pytest.fixture

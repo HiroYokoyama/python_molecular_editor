@@ -655,8 +655,21 @@ def test_app_state_radical_and_constraint_preservation(mock_parser_host):
     # Clear and Restore
     compute.data.atoms.clear()
     compute.constraints_3d = []
-    # Mock scene.addItem as it is called in set_state_from_data
     compute.scene = MagicMock()
+    def mock_restore(raw_atoms, raw_bonds):
+        for atom_id, data in raw_atoms.items():
+            compute.data.atoms[atom_id] = {
+                "symbol": data["symbol"],
+                "pos": tuple(data["pos"]),
+                "charge": data.get("charge", 0),
+                "radical": data.get("radical", 0),
+            }
+        for key, data in raw_bonds.items():
+            compute.data.bonds[key] = {
+                "order": data.get("order", 1),
+                "stereo": data.get("stereo", 0),
+            }
+    compute.scene.restore_atoms_and_bonds.side_effect = mock_restore
 
     StateManager.set_state_from_data(compute, state)
 
