@@ -94,7 +94,7 @@ class AtomItem(QGraphicsItem):
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             else:
                 logging.error(
-                    f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                    f"DIAGNOSTIC WARNING: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )
 
         self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
@@ -121,7 +121,7 @@ class AtomItem(QGraphicsItem):
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             else:
                 logging.error(
-                    f"REPORT ERROR: Missing attribute 'get_setting' on scene of type {type(scene)}"
+                    f"DIAGNOSTIC WARNING: Missing attribute 'get_setting' on scene of type {type(scene)}"
                 )
 
         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)

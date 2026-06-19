@@ -78,7 +78,7 @@ class ComputeManager:
         actor = getattr(self, "_calculating_text_actor", None)
         if (
             actor
-            and hasattr(self.host.view_3d_manager.plotter, "renderer")
+            and self.host.view_3d_manager.plotter.renderer
             and self.host.view_3d_manager.plotter.renderer
         ):
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -94,61 +94,37 @@ class ComputeManager:
         self.host.init_manager.convert_button.clicked.connect(self.trigger_conversion)
         self.host.init_manager.convert_button.setEnabled(True)
 
-        if hasattr(self.host.init_manager, "optimize_3d_button"):
+        if self.host.init_manager.optimize_3d_button:
             self._safe_disconnect(self.host.init_manager.optimize_3d_button.clicked)
             self.host.init_manager.optimize_3d_button.setText("Optimize 3D")
             self.host.init_manager.optimize_3d_button.clicked.connect(
                 self.optimize_3d_structure
             )
             self.host.init_manager.optimize_3d_button.setEnabled(True)
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'optimize_3d_button' on object"
-            )
 
     def _refresh_ui_state(self) -> None:
         """Consolidate UI state updates."""
         try:
             has_mol = self.host.view_3d_manager.current_mol is not None
 
-            if hasattr(self.host.init_manager, "cleanup_button"):
+            if self.host.init_manager.cleanup_button:
                 self.host.init_manager.cleanup_button.setEnabled(True)
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'cleanup_button' on object"
-                )
 
             self._restore_button_ui()
 
-            if hasattr(self.host.init_manager, "optimize_3d_button"):
+            if self.host.init_manager.optimize_3d_button:
                 self.host.init_manager.optimize_3d_button.setEnabled(has_mol)
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'optimize_3d_button' on object"
-                )
-            if hasattr(self.host.init_manager, "export_button"):
+            if self.host.init_manager.export_button:
                 self.host.init_manager.export_button.setEnabled(has_mol)
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'export_button' on object"
-                )
 
             # ui_manager and its methods are guaranteed on the host
             self.host.ui_manager.enable_3d_features(has_mol)
             self.host.ui_manager.enable_3d_edit_actions(has_mol)
 
-            if hasattr(self.host.init_manager, "analysis_action"):
+            if self.host.init_manager.analysis_action:
                 self.host.init_manager.analysis_action.setEnabled(has_mol)
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'analysis_action' on object"
-                )
-            if hasattr(self.host.init_manager, "edit_3d_action"):
+            if self.host.init_manager.edit_3d_action:
                 self.host.init_manager.edit_3d_action.setEnabled(has_mol)
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'edit_3d_action' on object"
-                )
 
             # plotter and view_2d are fundamental host components
             if self.host.view_3d_manager.plotter:
@@ -167,10 +143,7 @@ class ComputeManager:
         self.host.get_settings()["optimization_method"] = method
         self.host.set_settings_dirty(True)
 
-        if (
-            hasattr(self.host.init_manager, "opt3d_actions")
-            and self.host.init_manager.opt3d_actions
-        ):
+        if self.host.init_manager.opt3d_actions:
             for k, act in self.host.init_manager.opt3d_actions.items():
                 act.setChecked(k.upper() == method)
 
@@ -229,10 +202,7 @@ class ComputeManager:
         ]
         for label, key in opt_list:
             a = QAction(label, self.host)
-            if (
-                hasattr(self.host.init_manager, "opt3d_actions")
-                and key in self.host.init_manager.opt3d_actions
-            ):
+            if key in self.host.init_manager.opt3d_actions:
                 a.setEnabled(self.host.init_manager.opt3d_actions[key].isEnabled())
             a.triggered.connect(
                 lambda checked=False, k=key: self._trigger_optimize_with_temp_method(k)
@@ -387,25 +357,17 @@ class ComputeManager:
 
         self.active_worker_ids.add(run_id)
 
-        if hasattr(self.host.init_manager, "optimize_3d_button"):
+        if self.host.init_manager.optimize_3d_button:
             self.host.init_manager.optimize_3d_button.setText("Halt optimize")
             self._safe_disconnect(self.host.init_manager.optimize_3d_button.clicked)
             self.host.init_manager.optimize_3d_button.clicked.connect(
                 self.halt_conversion
             )
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'optimize_3d_button' on object"
-            )
 
         self.host.ui_manager.enable_3d_features(False)
         # Re-enable the button so it can be clicked to Halt
-        if hasattr(self.host.init_manager, "optimize_3d_button"):
+        if self.host.init_manager.optimize_3d_button:
             self.host.init_manager.optimize_3d_button.setEnabled(True)
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'optimize_3d_button' on object"
-            )
 
         self._start_calculation_worker(mol_block, options, run_id)
 
@@ -514,7 +476,7 @@ class ComputeManager:
         self.host.is_xyz_derived = False
 
         # Restore properties
-        if hasattr(self, "original_atom_properties") and mol:
+        if mol:
             for i, orig_id in self.original_atom_properties.items():
                 if i < mol.GetNumAtoms():
                     mol.GetAtomWithIdx(i).SetIntProp("_original_atom_id", orig_id)
@@ -656,10 +618,9 @@ class ComputeManager:
 
         atom_ids = set()
         for item in selected_items:
-            if hasattr(item, "atom_id"):
-                atom_ids.add(item.atom_id)
-            else:
-                logging.error("DIAGNOSTIC WARNING: Missing attribute 'atom_id' on item")
+            atom_id = getattr(item, "atom_id", None)
+            if atom_id is not None:
+                atom_ids.add(atom_id)
 
         if not atom_ids:
             return

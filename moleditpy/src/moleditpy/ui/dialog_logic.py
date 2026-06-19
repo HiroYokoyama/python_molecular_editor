@@ -12,7 +12,6 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-import logging
 
 import json
 import os
@@ -86,15 +85,9 @@ class DialogManager:
         Specifically for 3D Select.
         """
         preselected_atoms = []
-        if hasattr(self.host, "edit_3d_manager"):
-            if self.host.edit_3d_manager.selected_atoms_for_measurement:
-                preselected_atoms = list(
-                    self.host.edit_3d_manager.selected_atoms_for_measurement
-                )
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'edit_3d_manager' on self.host"
-            )
+        mgr = getattr(self.host, "edit_3d_manager", None)
+        if mgr and mgr.selected_atoms_for_measurement:
+            preselected_atoms = list(mgr.selected_atoms_for_measurement)
         return preselected_atoms
 
     def show_about_dialog(self) -> None:
@@ -152,10 +145,7 @@ class DialogManager:
 
         # Activate if a template is selected after dialog is closed
         def on_dialog_finished() -> None:
-            if (
-                hasattr(self.host.template_dialog, "selected_template")
-                and self.host.template_dialog.selected_template
-            ):
+            if self.host.template_dialog.selected_template:
                 template_name = self.host.template_dialog.selected_template.get(
                     "name", "user_template"
                 )

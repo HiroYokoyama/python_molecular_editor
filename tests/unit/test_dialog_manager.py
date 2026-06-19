@@ -140,10 +140,8 @@ class TestGetPreselectedAtoms3D:
         host = DummyHost()
         del host.edit_3d_manager
         dlgm = DialogManager(host)
-        with patch("moleditpy.ui.dialog_logic.logging.error") as mock_log:
-            result = dlgm._get_preselected_atoms_3d()
+        result = dlgm._get_preselected_atoms_3d()
         assert result == []
-        mock_log.assert_called_once()
 
 
 # ===========================================================================

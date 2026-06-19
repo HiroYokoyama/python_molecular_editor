@@ -15,7 +15,6 @@ from __future__ import annotations
 # main_window_edit_3d.py
 # Mixin class separated from main_window.py
 
-import logging
 from typing import Any, List, Optional
 
 import numpy as np
@@ -78,12 +77,7 @@ class Edit3DManager:
             # Disable 3D Drag mode when measurement mode is on
             if self.is_3d_edit_mode:
                 self.host.init_manager.edit_3d_action.setChecked(False)
-                if hasattr(self.host, "ui_manager"):
-                    self.host.ui_manager.toggle_3d_edit_mode(False)
-                else:
-                    logging.error(
-                        "DIAGNOSTIC WARNING: Missing attribute 'ui_manager' on self.host"
-                    )
+                self.host.ui_manager.toggle_3d_edit_mode(False)
 
             # Close active 3D edit dialogs
             self.close_all_3d_edit_dialogs()
@@ -229,7 +223,6 @@ class Edit3DManager:
         # Create atom-to-AtomItem mapping
         if (
             not self.host.view_3d_manager.current_mol
-            or not hasattr(self.host.state_manager, "data")
             or not self.host.state_manager.data.atoms
         ):
             return
@@ -238,21 +231,18 @@ class Edit3DManager:
         atom_idx_to_item = {}
 
         # Get AtomItems from scene
-        if hasattr(self.host.init_manager, "scene"):
-            for item in self.host.init_manager.scene.items():
-                if hasattr(item, "atom_id") and hasattr(
-                    item, "symbol"
-                ):  # Check if AtomItem
-                    # Find RDKit index from atom ID
-                    rdkit_idx = self.find_rdkit_atom_index(item)
-                    if rdkit_idx is not None:
-                        atom_idx_to_item[rdkit_idx] = item
-        else:
-            logging.error("DIAGNOSTIC WARNING: Missing attribute 'scene' on object")
+        for item in self.host.init_manager.scene.items():
+            # Check if AtomItem
+            if (
+                getattr(item, "atom_id", None) is not None
+                and getattr(item, "symbol", None) is not None
+            ):
+                # Find RDKit index from atom ID
+                rdkit_idx = self.find_rdkit_atom_index(item)
+                if rdkit_idx is not None:
+                    atom_idx_to_item[rdkit_idx] = item
 
         # Add to 2D view
-        if not hasattr(self, "measurement_label_items_2d"):
-            self.measurement_label_items_2d = []
 
         for atom_idx, label_text in self.measurement_labels:
             if atom_idx in atom_idx_to_item:
@@ -284,32 +274,27 @@ class Edit3DManager:
 
     def clear_2d_measurement_labels(self) -> None:
         """Remove all 2D measurement labels."""
-        if hasattr(self, "measurement_label_items_2d"):
-            for label_item in self.measurement_label_items_2d:
+        for label_item in self.measurement_label_items_2d:
+            try:
+                # Avoid touching partially-deleted wrappers
+                if sip_isdeleted_safe(label_item):
+                    continue
                 try:
-                    # Avoid touching partially-deleted wrappers
-                    if sip_isdeleted_safe(label_item):
-                        continue
-                    try:
-                        if label_item.scene():
-                            self.host.init_manager.scene.removeItem(label_item)
-                    except (AttributeError, RuntimeError):
-                        # Scene access or removal failed; skip this item.
-                        # Safe defensive fallback catching AttributeError, RuntimeError
-                        pass
+                    if label_item.scene():
+                        self.host.init_manager.scene.removeItem(label_item)
                 except (AttributeError, RuntimeError):
-                    # If sip check itself fails, fall back to best-effort removal
-                    try:
-                        if label_item.scene():
-                            self.host.init_manager.scene.removeItem(label_item)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Best-effort removal failed after sip check failed; skip.
-                        continue
-            self.measurement_label_items_2d.clear()
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'measurement_label_items_2d' on self"
-            )
+                    # Scene access or removal failed; skip this item.
+                    # Safe defensive fallback catching AttributeError, RuntimeError
+                    pass
+            except (AttributeError, RuntimeError):
+                # If sip check itself fails, fall back to best-effort removal
+                try:
+                    if label_item.scene():
+                        self.host.init_manager.scene.removeItem(label_item)
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    # Best-effort removal failed after sip check failed; skip.
+                    continue
+        self.measurement_label_items_2d.clear()
 
     def find_rdkit_atom_index(self, atom_item: Any) -> Optional[int]:
         """Find RDKit index from AtomItem."""
@@ -318,7 +303,7 @@ class Edit3DManager:
 
         # Use mapping dictionary
         if (
-            hasattr(self.host, "atom_id_to_rdkit_idx_map")
+            self.host.atom_id_to_rdkit_idx_map
             and atom_item.atom_id in self.host.atom_id_to_rdkit_idx_map
         ):
             return int(self.host.atom_id_to_rdkit_idx_map[atom_item.atom_id])

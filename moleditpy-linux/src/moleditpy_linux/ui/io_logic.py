@@ -56,10 +56,7 @@ class IOManager:
     def _get_default_basename(self) -> str:
         """Helper to get a default filename base from the current file path."""
         try:
-            if (
-                hasattr(self.host.init_manager, "current_file_path")
-                and self.host.init_manager.current_file_path
-            ):
+            if self.host.init_manager.current_file_path:
                 base = os.path.basename(self.host.init_manager.current_file_path)
                 name = os.path.splitext(base)[0]
                 if name:
@@ -212,10 +209,7 @@ class IOManager:
                             final_mol = _process(charge_val, use_rd_determine=True)
                             break
                         except (RuntimeError, ValueError, TypeError) as e:
-                            if (
-                                hasattr(self.host, "statusBar")
-                                and self.host.statusBar()
-                            ):
+                            if self.host.statusBar():
                                 self.host.statusBar().showMessage(
                                     f"Chemistry failed for charge {charge_val}: {e}. Try a different charge or skip."
                                 )
@@ -725,12 +719,7 @@ class IOManager:
                     skip_flag = bool(mol.GetIntProp("_xyz_skip_checks"))
             self.host.is_xyz_derived = skip_flag or (mol.GetNumBonds() == 0)
 
-            if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
-                self.host.view_3d_manager.draw_molecule_3d(mol)
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'draw_molecule_3d' on object"
-                )
+            self.host.view_3d_manager.draw_molecule_3d(mol)
 
             # Reset camera/zoom after drawing
             QTimer.singleShot(
@@ -738,34 +727,14 @@ class IOManager:
             )
             QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
 
-            if hasattr(self.host.ui_manager, "enter_3d_viewer_mode"):
-                self.host.ui_manager.enter_3d_viewer_mode()
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'enter_3d_viewer_mode' on object"
-                )
+            self.host.ui_manager.enter_3d_viewer_mode()
 
-            if hasattr(self.host.ui_manager, "enable_3d_features"):
-                self.host.ui_manager.enable_3d_features(True)
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'enable_3d_features' on object"
-                )
+            self.host.ui_manager.enable_3d_features(True)
 
-            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
-                self.host.view_3d_manager.update_atom_id_menu_text()
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object"
-                )
-            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
-                self.host.view_3d_manager.update_atom_id_menu_state()
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
-                )
+            self.host.view_3d_manager.update_atom_id_menu_text()
+            self.host.view_3d_manager.update_atom_id_menu_state()
 
-            if hasattr(self.host, "statusBar") and self.host.statusBar():
+            if self.host.statusBar():
                 self.host.statusBar().showMessage(
                     f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
                 )
@@ -773,7 +742,7 @@ class IOManager:
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
         except Exception as e:
-            if hasattr(self.host, "statusBar") and self.host.statusBar():
+            if self.host.statusBar():
                 self.host.statusBar().showMessage(f"XYZ Load failed: {e}")
 
     def load_mol_file_for_3d_viewing(self, file_path: Optional[str] = None) -> None:
@@ -822,24 +791,9 @@ class IOManager:
             QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
 
             self.host.ui_manager.enter_3d_viewer_mode()
-            if hasattr(self.host.ui_manager, "enable_3d_features"):
-                self.host.ui_manager.enable_3d_features(True)
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'enable_3d_features' on object"
-                )
-            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
-                self.host.view_3d_manager.update_atom_id_menu_text()
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object"
-                )
-            if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
-                self.host.view_3d_manager.update_atom_id_menu_state()
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
-                )
+            self.host.ui_manager.enable_3d_features(True)
+            self.host.view_3d_manager.update_atom_id_menu_text()
+            self.host.view_3d_manager.update_atom_id_menu_state()
             self.host.update_status_message(f"Loaded {file_path} in 3D viewer")
             self.host.set_current_file_path(file_path)
             self.host.set_has_unsaved_changes(False)

@@ -267,7 +267,7 @@ class MainInitManager:
             self._setup_action_groups(self.toolbar, self.toolbar_bottom)
         else:
             logging.error(
-                "REPORT ERROR: Toolbars not initialized before setup_action_groups"
+                "DIAGNOSTIC WARNING: Toolbars not initialized before setup_action_groups"
             )
 
     def init_menu_bar(self) -> None:
@@ -431,7 +431,7 @@ class MainInitManager:
                         ]
                 else:
                     logging.error(
-                        "REPORT ERROR: Missing attribute 'CPK_COLORS_PV' on constants module"
+                        "DIAGNOSTIC WARNING: Missing attribute 'CPK_COLORS_PV' on constants module"
                     )
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             logging.error(f"Failed to update CPK colors from settings: {e}")
@@ -513,37 +513,29 @@ class MainInitManager:
                     # Use case-insensitive comparison for robustness
                     action.setChecked(key.upper() == current_method)
             else:
-                logging.error("REPORT ERROR: Missing attribute 'opt3d_actions' on self")
+                logging.error(
+                    "DIAGNOSTIC WARNING: Missing attribute 'opt3d_actions' on self"
+                )
 
             # Conversion actions
-            if hasattr(self, "conv_actions"):
+            if self.conv_actions:
                 mode = (
                     self.settings.get("3d_conversion_mode", "fallback") or ""
                 ).lower()
                 for key, action in self.conv_actions.items():
                     action.setChecked(key.lower() == mode)
-            else:
-                logging.error("REPORT ERROR: Missing attribute 'conv_actions' on self")
 
             # Intermolecular interaction
-            if hasattr(self.host, "intermolecular_rdkit_action"):
-                self.host.intermolecular_rdkit_action.setChecked(
-                    self.settings.get("optimize_intermolecular_interaction_rdkit", True)
-                )
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'intermolecular_rdkit_action' on self"
-                )
+            self.host.intermolecular_rdkit_action.setChecked(
+                self.settings.get("optimize_intermolecular_interaction_rdkit", True)
+            )
 
     def _refresh_views_after_reset(self) -> None:
         """Refresh 2D and 3D views after settings reset."""
         # Refresh 3D View
         try:
             self.host.view_3d_manager.apply_3d_settings()
-            if (
-                hasattr(self.host, "current_mol")
-                and self.host.view_3d_manager.current_mol
-            ):
+            if self.host.view_3d_manager.current_mol:
                 self.host.view_3d_manager.draw_molecule_3d(
                     self.host.view_3d_manager.current_mol
                 )
@@ -551,7 +543,7 @@ class MainInitManager:
             logging.debug(f"Suppressed exception: {e}")
 
         # Refresh 2D View
-        if hasattr(self, "scene") and self.scene:
+        if self.scene:
             try:
                 bg_c = self.settings.get("background_color_2d", "#FFFFFF")
                 self.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
@@ -563,7 +555,7 @@ class MainInitManager:
                             item.update_style()
                         else:
                             logging.error(
-                                "REPORT ERROR: Missing attribute 'update_style' on item"
+                                "DIAGNOSTIC WARNING: Missing attribute 'update_style' on item"
                             )
                 self.scene.update()
                 for v in self.scene.views():
@@ -1058,7 +1050,9 @@ class MainInitManager:
             self.plugin_toolbar.clear()
             self.plugin_toolbar.hide()
         else:
-            logging.error("REPORT ERROR: Missing attribute 'plugin_toolbar' on self")
+            logging.error(
+                "DIAGNOSTIC WARNING: Missing attribute 'plugin_toolbar' on self"
+            )
 
     def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""
@@ -1726,7 +1720,7 @@ class MainInitManager:
         reset_3d_view_action = QAction("Reset 3D View", self.host)
         reset_3d_view_action.triggered.connect(
             lambda: self.host.view_3d_manager.plotter.reset_camera()
-            if hasattr(self.host.view_3d_manager, "plotter")
+            if self.host.view_3d_manager.plotter
             else None
         )
         reset_3d_view_action.setShortcut(QKeySequence("Ctrl+Shift+R"))

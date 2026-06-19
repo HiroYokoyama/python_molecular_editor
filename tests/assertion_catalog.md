@@ -1648,7 +1648,6 @@ _No description provided._
 _No description provided._
 
 - assert result == []
-- mock_log.assert_called_once()
 
 ### TestShowAboutDialog.test_creates_and_execs_dialog
 _No description provided._

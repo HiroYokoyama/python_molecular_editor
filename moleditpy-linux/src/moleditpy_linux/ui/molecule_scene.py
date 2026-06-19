@@ -422,7 +422,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                                 sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
                         else:
                             logging.error(
-                                "REPORT ERROR: Missing attribute 'statusBar' on self.window"
+                                "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
                             )
                         self.update_all_items()  # Redraw even on error to maintain consistency
                 # AtomItem does nothing
@@ -659,7 +659,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
                         else:
                             logging.error(
-                                "REPORT ERROR: Missing attribute 'update_bond_stereo' on self"
+                                "DIAGNOSTIC WARNING: Missing attribute 'update_bond_stereo' on self"
                             )
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.error(
@@ -674,7 +674,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             )
                     else:
                         logging.error(
-                            "REPORT ERROR: Missing attribute 'statusBar' on self.window"
+                            "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
                         )
                     self.update_all_items()  # Redraw even on error to maintain consistency
                 return  # Do not proceed further
@@ -988,13 +988,15 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     if hasattr(obj, "hide"):
                         obj.hide()
                     else:
-                        logging.error("REPORT ERROR: Missing attribute 'hide' on obj")
+                        logging.error(
+                            "DIAGNOSTIC WARNING: Missing attribute 'hide' on obj"
+                        )
                     if hasattr(obj, "bonds") and obj.bonds is not None:
                         if hasattr(obj.bonds, "clear"):
                             obj.bonds.clear()
                         else:
                             logging.error(
-                                "REPORT ERROR: Missing attribute 'clear' on object"
+                                "DIAGNOSTIC WARNING: Missing attribute 'clear' on object"
                             )
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.debug(f"Error purging item {obj} in MoleculeScene: {e}")

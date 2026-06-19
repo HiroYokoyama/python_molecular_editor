@@ -18,6 +18,7 @@ import binascii
 import copy
 import logging
 import os
+import contextlib
 from typing import Any, Dict, Optional, Tuple
 
 
@@ -152,19 +153,10 @@ class StateManager:
 
         # Warn if file version is newer than app version
         if file_version_parts > app_version_parts:
-            if hasattr(self.host, "warning_message_box"):
-                self.host.warning_message_box(
-                    "Version Mismatch",
-                    f"The file you are opening was saved with a newer version of MoleditPy (ver. {file_version_str}).",
-                )
-            else:
-                QMessageBox.warning(
-                    self.host,
-                    "Version Mismatch",
-                    f"The file you are opening was saved with a newer version of MoleditPy (ver. {file_version_str}).\n\n"
-                    f"Your current version is {VERSION}.\n\n"
-                    "Some features may not load or work correctly.",
-                )
+            self.host.warning_message_box(
+                "Version Mismatch",
+                f"The file you are opening was saved with a newer version of MoleditPy (ver. {file_version_str}).",
+            )
 
         raw_atoms = loaded_data.get("atoms", {})
         raw_bonds = loaded_data.get("bonds", {})
@@ -283,11 +275,7 @@ class StateManager:
                     self.host.view_3d_manager.draw_molecule_3d(
                         self.host.view_3d_manager.current_mol
                     )
-                    if (
-                        hasattr(self.host.view_3d_manager, "plotter")
-                        and self.host.view_3d_manager.plotter
-                        and hasattr(self.host.view_3d_manager.plotter, "reset_camera")
-                    ):
+                    if self.host.view_3d_manager.plotter:
                         self.host.view_3d_manager.plotter.reset_camera()
 
                     self.host.ui_manager.enable_3d_features(True)
@@ -391,7 +379,7 @@ class StateManager:
             self.host.init_manager.formula_label.setText("")  # Clear label if no atoms
             return
 
-        if hasattr(self, "data") and self.data and hasattr(self.data, "to_rdkit_mol"):
+        if self.data:
             try:
                 mol = self.data.to_rdkit_mol()
                 if mol:
@@ -409,10 +397,7 @@ class StateManager:
                 logging.debug(
                     f"Molecular info update suppressed for unstable structure: {e}"
                 )
-                if (
-                    hasattr(self.host, "formula_label")
-                    and self.host.init_manager.formula_label
-                ):
+                if self.host.init_manager.formula_label:
                     self.host.init_manager.formula_label.setText("Invalid structure")
 
     def create_json_data(self) -> Dict[str, Any]:
@@ -605,7 +590,7 @@ class StateManager:
         )
 
         pm = getattr(self.host, "plugin_manager", None)
-        if pm and hasattr(pm, "save_handlers") and pm.save_handlers:
+        if pm and pm.save_handlers:
             for name, callback in pm.save_handlers.items():
                 if callable(callback):
                     try:
@@ -631,12 +616,8 @@ class StateManager:
         # Restore last successful optimization method if present in file
         try:
             method = json_data.get("last_successful_optimization_method", None)
-            if hasattr(self.host, "set_last_successful_optimization_method"):
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.host.set_last_successful_optimization_method(method)
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'set_last_successful_optimization_method' on self.host"
-                )
         except (AttributeError, RuntimeError, TypeError):
             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
             pass
@@ -649,7 +630,7 @@ class StateManager:
             if isinstance(plugin_data, dict):
                 for name, p_state in plugin_data.items():
                     load_hand = None
-                    if pm and hasattr(pm, "load_handlers"):
+                    if pm:
                         load_hand = pm.load_handlers.get(name)
 
                     if load_hand and callable(load_hand):
@@ -803,62 +784,26 @@ class StateManager:
                                 self.host.set_3d_atom_positions(positions_3d)
 
                             # Build mapping
-                            if hasattr(
-                                self.host.compute_manager, "create_atom_id_mapping"
-                            ):
-                                try:
-                                    self.host.compute_manager.create_atom_id_mapping()
-                                    if hasattr(
-                                        self.host.view_3d_manager,
-                                        "update_atom_id_menu_text",
-                                    ):
-                                        self.host.view_3d_manager.update_atom_id_menu_text()
-                                    else:
-                                        logging.error(
-                                            "DIAGNOSTIC WARNING: Missing attribute 'update_atom_id_menu_text' on object"
-                                        )
-                                    if hasattr(
-                                        self.host.view_3d_manager,
-                                        "update_atom_id_menu_state",
-                                    ):
-                                        self.host.view_3d_manager.update_atom_id_menu_state()
-                                    else:
-                                        logging.error(
-                                            "DIAGNOSTIC WARNING: Missing attribute 'update_atom_id_menu_state' on object"
-                                        )
-                                except (RuntimeError, TypeError, AttributeError):
-                                    # Safe defensive fallback catching RuntimeError, TypeError, AttributeError
-                                    pass
-                            else:
-                                logging.error(
-                                    "DIAGNOSTIC WARNING: Missing attribute 'create_atom_id_mapping' on object"
-                                )
+                            try:
+                                self.host.compute_manager.create_atom_id_mapping()
+                                self.host.view_3d_manager.update_atom_id_menu_text()
+                                self.host.view_3d_manager.update_atom_id_menu_state()
+                            except (RuntimeError, TypeError, AttributeError):
+                                # Safe defensive fallback catching RuntimeError, TypeError, AttributeError
+                                pass
 
                         # Always show 3D if 3D molecule exists
-                        if hasattr(self.host.view_3d_manager, "draw_molecule_3d"):
-                            self.host.view_3d_manager.draw_molecule_3d(
-                                self.host.view_3d_manager.current_mol
-                            )
-                        else:
-                            logging.error(
-                                "DIAGNOSTIC WARNING: Missing attribute 'draw_molecule_3d' on object"
-                            )
+                        self.host.view_3d_manager.draw_molecule_3d(
+                            self.host.view_3d_manager.current_mol
+                        )
 
                         # Switch UI in Viewer mode
-                        if is_3d_mode and hasattr(
-                            self.host.ui_manager, "enter_3d_viewer_mode"
-                        ):
+                        if is_3d_mode:
                             self.host.ui_manager.enter_3d_viewer_mode()
                         else:
                             self.host.set_is_2d_editable(True)
 
-                        if (
-                            hasattr(self.host.view_3d_manager, "plotter")
-                            and self.host.view_3d_manager.plotter
-                            and hasattr(
-                                self.host.view_3d_manager.plotter, "reset_camera"
-                            )
-                        ):
+                        if self.host.view_3d_manager.plotter:
                             self.host.view_3d_manager.plotter.reset_camera()
 
                         # Enable 3D-related UI

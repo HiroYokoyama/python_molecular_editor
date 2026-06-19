@@ -48,10 +48,7 @@ class ExportManager:
     def _get_default_basename(self) -> str:
         """Helper to get a default filename base from the current file path."""
         try:
-            if (
-                hasattr(self.host.init_manager, "current_file_path")
-                and self.host.init_manager.current_file_path
-            ):
+            if self.host.init_manager.current_file_path:
                 base = os.path.basename(self.host.init_manager.current_file_path)
                 name = os.path.splitext(base)[0]
                 if name:
@@ -528,7 +525,7 @@ class ExportManager:
                                 color = [int(c * 255) for c in vtk_color]
                             else:
                                 logging.error(
-                                    "REPORT ERROR: Missing color attribute on actor/property"
+                                    "DIAGNOSTIC WARNING: Missing color attribute on actor/property"
                                 )
                         except (AttributeError, RuntimeError, TypeError):
                             # Use default color on failure to avoid console noise during complex mesh export
@@ -898,12 +895,10 @@ class ExportManager:
             generator.setViewBox(rect_to_render)
             generator.setTitle("MoleditPy Molecule")
             dpi = 96
-            if hasattr(self.host, "logicalDpiX"):
-                try:
-                    dpi = int(self.host.logicalDpiX())
-                except (AttributeError, RuntimeError, TypeError, ValueError):
-                    # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
-                    pass
+            try:
+                dpi = int(self.host.logicalDpiX())
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                pass
             generator.setResolution(dpi)
 
             # 4. Render

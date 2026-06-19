@@ -118,7 +118,9 @@ class UserTemplateDialog(QDialog):
         if hasattr(self, "delete_button"):
             self.delete_button.setEnabled(False)
         else:
-            logging.error("REPORT ERROR: Missing attribute 'delete_button' on self")
+            logging.error(
+                "DIAGNOSTIC WARNING: Missing attribute 'delete_button' on self"
+            )
 
         # 2. Reset Main Window Mode (UI/Toolbar)
         target_mode = "atom_C"
@@ -150,7 +152,7 @@ class UserTemplateDialog(QDialog):
                     scene.clear_template_preview()
                 else:
                     logging.error(
-                        "REPORT ERROR: Missing attribute 'clear_template_preview' on scene"
+                        "DIAGNOSTIC WARNING: Missing attribute 'clear_template_preview' on scene"
                     )
 
                 if hasattr(scene, "template_preview") and scene.template_preview:
@@ -188,7 +190,7 @@ class UserTemplateDialog(QDialog):
                             child.refit_view()
                         else:
                             logging.error(
-                                "REPORT ERROR: Missing attribute 'refit_view' on child"
+                                "DIAGNOSTIC WARNING: Missing attribute 'refit_view' on child"
                             )
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Warning: Failed to refit template previews: {e}")

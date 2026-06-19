@@ -204,12 +204,7 @@ class EditActionsManager:
                 self.host.state_manager.update_window_title()
 
         self.update_implicit_hydrogens()
-        if hasattr(self.host.state_manager, "update_realtime_info"):
-            self.host.state_manager.update_realtime_info()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'update_realtime_info' on object"
-            )
+        self.host.state_manager.update_realtime_info()
         self.update_undo_redo_actions()
 
     def undo(self) -> None:
@@ -233,16 +228,8 @@ class EditActionsManager:
                 self.host.ui_manager.enable_3d_edit_actions(False)
 
         self.update_undo_redo_actions()
-        if hasattr(self.host.state_manager, "update_realtime_info"):
-            self.host.state_manager.update_realtime_info()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'update_realtime_info' on object"
-            )
-        if (
-            hasattr(self.host.init_manager, "view_2d")
-            and self.host.init_manager.view_2d
-        ):
+        self.host.state_manager.update_realtime_info()
+        if self.host.init_manager.view_2d:
             self.host.init_manager.view_2d.setFocus()
 
     def redo(self) -> None:
@@ -266,16 +253,8 @@ class EditActionsManager:
                 self.host.ui_manager.enable_3d_edit_actions(False)
 
         self.update_undo_redo_actions()
-        if hasattr(self.host.state_manager, "update_realtime_info"):
-            self.host.state_manager.update_realtime_info()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'update_realtime_info' on object"
-            )
-        if (
-            hasattr(self.host.init_manager, "view_2d")
-            and self.host.init_manager.view_2d
-        ):
+        self.host.state_manager.update_realtime_info()
+        if self.host.init_manager.view_2d:
             self.host.init_manager.view_2d.setFocus()
 
     def update_undo_redo_actions(self) -> None:
@@ -918,10 +897,7 @@ class EditActionsManager:
         self.host.state_manager.update_window_title()
 
         # Reset 2D zoom
-        if (
-            hasattr(self.host.init_manager, "view_2d")
-            and self.host.init_manager.view_2d
-        ):
+        if self.host.init_manager.view_2d:
             self.host.init_manager.view_2d.resetTransform()
 
         # Update scene and view
@@ -943,7 +919,7 @@ class EditActionsManager:
         QApplication.processEvents()
 
         # Call plugin document reset handlers
-        if hasattr(self.host, "plugin_manager") and self.host.plugin_manager:
+        if self.host.plugin_manager:
             self.host.plugin_manager.invoke_document_reset_handlers()
 
         self.host.update_status_message("Cleared all data.")
@@ -959,12 +935,7 @@ class EditActionsManager:
         # but usually it's handled in clear_all.
 
         # Also clear measurement labels
-        if hasattr(self.host, "edit_3d_manager"):
-            self.host.edit_3d_manager.clear_2d_measurement_labels()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host"
-            )
+        self.host.edit_3d_manager.clear_2d_measurement_labels()
 
         # Clear 3D data and disable 3D-related menus
         self.host.clear_3d_view()
@@ -1049,14 +1020,7 @@ class EditActionsManager:
         except (AttributeError, RuntimeError, ValueError, TypeError):
             return
 
-        atoms_snapshot = (
-            dict(self.host.state_manager.data.atoms)
-            if (
-                hasattr(self.host.state_manager, "data")
-                and hasattr(self.host.state_manager.data, "atoms")
-            )
-            else {}
-        )
+        atoms_snapshot = dict(self.host.state_manager.data.atoms)
         is_deleted_func = sip_isdeleted_safe
 
         items_to_update = []
@@ -1073,7 +1037,7 @@ class EditActionsManager:
 
                 # Check if the item is no longer in a scene: skip updating it to avoid
                 # touching partially-deleted objects during scene teardown.
-                sc = item.scene() if hasattr(item, "scene") else None
+                sc = item.scene()
                 if sc is None:
                     continue
 
@@ -1174,10 +1138,7 @@ class EditActionsManager:
         mol = self.host.state_manager.data.to_rdkit_mol()
         if mol is None or mol.GetNumAtoms() == 0:
             # If RDKit conversion fails, check for chemistry problems
-            if hasattr(self.host, "compute_manager") and hasattr(
-                self.host.compute_manager, "check_chemistry_problems_fallback"
-            ):
-                self.host.compute_manager.check_chemistry_problems_fallback()
+            self.host.compute_manager.check_chemistry_problems_fallback()
             return
 
         try:
@@ -1222,7 +1183,7 @@ class EditActionsManager:
                     continue
                 if sip_isdeleted_safe(bond_item):
                     continue
-                if hasattr(bond_item, "scene") and bond_item.scene():
+                if bond_item.scene():
                     # Suppress potential errors if the item is already destroyed during coordinate adjustment
                     with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                         bond_item.update_position()
@@ -1231,12 +1192,7 @@ class EditActionsManager:
             self.resolve_overlapping_groups()
 
             # Update measurement labels
-            if hasattr(self.host.edit_3d_manager, "update_2d_measurement_labels"):
-                self.host.edit_3d_manager.update_2d_measurement_labels()
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object"
-                )
+            self.host.edit_3d_manager.update_2d_measurement_labels()
 
             # Request scene update and ring re-analysis
             self.host.init_manager.scene.update_all_items()
@@ -1251,10 +1207,7 @@ class EditActionsManager:
 
     def redraw_molecule_3d(self) -> None:
         """Manually trigger redraw of the 3D molecule."""
-        if (
-            hasattr(self.host, "view_3d_manager")
-            and self.host.view_3d_manager.current_mol
-        ):
+        if self.host.view_3d_manager.current_mol:
             self.host.view_3d_manager.draw_molecule_3d(
                 self.host.view_3d_manager.current_mol
             )
@@ -1318,19 +1271,14 @@ class EditActionsManager:
             try:
                 if sip_isdeleted_safe(item):
                     continue
-                if hasattr(item, "scene") and item.scene():
+                if item.scene():
                     with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                         item.update_position()
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(f"Bond position update suppressed: {e}")
 
         # Update labels after resolution
-        if hasattr(self.host.edit_3d_manager, "update_2d_measurement_labels"):
-            self.host.edit_3d_manager.update_2d_measurement_labels()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'update_2d_measurement_labels' on object"
-            )
+        self.host.edit_3d_manager.update_2d_measurement_labels()
 
         self.host.init_manager.scene.update()
         self.host.edit_actions_manager.push_undo_state()
@@ -1517,13 +1465,8 @@ class EditActionsManager:
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
             # Disable 3D optimization UI to prevent running on invalid molecules
-            if hasattr(self.host.init_manager, "optimize_3d_button"):
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                    self.host.init_manager.optimize_3d_button.setEnabled(False)
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
-                )
+            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                self.host.init_manager.optimize_3d_button.setEnabled(False)
 
     def _clear_xyz_flags(self, mol: Optional[Any] = None) -> None:
         """Clear XYZ-derived markers from a molecule (or current_mol) and
@@ -1552,23 +1495,16 @@ class EditActionsManager:
             target.__dict__.pop("_xyz_skip_checks", None)
             target.__dict__.pop("xyz_atom_data", None)
 
-        if hasattr(self.host.view_3d_manager, "reset_zoom"):
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
             self.host.view_3d_manager.reset_zoom()
-        else:
-            logging.error("REPORT ERROR: Missing attribute 'reset_zoom' on object")
 
         self.host.is_xyz_derived = False
 
         # Enable Optimize 3D unless sanitization failed
-        if hasattr(self.host.init_manager, "optimize_3d_button"):
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                # Suppress error if optimize_3d_button is partially destroyed.
-                self.host.init_manager.optimize_3d_button.setEnabled(
-                    not getattr(self.host, "chem_check_failed", False)
-                )
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            # Suppress error if optimize_3d_button is partially destroyed.
+            self.host.init_manager.optimize_3d_button.setEnabled(
+                not getattr(self.host, "chem_check_failed", False)
             )
 
 
