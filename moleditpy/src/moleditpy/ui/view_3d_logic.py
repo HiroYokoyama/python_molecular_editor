@@ -43,9 +43,6 @@ from .template_preview_item import TemplatePreviewItem
 class View3DManager:
     """Independent manager for 3D rendering logic, ported from MainWindowView3d mixin."""
 
-    _cls: Optional[type[View3DManager]] = (
-        None  # Class-level reference for plugin patching accessibility
-    )
 
     def __init__(self, host: MainWindow) -> None:
         self._plugin_bond_color_overrides = {}
@@ -2010,5 +2007,3 @@ class View3DManager:
             self.draw_molecule_3d(self.current_mol)
 
 
-# Set class-level marker for plugin compatibility
-View3DManager._cls = View3DManager

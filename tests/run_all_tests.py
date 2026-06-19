@@ -85,7 +85,7 @@ def _run_once(name, cmd, env):
     return returncode, "".join(output_lines), duration
 
 
-def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
+def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True, exitfirst=False):
     """Run a test suite in a separate process for isolation."""
     print(
         f"\n>>> Running {name} Tests{' with Coverage' if enable_cov else ''}...",
@@ -124,13 +124,14 @@ def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
         sys.path.insert(0, SRC_DIR)
 
     try:
-        for attempt in range(1, _MAX_RETRIES + 1):
+        max_retries = 1 if exitfirst else _MAX_RETRIES
+        for attempt in range(1, max_retries + 1):
             returncode, combined_output, duration = _run_once(name, cmd, env)
             if returncode == 0:
                 return 0
-            if returncode in _KNOWN_CRASH_CODES and attempt < _MAX_RETRIES:
+            if returncode in _KNOWN_CRASH_CODES and attempt < max_retries:
                 print(
-                    f"  [RETRY {attempt}/{_MAX_RETRIES - 1}] {name}: known crash exit code "
+                    f"  [RETRY {attempt}/{max_retries - 1}] {name}: known crash exit code "
                     f"{returncode} — retrying...",
                     flush=True,
                 )
@@ -201,7 +202,7 @@ if __name__ == "__main__":
         "-x",
         "--exitfirst",
         action="store_true",
-        help="Exit instantly on first error or failure",
+        help="Exit instantly on first error or failure, and run each suite at most once (no retries)",
     )
     parser.add_argument(
         "--catalog-only", action="store_true", help="Update ONLY the assertion catalog"
@@ -302,6 +303,7 @@ if __name__ == "__main__":
                 env_vars=env_vars,
                 extra_args=extra_pytest_args,
                 enable_cov=enable_cov,
+                exitfirst=args.exitfirst,
             )
             results[name] = "PASSED" if ret_code == 0 else "FAILED"
         except KeyboardInterrupt:

@@ -29,11 +29,9 @@ from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
 
 # PyQt6 Modules
-from PyQt6.QtCore import QDateTime, QPointF, Qt
+from PyQt6.QtCore import QDateTime, Qt
 from PyQt6.QtWidgets import QMessageBox
 
-from .atom_item import AtomItem
-from .bond_item import BondItem
 from ..utils.constants import VERSION
 from ..core.molecular_data import MolecularData
 
@@ -73,8 +71,6 @@ def _deserialize_constraints(raw: list) -> list:
 
 
 class StateManager:
-    _cls = None
-
     def __init__(self, host: MainWindow) -> None:
         self.host = host
         self.data: MolecularData  # Dynamically assigned in main_window_init.py
@@ -105,13 +101,13 @@ class StateManager:
 
         state["version"] = VERSION
 
-        if self.host.view_3d_manager.current_mol:
-            state["mol_3d"] = self.host.view_3d_manager.current_mol.ToBinary()
+        if self.host.current_mol:
+            state["mol_3d"] = self.host.current_mol.ToBinary()
             # RDKit binary serialization does not preserve custom properties like _original_atom_id.
             # We store them separately to ensure we can restore the 2D-3D link after undo/redo.
             mol_3d_atom_ids = []
-            for i in range(self.host.view_3d_manager.current_mol.GetNumAtoms()):
-                atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(i)
+            for i in range(self.host.current_mol.GetNumAtoms()):
+                atom = self.host.current_mol.GetAtomWithIdx(i)
                 if atom and atom.HasProp("_original_atom_id"):
                     try:
                         mol_3d_atom_ids.append(atom.GetIntProp("_original_atom_id"))
@@ -170,50 +166,11 @@ class StateManager:
             else []
         )
 
-        for atom_id, data in raw_atoms.items():
-            raw_pos = tuple(data["pos"])
-            pos_q = QPointF(raw_pos[0], raw_pos[1])
-            charge = data.get("charge", 0)
-            radical = data.get("radical", 0)
-            # Pass QPointF to AtomItem for UI positioning
-            atom_item = AtomItem(
-                atom_id, data["symbol"], pos_q, charge=charge, radical=radical
-            )
-            self.host.state_manager.data.atoms[atom_id] = {
-                "symbol": data["symbol"],
-                "pos": raw_pos,
-                "charge": charge,
-                "radical": radical,
-            }
-            self.host.init_manager.scene.atom_items[atom_id] = atom_item
-            self.host.init_manager.scene.addItem(atom_item)
-
+        self.host.scene.restore_atoms_and_bonds(raw_atoms, raw_bonds)
         self.data.next_atom_id = loaded_data.get(
             "_next_atom_id",
             max(self.data.atoms.keys()) + 1 if self.data.atoms else 0,
         )
-
-        for key_tuple, data in raw_bonds.items():
-            id1, id2 = key_tuple
-            if id1 in self.data.atoms and id2 in self.data.atoms:
-                scene = self.host.init_manager.scene
-                atom1_item = scene.atom_items[id1]
-                atom2_item = scene.atom_items[id2]
-                bond_item = BondItem(
-                    atom1_item, atom2_item, data.get("order", 1), data.get("stereo", 0)
-                )
-                self.data.bonds[key_tuple] = {
-                    "order": data.get("order", 1),
-                    "stereo": data.get("stereo", 0),
-                }
-                self.host.init_manager.scene.bond_items[key_tuple] = bond_item
-                atom1_item.bonds.append(bond_item)
-                atom2_item.bonds.append(bond_item)
-                self.host.init_manager.scene.addItem(bond_item)
-
-        for atom_item in self.host.init_manager.scene.atom_items.values():
-            atom_item.update_style()
-        self.host.init_manager.scene.update_all_items()
         mol_3d_data = loaded_data.get("mol_3d")
         if mol_3d_data is not None:
             try:
@@ -353,36 +310,29 @@ class StateManager:
             return False  # Cancel
 
     def reset_undo_stack(self) -> None:
-        self.host.edit_actions_manager.undo_stack.clear()
-        self.host.edit_actions_manager.redo_stack.clear()
-        self.host.edit_actions_manager.push_undo_state()
+        self.host.reset_undo_redo_stacks()
 
     def update_realtime_info(self) -> None:
         """Show molecular info in status bar."""
         if not self.data.atoms:
-            self.host.init_manager.formula_label.setText("")  # Clear label if no atoms
+            self.host.update_formula_label("")
             return
 
         if self.data:
             try:
                 mol = self.data.to_rdkit_mol()
                 if mol:
-                    # Generate mol with explicit Hs
                     mol_with_hs = Chem.AddHs(mol)
                     mol_formula = rdMolDescriptors.CalcMolFormula(mol)
-                    # Get atom count with Hs
                     num_atoms = mol_with_hs.GetNumAtoms()
-                    # Update label text
-                    if self.host.init_manager.formula_label:
-                        self.host.init_manager.formula_label.setText(
-                            f"Formula: {mol_formula}   |   Atoms: {num_atoms}"
-                        )
+                    self.host.update_formula_label(
+                        f"Formula: {mol_formula}   |   Atoms: {num_atoms}"
+                    )
             except (RuntimeError, TypeError, ValueError) as e:
                 logging.debug(
                     f"Molecular info update suppressed for unstable structure: {e}"
                 )
-                if self.host.init_manager.formula_label:
-                    self.host.init_manager.formula_label.setText("Invalid structure")
+                self.host.update_formula_label("Invalid structure")
 
     def create_json_data(self) -> Dict[str, Any]:
         """Convert current state to PMEJSON."""
@@ -624,67 +574,11 @@ class StateManager:
             atoms_2d = structure_2d.get("atoms", [])
             bonds_2d = structure_2d.get("bonds", [])
 
-            # Restore atoms
-            for atom_data in atoms_2d:
-                atom_id = atom_data["id"]
-                symbol = atom_data["symbol"]
-                raw_pos = (float(atom_data["x"]), float(atom_data["y"]))
-                pos_q = QPointF(raw_pos[0], raw_pos[1])
-                charge = atom_data.get("charge", 0)
-                radical = atom_data.get("radical", 0)
-
-                atom_item = AtomItem(
-                    atom_id, symbol, pos_q, charge=charge, radical=radical
-                )
-                self.data.atoms[atom_id] = {
-                    "symbol": symbol,
-                    "pos": raw_pos,
-                    "charge": charge,
-                    "radical": radical,
-                }
-                self.host.init_manager.scene.atom_items[atom_id] = atom_item
-                self.host.init_manager.scene.addItem(atom_item)
-
-            # Restore next_atom_id
-
+            self.host.scene.restore_atoms_and_bonds_from_json(atoms_2d, bonds_2d)
             self.data.next_atom_id = structure_2d.get(
                 "next_atom_id",
                 max([atom["id"] for atom in atoms_2d]) + 1 if atoms_2d else 0,
             )
-
-            # Restore bonds
-            for bond_data in bonds_2d:
-                atom1_id = bond_data["atom1"]
-                atom2_id = bond_data["atom2"]
-
-                if atom1_id in self.data.atoms and atom2_id in self.data.atoms:
-                    scene = self.host.init_manager.scene
-                    atom1_item = scene.atom_items[atom1_id]
-                    atom2_item = scene.atom_items[atom2_id]
-
-                    bond_order = bond_data["order"]
-                    stereo = bond_data.get("stereo", 0)
-
-                    bond_item = BondItem(
-                        atom1_item, atom2_item, bond_order, stereo=stereo
-                    )
-                    # Add to bond list (used for C visibility)
-                    atom1_item.bonds.append(bond_item)
-                    atom2_item.bonds.append(bond_item)
-
-                    self.data.bonds[(atom1_id, atom2_id)] = {
-                        "order": bond_order,
-                        "stereo": stereo,
-                    }
-                    self.host.init_manager.scene.bond_items[(atom1_id, atom2_id)] = (
-                        bond_item
-                    )
-                    self.host.init_manager.scene.addItem(bond_item)
-
-            # Update all AtomItem styles
-            for atom_item in self.host.init_manager.scene.atom_items.values():
-                atom_item.update_style()
-            self.host.init_manager.scene.update_all_items()
         # Restore 3D data
         structure_3d = json_data.get("3d_structure")
         if isinstance(structure_3d, dict):
@@ -772,4 +666,3 @@ class StateManager:
                 self.host.set_current_molecule(None)
 
 
-StateManager._cls = StateManager  # type: ignore[assignment]

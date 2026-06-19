@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -249,6 +250,12 @@ class MainWindow(QMainWindow):
         """Show a modal warning dialog."""
         QMessageBox.warning(self, title, message)
 
+    def update_formula_label(self, text: str) -> None:
+        """Set the formula/info label text in the main toolbar."""
+        label = getattr(self.init_manager, "formula_label", None)
+        if label is not None:
+            label.setText(text)
+
     def set_last_successful_optimization_method(self, method: Optional[str]) -> None:
         """Set the last successful 3D optimization method."""
         self.compute_manager.last_successful_optimization_method = method
@@ -269,9 +276,8 @@ class MainWindow(QMainWindow):
             self.state_manager.saved_state = copy.deepcopy(
                 self.state_manager.get_current_state()
             )
-        except Exception:
-            # Safe defensive fallback catching Exception
-            pass
+        except Exception as e:
+            logging.error(f"save_state_snapshot failed: {e}")
 
     def update_window_title(self) -> None:
         """Update main window title to reflect file path and save status."""
@@ -288,6 +294,10 @@ class MainWindow(QMainWindow):
     def reset_active_calc_threads(self) -> None:
         """Reset active calculation threads list."""
         self.compute_manager.reset_active_threads()
+
+    def reset_undo_redo_stacks(self) -> None:
+        """Clear undo/redo history and push current state as the initial entry."""
+        self.edit_actions_manager.reset_history()
 
     # --- Core Proxy Properties (Legacy Plugin Support Only. Bypassed by Core Logics) ---
     @property

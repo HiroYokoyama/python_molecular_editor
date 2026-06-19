@@ -99,8 +99,6 @@ class Rotate2DDialog(QDialog):
 class EditActionsManager:
     """Independent manager for molecular editing actions, ported from MainWindowEditActions mixin."""
 
-    _cls = None
-
     def __init__(self, host: MainWindow) -> None:
         self.dragged_atom_info = None
         self.host = host
@@ -108,6 +106,12 @@ class EditActionsManager:
         self.last_rotation_angle: float = 0
         self.undo_stack: List[Dict[str, Any]] = []
         self.redo_stack: List[Dict[str, Any]] = []
+
+    def reset_history(self) -> None:
+        """Clear undo/redo stacks and push current state as the initial entry."""
+        self.undo_stack.clear()
+        self.redo_stack.clear()
+        self.push_undo_state()
 
     def push_undo_state(self) -> None:
         """Saves current molecular state to undo stack for history tracking."""
@@ -1479,4 +1483,3 @@ class EditActionsManager:
             )
 
 
-EditActionsManager._cls = EditActionsManager  # type: ignore[assignment]

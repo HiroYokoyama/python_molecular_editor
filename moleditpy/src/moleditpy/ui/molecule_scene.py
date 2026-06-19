@@ -201,6 +201,89 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         if self.views():
             self.views()[0].viewport().update()
 
+    def restore_atoms_and_bonds(self, raw_atoms: dict, raw_bonds: dict) -> None:
+        """Restore scene items from undo/redo state (dict-of-dicts format)."""
+        for atom_id, data in raw_atoms.items():
+            raw_pos = tuple(data["pos"])
+            pos_q = QPointF(raw_pos[0], raw_pos[1])
+            charge = data.get("charge", 0)
+            radical = data.get("radical", 0)
+            atom_item = AtomItem(
+                atom_id, data["symbol"], pos_q, charge=charge, radical=radical
+            )
+            self.data.atoms[atom_id] = {
+                "symbol": data["symbol"],
+                "pos": raw_pos,
+                "charge": charge,
+                "radical": radical,
+            }
+            self.atom_items[atom_id] = atom_item
+            self.addItem(atom_item)
+
+        for key_tuple, data in raw_bonds.items():
+            id1, id2 = key_tuple
+            if id1 in self.data.atoms and id2 in self.data.atoms:
+                atom1_item = self.atom_items[id1]
+                atom2_item = self.atom_items[id2]
+                bond_item = BondItem(
+                    atom1_item, atom2_item, data.get("order", 1), data.get("stereo", 0)
+                )
+                self.data.bonds[key_tuple] = {
+                    "order": data.get("order", 1),
+                    "stereo": data.get("stereo", 0),
+                }
+                self.bond_items[key_tuple] = bond_item
+                atom1_item.bonds.append(bond_item)
+                atom2_item.bonds.append(bond_item)
+                self.addItem(bond_item)
+
+        for atom_item in self.atom_items.values():
+            atom_item.update_style()
+        self.update_all_items()
+
+    def restore_atoms_and_bonds_from_json(
+        self, atoms_2d: list, bonds_2d: list
+    ) -> None:
+        """Restore scene items from PMEPRJ JSON (list-of-dicts format)."""
+        for atom_data in atoms_2d:
+            atom_id = atom_data["id"]
+            symbol = atom_data["symbol"]
+            raw_pos = (float(atom_data["x"]), float(atom_data["y"]))
+            pos_q = QPointF(raw_pos[0], raw_pos[1])
+            charge = atom_data.get("charge", 0)
+            radical = atom_data.get("radical", 0)
+            atom_item = AtomItem(atom_id, symbol, pos_q, charge=charge, radical=radical)
+            self.data.atoms[atom_id] = {
+                "symbol": symbol,
+                "pos": raw_pos,
+                "charge": charge,
+                "radical": radical,
+            }
+            self.atom_items[atom_id] = atom_item
+            self.addItem(atom_item)
+
+        for bond_data in bonds_2d:
+            atom1_id = bond_data["atom1"]
+            atom2_id = bond_data["atom2"]
+            if atom1_id in self.data.atoms and atom2_id in self.data.atoms:
+                atom1_item = self.atom_items[atom1_id]
+                atom2_item = self.atom_items[atom2_id]
+                bond_order = bond_data["order"]
+                stereo = bond_data.get("stereo", 0)
+                bond_item = BondItem(atom1_item, atom2_item, bond_order, stereo=stereo)
+                atom1_item.bonds.append(bond_item)
+                atom2_item.bonds.append(bond_item)
+                self.data.bonds[(atom1_id, atom2_id)] = {
+                    "order": bond_order,
+                    "stereo": stereo,
+                }
+                self.bond_items[(atom1_id, atom2_id)] = bond_item
+                self.addItem(bond_item)
+
+        for atom_item in self.atom_items.values():
+            atom_item.update_style()
+        self.update_all_items()
+
     def reinitialize_items(self) -> None:
         self.template_preview = TemplatePreviewItem()
         self.addItem(self.template_preview)

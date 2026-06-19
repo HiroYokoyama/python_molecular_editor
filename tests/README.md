@@ -35,7 +35,7 @@ python tests/run_all_tests.py --no-cov
 # Skip the reporting phase (Markdown/Catalog generation)
 python tests/run_all_tests.py --no-report
 
-# Exit instantly on the first error or failure (fail-fast)
+# Exit instantly on the first error or failure (fail-fast, run each suite at most once, no retries)
 python tests/run_all_tests.py -x
 
 # Reporting and maintenance

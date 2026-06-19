@@ -40,8 +40,6 @@ except ImportError:
 class ExportManager:
     """Independent manager for export logic, ported from MainWindowExport mixin."""
 
-    _cls: Optional[type[ExportManager]] = None
-
     def __init__(self, host: Any) -> None:
         self.host = host
 
@@ -964,4 +962,3 @@ class ExportManager:
             self.host.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
 
 
-ExportManager._cls = ExportManager

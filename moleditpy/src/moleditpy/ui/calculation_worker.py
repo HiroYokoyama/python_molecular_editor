@@ -821,20 +821,10 @@ class CalculationWorker(QObject):
             # Swallow here; the loop has already been notified
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.error.emit((w_id, "Halted"))
-        except (
-            Exception,
-            RuntimeError,
-            ValueError,
-            TypeError,
-            AttributeError,
-            ImportError,
-            OSError,
-            UnicodeDecodeError,
-        ) as e:
+        except Exception as e:
             try:
                 _safe_error(str(e))
             except WorkerHaltError:
-                # Swallowed if safe_error itself detected a halt
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.error.emit((w_id, "Halted"))
 

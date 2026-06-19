@@ -37,8 +37,6 @@ from ..utils.constants import VDW_RADII
 class Edit3DManager:
     """Independent manager for 3D editing logic, ported from MainWindowEdit3d mixin."""
 
-    _cls = None
-
     def __init__(self, host: Any) -> None:
         self.host = host
         # State variables previously held by mixin
@@ -482,4 +480,3 @@ class Edit3DManager:
             self.active_3d_dialogs.remove(dialog)
 
 
-Edit3DManager._cls = Edit3DManager  # type: ignore[assignment]
