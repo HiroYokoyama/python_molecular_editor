@@ -393,6 +393,17 @@ class PluginContext:
             if hasattr(mw.init_manager, "settings_dirty"):
                 mw.init_manager.settings_dirty = True
 
+    def mark_project_modified(self) -> None:
+        """Mark the current project as having unsaved changes and update the window title."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "state_manager"):
+            try:
+                mw.state_manager.has_unsaved_changes = True
+                if hasattr(mw.state_manager, "update_window_title"):
+                    mw.state_manager.update_window_title()
+            except Exception:
+                pass
+
 
 class Plugin3DController:
     """Helper to manipulate the 3D scene."""

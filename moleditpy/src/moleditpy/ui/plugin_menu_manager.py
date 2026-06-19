@@ -42,7 +42,7 @@ class PluginMenuManager:
 
         def _safe(*args: Any, **kwargs: Any) -> None:
             try:
-                callback(*args, **kwargs)
+                callback()
             except Exception as exc:
                 logging.exception("Plugin callback error (%s)", plugin_name)
                 try:

@@ -118,6 +118,7 @@ The `context` object passed to `initialize(context)` is your safe proxy to the a
 | **UI** | `show_status_message(msg, ms)` | Temporary message in status bar |
 | **UI** | `enter_3d_mode()` | Switch layout to 3D mode (alias of `enter_3d_viewer_mode`) |
 | **UI** | `enter_3d_viewer_mode()` | Switch layout to 3D viewer mode |
+| **UI** | `mark_project_modified()` | Mark project as modified and update the title bar |
 | **Files** | `register_file_opener(ext, cb, priority)` | Handle a file extension (Import + CLI) |
 | **Files** | `register_drop_handler(cb, priority)` | Handle drag-and-drop onto the window |
 | **Molecule** | `current_molecule` | Get / set the active RDKit mol |
@@ -194,6 +195,18 @@ Switch the application UI layout to 3D mode. This minimizes the 2D drawing canva
 
 #### `enter_3d_viewer_mode()`
 Switch the application UI layout to 3D viewer mode. Minimizes the 2D panel, maximizes the 3D scene, and activates 3D features.
+
+#### `mark_project_modified()`
+Signal to the application that the current project has unsaved changes. This updates the title bar with a modification indicator and sets the internal `has_unsaved_changes` flag.
+
+> [!TIP]
+> Call this after any operation that changes project-level state but does not go through the `current_molecule` setter (which already handles undo/redraw). For example, after saving calculation results or updating plugin-managed project data.
+
+```python
+def on_calculation_finished(self, result_data):
+    # ... save result_data to plugin settings ...
+    self.context.mark_project_modified()
+```
 
 ---
 
@@ -474,6 +487,7 @@ def highlight_selection(context):
 | `mw.draw_molecule_3d(...)` | `context.refresh_3d_view()` or `context.draw_molecule_3d(mol)` |
 | `context.register_menu_action(path, text, cb)` | `context.add_menu_action(path, cb, text)` |
 | `mw.settings.get(key)` | `context.get_setting(key)` |
+| `mw.state_manager.has_unsaved_changes = True` + `mw.state_manager.update_window_title()` | `context.mark_project_modified()` |
 
 > [!NOTE]
 > `mw.trigger_conversion()` is still accessible via `context.get_main_window()` and delegates to the internal compute manager. Prefer `context.add_menu_action` or `context.add_analysis_tool` for triggering computation workflows from menus.
