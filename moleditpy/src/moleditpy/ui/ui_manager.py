@@ -222,7 +222,7 @@ class UIManager(QObject):
             pass
 
         # 2. Handle unsaved changes
-        if getattr(self.host.state_manager, "has_unsaved_changes", False):
+        if self.host.state_manager.has_unsaved_changes:
             reply = QMessageBox.question(
                 self.host,
                 "Unsaved Changes",
@@ -235,7 +235,7 @@ class UIManager(QObject):
 
             if reply == QMessageBox.StandardButton.Yes:
                 self.host.io_manager.save_project()
-                if getattr(self.host.state_manager, "has_unsaved_changes", False):
+                if self.host.state_manager.has_unsaved_changes:
                     return False
             elif reply == QMessageBox.StandardButton.Cancel:
                 return False

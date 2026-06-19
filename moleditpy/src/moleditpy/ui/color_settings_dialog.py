@@ -376,14 +376,7 @@ class ColorSettingsDialog(QDialog):
             )
 
         # Refresh SettingsDialog
-        SettingsDialog: Optional[type] = None
-        try:
-            from .settings_dialog import SettingsDialog  # type: ignore[assignment]
-        except ImportError:
-            try:
-                from moleditpy.ui.settings_dialog import SettingsDialog  # type: ignore[assignment]
-            except ImportError:
-                SettingsDialog = None
+        from .settings_dialog import SettingsDialog  # type: ignore[assignment]
 
         if SettingsDialog:
             for w in QApplication.topLevelWidgets():
