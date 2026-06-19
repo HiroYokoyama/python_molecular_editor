@@ -1,5 +1,8 @@
 # MoleditPy Plugin Development Manual (Version 3.0)
 
+> [!NOTE]
+> This is the manual for the **Version 3.0** API. For the newer version, see the [Plugin Development Manual (Version 4.0)](PLUGIN_DEVELOPMENT_MANUAL_V4.md).
+
 Welcome to the **Version 3.0** of the MoleditPy Plugin API. This version introduces a fully decoupled, namespaced architecture designed for high stability, clean memory management, and long-term maintainability.
 
 > [!IMPORTANT]
