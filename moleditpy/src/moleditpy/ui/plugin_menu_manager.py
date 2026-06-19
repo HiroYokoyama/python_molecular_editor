@@ -57,13 +57,13 @@ class PluginMenuManager:
 
         plugins = self._im.host.plugin_manager.discover_plugins(self._im.host)
 
-        self._update_style_menu_with_plugins()
+        self.update_style_menu_with_plugins()
         self.add_registered_plugin_actions()
         self.add_plugin_toolbar_actions()
         self._add_legacy_plugin_actions(plugin_menu, plugins)
-        self._integrate_plugin_export_actions()
-        self._integrate_plugin_file_openers()
-        self._integrate_plugin_analysis_tools()
+        self.integrate_plugin_export_actions()
+        self.integrate_plugin_file_openers()
+        self.integrate_plugin_analysis_tools()
 
     def rebuild_plugin_menus(self) -> None:
         """Fully rebuild all plugin-managed UI after an install/uninstall.
@@ -99,10 +99,10 @@ class PluginMenuManager:
         for method, label in [
             (self.add_registered_plugin_actions, "menu actions"),
             (self.add_plugin_toolbar_actions, "toolbar actions"),
-            (self._integrate_plugin_export_actions, "export actions"),
-            (self._integrate_plugin_file_openers, "file openers"),
-            (self._integrate_plugin_analysis_tools, "analysis tools"),
-            (self._update_style_menu_with_plugins, "style menu"),
+            (self.integrate_plugin_export_actions, "export actions"),
+            (self.integrate_plugin_file_openers, "file openers"),
+            (self.integrate_plugin_analysis_tools, "analysis tools"),
+            (self.update_style_menu_with_plugins, "style menu"),
         ]:
             try:
                 method()
@@ -222,7 +222,7 @@ class PluginMenuManager:
         if export_button and export_button.menu():
             clear_menu(export_button.menu())
 
-    def _update_style_menu_with_plugins(self) -> None:
+    def update_style_menu_with_plugins(self) -> None:
         """Append custom 3D styles registered by plugins to the style menu."""
         style_button = getattr(self._im, "style_button", None)
         if not style_button or not style_button.menu():
@@ -299,7 +299,7 @@ class PluginMenuManager:
             )
             plugin_menu.addAction(a)
 
-    def _integrate_plugin_export_actions(self) -> None:
+    def integrate_plugin_export_actions(self) -> None:
         """Inject plugin export actions into the File > Export menu and export button."""
         if not self._im.host.plugin_manager.export_actions:
             return
@@ -335,7 +335,7 @@ class PluginMenuManager:
                 a.setData(PLUGIN_ACTION_TAG)
                 menu.addAction(a)
 
-    def _integrate_plugin_file_openers(self) -> None:
+    def integrate_plugin_file_openers(self) -> None:
         """Inject plugin file-opener entries into the File > Import menu."""
         if not self._im.host.plugin_manager.file_openers:
             return
@@ -387,7 +387,7 @@ class PluginMenuManager:
             a.setData(PLUGIN_ACTION_TAG)
             import_menu.addAction(a)
 
-    def _integrate_plugin_analysis_tools(self) -> None:
+    def integrate_plugin_analysis_tools(self) -> None:
         """Inject plugin analysis tools into the Analysis menu."""
         analysis_menu = next(
             (

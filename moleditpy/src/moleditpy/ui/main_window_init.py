@@ -289,7 +289,7 @@ class MainInitManager:
         self.host.ui_manager.enable_3d_features(False)
 
         # Finally, populate plugins now that all menus are created
-        self.update_plugin_menu(self.plugin_menu)
+        self.plugin_menu_manager.update_plugin_menu(self.plugin_menu)
 
     def init_worker_thread(self) -> None:
         # Initialize shared state for calculation runs.
@@ -608,22 +608,6 @@ class MainInitManager:
             self.host.initial_settings = self.settings.copy()
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.error(f"Error saving settings: {e}")
-
-    def update_plugin_menu(self, plugin_menu: QMenu) -> None:
-        """Discover plugins and populate the Plugin menu."""
-        self.plugin_menu_manager.update_plugin_menu(plugin_menu)
-
-    def rebuild_plugin_menus(self) -> None:
-        """Fully rebuild all plugin-managed UI after install/uninstall."""
-        self.plugin_menu_manager.rebuild_plugin_menus()
-
-    def add_registered_plugin_actions(self) -> None:
-        """Add menu actions registered by V3/V4 plugins."""
-        self.plugin_menu_manager.add_registered_plugin_actions()
-
-    def add_plugin_toolbar_actions(self) -> None:
-        """Populate the plugin toolbar from registered actions."""
-        self.plugin_menu_manager.add_plugin_toolbar_actions()
 
     # --- UI Initialization Helpers ---
     def _init_main_layout(self) -> None:
@@ -1644,7 +1628,7 @@ class MainInitManager:
 
             dlg = PluginManagerWindow(self.host.plugin_manager, self.host)
             dlg.exec()
-            self.update_plugin_menu(self.plugin_menu)
+            self.plugin_menu_manager.update_plugin_menu(self.plugin_menu)
 
         manage_plugins_action.triggered.connect(show_plugin_manager)
         self.plugin_menu.addAction(manage_plugins_action)

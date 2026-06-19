@@ -325,6 +325,11 @@ class MainWindow(QMainWindow):
         """Proxy for 2D scene. Not for core logic use."""
         return self.init_manager.scene
 
+    @property
+    def plugin_menu_manager(self):
+        """Proxy for plugin UI lifecycle manager. Not for core logic use."""
+        return self.init_manager.plugin_menu_manager
+
     def draw_molecule_3d(self, mol: Any) -> None:
         """Proxy for 3D rendering. Not for core logic use."""
         self.current_mol = mol

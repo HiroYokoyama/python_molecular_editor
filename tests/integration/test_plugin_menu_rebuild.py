@@ -164,60 +164,58 @@ class TestRebuildCompleteness:
 
 
 # ---------------------------------------------------------------------------
-# MainInitManager delegates to PluginMenuManager
+# MainWindow.plugin_menu_manager proxy and PluginManager call path
 # ---------------------------------------------------------------------------
 
-class TestMainInitManagerDelegation:
-    """Verify MainInitManager.rebuild_plugin_menus and friends delegate to PluginMenuManager."""
+class TestPluginMenuManagerRouting:
+    """Verify the direct-routing architecture: callers go through
+    MainWindow.plugin_menu_manager, not through MainInitManager wrappers."""
 
-    def _make_real_init_manager_stub(self):
-        """Return a MainInitManager with plugin_menu_manager injected."""
-        from moleditpy.ui.main_window_init import MainInitManager
-        # Construct without running __init__ to keep it lightweight
-        im = object.__new__(MainInitManager)
-        im.plugin_menu_manager = MagicMock()
-        return im
-
-    def test_rebuild_plugin_menus_delegates(self):
-        from moleditpy.ui.main_window_init import MainInitManager
-        im = object.__new__(MainInitManager)
+    def test_main_window_proxy_returns_init_manager_pmm(self):
+        """MainWindow.plugin_menu_manager property reads from init_manager."""
+        from moleditpy.ui.main_window import MainWindow
+        # Read the property descriptor directly without constructing MainWindow
+        # (QMainWindow requires a QApplication and full Qt setup to instantiate).
+        prop = MainWindow.__dict__.get("plugin_menu_manager")
+        assert prop is not None and isinstance(prop, property), (
+            "MainWindow.plugin_menu_manager must be a @property"
+        )
+        # Verify the getter delegates to init_manager.plugin_menu_manager
         pmm_mock = MagicMock()
-        im.plugin_menu_manager = pmm_mock
+        fake_mw = MagicMock()
+        fake_mw.init_manager.plugin_menu_manager = pmm_mock
+        result = prop.fget(fake_mw)
+        assert result is pmm_mock
 
-        im.rebuild_plugin_menus()
+    def test_plugin_manager_rebuild_calls_main_window_pmm(self):
+        """PluginManager.rebuild_plugin_menus() calls main_window.plugin_menu_manager."""
+        from moleditpy.plugins.plugin_manager import PluginManager
+        pm = PluginManager.__new__(PluginManager)
+        pmm_mock = MagicMock()
+        pm.main_window = MagicMock()
+        pm.main_window.plugin_menu_manager = pmm_mock
+
+        pm.rebuild_plugin_menus()
 
         pmm_mock.rebuild_plugin_menus.assert_called_once()
 
-    def test_update_plugin_menu_delegates(self):
+    def test_plugin_manager_rebuild_no_main_window_does_nothing(self):
+        """PluginManager.rebuild_plugin_menus() with no main_window is a no-op."""
+        from moleditpy.plugins.plugin_manager import PluginManager
+        pm = PluginManager.__new__(PluginManager)
+        pm.main_window = None
+
+        pm.rebuild_plugin_menus()  # must not raise
+
+    def test_main_init_manager_has_no_wrapper_methods(self):
+        """MainInitManager no longer exposes the old wrapper methods directly."""
         from moleditpy.ui.main_window_init import MainInitManager
-        im = object.__new__(MainInitManager)
-        pmm_mock = MagicMock()
-        im.plugin_menu_manager = pmm_mock
-
-        sentinel_menu = MagicMock()
-        im.update_plugin_menu(sentinel_menu)
-
-        pmm_mock.update_plugin_menu.assert_called_once_with(sentinel_menu)
-
-    def test_add_registered_plugin_actions_delegates(self):
-        from moleditpy.ui.main_window_init import MainInitManager
-        im = object.__new__(MainInitManager)
-        pmm_mock = MagicMock()
-        im.plugin_menu_manager = pmm_mock
-
-        im.add_registered_plugin_actions()
-
-        pmm_mock.add_registered_plugin_actions.assert_called_once()
-
-    def test_add_plugin_toolbar_actions_delegates(self):
-        from moleditpy.ui.main_window_init import MainInitManager
-        im = object.__new__(MainInitManager)
-        pmm_mock = MagicMock()
-        im.plugin_menu_manager = pmm_mock
-
-        im.add_plugin_toolbar_actions()
-
-        pmm_mock.add_plugin_toolbar_actions.assert_called_once()
+        for method in ("rebuild_plugin_menus", "update_plugin_menu",
+                       "add_registered_plugin_actions", "add_plugin_toolbar_actions"):
+            assert not hasattr(MainInitManager, method), (
+                f"MainInitManager should not have {method!r} — "
+                "callers must use host.plugin_menu_manager directly"
+            )
 
 
 # ---------------------------------------------------------------------------
