@@ -129,10 +129,8 @@ class View3DManager:
                 try:
                     handler(mw, mol)
                     return
-                except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                    logging.error(
-                        f"Error in custom 3d style '{self.current_3d_style}': {e}"
-                    )
+                except Exception:  # plugins have full app access; catch everything to keep 3D view functional
+                    logging.exception("Error in custom 3D style '%s'", self.current_3d_style)
 
         self.draw_standard_3d_style(mol)
 

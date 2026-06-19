@@ -521,8 +521,8 @@ class StateManager:
                     try:
                         p_state = callback()
                         plugin_data[name] = p_state
-                    except (RuntimeError, TypeError, ValueError, AttributeError) as e:
-                        logging.error(f"Error saving state for plugin {name}: {e}")
+                    except Exception:  # plugins have full app access; catch everything to prevent save corruption
+                        logging.exception("Error saving state for plugin %s", name)
 
         if plugin_data:
             json_data["plugins"] = plugin_data
@@ -561,8 +561,8 @@ class StateManager:
                     if load_hand and callable(load_hand):
                         try:
                             load_hand(p_state)
-                        except (RuntimeError, ValueError, TypeError) as e:
-                            logging.error(f"Error loading state for plugin {name}: {e}")
+                        except Exception:  # plugins have full app access; catch everything to prevent load corruption
+                            logging.exception("Error loading state for plugin %s", name)
                     else:
                         # No handler found (plugin disabled or missing)
                         # Preserve data so it's not lost on next save

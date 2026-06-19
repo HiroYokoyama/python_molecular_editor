@@ -368,8 +368,7 @@ class UIManager(QObject):
                 if handler_def["callback"](file_path):
                     event.acceptProposedAction()
                     return
-            except (AttributeError, RuntimeError, TypeError, ValueError):
-                # Log but suppress plugin-specific drop handler errors to prevent app-wide crash
+            except Exception:  # plugins have full app access; catch everything to prevent app-wide crash
                 logging.exception("Error in plugin drop handler")
 
         # 2. Built-in Handlers
