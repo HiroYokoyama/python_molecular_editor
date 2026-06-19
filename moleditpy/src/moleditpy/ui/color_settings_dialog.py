@@ -379,7 +379,7 @@ class ColorSettingsDialog(QDialog):
         SettingsDialog: Optional[type] = None
         try:
             from .settings_dialog import SettingsDialog  # type: ignore[assignment]
-        except (ImportError, ValueError):
+        except ImportError:
             try:
                 from moleditpy.ui.settings_dialog import SettingsDialog  # type: ignore[assignment]
             except ImportError:
