@@ -362,32 +362,16 @@ class PluginManager:
                     # Pass category to context if needed, currently not storing it in context directly but could be useful
                     try:
                         module.initialize(context)
-                    except (
-                        AttributeError,
-                        RuntimeError,
-                        ValueError,
-                        OSError,
-                        ImportError,
-                        SyntaxError,
-                    ) as e:
-                        # [BROAD EXCEPTION] Plugins have root power; catch all potential failures during init.
+                    except Exception as e:  # plugins have full app access; catch everything to isolate faults
                         status = f"Error (Init): {e}"
-                        # Initialization errors are stored in plugin status for display in Plugin Dialog
-                        logging.error(f"Plugin {plugin_name} initialize error: {e}")
+                        logging.exception("Plugin %s initialize error", plugin_name)
                 elif has_autorun:
                     try:
                         if self.main_window:
                             module.autorun(self.main_window)
                         else:
                             status = "Skipped (No MW)"
-                    except (
-                        AttributeError,
-                        RuntimeError,
-                        ValueError,
-                        OSError,
-                        ImportError,
-                        SyntaxError,
-                    ) as e:
+                    except Exception as e:  # plugins have full app access; catch everything to isolate faults
                         status = f"Error (Autorun): {e}"
                         logging.exception("Plugin %s autorun error", plugin_name)
                 elif not has_run:
@@ -407,30 +391,14 @@ class PluginManager:
                     }
                 )
 
-        except (
-            AttributeError,
-            RuntimeError,
-            ValueError,
-            OSError,
-            ImportError,
-            SyntaxError,
-        ) as e:
-            # [BROAD EXCEPTION] Loading failures are caught to prevent a single buggy plugin from
-            # crashing the entire discovery process.
-            logging.error(f"Failed to load plugin {module_name}: {e}")
+        except Exception as e:  # plugins have full app access; isolate any load failure to prevent crashing discovery
+            logging.exception("Failed to load plugin %s", module_name)
 
     def run_plugin(self, module: Any, main_window: Any) -> None:
         """Executes the plugin's run method (Legacy manual trigger)."""
         try:
             module.run(main_window)
-        except (
-            AttributeError,
-            RuntimeError,
-            ValueError,
-            OSError,
-            ImportError,
-            SyntaxError,
-        ) as e:
+        except Exception as e:  # plugins have full app access; catch everything so the error dialog can show the cause
             QMessageBox.critical(
                 main_window,
                 "Plugin Error",
@@ -641,18 +609,8 @@ class PluginManager:
         for handler in self.document_reset_handlers:
             try:
                 handler["callback"]()
-            except (
-                AttributeError,
-                RuntimeError,
-                ValueError,
-                OSError,
-                ImportError,
-                SyntaxError,
-            ) as e:
-                # [BROAD EXCEPTION] Document reset handlers are user plugins; catch all to prevent data loss.
-                logging.error(
-                    f"Error in document reset handler for {handler['plugin']}: {e}"
-                )
+            except Exception as e:  # plugins have full app access; catch everything to prevent data loss on document reset
+                logging.exception("Error in document reset handler for %s", handler["plugin"])
 
     def get_plugin_info_safe(self, file_path: str) -> Dict[str, str]:
         """Extracts plugin metadata using AST parsing (safe, no execution)."""

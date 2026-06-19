@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, TYPE_CHECKING
 
 from PyQt6.QtGui import QAction, QIcon, QKeySequence
 from PyQt6.QtWidgets import QFileDialog, QMenu, QMessageBox
@@ -36,6 +36,23 @@ class PluginMenuManager:
 
     def __init__(self, init_manager: MainInitManager) -> None:
         self._im = init_manager
+
+    def _make_safe_callback(self, callback: Callable, plugin_name: str) -> Callable:
+        """Wrap a plugin callback so exceptions don't propagate into Qt's signal machinery."""
+        def _safe(*args: Any, **kwargs: Any) -> None:
+            try:
+                callback(*args, **kwargs)
+            except Exception as exc:
+                logging.exception("Plugin callback error (%s)", plugin_name)
+                try:
+                    QMessageBox.critical(
+                        self._im.host,
+                        "Plugin Error",
+                        f"An error occurred in plugin '{plugin_name}':\n{exc}",
+                    )
+                except Exception:
+                    pass
+        return _safe
 
     # ------------------------------------------------------------------
     # Public API — called by MainInitManager and PluginManager
@@ -158,7 +175,7 @@ class PluginMenuManager:
                 sep.setData(PLUGIN_ACTION_TAG)
 
             action = QAction(text or parts[-1], self._im.host)
-            action.triggered.connect(callback)
+            action.triggered.connect(self._make_safe_callback(callback, action_def.get("plugin", "Plugin")))
             if action_def.get("shortcut"):
                 action.setShortcut(QKeySequence(action_def["shortcut"]))
             action.setData(PLUGIN_ACTION_TAG)
@@ -174,7 +191,7 @@ class PluginMenuManager:
             self._im.plugin_toolbar.show()
             for action_def in self._im.host.plugin_manager.toolbar_actions:
                 action = QAction(action_def["text"], self._im.host)
-                action.triggered.connect(action_def["callback"])
+                action.triggered.connect(self._make_safe_callback(action_def["callback"], action_def.get("plugin", "Plugin")))
                 if action_def["icon"] and os.path.exists(action_def["icon"]):
                     action.setIcon(QIcon(action_def["icon"]))
                 if action_def["tooltip"]:
@@ -331,7 +348,7 @@ class PluginMenuManager:
             sep.setData(PLUGIN_ACTION_TAG)
             for exp in self._im.host.plugin_manager.export_actions:
                 a = QAction(exp["label"], self._im.host)
-                a.triggered.connect(exp["callback"])
+                a.triggered.connect(self._make_safe_callback(exp["callback"], exp.get("plugin", "Plugin")))
                 a.setData(PLUGIN_ACTION_TAG)
                 menu.addAction(a)
 
@@ -376,7 +393,16 @@ class PluginMenuManager:
                     if fpath:
                         ext = os.path.splitext(fpath)[1].lower()
                         if ext in m:
-                            m[ext](fpath)
+                            try:
+                                m[ext](fpath)
+                            except Exception as exc:
+                                logging.exception("Plugin file opener error (%s)", n)
+                                QMessageBox.critical(
+                                    self._im.host,
+                                    "Plugin Error",
+                                    f"An error occurred in plugin '{n}':\n{exc}",
+                                )
+                                return
                             self._im.current_file_path = fpath
                             self._im.host.state_manager.update_window_title()
 
@@ -405,7 +431,7 @@ class PluginMenuManager:
                 a = QAction(
                     f"{tool['label']} ({tool.get('plugin', 'Plugin')})", self._im.host
                 )
-                a.triggered.connect(tool["callback"])
+                a.triggered.connect(self._make_safe_callback(tool["callback"], tool.get("plugin", "Plugin")))
                 a.setData(PLUGIN_ACTION_TAG)
                 analysis_menu.addAction(a)
 

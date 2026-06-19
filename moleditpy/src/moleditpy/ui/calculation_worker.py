@@ -592,7 +592,7 @@ def _perform_optimize_only(
         _safe_status(
             f"Warning: Optimization with {opt_method} failed. Structure preserved."
         )
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(KeyError):
             mol.ClearProp("_pme_optimization_method")
 
     # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
@@ -704,6 +704,7 @@ class CalculationWorker(QObject):
     def __init__(self, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self.halt_ids: Optional[Set[Any]] = None
+        self.halt_all: bool = False
         self.start_work.connect(self.run_calculation)
 
     @pyqtSlot(str, object)
@@ -716,7 +717,7 @@ class CalculationWorker(QObject):
 
         def _check_halted() -> bool:
             h_ids = getattr(self, "halt_ids", None)
-            if getattr(self, "halt_all", False):
+            if self.halt_all:
                 return True  # type: ignore[return-value]
             if not isinstance(h_ids, set):
                 return False

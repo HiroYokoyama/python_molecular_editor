@@ -84,7 +84,7 @@ class View3DManager:
     def cleanup(self) -> None:
         """Cleanup resources used by the 3D manager."""
         if self.plotter:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(RuntimeError, OSError):
                 self.plotter.clear()
                 self.plotter.close()
         self.current_mol = None

@@ -391,11 +391,11 @@ class ComputeManager:
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
         self.host.statusBar().showMessage(msg)
 
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(RuntimeError):
             QMessageBox.critical(self.host, "Chemistry Problem", msg)
 
         for prob in problems:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(AttributeError, KeyError, RuntimeError):
                 atom_idx = prob.GetAtomIdx()
                 rd_atom = mol.GetAtomWithIdx(atom_idx)
                 orig_id = rd_atom.GetIntProp("_original_atom_id")
