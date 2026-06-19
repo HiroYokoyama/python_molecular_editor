@@ -164,6 +164,24 @@ class PluginContext:
         """
         self._manager.show_status_message(message, timeout)
 
+    def rebuild_menus(self) -> None:
+        """Rebuild plugin-managed menus and toolbars to apply changes immediately (Public API)."""
+        if hasattr(self._manager, "rebuild_plugin_menus"):
+            self._manager.rebuild_plugin_menus()
+
+    def enter_3d_viewer_mode(self) -> None:
+        """Switch the application UI layout to 3D viewer mode (Public API)."""
+        mw = self.get_main_window()
+        if mw is not None and hasattr(mw, "ui_manager"):
+            if hasattr(mw.ui_manager, "enter_3d_viewer_mode"):
+                mw.ui_manager.enter_3d_viewer_mode()
+            elif hasattr(mw.ui_manager, "enter_3d_viewer_ui_mode"):
+                mw.ui_manager.enter_3d_viewer_ui_mode()
+
+    def enter_3d_mode(self) -> None:
+        """Switch UI layout to 3D viewer mode. Alias for enter_3d_viewer_mode."""
+        self.enter_3d_viewer_mode()
+
     @property
     def current_mol(self) -> Any:
         """
@@ -310,8 +328,12 @@ class PluginContext:
 
     def register_3d_context_menu(self, callback: Callable, label: str) -> None:
         """Deprecated: This method does nothing. Kept for backward compatibility."""
-        print(
-            f"Warning: Plugin '{self._plugin_name}' uses deprecated 'register_3d_context_menu'. This API has been removed."
+        import warnings
+
+        warnings.warn(
+            f"Plugin '{self._plugin_name}' uses deprecated 'register_3d_context_menu'. This API has been removed.",
+            category=DeprecationWarning,
+            stacklevel=2,
         )
 
     def register_3d_style(

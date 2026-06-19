@@ -65,16 +65,16 @@ class MoveGroupDialog(BasePickingDialog):
 
         self.clicked_atom_for_toggle: Optional[int] = None
         # State for group movement (used by CustomInteractorStyle)
-        self._initial_positions: dict = {}
-        self._is_dragging_group_vtk = False
-        self._is_rotating_group_vtk = False
-        self._drag_atom_idx: Optional[int] = None
-        self._drag_start_pos: Optional[Any] = None
-        self._mouse_moved: bool = False
-        self._rotation_start_pos: Optional[Any] = None
-        self._rotation_mouse_moved: bool = False
-        self._rotation_atom_idx: Optional[int] = None
-        self._group_centroid: Optional[np.ndarray] = None
+        self.initial_positions: dict = {}
+        self.is_dragging_group_vtk = False
+        self.is_rotating_group_vtk = False
+        self.drag_atom_idx_vtk: Optional[int] = None
+        self.drag_start_pos_vtk: Optional[Any] = None
+        self.mouse_moved_vtk: bool = False
+        self.rotation_start_pos: Optional[Any] = None
+        self.rotation_mouse_moved: bool = False
+        self.rotation_atom_idx: Optional[int] = None
+        self.group_centroid: Optional[np.ndarray] = None
 
         # State for group movement (used by dialog's own event filter)
         self.drag_atom_idx: Optional[int] = None

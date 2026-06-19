@@ -25,13 +25,6 @@ from PyQt6.QtGui import QBrush, QImage, QPainter
 from PyQt6.QtSvg import QSvgGenerator
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
-try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
@@ -699,8 +692,8 @@ class ExportManager:
 
             return meshes_with_colors
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error in export_from_3d_view_with_colors: {e}")
+        except (AttributeError, RuntimeError, ValueError):
+            logging.exception("Error in export_from_3d_view_with_colors")
             return []
 
     def export_2d_png(self) -> None:

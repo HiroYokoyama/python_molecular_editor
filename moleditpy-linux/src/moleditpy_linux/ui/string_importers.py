@@ -22,14 +22,6 @@ from rdkit.Chem import AllChem
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import QInputDialog
 
-try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
-
 
 # --- Classes ---
 class StringImporterManager:
@@ -98,8 +90,8 @@ class StringImporterManager:
             if b_idx in rdkit_idx_to_my_id and e_idx in rdkit_idx_to_my_id:
                 a1_id = rdkit_idx_to_my_id[b_idx]
                 a2_id = rdkit_idx_to_my_id[e_idx]
-                a1_item = self.host.state_manager.data.atoms[a1_id]["item"]
-                a2_item = self.host.state_manager.data.atoms[a2_id]["item"]
+                a1_item = self.host.init_manager.scene.atom_items[a1_id]
+                a2_item = self.host.init_manager.scene.atom_items[a2_id]
                 self.host.init_manager.scene.create_bond(
                     a1_item, a2_item, bond_order=int(b_type), bond_stereo=stereo
                 )

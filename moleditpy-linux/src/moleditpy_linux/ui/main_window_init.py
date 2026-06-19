@@ -73,14 +73,6 @@ except ImportError:
 
 
 try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except (AttributeError, RuntimeError, TypeError):
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
-
-try:
     # package relative imports (preferred when running as `python -m moleditpy`)
     from .color_settings_dialog import ColorSettingsDialog
     from ..utils.constants import DEFAULT_CPK_COLORS, NUM_DASHES, VERSION
@@ -151,8 +143,8 @@ class MainInitManager:
         # Chemical check flags: whether a chemical/sanitization check was attempted and whether it failed
         self.host.chem_check_tried = False
         self.host.chem_check_failed = False
-        self.host._template_dialog = None
-        self.host._picking_consumed = False
+        self.host.template_dialog = None
+        self.host.picking_consumed = False
         self.mode_actions: Dict[str, Any] = {}
 
         # Variable tracking the saved state
@@ -160,23 +152,23 @@ class MainInitManager:
         self.settings_dirty = True
         self.current_file_path = None
         self.host.initialization_complete = False
-        self.host._ih_update_counter = 0
+        self.host.ih_update_counter = 0
 
         # Initialization of the plugin manager
         if safe_mode:
-            print("Safe mode: plugins disabled.")
+            logging.info("Safe mode: plugins disabled.")
             self.host.plugin_manager = None
         else:
             try:
                 self.host.plugin_manager = PluginManager()
             except (AttributeError, RuntimeError, ValueError) as e:
-                print(f"Failed to initialize PluginManager: {e}")
+                logging.error(f"Failed to initialize PluginManager: {e}")
                 self.host.plugin_manager = None
 
         # Dictionary holding data for plugins that haven't been loaded
         self._preserved_plugin_data: Dict[str, Any] = {}
 
-        self._plugin_menubar_separator_added = False
+        self.plugin_menubar_separator_added = False
         self.active_worker_ids = set()
         self.analysis_action = None
         self.atom_index_base_0_action = None
@@ -200,7 +192,7 @@ class MainInitManager:
         self.view_2d = None
         self.init_ui()
         self.init_worker_thread()
-        self.host.ui_manager._setup_3d_picker()
+        self.host.ui_manager.setup_3d_picker()
         # Install event filter to capture window close events (handled in UIManager)
         self.host.installEventFilter(self.host.ui_manager)
 
@@ -214,7 +206,7 @@ class MainInitManager:
                 for atom in warmup_mol.GetAtoms():
                     atom.GetNumImplicitHs()
         except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"RDKit warm-up failed: {e}")
+            logging.error(f"RDKit warm-up failed: {e}")
 
         self.host.state_manager.reset_undo_stack()
         self.scene.selectionChanged.connect(
@@ -265,7 +257,7 @@ class MainInitManager:
             self.host.setWindowIcon(app_icon)
             QApplication.instance().setWindowIcon(app_icon)
         else:
-            print(f"Warning: Icon file not found: {icon_path}")
+            logging.warning(f"Warning: Icon file not found: {icon_path}")
 
         self._init_main_layout()
         self._init_toolbars()
@@ -291,7 +283,7 @@ class MainInitManager:
         self._init_help_menu(menu_bar)
 
         # Consistently set initial state for 3D-related features
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_features(False)
 
         # Finally, populate plugins now that all menus are created
         self.update_plugin_menu(self.plugin_menu)
@@ -442,7 +434,7 @@ class MainInitManager:
                         "REPORT ERROR: Missing attribute 'CPK_COLORS_PV' on constants module"
                     )
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-            print(f"Failed to update CPK colors from settings: {e}")
+            logging.error(f"Failed to update CPK colors from settings: {e}")
 
     def open_settings_dialog(self) -> None:
         dialog = SettingsDialog(self.settings, self.host)
@@ -620,7 +612,7 @@ class MainInitManager:
             self.settings_dirty = False
             self.host.initial_settings = self.settings.copy()
         except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error saving settings: {e}")
+            logging.error(f"Error saving settings: {e}")
 
     def update_plugin_menu(self, plugin_menu: QMenu) -> None:
         """Discovers plugins and updates the plugin menu actions."""
@@ -643,8 +635,8 @@ class MainInitManager:
 
         # Integrate
         self._update_style_menu_with_plugins()
-        self._add_registered_plugin_actions()
-        self._add_plugin_toolbar_actions()
+        self.add_registered_plugin_actions()
+        self.add_plugin_toolbar_actions()
         self._add_legacy_plugin_actions(plugin_menu, plugins)
         self._integrate_plugin_export_actions()
         self._integrate_plugin_file_openers()
@@ -709,7 +701,42 @@ class MainInitManager:
                     style_menu.addAction(action)
                     style_group.addAction(action)
 
-    def _add_registered_plugin_actions(self) -> None:
+    def rebuild_plugin_menus(self) -> None:
+        """Rebuild all plugin-managed menus and toolbars cleanly."""
+        PLUGIN_ACTION_TAG = "plugin_managed"
+
+        def _clean_menu(menu):
+            for action in list(menu.actions()):
+                submenu = action.menu()
+                if submenu is not None:
+                    _clean_menu(submenu)
+                    has_content = any(not a.isSeparator() for a in submenu.actions())
+                    if not has_content:
+                        menu.removeAction(action)
+                elif action.data() == PLUGIN_ACTION_TAG:
+                    menu.removeAction(action)
+
+        try:
+            for top_action in list(self.host.menuBar().actions()):
+                top_menu = top_action.menu()
+                if top_menu is not None:
+                    _clean_menu(top_menu)
+        except Exception as e:
+            logging.warning("Plugin Installer: menu cleanup error: %s", e)
+
+        self.plugin_menubar_separator_added = False
+
+        try:
+            self.add_registered_plugin_actions()
+        except Exception as e:
+            logging.warning("Plugin Installer: menu rebuild error: %s", e)
+
+        try:
+            self.add_plugin_toolbar_actions()
+        except Exception as e:
+            logging.warning("Plugin Installer: toolbar rebuild error: %s", e)
+
+    def add_registered_plugin_actions(self) -> None:
         """Add actions that have been explicitly registered via the plugin manager."""
         PLUGIN_ACTION_TAG = "plugin_managed"
         if not self.host.plugin_manager.menu_actions:
@@ -733,9 +760,9 @@ class MainInitManager:
 
             if not current_menu:
                 # Add a separator before the first plugin-owned top-level menu
-                if not getattr(self, "_plugin_menubar_separator_added", False):
+                if not getattr(self, "plugin_menubar_separator_added", False):
                     self.host.menuBar().addSeparator()
-                    self._plugin_menubar_separator_added = True
+                    self.plugin_menubar_separator_added = True
                 current_menu = self.host.menuBar().addMenu(top_level_title)
 
             for part in parts[1:-1]:
@@ -765,7 +792,7 @@ class MainInitManager:
             action.setData(PLUGIN_ACTION_TAG)
             current_menu.addAction(action)
 
-    def _add_plugin_toolbar_actions(self) -> None:
+    def add_plugin_toolbar_actions(self) -> None:
         """Add toolbar actions registered by plugins."""
         if not hasattr(self, "plugin_toolbar"):
             return

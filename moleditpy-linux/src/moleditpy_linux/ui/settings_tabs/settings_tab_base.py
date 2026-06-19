@@ -64,12 +64,12 @@ class SettingsTabBase(QWidget):
             spin.setRange(min_val, max_val)
             spin.setValue(slider.value())
 
-            def sync_spin(val):
+            def sync_spin(val: int) -> None:
                 spin.blockSignals(True)
                 spin.setValue(val)
                 spin.blockSignals(False)
 
-            def sync_slider(val):
+            def sync_slider(val: int) -> None:
                 slider.blockSignals(True)
                 slider.setValue(val)
                 slider.blockSignals(False)
@@ -83,12 +83,12 @@ class SettingsTabBase(QWidget):
             spin.setDecimals(2)
             spin.setValue(slider.value() / scale)
 
-            def sync_spin(val):
+            def sync_spin(val: int) -> None:
                 spin.blockSignals(True)
                 spin.setValue(val / scale)
                 spin.blockSignals(False)
 
-            def sync_slider(val):
+            def sync_slider(val: float) -> None:
                 slider.blockSignals(True)
                 slider.setValue(int(round(val * scale)))
                 slider.blockSignals(False)

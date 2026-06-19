@@ -17,7 +17,7 @@ from PyQt6.QtGui import QColor, QFont
 from rdkit import Chem
 
 
-def _get_version():
+def _get_version() -> str:
     try:
         from importlib.metadata import version, PackageNotFoundError
 

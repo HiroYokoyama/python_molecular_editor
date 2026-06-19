@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 import contextlib
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, TYPE_CHECKING
 
 from PyQt6.QtCore import QThread, QTimer, QPoint
 from PyQt6.QtGui import QAction, QColor
@@ -41,12 +41,18 @@ except ImportError:
     )
 
 
+if TYPE_CHECKING:
+    try:
+        from .main_window import MainWindow
+    except ImportError:
+        from moleditpy_linux.ui.main_window import MainWindow
+
+
 class ComputeManager:
     """Independent manager for molecular computations, ported from MainWindowCompute mixin."""
 
-    def __init__(self, host: Any) -> None:
+    def __init__(self, host: MainWindow) -> None:
         self._calculating_text_actor = None
-        self._temp_optimization_method = None
         self.original_atom_properties = {}
         self.host = host
         self.last_successful_optimization_method: Optional[str] = None
@@ -128,8 +134,8 @@ class ComputeManager:
                 )
 
             # ui_manager and its methods are guaranteed on the host
-            self.host.ui_manager._enable_3d_features(has_mol)
-            self.host.ui_manager._enable_3d_edit_actions(has_mol)
+            self.host.ui_manager.enable_3d_features(has_mol)
+            self.host.ui_manager.enable_3d_edit_actions(has_mol)
 
             if hasattr(self.host.init_manager, "analysis_action"):
                 self.host.init_manager.analysis_action.setEnabled(has_mol)
@@ -203,8 +209,7 @@ class ComputeManager:
         menu.exec(self.host.init_manager.convert_button.mapToGlobal(pos))
 
     def _trigger_conversion_with_temp_mode(self, mode_key: str) -> None:
-        self.host._temp_conv_mode = mode_key
-        QTimer.singleShot(0, self.trigger_conversion)
+        QTimer.singleShot(0, lambda: self.trigger_conversion(conversion_mode=mode_key))
 
     def show_optimize_menu(self, pos: QPoint) -> None:
         """Temporary 3D optimization menu (right-click)."""
@@ -236,10 +241,13 @@ class ComputeManager:
         menu.exec(self.host.init_manager.optimize_3d_button.mapToGlobal(pos))
 
     def _trigger_optimize_with_temp_method(self, method_key: str) -> None:
-        self.host._temp_optimization_method = method_key
-        QTimer.singleShot(0, self.optimize_3d_structure)
+        QTimer.singleShot(0, lambda: self.optimize_3d_structure(method_key))
 
-    def trigger_conversion(self) -> None:
+    def trigger_conversion(
+        self,
+        conversion_mode: Optional[str] = None,
+        optimization_method: Optional[str] = None,
+    ) -> None:
         """Main entry point for 2D to 3D conversion."""
         self.last_successful_optimization_method = None
         self.host.set_constraints_3d([])
@@ -285,7 +293,7 @@ class ComputeManager:
         self._safe_disconnect(self.host.init_manager.convert_button.clicked)
         self.host.init_manager.convert_button.clicked.connect(self.halt_conversion)
         self.host.init_manager.cleanup_button.setEnabled(False)
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_features(False)
         self.host.clear_3d_view()
 
         # Add 'Calculating...' overlay
@@ -305,13 +313,9 @@ class ComputeManager:
         self.host.view_3d_manager.plotter.render()
 
         options = {
-            "conversion_mode": self.host.__dict__.pop(
-                "_temp_conv_mode",
-                self.host.init_manager.settings.get("3d_conversion_mode", "fallback"),
-            ),
-            "optimization_method": self.host.__dict__.pop(
-                "_temp_optimization_method", None
-            )
+            "conversion_mode": conversion_mode
+            or self.host.init_manager.settings.get("3d_conversion_mode", "fallback"),
+            "optimization_method": optimization_method
             or getattr(self.host.init_manager, "optimization_method", "MMFF_RDKIT"),
             "optimize_intermolecular_interaction_rdkit": self.host.init_manager.settings.get(
                 "optimize_intermolecular_interaction_rdkit", True
@@ -335,7 +339,7 @@ class ComputeManager:
         self._remove_calculating_text()
         self.host.statusBar().showMessage("Halted")
 
-    def optimize_3d_structure(self) -> None:
+    def optimize_3d_structure(self, method_key: Optional[str] = None) -> None:
         """Optimize 3D structure."""
         if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("No 3D molecule to optimize.")
@@ -347,7 +351,7 @@ class ComputeManager:
             )
             return
 
-        method = self.host.__dict__.pop("_temp_optimization_method", None) or getattr(
+        method = method_key or getattr(
             self.host.init_manager, "optimization_method", "MMFF_RDKIT"
         )
         method = method.upper() if method else "MMFF_RDKIT"
@@ -394,7 +398,7 @@ class ComputeManager:
                 "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
             )
 
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_features(False)
         # Re-enable the button so it can be clicked to Halt
         if hasattr(self.host.init_manager, "optimize_3d_button"):
             self.host.init_manager.optimize_3d_button.setEnabled(True)
@@ -444,9 +448,10 @@ class ComputeManager:
                 atom_idx = prob.GetAtomIdx()
                 rd_atom = mol.GetAtomWithIdx(atom_idx)
                 orig_id = rd_atom.GetIntProp("_original_atom_id")
-                item = self.host.state_manager.data.atoms[orig_id]["item"]
-                item.has_problem = True
-                item.update()
+                item = self.host.init_manager.scene.atom_items.get(orig_id)
+                if item:
+                    item.has_problem = True
+                    item.update()
         self.host.init_manager.view_2d.setFocus()
 
     def _setup_mol_block_for_worker(self, mol: Any) -> str:
@@ -586,8 +591,7 @@ class ComputeManager:
                     QMessageBox.StandardButton.No,
                 )
                 if reply == QMessageBox.StandardButton.Yes:
-                    self._temp_optimization_method = "UFF_RDKIT"
-                    self.optimize_3d_structure()
+                    self.optimize_3d_structure("UFF_RDKIT")
                     return
             except (TypeError, RuntimeError):
                 # Safe defensive fallback catching TypeError, RuntimeError
@@ -619,7 +623,7 @@ class ComputeManager:
         )
         if problem_atom_ids:
             for aid in problem_atom_ids:
-                item = self.host.state_manager.data.atoms[aid].get("item")
+                item = self.host.init_manager.scene.atom_items.get(aid)
                 if item:
                     item.has_problem = True
                     item.update()
@@ -670,5 +674,6 @@ class ComputeManager:
                     stack.append(neighbor)
 
         for aid in connected:
-            item = self.host.state_manager.data.atoms[aid]["item"]
-            item.setSelected(True)
+            item = self.host.init_manager.scene.atom_items.get(aid)
+            if item:
+                item.setSelected(True)

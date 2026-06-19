@@ -267,7 +267,7 @@ class PluginManagerWindow(QDialog):
                 is_folder = True
 
             if is_valid:
-                sha256_value = self.plugin_manager._compute_sha256(file_path)
+                sha256_value = self.plugin_manager.compute_sha256(file_path)
                 # Extract info and confirm
                 info = {
                     "name": os.path.basename(file_path),

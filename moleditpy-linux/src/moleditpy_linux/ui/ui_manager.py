@@ -30,12 +30,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 
 try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
+    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
+    from moleditpy_linux.utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
@@ -381,9 +378,9 @@ class UIManager(QObject):
                 if handler_def["callback"](file_path):
                     event.acceptProposedAction()
                     return
-            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
+            except (AttributeError, RuntimeError, TypeError, ValueError):
                 # Log but suppress plugin-specific drop handler errors to prevent app-wide crash
-                print(f"Error in plugin drop handler: {e}")
+                logging.exception("Error in plugin drop handler")
 
         # 2. Built-in Handlers
         file_lower = file_path.lower()
@@ -507,7 +504,23 @@ class UIManager(QObject):
 
         self._enable_3d_edit_actions(enabled)
 
-    def _enter_3d_viewer_ui_mode(self) -> None:
+    def enter_3d_viewer_mode(self) -> None:
+        """Switch the application UI layout to 3D viewer mode (Public API)."""
+        self.enter_3d_viewer_ui_mode()
+
+    def enable_3d_features(self, enabled: bool) -> None:
+        """Enable or disable 3D UI features (Public API)."""
+        self._enable_3d_features(enabled)
+
+    def enable_3d_edit_actions(self, enabled: bool) -> None:
+        """Enable or disable 3D editing actions (Public API)."""
+        self._enable_3d_edit_actions(enabled)
+
+    def setup_3d_picker(self) -> None:
+        """Initialize the 3D interaction picker (Public API)."""
+        self._setup_3d_picker()
+
+    def enter_3d_viewer_ui_mode(self) -> None:
         """Set UI mode to 3D viewer."""
         self.is_2d_editable = False
         self.host.init_manager.cleanup_button.setEnabled(False)
@@ -524,7 +537,7 @@ class UIManager(QObject):
         self.host.ui_manager.minimize_2d_panel()
 
         # Collectively enable 3D-related features
-        self.host.ui_manager._enable_3d_features(True)
+        self.enable_3d_features(True)
 
     def restore_ui_for_editing(self) -> None:
         """Enables all 2D editing UI elements."""
@@ -603,12 +616,8 @@ class UIManager(QObject):
         if not isinstance(splitter, QSplitter):
             return None
 
-        if _sip_isdeleted is not None:
-            try:
-                if _sip_isdeleted(splitter):
-                    return None
-            except (AttributeError, RuntimeError, TypeError):
-                return None
+        if sip_isdeleted_safe(splitter):
+            return None
 
         return splitter
 

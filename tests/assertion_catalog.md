@@ -4460,6 +4460,16 @@ _No description provided._
 
 - mock_main_window.view_3d_manager.plotter.reset_camera.assert_called_once()
 
+### TestPluginInterface.test_enter_3d_viewer_mode
+_No description provided._
+
+- mock_main_window.ui_manager.enter_3d_viewer_mode.assert_called_once()
+
+### TestPluginInterface.test_enter_3d_mode
+_No description provided._
+
+- mock_main_window.ui_manager.enter_3d_viewer_mode.assert_called_once()
+
 ### TestPluginInterface.test_set_bond_color_by_atoms
 _No description provided._
 

@@ -92,8 +92,8 @@ class BondItem(QGraphicsItem):
                 if view and view.viewport():
                     view.viewport().update()
 
-        except (AttributeError, RuntimeError, TypeError) as e:
-            print(f"Error in BondItem.set_stereo: {e}")
+        except (AttributeError, RuntimeError, TypeError):
+            logging.exception("Error in BondItem.set_stereo")
             # Continue without crashing
             self.stereo = new_stereo
 
@@ -622,8 +622,8 @@ class BondItem(QGraphicsItem):
             if self.atom1:
                 self.setPos(self.atom1.pos())
             self.update()
-        except (AttributeError, RuntimeError) as e:
-            print(f"Error updating bond position: {e}")
+        except (AttributeError, RuntimeError):
+            logging.exception("Error updating bond position")
             # Continue without crashing
 
     def hoverEnterEvent(self, event: Any) -> None:

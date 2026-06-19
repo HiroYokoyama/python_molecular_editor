@@ -33,7 +33,7 @@ except ImportError:
 
 
 class PluginManager:
-    def _compute_sha256(self, path: str) -> str:
+    def compute_sha256(self, path: str) -> str:
         """Computes SHA-256 for a file or a directory (concatenated hashes of all files)."""
         if os.path.isfile(path):
             return self._sha256_for_file(path)
@@ -66,7 +66,10 @@ class PluginManager:
                     hasher.update(rel_path.encode("utf-8", errors="replace"))
                     hasher.update(b"\0")
                     with open(file_path, "rb") as f:
-                        for chunk in iter(lambda: f.read(8192), b""):
+                        while True:
+                            chunk = f.read(8192)
+                            if not chunk:
+                                break
                             hasher.update(chunk)
                     hasher.update(b"\0")
             return hasher.hexdigest()
@@ -390,8 +393,7 @@ class PluginManager:
                         SyntaxError,
                     ) as e:
                         status = f"Error (Autorun): {e}"
-                        # Autorun errors are stored in plugin status
-                        print(f"Plugin {plugin_name} autorun error: {e}")
+                        logging.exception("Plugin %s autorun error", plugin_name)
                 elif not has_run:
                     status = "No Entry Point"
 
@@ -438,6 +440,12 @@ class PluginManager:
                 "Plugin Error",
                 f"Error running plugin '{getattr(module, 'PLUGIN_NAME', 'Unknown')}':\n{e}",
             )
+
+    def rebuild_plugin_menus(self) -> None:
+        """Rebuild all plugin menus and toolbars by delegating to the init_manager."""
+        if self.main_window and hasattr(self.main_window, "init_manager"):
+            if hasattr(self.main_window.init_manager, "rebuild_plugin_menus"):
+                self.main_window.init_manager.rebuild_plugin_menus()
 
     # --- Registration Callbacks ---
     def register_menu_action(
@@ -677,10 +685,6 @@ class PluginManager:
                         if node.value:  # AnnAssign might presumably not have value? (though usually does for module globals)
                             if isinstance(node.value, ast.Constant):  # Py3.8+
                                 val = node.value.value
-                            elif hasattr(ast, "Str") and isinstance(
-                                node.value, getattr(ast, "Str", type(None))
-                            ):  # Py3.7 and below
-                                val = node.value.s
                             elif isinstance(node.value, ast.Tuple):
                                 # Handle version tuples e.g. (1, 0, 0)
                                 try:
@@ -689,10 +693,6 @@ class PluginManager:
                                     for elt in node.value.elts:
                                         if isinstance(elt, ast.Constant):
                                             elts.append(elt.value)
-                                        elif hasattr(ast, "Num") and isinstance(
-                                            elt, getattr(ast, "Num", type(None))
-                                        ):
-                                            elts.append(elt.n)
                                     val = ".".join(map(str, elts))
                                 except (
                                     AttributeError,

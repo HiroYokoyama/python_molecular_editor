@@ -87,12 +87,12 @@ class SettingsOtherTab(SettingsTabBase):
         self.aromatic_torus_thickness_label.setSingleStep(0.1)
         self.aromatic_torus_thickness_label.setDecimals(1)
 
-        def sync_spin(val):
+        def sync_spin(val: int) -> None:
             self.aromatic_torus_thickness_label.blockSignals(True)
             self.aromatic_torus_thickness_label.setValue(val / 100.0)
             self.aromatic_torus_thickness_label.blockSignals(False)
 
-        def sync_slider(val):
+        def sync_slider(val: float) -> None:
             self.aromatic_torus_thickness_slider.blockSignals(True)
             self.aromatic_torus_thickness_slider.setValue(int(round(val * 100)))
             self.aromatic_torus_thickness_slider.blockSignals(False)

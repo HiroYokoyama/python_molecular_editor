@@ -223,7 +223,7 @@ class IOManager:
                                 raise e
 
                 if final_mol:
-                    final_mol._xyz_atom_data = atoms_data
+                    final_mol.xyz_atom_data = atoms_data
             return final_mol
 
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
@@ -404,15 +404,9 @@ class IOManager:
         elif file_path.lower().endswith(".pmeraw"):
             self.load_raw_data(file_path)
         else:
-            try:
-                self.load_json_data(file_path)
-            except Exception:
-                try:
-                    self.load_raw_data(file_path)
-                except Exception:
-                    self.host.statusBar().showMessage(
-                        "Error: Unable to determine file format or file corrupted."
-                    )
+            self.host.statusBar().showMessage(
+                "Error: Unable to determine file format or file corrupted."
+            )
 
     def save_as_json(self) -> None:
         """Save as PME Project (JSON) format."""
@@ -651,12 +645,12 @@ class IOManager:
                     elif bond.GetStereo() == Chem.BondStereo.STEREOE:
                         stereo = 4
                 self.host.init_manager.scene.create_bond(
-                    self.host.state_manager.data.atoms[
+                    self.host.init_manager.scene.atom_items[
                         rdkit_idx_to_my_id[bond.GetBeginAtomIdx()]
-                    ]["item"],
-                    self.host.state_manager.data.atoms[
+                    ],
+                    self.host.init_manager.scene.atom_items[
                         rdkit_idx_to_my_id[bond.GetEndAtomIdx()]
-                    ]["item"],
+                    ],
                     bond_order=int(bond.GetBondTypeAsDouble()),
                     bond_stereo=stereo,
                 )
@@ -744,18 +738,18 @@ class IOManager:
             )
             QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
 
-            if hasattr(self.host.ui_manager, "_enter_3d_viewer_ui_mode"):
-                self.host.ui_manager._enter_3d_viewer_ui_mode()
+            if hasattr(self.host.ui_manager, "enter_3d_viewer_mode"):
+                self.host.ui_manager.enter_3d_viewer_mode()
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute '_enter_3d_viewer_ui_mode' on object"
+                    "REPORT ERROR: Missing attribute 'enter_3d_viewer_mode' on object"
                 )
 
-            if hasattr(self.host.ui_manager, "_enable_3d_features"):
-                self.host.ui_manager._enable_3d_features(True)
+            if hasattr(self.host.ui_manager, "enable_3d_features"):
+                self.host.ui_manager.enable_3d_features(True)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute '_enable_3d_features' on object"
+                    "REPORT ERROR: Missing attribute 'enable_3d_features' on object"
                 )
 
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
@@ -827,12 +821,12 @@ class IOManager:
             )
             QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
 
-            self.host.ui_manager._enter_3d_viewer_ui_mode()
-            if hasattr(self.host.ui_manager, "_enable_3d_features"):
-                self.host.ui_manager._enable_3d_features(True)
+            self.host.ui_manager.enter_3d_viewer_mode()
+            if hasattr(self.host.ui_manager, "enable_3d_features"):
+                self.host.ui_manager.enable_3d_features(True)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute '_enable_3d_features' on object"
+                    "REPORT ERROR: Missing attribute 'enable_3d_features' on object"
                 )
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
                 self.host.view_3d_manager.update_atom_id_menu_text()

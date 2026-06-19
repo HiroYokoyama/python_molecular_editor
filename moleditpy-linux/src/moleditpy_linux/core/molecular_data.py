@@ -35,12 +35,12 @@ class MolecularData:
     atoms: Dict[int, Dict[str, Any]]
     bonds: Dict[Tuple[int, int], Dict[str, Any]]
     adjacency_list: Dict[int, List[int]]
-    _next_atom_id: int
+    next_atom_id: int
 
     def __init__(self) -> None:
         self.atoms = {}
         self.bonds = {}
-        self._next_atom_id = 0
+        self.next_atom_id = 0
         self.adjacency_list = {}
 
     def add_atom(
@@ -50,7 +50,7 @@ class MolecularData:
         charge: int = 0,
         radical: int = 0,
     ) -> int:
-        atom_id = self._next_atom_id
+        atom_id = self.next_atom_id
         # Internalize position as raw floats to decouple from UI types (QPointF)
         if hasattr(pos, "x") and hasattr(pos, "y"):
             raw_pos = PointTuple((float(pos.x()), float(pos.y())))
@@ -65,7 +65,7 @@ class MolecularData:
             "radical": radical,
         }
         self.adjacency_list[atom_id] = []
-        self._next_atom_id += 1
+        self.next_atom_id += 1
         return atom_id
 
     def set_atom_pos(self, atom_id: int, pos: Union[Any, Tuple[float, float]]) -> None:
@@ -348,7 +348,7 @@ class MolecularData:
             if atom.HasProp("_original_atom_id"):
                 orig_id = atom.GetIntProp("_original_atom_id")
                 if orig_id in self.atoms:
-                    rdkit_idx_to_item[atom.GetIdx()] = self.atoms[orig_id]["item"]
+                    rdkit_idx_to_item[atom.GetIdx()] = self.atoms[orig_id].get("item")
 
         # 4. Map RDKit bond index to editor bond item
         rdkit_bond_idx_to_item = {}
@@ -356,19 +356,16 @@ class MolecularData:
             a1_idx = rdkit_bond.GetBeginAtomIdx()
             a2_idx = rdkit_bond.GetEndAtomIdx()
             if a1_idx in rdkit_idx_to_item and a2_idx in rdkit_idx_to_item:
-                # Find corresponding editor bond item
-                # This is slightly expensive but done once per update
                 item1 = rdkit_idx_to_item[a1_idx]
                 item2 = rdkit_idx_to_item[a2_idx]
-                id1, id2 = item1.atom_id, item2.atom_id
-                key = (id1, id2) if (id1, id2) in self.bonds else (id2, id1)
-                if key in self.bonds:
-                    rdkit_bond_idx_to_item[bidx] = self.bonds[key].get("item")
+                if item1 and item2:
+                    id1, id2 = item1.atom_id, item2.atom_id
+                    key = (id1, id2) if (id1, id2) in self.bonds else (id2, id1)
+                    if key in self.bonds:
+                        rdkit_bond_idx_to_item[bidx] = self.bonds[key].get("item")
 
         # 5. Initialize/Reset all bond items and track best ring size
-        bond_to_best_size: Dict[
-            int, int
-        ] = {}  # bond_item_id -> smallest_ring_size_found
+        bond_to_best_size = {}  # bond_item_id -> smallest_ring_size_found
         for bond_data in self.bonds.values():
             bond_item = bond_data.get("item")
             if bond_item:
@@ -392,15 +389,13 @@ class MolecularData:
 
             center_x = sum(p.x() for p in positions) / len(positions)
             center_y = sum(p.y() for p in positions) / len(positions)
-            ring_center = (center_x, center_y)  # Use tuple (x, y) instead of QPointF
+            ring_center = (center_x, center_y)
 
             # Update all bonds in this ring
             for bidx in b_ring:
                 bond_item = rdkit_bond_idx_to_item.get(bidx)
                 if bond_item:
                     bond_item.is_in_ring = True
-                    # Explicitly prioritize smaller rings for double bond shift logic.
-                    # This ensures the double bond is drawn inside the smaller ring in fused systems.
                     item_id = id(bond_item)
                     if (
                         item_id not in bond_to_best_size

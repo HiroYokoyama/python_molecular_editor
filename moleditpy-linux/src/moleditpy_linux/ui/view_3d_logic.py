@@ -18,6 +18,11 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 if TYPE_CHECKING:
     from .custom_qt_interactor import CustomQtInteractor
 
+    try:
+        from .main_window import MainWindow
+    except ImportError:
+        from moleditpy_linux.ui.main_window import MainWindow
+
 import numpy as np
 import vtk
 
@@ -30,13 +35,6 @@ from PyQt6.QtCore import QRectF, Qt
 from PyQt6.QtGui import QColor, QTransform
 from PyQt6.QtWidgets import QGraphicsView
 
-try:
-    from PyQt6 import sip as _sip  # type: ignore
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except (ImportError, AttributeError, TypeError):
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
 
 try:
     # package relative imports (preferred when running as `python -m moleditpy`)
@@ -55,7 +53,7 @@ class View3DManager:
         None  # Class-level reference for plugin patching accessibility
     )
 
-    def __init__(self, host: Any) -> None:
+    def __init__(self, host: MainWindow) -> None:
         self._plugin_bond_color_overrides = {}
         self._plugin_color_overrides = {}
         self.host = host
@@ -92,8 +90,7 @@ class View3DManager:
         if val is not None:
             return val  # type: ignore[return-value]
         if (
-            hasattr(self, "host")
-            and hasattr(self.host, "view_3d_manager")
+            hasattr(self.host, "view_3d_manager")
             and self.host.view_3d_manager is not self
             and hasattr(self.host.view_3d_manager, "plotter")
         ):
@@ -106,7 +103,7 @@ class View3DManager:
 
     def cleanup(self) -> None:
         """Cleanup resources used by the 3D manager."""
-        if hasattr(self, "plotter") and self.plotter:
+        if self.plotter:
             with contextlib.suppress(Exception):
                 self.plotter.clear()
                 self.plotter.close()
@@ -143,13 +140,9 @@ class View3DManager:
         """Dispatch to custom style or standard drawing."""
         mw = self.host
 
-        if hasattr(mw, "plugin_manager") and hasattr(
-            mw.plugin_manager, "custom_3d_styles"
-        ):
-            if (
-                hasattr(self, "current_3d_style")
-                and self.current_3d_style in mw.plugin_manager.custom_3d_styles
-            ):
+        plugin_manager = getattr(mw, "plugin_manager", None)
+        if plugin_manager is not None and hasattr(plugin_manager, "custom_3d_styles"):
+            if self.current_3d_style in plugin_manager.custom_3d_styles:
                 handler = mw.plugin_manager.custom_3d_styles[self.current_3d_style][
                     "callback"
                 ]
@@ -175,7 +168,7 @@ class View3DManager:
         self._drawing_3d = True
 
         try:
-            View3DManager._draw_standard_3d_style_body(self, mol, style_override)
+            self._draw_standard_3d_style_body(mol, style_override)
             # Ensure background and axes are reapplied after plotter.clear()
             self.apply_3d_settings(redraw=False)
         finally:
@@ -197,23 +190,12 @@ class View3DManager:
     def _draw_standard_3d_style_body(
         self, mol: Chem.Mol, style_override: Optional[str] = None
     ) -> None:
-        current_style = (
-            style_override
-            if style_override
-            else getattr(self, "current_3d_style", "Ball and Stick")
-        )
+        current_style = style_override if style_override else self.current_3d_style
 
         # Clear measurement selection (molecule changed)
-        if hasattr(self.host.edit_3d_manager, "measurement_mode"):
-            self.host.edit_3d_manager.clear_measurement_selection()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'measurement_mode' on object"
-            )
+        self.host.edit_3d_manager.clear_measurement_selection()
 
         # Initialize 3D color map
-        if not hasattr(self, "_3d_color_map"):
-            self._3d_color_map = {}
         self._3d_color_map.clear()
 
         # 1. Camera state and clear
@@ -289,7 +271,7 @@ class View3DManager:
         col = np.array([CPK_COLORS_PV.get(s, [0.5, 0.5, 0.5]) for s in sym])
 
         # Apply plugin color overrides
-        if hasattr(self, "_plugin_color_overrides") and self._plugin_color_overrides:
+        if self._plugin_color_overrides:
             for atom_idx, hex_color in self._plugin_color_overrides.items():
                 if 0 <= atom_idx < len(col):
                     try:
@@ -335,10 +317,7 @@ class View3DManager:
                     logging.error(f"Render failed: {e}")
 
         # Re-display if AtomID or other atom info is shown
-        if (
-            hasattr(self, "atom_info_display_mode")
-            and self.atom_info_display_mode is not None
-        ):
+        if self.atom_info_display_mode is not None:
             self.show_all_atom_info()
 
         # Update menu text and state depending on molecule type
@@ -660,10 +639,7 @@ class View3DManager:
                 # Check for plugin override
                 bond_idx = bond.GetIdx()
                 # Override handling: if set, force both ends and uniform color to this value
-                if (
-                    hasattr(self, "_plugin_bond_color_overrides")
-                    and bond_idx in self._plugin_bond_color_overrides
-                ):
+                if bond_idx in self._plugin_bond_color_overrides:
                     try:
                         # Expecting hex string
                         hex_c = self._plugin_bond_color_overrides[bond_idx]
@@ -683,10 +659,7 @@ class View3DManager:
                 # Determine effective uniform color for this bond
                 local_bs_bond_rgb = (
                     begin_color_rgb
-                    if (
-                        hasattr(self, "_plugin_bond_color_overrides")
-                        and bond_idx in self._plugin_bond_color_overrides
-                    )
+                    if bond_idx in self._plugin_bond_color_overrides
                     else bs_bond_rgb
                 )
 
@@ -709,10 +682,7 @@ class View3DManager:
                 # To be robust, if overwritten, we can force "use_cpk_bond" logic but with our same colors?
                 # Actually, if overridden, we probably want the whole bond to be that color.
 
-                is_overridden = (
-                    hasattr(self, "_plugin_bond_color_overrides")
-                    and bond_idx in self._plugin_bond_color_overrides
-                )
+                is_overridden = bond_idx in self._plugin_bond_color_overrides
 
                 if (
                     bt == Chem.rdchem.BondType.SINGLE
@@ -1354,9 +1324,9 @@ class View3DManager:
         Prefer 3D (self.host.view_3d_manager.current_mol) if available; otherwise use RDKit mol from 2D.
         """
         # First clear labels from all items
-        for atom_data in self.host.state_manager.data.atoms.values():
-            if atom_data.get("item"):
-                atom_data["item"].chiral_label = None
+        for item in self.host.init_manager.scene.atom_items.values():
+            if item:
+                item.chiral_label = None
 
         if not self.show_chiral_labels:
             self.host.init_manager.scene.update()
@@ -1399,14 +1369,9 @@ class View3DManager:
             for idx, label in chiral_centers:
                 if idx in rdkit_idx_to_my_id:
                     atom_id = rdkit_idx_to_my_id[idx]
-                    if (
-                        atom_id in self.host.state_manager.data.atoms
-                        and self.host.state_manager.data.atoms[atom_id].get("item")
-                    ):
-                        # 'R' / 'S' / '?'
-                        self.host.state_manager.data.atoms[atom_id][
-                            "item"
-                        ].chiral_label = label
+                    item = self.host.init_manager.scene.atom_items.get(atom_id)
+                    if item:
+                        item.chiral_label = label
 
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Update chiral labels error: {e}")
@@ -1571,11 +1536,7 @@ class View3DManager:
 
     def show_all_atom_info(self) -> None:
         """Display info for all atoms"""
-        if (
-            self.atom_info_display_mode is None
-            or not hasattr(self, "atom_positions_3d")
-            or self.atom_positions_3d is None
-        ):
+        if self.atom_info_display_mode is None or self.atom_positions_3d is None:
             return
 
         # Clear existing labels
@@ -1737,10 +1698,7 @@ class View3DManager:
 
         # Display legend in the top-right (remove existing legends)
         try:
-            if (
-                hasattr(self, "atom_label_legend_names")
-                and self.atom_label_legend_names
-            ):
+            if self.atom_label_legend_names:
                 for nm in self.atom_label_legend_names:
                     try:
                         self.host.view_3d_manager.plotter.remove_actor(nm)
@@ -1812,10 +1770,7 @@ class View3DManager:
         """Clear all atom info labels"""
         # Remove label actors (may be a single actor, a list, or None)
         try:
-            if (
-                hasattr(self, "current_atom_info_labels")
-                and self.current_atom_info_labels
-            ):
+            if self.current_atom_info_labels:
                 if isinstance(self.current_atom_info_labels, (list, tuple)):
                     for a in list(self.current_atom_info_labels):
                         try:
@@ -1840,10 +1795,7 @@ class View3DManager:
 
         # Remove legend text actors if present
         try:
-            if (
-                hasattr(self, "atom_label_legend_names")
-                and self.atom_label_legend_names
-            ):
+            if self.atom_label_legend_names:
                 for nm in list(self.atom_label_legend_names):
                     try:
                         self.host.view_3d_manager.plotter.remove_actor(nm)
@@ -1972,7 +1924,7 @@ class View3DManager:
 
         try:
             # First, remove existing axes widget if it exists
-            if hasattr(self, "axes_widget") and self.axes_widget:
+            if self.axes_widget:
                 try:
                     self.axes_widget.SetEnabled(False)
                     self.axes_widget = None
@@ -2067,8 +2019,6 @@ class View3DManager:
         self, bond_idx: int, hex_color: Optional[str]
     ) -> None:
         """Plugin API helper to override bond color."""
-        if not hasattr(self, "_plugin_bond_color_overrides"):
-            self._plugin_bond_color_overrides: Dict[int, Any] = {}
 
         if hex_color is None:
             if bond_idx in self._plugin_bond_color_overrides:
@@ -2083,8 +2033,6 @@ class View3DManager:
         self, atom_index: int, color_hex: Optional[str]
     ) -> None:
         """Plugin helper to update specific atom color override."""
-        if not hasattr(self, "_plugin_color_overrides"):
-            self._plugin_color_overrides: Dict[int, Any] = {}
 
         if color_hex is None:
             if atom_index in self._plugin_color_overrides:
