@@ -635,7 +635,7 @@ class StateManager:
                 self.host.set_last_successful_optimization_method(method)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'set_last_successful_optimization_method' on self.host"
+                    "DIAGNOSTIC WARNING: Missing attribute 'set_last_successful_optimization_method' on self.host"
                 )
         except (AttributeError, RuntimeError, TypeError):
             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
@@ -815,7 +815,7 @@ class StateManager:
                                         self.host.view_3d_manager.update_atom_id_menu_text()
                                     else:
                                         logging.error(
-                                            "REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object"
+                                            "DIAGNOSTIC WARNING: Missing attribute 'update_atom_id_menu_text' on object"
                                         )
                                     if hasattr(
                                         self.host.view_3d_manager,
@@ -824,14 +824,14 @@ class StateManager:
                                         self.host.view_3d_manager.update_atom_id_menu_state()
                                     else:
                                         logging.error(
-                                            "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
+                                            "DIAGNOSTIC WARNING: Missing attribute 'update_atom_id_menu_state' on object"
                                         )
                                 except (RuntimeError, TypeError, AttributeError):
                                     # Safe defensive fallback catching RuntimeError, TypeError, AttributeError
                                     pass
                             else:
                                 logging.error(
-                                    "REPORT ERROR: Missing attribute 'create_atom_id_mapping' on object"
+                                    "DIAGNOSTIC WARNING: Missing attribute 'create_atom_id_mapping' on object"
                                 )
 
                         # Always show 3D if 3D molecule exists
@@ -841,7 +841,7 @@ class StateManager:
                             )
                         else:
                             logging.error(
-                                "REPORT ERROR: Missing attribute 'draw_molecule_3d' on object"
+                                "DIAGNOSTIC WARNING: Missing attribute 'draw_molecule_3d' on object"
                             )
 
                         # Switch UI in Viewer mode

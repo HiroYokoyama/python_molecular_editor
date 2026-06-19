@@ -93,7 +93,7 @@ class DialogManager:
                 )
         else:
             logging.error(
-                "REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host"
+                "DIAGNOSTIC WARNING: Missing attribute 'edit_3d_manager' on self.host"
             )
         return preselected_atoms
 

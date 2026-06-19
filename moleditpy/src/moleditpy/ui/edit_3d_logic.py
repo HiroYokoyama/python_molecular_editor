@@ -82,7 +82,7 @@ class Edit3DManager:
                     self.host.ui_manager.toggle_3d_edit_mode(False)
                 else:
                     logging.error(
-                        "REPORT ERROR: Missing attribute 'ui_manager' on self.host"
+                        "DIAGNOSTIC WARNING: Missing attribute 'ui_manager' on self.host"
                     )
 
             # Close active 3D edit dialogs
@@ -248,7 +248,7 @@ class Edit3DManager:
                     if rdkit_idx is not None:
                         atom_idx_to_item[rdkit_idx] = item
         else:
-            logging.error("REPORT ERROR: Missing attribute 'scene' on object")
+            logging.error("DIAGNOSTIC WARNING: Missing attribute 'scene' on object")
 
         # Add to 2D view
         if not hasattr(self, "measurement_label_items_2d"):
@@ -308,7 +308,7 @@ class Edit3DManager:
             self.measurement_label_items_2d.clear()
         else:
             logging.error(
-                "REPORT ERROR: Missing attribute 'measurement_label_items_2d' on self"
+                "DIAGNOSTIC WARNING: Missing attribute 'measurement_label_items_2d' on self"
             )
 
     def find_rdkit_atom_index(self, atom_item: Any) -> Optional[int]:

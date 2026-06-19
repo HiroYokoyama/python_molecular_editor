@@ -103,7 +103,7 @@ class ComputeManager:
             self.host.init_manager.optimize_3d_button.setEnabled(True)
         else:
             logging.error(
-                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+                "DIAGNOSTIC WARNING: Missing attribute 'optimize_3d_button' on object"
             )
 
     def _refresh_ui_state(self) -> None:
@@ -115,7 +115,7 @@ class ComputeManager:
                 self.host.init_manager.cleanup_button.setEnabled(True)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'cleanup_button' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'cleanup_button' on object"
                 )
 
             self._restore_button_ui()
@@ -124,13 +124,13 @@ class ComputeManager:
                 self.host.init_manager.optimize_3d_button.setEnabled(has_mol)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'optimize_3d_button' on object"
                 )
             if hasattr(self.host.init_manager, "export_button"):
                 self.host.init_manager.export_button.setEnabled(has_mol)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'export_button' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'export_button' on object"
                 )
 
             # ui_manager and its methods are guaranteed on the host
@@ -141,13 +141,13 @@ class ComputeManager:
                 self.host.init_manager.analysis_action.setEnabled(has_mol)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'analysis_action' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'analysis_action' on object"
                 )
             if hasattr(self.host.init_manager, "edit_3d_action"):
                 self.host.init_manager.edit_3d_action.setEnabled(has_mol)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'edit_3d_action' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'edit_3d_action' on object"
                 )
 
             # plotter and view_2d are fundamental host components
@@ -395,7 +395,7 @@ class ComputeManager:
             )
         else:
             logging.error(
-                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+                "DIAGNOSTIC WARNING: Missing attribute 'optimize_3d_button' on object"
             )
 
         self.host.ui_manager.enable_3d_features(False)
@@ -404,7 +404,7 @@ class ComputeManager:
             self.host.init_manager.optimize_3d_button.setEnabled(True)
         else:
             logging.error(
-                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
+                "DIAGNOSTIC WARNING: Missing attribute 'optimize_3d_button' on object"
             )
 
         self._start_calculation_worker(mol_block, options, run_id)
@@ -659,7 +659,7 @@ class ComputeManager:
             if hasattr(item, "atom_id"):
                 atom_ids.add(item.atom_id)
             else:
-                logging.error("REPORT ERROR: Missing attribute 'atom_id' on item")
+                logging.error("DIAGNOSTIC WARNING: Missing attribute 'atom_id' on item")
 
         if not atom_ids:
             return

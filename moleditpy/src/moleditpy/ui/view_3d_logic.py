@@ -83,18 +83,12 @@ class View3DManager:
         In production this is the :class:`CustomQtInteractor` set by
         ``MainInitManager``.  In unit tests the manager under test is
         created independently, so the property falls back to
-        ``self.host.view_3d_manager.plotter`` if the owning host carries a
+        ``self.plotter`` if the owning host carries a
         different (mock) ``view_3d_manager`` instance.
         """
         val = getattr(self, "_plotter_val", None)
         if val is not None:
             return val  # type: ignore[return-value]
-        if (
-            hasattr(self.host, "view_3d_manager")
-            and self.host.view_3d_manager is not self
-            and hasattr(self.host.view_3d_manager, "plotter")
-        ):
-            return self.host.view_3d_manager.plotter  # type: ignore[return-value]
         return None
 
     @plotter.setter
@@ -133,8 +127,8 @@ class View3DManager:
         self.host.statusBar().showMessage(f"3D style set to: {style_name}")
 
         # Redraw if molecule is displayed
-        if self.host.view_3d_manager.current_mol:
-            self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
+        if self.current_mol:
+            self.draw_molecule_3d(self.current_mol)
 
     def draw_molecule_3d(self, mol: Chem.Mol) -> None:
         """Dispatch to custom style or standard drawing."""
@@ -199,16 +193,16 @@ class View3DManager:
         self._3d_color_map.clear()
 
         # 1. Camera state and clear
-        camera_state = self.host.view_3d_manager.plotter.camera_position
+        camera_state = self.plotter.camera_position
 
         # Force removal to prevent ghost actor residues
         old_axes_actor = getattr(self, "axes_actor", None)
         if old_axes_actor is not None:
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                self.host.view_3d_manager.plotter.remove_actor(old_axes_actor)
+                self.plotter.remove_actor(old_axes_actor)
             self.axes_actor = None
 
-        self.host.view_3d_manager.plotter.clear()
+        self.plotter.clear()
 
         # 2. Background color setting
         self.plotter.set_background(
@@ -231,7 +225,7 @@ class View3DManager:
                 light_type="cameralight",
                 intensity=self.host.init_manager.settings.get("light_intensity", 1.2),
             )
-            self.host.view_3d_manager.plotter.add_light(light)
+            self.plotter.add_light(light)
 
         # 5. Molecule drawing logic
         # Mutually exclusive: Kekulé display or Aromatic Circle display (Kekulé takes priority)
@@ -305,14 +299,14 @@ class View3DManager:
         # Update projection mode and force render
         proj_mode = self.host.get_settings().get("projection_mode", "Perspective")
         if hasattr(self.plotter, "renderer") and hasattr(
-            self.host.view_3d_manager.plotter.renderer, "GetActiveCamera"
+            self.plotter.renderer, "GetActiveCamera"
         ):
-            vcam = self.host.view_3d_manager.plotter.renderer.GetActiveCamera()
+            vcam = self.plotter.renderer.GetActiveCamera()
             if vcam:
                 vcam.SetParallelProjection(proj_mode == "Orthographic")
                 try:
                     # Force a render so the change is visible immediately
-                    self.host.view_3d_manager.plotter.render()
+                    self.plotter.render()
                 except (AttributeError, RuntimeError, TypeError) as e:
                     logging.error(f"Render failed: {e}")
 
@@ -545,11 +539,11 @@ class View3DManager:
             )
 
             if is_lighting_enabled:
-                self.atom_actor = self.host.view_3d_manager.plotter.add_mesh(
+                self.atom_actor = self.plotter.add_mesh(
                     glyphs, scalars="colors", rgb=True, **mesh_props
                 )
             else:
-                self.atom_actor = self.host.view_3d_manager.plotter.add_mesh(
+                self.atom_actor = self.plotter.add_mesh(
                     glyphs,
                     scalars="colors",
                     rgb=True,
@@ -887,9 +881,7 @@ class View3DManager:
                 )
 
                 # Add to plotter
-                self.host.view_3d_manager.plotter.add_mesh(
-                    tube, scalars="colors", rgb=True, **mesh_props
-                )
+                self.plotter.add_mesh(tube, scalars="colors", rgb=True, **mesh_props)
 
     def _add_3d_aromatic_rings(
         self, mol_to_draw: Any, current_style: str, mesh_props: Dict[str, Any]
@@ -1054,9 +1046,7 @@ class View3DManager:
                         else:
                             torus_color = [0.5, 0.5, 0.5]
 
-                    self.host.view_3d_manager.plotter.add_mesh(
-                        circle_line, color=torus_color, **mesh_props
-                    )
+                    self.plotter.add_mesh(circle_line, color=torus_color, **mesh_props)
 
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logging.error(f"Error rendering aromatic circles: {e}")
@@ -1078,12 +1068,12 @@ class View3DManager:
                         pts.append(coord)
                         labels.append(lbl if lbl is not None else "?")
                     try:
-                        self.host.view_3d_manager.plotter.remove_actor("chiral_labels")
+                        self.plotter.remove_actor("chiral_labels")
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
                         )  # Suppress non-critical 3D label update errors
-                    self.host.view_3d_manager.plotter.add_point_labels(
+                    self.plotter.add_point_labels(
                         np.array(pts),
                         labels,
                         font_size=20,
@@ -1208,11 +1198,11 @@ class View3DManager:
 
         # Remove existing E/Z labels
         if (
-            hasattr(self.host.view_3d_manager.plotter, "renderer")
-            and "ez_labels" in self.host.view_3d_manager.plotter.renderer.actors
+            hasattr(self.plotter, "renderer")
+            and "ez_labels" in self.plotter.renderer.actors
         ):
             try:
-                self.host.view_3d_manager.plotter.remove_actor("ez_labels")
+                self.plotter.remove_actor("ez_labels")
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.error(f"Failed to remove EZ labels: {e}")
 
@@ -1290,7 +1280,7 @@ class View3DManager:
                     labels.append(label)
 
         if pts and labels:
-            self.host.view_3d_manager.plotter.add_point_labels(
+            self.plotter.add_point_labels(
                 np.array(pts),
                 labels,
                 font_size=18,
@@ -1309,8 +1299,8 @@ class View3DManager:
         """Toggle chiral label display based on View menu action"""
         self.show_chiral_labels = checked
 
-        if self.host.view_3d_manager.current_mol:
-            self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
+        if self.current_mol:
+            self.draw_molecule_3d(self.current_mol)
 
         if checked:
             self.host.statusBar().showMessage(
@@ -1321,7 +1311,7 @@ class View3DManager:
 
     def update_chiral_labels(self) -> None:
         """Calculate chiral centers and set/clear R/S labels on 2D AtomItems.
-        Prefer 3D (self.host.view_3d_manager.current_mol) if available; otherwise use RDKit mol from 2D.
+        Prefer 3D (self.current_mol) if available; otherwise use RDKit mol from 2D.
         """
         # First clear labels from all items
         for item in self.host.init_manager.scene.atom_items.values():
@@ -1335,7 +1325,7 @@ class View3DManager:
         # Use 3D RDKit Mol with conformer
         mol_for_chirality = None
         if getattr(self, "current_mol", None) is not None:
-            mol_for_chirality = self.host.view_3d_manager.current_mol
+            mol_for_chirality = self.current_mol
         else:
             return
 
@@ -1440,7 +1430,7 @@ class View3DManager:
 
             # Display info for all atoms
             self.show_all_atom_info()
-            self.host.view_3d_manager.plotter.render()
+            self.plotter.render()
 
     def set_atom_index_base(self, base: int) -> None:
         """Switch between 0-based and 1-based index display and refresh labels."""
@@ -1456,25 +1446,18 @@ class View3DManager:
         if self.atom_info_display_mode in {"rdkit_index", "original_id", "xyz_index"}:
             self.clear_all_atom_info_labels()
             self.show_all_atom_info()
-            self.host.view_3d_manager.plotter.render()
+            self.plotter.render()
 
     def is_xyz_derived_molecule(self) -> bool:
         """Determine if the current molecule is derived from an XYZ file"""
-        if not self.host.view_3d_manager.current_mol:
+        if not self.current_mol:
             return False
-        if (
-            not self.host.view_3d_manager.current_mol
-            or self.host.view_3d_manager.current_mol.GetNumAtoms() == 0
-        ):
+        if not self.current_mol or self.current_mol.GetNumAtoms() == 0:
             return False
 
         try:
             # Check if the first atom has xyz_unique_id property
-            return bool(
-                self.host.view_3d_manager.current_mol.GetAtomWithIdx(0).HasProp(
-                    "xyz_unique_id"
-                )
-            )
+            return bool(self.current_mol.GetAtomWithIdx(0).HasProp("xyz_unique_id"))
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Suppress non-critical property access noise
             return False
@@ -1483,15 +1466,12 @@ class View3DManager:
 
     def has_original_atom_ids(self) -> bool:
         """Determine if the current molecule has Original Atom IDs"""
-        if (
-            not self.host.view_3d_manager.current_mol
-            or self.host.view_3d_manager.current_mol.GetNumAtoms() == 0
-        ):
+        if not self.current_mol or self.current_mol.GetNumAtoms() == 0:
             return False
         try:
             # Check if any atom has _original_atom_id property
-            for atom_idx in range(self.host.view_3d_manager.current_mol.GetNumAtoms()):
-                atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(atom_idx)
+            for atom_idx in range(self.current_mol.GetNumAtoms()):
+                atom = self.current_mol.GetAtomWithIdx(atom_idx)
                 if atom.HasProp("_original_atom_id"):
                     return True
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
@@ -1567,10 +1547,8 @@ class View3DManager:
             elif self.atom_info_display_mode == "original_id":
                 # Show only _original_atom_id labels in original-ID mode.
                 try:
-                    if self.host.view_3d_manager.current_mol:
-                        atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
-                            atom_idx
-                        )
+                    if self.current_mol:
+                        atom = self.current_mol.GetAtomWithIdx(atom_idx)
                         if atom.HasProp("_original_atom_id"):
                             original_id = atom.GetIntProp("_original_atom_id")
                             id_positions.append(pos)
@@ -1581,10 +1559,8 @@ class View3DManager:
             elif self.atom_info_display_mode == "xyz_index":
                 # Show xyz_unique_id property if present, else fall back to RDKit index
                 try:
-                    if self.host.view_3d_manager.current_mol:
-                        atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
-                            atom_idx
-                        )
+                    if self.current_mol:
+                        atom = self.current_mol.GetAtomWithIdx(atom_idx)
                         if atom.HasProp("xyz_unique_id"):
                             unique_id = atom.GetIntProp("xyz_unique_id")
                             xyz_positions.append(pos)
@@ -1604,10 +1580,8 @@ class View3DManager:
                 other_texts.append(f"({pos[0]:.2f},{pos[1]:.2f},{pos[2]:.2f})")
 
             elif self.atom_info_display_mode == "symbol":
-                if self.host.view_3d_manager.current_mol:
-                    symbol = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
-                        atom_idx
-                    ).GetSymbol()
+                if self.current_mol:
+                    symbol = self.current_mol.GetAtomWithIdx(atom_idx).GetSymbol()
                     other_positions.append(pos)
                     other_texts.append(symbol)
                 else:
@@ -1627,7 +1601,7 @@ class View3DManager:
         self.current_atom_info_labels = []
         try:
             if rdkit_positions:
-                a = self.host.view_3d_manager.plotter.add_point_labels(
+                a = self.plotter.add_point_labels(
                     np.array(rdkit_positions),
                     rdkit_texts,
                     point_size=12,
@@ -1644,7 +1618,7 @@ class View3DManager:
                 self.current_atom_info_labels.append(a)
 
             if id_positions:
-                a = self.host.view_3d_manager.plotter.add_point_labels(
+                a = self.plotter.add_point_labels(
                     np.array(id_positions),
                     id_texts,
                     point_size=12,
@@ -1661,7 +1635,7 @@ class View3DManager:
                 self.current_atom_info_labels.append(a)
 
             if xyz_positions:
-                a = self.host.view_3d_manager.plotter.add_point_labels(
+                a = self.plotter.add_point_labels(
                     np.array(xyz_positions),
                     xyz_texts,
                     point_size=12,
@@ -1678,7 +1652,7 @@ class View3DManager:
                 self.current_atom_info_labels.append(a)
 
             if other_positions:
-                a = self.host.view_3d_manager.plotter.add_point_labels(
+                a = self.plotter.add_point_labels(
                     np.array(other_positions),
                     other_texts,
                     point_size=12,
@@ -1701,7 +1675,7 @@ class View3DManager:
             if self.atom_label_legend_names:
                 for nm in self.atom_label_legend_names:
                     try:
-                        self.host.view_3d_manager.plotter.remove_actor(nm)
+                        self.plotter.remove_actor(nm)
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1733,7 +1707,7 @@ class View3DManager:
                 except (AttributeError, RuntimeError, TypeError):
                     x_offset = 0.0
                 try:
-                    actor = self.host.view_3d_manager.plotter.add_text(
+                    actor = self.plotter.add_text(
                         label_text,
                         position=(0.0 + x_offset, y),
                         font_size=12,
@@ -1752,7 +1726,7 @@ class View3DManager:
                                 logging.debug(f"Failed to set bold font: {e}")
                         else:
                             logging.error(
-                                "REPORT ERROR: Missing attribute 'GetTextProperty' on actor"
+                                "DIAGNOSTIC WARNING: Missing attribute 'GetTextProperty' on actor"
                             )
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
@@ -1774,14 +1748,12 @@ class View3DManager:
                 if isinstance(self.current_atom_info_labels, (list, tuple)):
                     for a in list(self.current_atom_info_labels):
                         try:
-                            self.host.view_3d_manager.plotter.remove_actor(a)
+                            self.plotter.remove_actor(a)
                         except (AttributeError, RuntimeError, TypeError) as e:
                             logging.debug(f"Failed to remove actor: {e}")
                 else:
                     try:
-                        self.host.view_3d_manager.plotter.remove_actor(
-                            self.current_atom_info_labels
-                        )
+                        self.plotter.remove_actor(self.current_atom_info_labels)
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1798,7 +1770,7 @@ class View3DManager:
             if self.atom_label_legend_names:
                 for nm in list(self.atom_label_legend_names):
                     try:
-                        self.host.view_3d_manager.plotter.remove_actor(nm)
+                        self.plotter.remove_actor(nm)
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1893,24 +1865,24 @@ class View3DManager:
         proj_mode = self.host.init_manager.settings.get(
             "projection_mode", "Perspective"
         )
-        if hasattr(self.host.view_3d_manager.plotter, "renderer") and hasattr(
-            self.host.view_3d_manager.plotter.renderer, "GetActiveCamera"
+        if hasattr(self.plotter, "renderer") and hasattr(
+            self.plotter.renderer, "GetActiveCamera"
         ):
-            cam = self.host.view_3d_manager.plotter.renderer.GetActiveCamera()
+            cam = self.plotter.renderer.GetActiveCamera()
             if cam:
                 if proj_mode == "Orthographic":
                     cam.SetParallelProjection(True)
-        if not hasattr(self.host.view_3d_manager, "plotter"):
+        if not hasattr(self, "plotter"):
             return
 
         # Enable renderer layers (for text overlay)
         # --- Background Color ---
-        self.host.view_3d_manager.plotter.set_background(
+        self.plotter.set_background(
             self.host.init_manager.settings.get("background_color", "#919191")
         )
 
         # --- Renderer Layers ---
-        renderer = self.host.view_3d_manager.plotter.renderer
+        renderer = self.plotter.renderer
         if renderer and hasattr(renderer, "SetNumberOfLayers"):
             try:
                 renderer.SetNumberOfLayers(2)  # Layer 0: 3D, Layer 1: 2D Overlay
@@ -1967,17 +1939,15 @@ class View3DManager:
                 # Add orientation marker widget
                 self.axes_widget = vtk.vtkOrientationMarkerWidget()
                 self.axes_widget.SetOrientationMarker(axes)
-                self.axes_widget.SetInteractor(
-                    self.host.view_3d_manager.plotter.interactor
-                )
+                self.axes_widget.SetInteractor(self.plotter.interactor)
                 self.axes_widget.SetViewport(0.0, 0.0, 0.2, 0.2)
                 self.axes_widget.SetEnabled(True)
                 self.axes_widget.InteractiveOff()
             else:
-                self.host.view_3d_manager.plotter.hide_axes()
+                self.plotter.hide_axes()
 
             # Re-render to show axes
-            self.host.view_3d_manager.plotter.render()
+            self.plotter.render()
         except (
             AttributeError,
             RuntimeError,
@@ -1987,15 +1957,15 @@ class View3DManager:
             logging.debug(f"Failed to toggle 3D axes: {e}")
 
             # Explicitly render to show change
-            self.host.view_3d_manager.plotter.render()
+            self.plotter.render()
 
         if redraw:
-            self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
+            self.draw_molecule_3d(self.current_mol)
 
         # Do not reset camera on settings change (reset only once)
         if not getattr(self, "_camera_initialized", False):
             try:
-                self.host.view_3d_manager.plotter.reset_camera()
+                self.plotter.reset_camera()
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(
                     f"Suppressed exception: {e}"
@@ -2005,11 +1975,13 @@ class View3DManager:
 
         # Force plotter update
         try:
-            self.host.view_3d_manager.plotter.render()
-            if hasattr(self.host.view_3d_manager.plotter, "update"):
-                self.host.view_3d_manager.plotter.update()
+            self.plotter.render()
+            if hasattr(self.plotter, "update"):
+                self.plotter.update()
             else:
-                logging.error("REPORT ERROR: Missing attribute 'update' on object")
+                logging.error(
+                    "DIAGNOSTIC WARNING: Missing attribute 'update' on object"
+                )
         except (AttributeError, RuntimeError, TypeError) as e:
             logging.debug(
                 f"Suppressed exception: {e}"
@@ -2026,8 +1998,8 @@ class View3DManager:
         else:
             self._plugin_bond_color_overrides[bond_idx] = hex_color
 
-        if self.host.view_3d_manager.current_mol:
-            self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
+        if self.current_mol:
+            self.draw_molecule_3d(self.current_mol)
 
     def update_atom_color_override(
         self, atom_index: int, color_hex: Optional[str]
@@ -2040,8 +2012,8 @@ class View3DManager:
         else:
             self._plugin_color_overrides[atom_index] = color_hex
 
-        if self.host.view_3d_manager.current_mol:
-            self.draw_molecule_3d(self.host.view_3d_manager.current_mol)
+        if self.current_mol:
+            self.draw_molecule_3d(self.current_mol)
 
 
 # Set class-level marker for plugin compatibility

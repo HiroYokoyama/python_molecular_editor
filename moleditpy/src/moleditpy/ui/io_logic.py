@@ -729,7 +729,7 @@ class IOManager:
                 self.host.view_3d_manager.draw_molecule_3d(mol)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'draw_molecule_3d' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'draw_molecule_3d' on object"
                 )
 
             # Reset camera/zoom after drawing
@@ -742,27 +742,27 @@ class IOManager:
                 self.host.ui_manager.enter_3d_viewer_mode()
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'enter_3d_viewer_mode' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'enter_3d_viewer_mode' on object"
                 )
 
             if hasattr(self.host.ui_manager, "enable_3d_features"):
                 self.host.ui_manager.enable_3d_features(True)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'enable_3d_features' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'enable_3d_features' on object"
                 )
 
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
                 self.host.view_3d_manager.update_atom_id_menu_text()
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'update_atom_id_menu_text' on object"
                 )
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
                 self.host.view_3d_manager.update_atom_id_menu_state()
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'update_atom_id_menu_state' on object"
                 )
 
             if hasattr(self.host, "statusBar") and self.host.statusBar():
@@ -826,19 +826,19 @@ class IOManager:
                 self.host.ui_manager.enable_3d_features(True)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'enable_3d_features' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'enable_3d_features' on object"
                 )
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_text"):
                 self.host.view_3d_manager.update_atom_id_menu_text()
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'update_atom_id_menu_text' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'update_atom_id_menu_text' on object"
                 )
             if hasattr(self.host.view_3d_manager, "update_atom_id_menu_state"):
                 self.host.view_3d_manager.update_atom_id_menu_state()
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'update_atom_id_menu_state' on object"
+                    "DIAGNOSTIC WARNING: Missing attribute 'update_atom_id_menu_state' on object"
                 )
             self.host.update_status_message(f"Loaded {file_path} in 3D viewer")
             self.host.set_current_file_path(file_path)

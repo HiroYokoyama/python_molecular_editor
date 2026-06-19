@@ -71,7 +71,7 @@ class UIManager(QObject):
             self.host.init_manager.scene.refresh_mode_state()
         else:
             logging.error(
-                "REPORT ERROR: Missing attribute 'refresh_mode_state' on object"
+                "DIAGNOSTIC WARNING: Missing attribute 'refresh_mode_state' on object"
             )
         # Clear ghost when leaving template mode
         if (
@@ -277,11 +277,15 @@ class UIManager(QObject):
                     if hasattr(thr, "quit"):
                         thr.quit()
                     else:
-                        logging.error("REPORT ERROR: Missing attribute 'quit' on thr")
+                        logging.error(
+                            "DIAGNOSTIC WARNING: Missing attribute 'quit' on thr"
+                        )
                     if hasattr(thr, "wait"):
                         thr.wait(200)
                     else:
-                        logging.error("REPORT ERROR: Missing attribute 'wait' on thr")
+                        logging.error(
+                            "DIAGNOSTIC WARNING: Missing attribute 'wait' on thr"
+                        )
                 except (RuntimeError, TypeError):
                     # Safe defensive fallback catching RuntimeError, TypeError
                     pass
@@ -402,7 +406,9 @@ class UIManager(QObject):
                 ):
                     is_on_3d = True
             else:
-                logging.error("REPORT ERROR: Missing attribute 'plotter' on object")
+                logging.error(
+                    "DIAGNOSTIC WARNING: Missing attribute 'plotter' on object"
+                )
 
             if is_on_3d:
                 self.host.io_manager.load_mol_file_for_3d_viewing(file_path=file_path)
@@ -454,7 +460,7 @@ class UIManager(QObject):
                 getattr(self.host, action_name).setEnabled(enabled)
             else:
                 logging.error(
-                    f"REPORT ERROR: Missing attribute {action_name} on self.host"
+                    f"DIAGNOSTIC WARNING: Missing attribute {action_name} on self.host"
                 )
 
         for menu_name in menus:
@@ -462,7 +468,7 @@ class UIManager(QObject):
                 getattr(self.host, menu_name).setEnabled(enabled)
             else:
                 logging.error(
-                    f"REPORT ERROR: Missing attribute {menu_name} on self.host"
+                    f"DIAGNOSTIC WARNING: Missing attribute {menu_name} on self.host"
                 )
 
     def _enable_3d_features(self, enabled: bool = True) -> None:
@@ -531,7 +537,7 @@ class UIManager(QObject):
             self.host.init_manager.other_atom_action.setEnabled(False)
         else:
             logging.error(
-                "REPORT ERROR: Missing attribute 'other_atom_action' on object"
+                "DIAGNOSTIC WARNING: Missing attribute 'other_atom_action' on object"
             )
 
         self.host.ui_manager.minimize_2d_panel()
@@ -553,7 +559,7 @@ class UIManager(QObject):
             self.host.init_manager.other_atom_action.setEnabled(True)
         else:
             logging.error(
-                "REPORT ERROR: Missing attribute 'other_atom_action' on self.host.init_manager"
+                "DIAGNOSTIC WARNING: Missing attribute 'other_atom_action' on self.host.init_manager"
             )
 
         # Collectively disable 3D edit functions when returning to 2D mode
@@ -652,7 +658,9 @@ class UIManager(QObject):
                         except (AttributeError, RuntimeError, TypeError):
                             return
                 else:
-                    logging.error("REPORT ERROR: Missing attribute 'handle' on object")
+                    logging.error(
+                        "DIAGNOSTIC WARNING: Missing attribute 'handle' on object"
+                    )
 
     def setup_splitter_tooltip(self) -> None:
         """Set initial splitter tooltip."""

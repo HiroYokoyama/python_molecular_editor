@@ -81,7 +81,7 @@ class GeometryBaseDialog(BasePickingDialog):
             self.main_window.view_3d_manager.update_chiral_labels()
         else:
             logging.error(
-                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
+                "DIAGNOSTIC WARNING: Missing attribute 'update_chiral_labels' on object"
             )
 
     def on_slider_value_changed_click(
@@ -111,7 +111,7 @@ class GeometryBaseDialog(BasePickingDialog):
             self.main_window.view_3d_manager.update_chiral_labels()
         else:
             logging.error(
-                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
+                "DIAGNOSTIC WARNING: Missing attribute 'update_chiral_labels' on object"
             )
 
     def on_slider_moved_realtime(

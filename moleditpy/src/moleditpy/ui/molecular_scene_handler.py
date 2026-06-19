@@ -106,7 +106,9 @@ class TemplateMixin:
         if hasattr(self, "template_preview"):
             self.template_preview.hide()
         else:
-            logging.error("REPORT ERROR: Missing attribute 'template_preview' on self")
+            logging.error(
+                "DIAGNOSTIC WARNING: Missing attribute 'template_preview' on self"
+            )
 
     def _calculate_6ring_rotation(
         self,
@@ -1375,7 +1377,7 @@ class KeyboardMixin:
                     return
                 else:
                     logging.error(
-                        "REPORT ERROR: Missing attribute 'set_mode_and_update_toolbar' on object"
+                        "DIAGNOSTIC WARNING: Missing attribute 'set_mode_and_update_toolbar' on object"
                     )
 
             # Correctly delegate to the base class (QGraphicsScene) directly
@@ -1521,7 +1523,7 @@ class SceneQueryMixin:
                     atom.update_style()
                 else:
                     logging.error(
-                        "REPORT ERROR: Missing attribute 'update_style' on atom"
+                        "DIAGNOSTIC WARNING: Missing attribute 'update_style' on atom"
                     )
 
             # 3. Remove from data model
@@ -1591,7 +1593,7 @@ class SceneQueryMixin:
                     atom.update_style()
                 else:
                     logging.error(
-                        "REPORT ERROR: Missing attribute 'update_style' on atom"
+                        "DIAGNOSTIC WARNING: Missing attribute 'update_style' on atom"
                     )
 
             self.update_all_items()
@@ -1655,7 +1657,7 @@ class SceneQueryMixin:
                         )
                     else:
                         logging.error(
-                            "REPORT ERROR: Missing attribute 'statusBar' on self.window"
+                            "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
                         )
                     return
 
@@ -1672,6 +1674,6 @@ class SceneQueryMixin:
                 self.window.statusBar().showMessage(f"Error: {e}", 5000)
             else:
                 logging.error(
-                    "REPORT ERROR: Missing attribute 'statusBar' on self.window"
+                    "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
                 )
             self.update_all_items()

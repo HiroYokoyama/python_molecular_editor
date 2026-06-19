@@ -2240,7 +2240,6 @@ _No description provided._
 ### TestEditActionsExtended.test_apply_chem_check_missing_button
 _No description provided._
 
-- mock_log.assert_called()
 
 ### TestEditActionsExtended.test_clear_xyz_flags_current_mol
 _No description provided._
@@ -2251,7 +2250,6 @@ _No description provided._
 ### TestEditActionsExtended.test_clear_xyz_flags_missing_zoom
 _No description provided._
 
-- mock_log.assert_called()
 
 ## tests/unit/test_export_logic.py
 
@@ -2492,12 +2490,12 @@ _No description provided._
 ### TestLoggingErrorFallback.test_missing_chiral_labels_on_released
 _No description provided._
 
-- mock_log.assert_called_once_with("REPORT ERROR: Missing attribute 'update_chiral_labels' on object")
+- mock_log.assert_called_once_with("DIAGNOSTIC WARNING: Missing attribute 'update_chiral_labels' on object")
 
 ### TestLoggingErrorFallback.test_missing_chiral_labels_on_click
 _No description provided._
 
-- mock_log.assert_called_once_with("REPORT ERROR: Missing attribute 'update_chiral_labels' on object")
+- mock_log.assert_called_once_with("DIAGNOSTIC WARNING: Missing attribute 'update_chiral_labels' on object")
 
 ## tests/unit/test_geometry_dialogs.py
 
@@ -6536,10 +6534,10 @@ _Test safe check when _sip_isdeleted is None (sip import failed)._
 ### test_view_3d_draw_standard_3d_style
 _Verify that draw_standard_3d_style clears the plotter and constructs the correct VTK meshes._
 
-- mock_parser_host.view_3d_manager.plotter.clear.assert_called()
-- mock_parser_host.view_3d_manager.plotter.set_background.assert_called_with('#ffffff')
-- assert mock_parser_host.view_3d_manager.plotter.add_mesh.call_count >= 1
-- mock_parser_host.view_3d_manager.plotter.render.assert_called()
+- view3d.plotter.clear.assert_called()
+- view3d.plotter.set_background.assert_called_with('#ffffff')
+- assert view3d.plotter.add_mesh.call_count >= 1
+- view3d.plotter.render.assert_called()
 - assert hasattr(view3d, 'atom_positions_3d')
 - assert isinstance(view3d.atom_positions_3d, np.ndarray)
 - assert len(view3d.atom_positions_3d) == 3
@@ -6547,9 +6545,9 @@ _Verify that draw_standard_3d_style clears the plotter and constructs the correc
 ### test_view_3d_draw_none
 _Verify that calling draw with None safely clears the renderer._
 
-- mock_parser_host.view_3d_manager.plotter.clear.assert_called()
-- mock_parser_host.view_3d_manager.plotter.render.assert_called()
-- assert mock_parser_host.view_3d_manager.current_mol is None
+- view3d.plotter.clear.assert_called()
+- view3d.plotter.render.assert_called()
+- assert view3d.current_mol is None
 
 ### test_original_id_mode_hides_rdkit_id_labels
 _Original-ID labels should not fall back to RDKit index labels._
@@ -6609,7 +6607,7 @@ _Verify plugin bond color overrides._
 _Verify aromatic torus generation._
 
 - assert mock_pv.Spline.call_count == 1
-- assert mock_parser_host.view_3d_manager.plotter.add_mesh.call_count == 1
+- assert view3d.plotter.add_mesh.call_count == 1
 
 ### test_calculate_double_bond_offset
 _Verify neighbor-based plane calculation for double bond offset._

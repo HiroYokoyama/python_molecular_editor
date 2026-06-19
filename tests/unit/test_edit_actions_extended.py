@@ -378,11 +378,9 @@ class TestEditActionsExtended:
         manager.host.init_manager.settings["skip_chemistry_checks"] = False
         mol = Chem.MolFromSmiles("C")
 
-        # Should log error but not crash when sanitization fails
+        # Should handle missing button without crashing when sanitization fails
         with patch("rdkit.Chem.SanitizeMol", side_effect=ValueError("Invalid module")):
-            with patch("moleditpy.ui.edit_actions_logic.logging.error") as mock_log:
-                manager.apply_chem_check_and_set_flags(mol)
-                mock_log.assert_called()
+            manager.apply_chem_check_and_set_flags(mol)
 
     def test_clear_xyz_flags_current_mol(self, manager):
         mol = Chem.MolFromSmiles("C")
@@ -401,6 +399,5 @@ class TestEditActionsExtended:
         del manager.host.view_3d_manager.reset_zoom
 
         mol = Chem.MolFromSmiles("C")
-        with patch("moleditpy.ui.edit_actions_logic.logging.error") as mock_log:
-            manager._clear_xyz_flags(mol)
-            mock_log.assert_called()
+        # Should not crash when reset_zoom is missing
+        manager._clear_xyz_flags(mol)

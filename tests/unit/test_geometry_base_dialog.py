@@ -234,7 +234,7 @@ class TestLoggingErrorFallback:
         with patch("moleditpy.ui.geometry_base_dialog.logging.error") as mock_log:
             dlg.on_slider_released()
             mock_log.assert_called_once_with(
-                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
+                "DIAGNOSTIC WARNING: Missing attribute 'update_chiral_labels' on object"
             )
 
     def test_missing_chiral_labels_on_click(self, dlg):
@@ -249,5 +249,5 @@ class TestLoggingErrorFallback:
         with patch("moleditpy.ui.geometry_base_dialog.logging.error") as mock_log:
             dlg.on_slider_value_changed_click(150, inp, scale=100.0)
             mock_log.assert_called_once_with(
-                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
+                "DIAGNOSTIC WARNING: Missing attribute 'update_chiral_labels' on object"
             )

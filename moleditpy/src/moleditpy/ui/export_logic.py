@@ -528,7 +528,7 @@ class ExportManager:
                                 color = [int(c * 255) for c in vtk_color]
                             else:
                                 logging.error(
-                                    "REPORT ERROR: Missing color attribute on actor/property"
+                                    "DIAGNOSTIC WARNING: Missing color attribute on actor/property"
                                 )
                         except (AttributeError, RuntimeError, TypeError):
                             # Use default color on failure to avoid console noise during complex mesh export
