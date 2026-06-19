@@ -127,13 +127,13 @@ class EditActionsManager:
                     v.get("charge", 0),
                     v.get("radical", 0),
                 )
-                for k, v in self.host.data.atoms.items()
+                for k, v in self.host.state_manager.data.atoms.items()
             },
             "bonds": {
                 k: (v["order"], v.get("stereo", 0))
-                for k, v in self.host.data.bonds.items()
+                for k, v in self.host.state_manager.data.bonds.items()
             },
-            "_next_atom_id": self.host.data.next_atom_id,
+            "_next_atom_id": self.host.state_manager.data.next_atom_id,
             "mol_3d": self.host.view_3d_manager.current_mol.ToBinary()
             if self.host.view_3d_manager.current_mol
             else None,
@@ -253,7 +253,7 @@ class EditActionsManager:
         try:
             selected_atoms = [
                 item
-                for item in self.host.scene.selectedItems()
+                for item in self.host.init_manager.scene.selectedItems()
                 if isinstance(item, AtomItem)
             ]
             if not selected_atoms:
@@ -283,7 +283,7 @@ class EditActionsManager:
 
             # Store bonds between selected atoms
             fragment_bonds = []
-            for (id1, id2), bond_data in self.host.data.bonds.items():
+            for (id1, id2), bond_data in self.host.state_manager.data.bonds.items():
                 if id1 in selected_atom_ids and id2 in selected_atom_ids:
                     fragment_bonds.append(
                         {
@@ -331,14 +331,14 @@ class EditActionsManager:
     def cut_selection(self) -> None:
         """Cut selected items (copy then delete)"""
         try:
-            selected_items = self.host.scene.selectedItems()
+            selected_items = self.host.init_manager.scene.selectedItems()
             if not selected_items:
                 return
 
             # Execute copy process first
             self.copy_selection()
 
-            if self.host.scene.delete_items(set(selected_items)):
+            if self.host.init_manager.scene.delete_items(set(selected_items)):
                 self.host.edit_actions_manager.push_undo_state()
                 self.host.statusBar().showMessage("Cut selection.", 2000)
 
@@ -368,27 +368,27 @@ class EditActionsManager:
             paste_center_pos = self.host.init_manager.view_2d.mapToScene(
                 self.host.init_manager.view_2d.mapFromGlobal(QCursor.pos())
             )
-            self.host.scene.clearSelection()
+            self.host.init_manager.scene.clearSelection()
 
             new_atoms = []
             for atom_data in fragment_data["atoms"]:
                 # rel_pos was serialized as [x, y]; reconstruct as QPointF offset.
                 rp = atom_data["rel_pos"]
                 pos = paste_center_pos + QPointF(float(rp[0]), float(rp[1]))
-                new_id = self.host.scene.create_atom(
+                new_id = self.host.init_manager.scene.create_atom(
                     atom_data["symbol"],
                     pos,
                     charge=atom_data.get("charge", 0),
                     radical=atom_data.get("radical", 0),
                 )
-                new_item = self.host.scene.atom_items[new_id]
+                new_item = self.host.init_manager.scene.atom_items[new_id]
                 new_atoms.append(new_item)
                 new_item.setSelected(True)
 
             for bond_data in fragment_data["bonds"]:
                 atom1 = new_atoms[bond_data["idx1"]]
                 atom2 = new_atoms[bond_data["idx2"]]
-                self.host.scene.create_bond(
+                self.host.init_manager.scene.create_bond(
                     atom1,
                     atom2,
                     bond_order=bond_data.get("order", 1),
@@ -407,7 +407,7 @@ class EditActionsManager:
             logging.exception("Error during paste operation")
             self.host.statusBar().showMessage("Error during paste operation.")
         self.host.ui_manager.activate_select_mode()
-        self.host.scene.update_all_items()
+        self.host.init_manager.scene.update_all_items()
 
     def remove_hydrogen_atoms(self) -> None:
         """Delete hydrogen atoms and their bonds in 2D view"""
@@ -416,11 +416,11 @@ class EditActionsManager:
             hydrogen_map = {}
 
             # Iterate over a snapshot of atoms to avoid "dictionary changed size"
-            for atom_id, atom_data in list(self.host.data.atoms.items()):
+            for atom_id, atom_data in list(self.host.state_manager.data.atoms.items()):
                 try:
                     if atom_data.get("symbol") != "H":
                         continue
-                    item = self.host.scene.atom_items.get(atom_id)
+                    item = self.host.init_manager.scene.atom_items.get(atom_id)
                     # Only collect live AtomItem wrappers
                     if item is None:
                         continue
@@ -471,7 +471,7 @@ class EditActionsManager:
                     # scene.delete_items is expected to handle bond cleanup; call it per-batch
                     success = False
                     try:
-                        success = bool(self.host.scene.delete_items(batch))
+                        success = bool(self.host.init_manager.scene.delete_items(batch))
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         # If scene.delete_items raises for a batch, attempt a safe per-item fallback
                         success = False
@@ -482,7 +482,7 @@ class EditActionsManager:
                             try:
                                 # Use scene.delete_items for single-item as well
                                 ok = bool(
-                                    self.host.scene.delete_items({it})
+                                    self.host.init_manager.scene.delete_items({it})
                                 )
                                 if ok:
                                     deleted_any = True
@@ -504,7 +504,7 @@ class EditActionsManager:
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
             try:
-                for _, atom_data in list(self.host.data.atoms.items()):
+                for _, atom_data in list(self.host.state_manager.data.atoms.items()):
                     try:
                         if atom_data.get("symbol") == "H":
                             remaining_h += 1
@@ -543,7 +543,7 @@ class EditActionsManager:
         """Compute and add explicit hydrogens in 2D view using RDKit."""
 
         try:
-            mol = self.host.data.to_rdkit_mol(use_2d_stereo=False)
+            mol = self.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
             if not mol or mol.GetNumAtoms() == 0:
                 self.host.statusBar().showMessage(
                     "No molecule available to compute hydrogens.", 2000
@@ -562,7 +562,7 @@ class EditActionsManager:
                     # Skip if original editor ID is missing or entry is already stale.
                     continue
 
-                if orig_id not in self.host.data.atoms:
+                if orig_id not in self.host.state_manager.data.atoms:
                     continue
 
                 # Get implicit hydrogens; fallback to total - explicit
@@ -589,24 +589,24 @@ class EditActionsManager:
                 if implicit_h <= 0:
                     continue
 
-                parent_item = self.host.scene.atom_items.get(orig_id)
+                parent_item = self.host.init_manager.scene.atom_items.get(orig_id)
                 parent_pos = parent_item.pos()
 
                 # Determine angles based on neighbors to avoid collisions
                 neighbor_angles = []
                 try:
-                    for (a1, a2), _ in self.host.data.bonds.items():
+                    for (a1, a2), _ in self.host.state_manager.data.bonds.items():
                         # Collect neighboring atom angles (ignore H)
                         try:
                             if (
                                 a1 == orig_id
-                                and a2 in self.host.data.atoms
+                                and a2 in self.host.state_manager.data.atoms
                             ):
-                                neigh = self.host.data.atoms[a2]
+                                neigh = self.host.state_manager.data.atoms[a2]
                                 if neigh.get("symbol") == "H":
                                     continue
                                 neigh_item = (
-                                    self.host.scene.atom_items.get(a2)
+                                    self.host.init_manager.scene.atom_items.get(a2)
                                 )
                                 if neigh_item is None or sip_isdeleted_safe(neigh_item):
                                     continue
@@ -614,13 +614,13 @@ class EditActionsManager:
                                 neighbor_angles.append(math.atan2(vec.y(), vec.x()))
                             elif (
                                 a2 == orig_id
-                                and a1 in self.host.data.atoms
+                                and a1 in self.host.state_manager.data.atoms
                             ):
-                                neigh = self.host.data.atoms[a1]
+                                neigh = self.host.state_manager.data.atoms[a1]
                                 if neigh.get("symbol") == "H":
                                     continue
                                 neigh_item = (
-                                    self.host.scene.atom_items.get(a1)
+                                    self.host.init_manager.scene.atom_items.get(a1)
                                 )
                                 if neigh_item is None or sip_isdeleted_safe(neigh_item):
                                     continue
@@ -699,11 +699,11 @@ class EditActionsManager:
 
                     # Create new hydrogen atom
                     try:
-                        new_id = self.host.scene.create_atom("H", pos)
-                        new_item = self.host.scene.atom_items[new_id]
+                        new_id = self.host.init_manager.scene.create_atom("H", pos)
+                        new_item = self.host.init_manager.scene.atom_items[new_id]
                         # Set bond_stereo (plain, wedge, dash)
                         stereo = _choose_stereo(h_idx)
-                        self.host.scene.create_bond(
+                        self.host.init_manager.scene.create_bond(
                             parent_item, new_item, bond_order=1, bond_stereo=stereo
                         )
                         added_items.append(new_item)
@@ -712,14 +712,14 @@ class EditActionsManager:
                         logging.warning("Failed to add H for atom %s: %s", orig_id, e)
 
             if added_count > 0:
-                self.host.scene.update_all_items()
+                self.host.init_manager.scene.update_all_items()
                 self.host.edit_actions_manager.push_undo_state()
                 self.host.statusBar().showMessage(
                     f"Added {added_count} hydrogen atoms.", 2000
                 )
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     # Suppress selection errors if the scene is being cleared or items are invalid.
-                    self.host.scene.clearSelection()
+                    self.host.init_manager.scene.clearSelection()
                     for it in added_items:
                         it.setSelected(True)
             else:
@@ -734,7 +734,7 @@ class EditActionsManager:
     def update_edit_menu_actions(self) -> None:
         """Update edit menu based on selection and clipboard"""
         try:
-            has_selection = len(self.host.scene.selectedItems()) > 0
+            has_selection = len(self.host.init_manager.scene.selectedItems()) > 0
             self.host.init_manager.cut_action.setEnabled(has_selection)
             self.host.init_manager.copy_action.setEnabled(has_selection)
 
@@ -767,7 +767,7 @@ class EditActionsManager:
         """Rotate 2D molecule (selection or entire)"""
         try:
             # Determine target atoms
-            selected_items = self.host.scene.selectedItems()
+            selected_items = self.host.init_manager.scene.selectedItems()
             target_atoms = [
                 item for item in selected_items if isinstance(item, AtomItem)
             ]
@@ -776,7 +776,7 @@ class EditActionsManager:
             if not target_atoms:
                 target_atoms = [
                     item
-                    for item in self.host.scene.atom_items.values()
+                    for item in self.host.init_manager.scene.atom_items.values()
                     if not sip_isdeleted_safe(item)
                 ]
 
@@ -809,11 +809,11 @@ class EditActionsManager:
                     nx, ny = new_positions[atom.atom_id]
                     new_pos = QPointF(nx, ny)
                     atom.setPos(new_pos)
-                    self.host.data.set_atom_pos(atom.atom_id, new_pos)
+                    self.host.state_manager.data.set_atom_pos(atom.atom_id, new_pos)
 
             # Update bonds
-            self.host.scene.update_connected_bonds(target_atoms)
-            self.host.scene.update_all_items()
+            self.host.init_manager.scene.update_connected_bonds(target_atoms)
+            self.host.init_manager.scene.update_all_items()
 
             self.host.edit_actions_manager.push_undo_state()
             self.host.statusBar().showMessage(
@@ -825,7 +825,7 @@ class EditActionsManager:
             self.host.statusBar().showMessage("Error rotating molecule.")
 
     def select_all(self) -> None:
-        for item in self.host.scene.items():
+        for item in self.host.init_manager.scene.items():
             if isinstance(item, (AtomItem, BondItem)):
                 item.setSelected(True)
 
@@ -875,7 +875,7 @@ class EditActionsManager:
             self.host.init_manager.view_2d.resetTransform()
 
         # Update scene and view
-        self.host.scene.update()
+        self.host.init_manager.scene.update()
         if self.host.init_manager.view_2d:
             self.host.init_manager.view_2d.viewport().update()
 
@@ -899,8 +899,8 @@ class EditActionsManager:
     def clear_2d_editor(self, push_to_undo: bool = True) -> None:
         # Clear 2D editor (no undo push)
         self.host.set_molecule_data(MolecularData())
-        self.host.scene.clear()
-        self.host.scene.reinitialize_items()
+        self.host.init_manager.scene.clear()
+        self.host.init_manager.scene.reinitialize_items()
         self.host.is_xyz_derived = False
         # self.host.view_3d_manager.current_mol is now cleared via self.host.view_3d_manager.current_mol = None if needed,
         # but usually it's handled in clear_all.
@@ -921,7 +921,7 @@ class EditActionsManager:
         h_count_map = {}
         if mol is None:
             # Invalid/unsanitizable structure: reset all counts to 0
-            for atom_id in list(self.host.data.atoms.keys()):
+            for atom_id in list(self.host.state_manager.data.atoms.keys()):
                 h_count_map[atom_id] = 0
             return h_count_map
 
@@ -970,8 +970,8 @@ class EditActionsManager:
             else:
                 # Fallback: use the pure-logic valence heuristic from mol_geometry
                 for atom_id in identify_valence_problems(
-                    self.host.data.atoms,
-                    self.host.data.bonds,
+                    self.host.state_manager.data.atoms,
+                    self.host.state_manager.data.bonds,
                 ):
                     problem_map[atom_id] = True
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
@@ -991,13 +991,13 @@ class EditActionsManager:
         except (AttributeError, RuntimeError, ValueError, TypeError):
             return
 
-        atoms_snapshot = dict(self.host.data.atoms)
+        atoms_snapshot = dict(self.host.state_manager.data.atoms)
         is_deleted_func = sip_isdeleted_safe
 
         items_to_update = []
         for atom_id, atom_data in atoms_snapshot.items():
             try:
-                item = self.host.scene.atom_items.get(atom_id)
+                item = self.host.init_manager.scene.atom_items.get(atom_id)
                 if not item:
                     continue
 
@@ -1061,7 +1061,7 @@ class EditActionsManager:
     def update_implicit_hydrogens(self) -> None:
         """Update implicit hydrogen counts on AtomItems."""
         # Quick guards: nothing to do if no atoms or no QApplication
-        if not self.host.data.atoms:
+        if not self.host.state_manager.data.atoms:
             return
 
         try:
@@ -1075,7 +1075,7 @@ class EditActionsManager:
 
             mol = None
             try:
-                mol = self.host.data.to_rdkit_mol()
+                mol = self.host.state_manager.data.to_rdkit_mol()
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 logging.debug(f"to_rdkit_mol failed during H-update: {e}")
                 mol = None
@@ -1099,14 +1099,14 @@ class EditActionsManager:
         self.host.statusBar().showMessage("Optimizing 2D structure...")
 
         # Clear existing problem flags
-        self.host.scene.clear_all_problem_flags()
+        self.host.init_manager.scene.clear_all_problem_flags()
 
         # Case: no atoms in 2D editor
-        if not self.host.data.atoms:
+        if not self.host.state_manager.data.atoms:
             self.host.statusBar().showMessage("Error: No atoms to optimize.")
             return
 
-        mol = self.host.data.to_rdkit_mol()
+        mol = self.host.state_manager.data.to_rdkit_mol()
         if mol is None or mol.GetNumAtoms() == 0:
             # If RDKit conversion fails, check for chemistry problems
             self.host.compute_manager.check_chemistry_problems_fallback()
@@ -1136,20 +1136,20 @@ class EditActionsManager:
 
             # Apply new coordinates with centering and scaling
             for atom_id, (nx, ny) in new_positions.items():
-                if atom_id in self.host.data.atoms:
+                if atom_id in self.host.state_manager.data.atoms:
                     # Centered scaling: (coord - rdkit_center) * scale + scene_view_center
                     sx = ((nx - rdkit_cx) * SCALE) + view_center.x()
                     sy = (-(ny - rdkit_cy) * SCALE) + view_center.y()
                     new_pos = QPointF(sx, sy)
 
-                    item = self.host.scene.atom_items.get(atom_id)
+                    item = self.host.init_manager.scene.atom_items.get(atom_id)
                     if item:
                         item.setPos(new_pos)
                     # Cache back to model
-                    self.host.data.set_atom_pos(atom_id, new_pos)
+                    self.host.state_manager.data.set_atom_pos(atom_id, new_pos)
 
             # Update all bond positions
-            for bond_item in self.host.scene.bond_items.values():
+            for bond_item in self.host.init_manager.scene.bond_items.values():
                 if not bond_item:
                     continue
                 if sip_isdeleted_safe(bond_item):
@@ -1166,7 +1166,7 @@ class EditActionsManager:
             self.host.edit_3d_manager.update_2d_measurement_labels()
 
             # Request scene update and ring re-analysis
-            self.host.scene.update_all_items()
+            self.host.init_manager.scene.update_all_items()
 
             self.host.statusBar().showMessage("2D structure optimization successful.")
             self.host.edit_actions_manager.push_undo_state()
@@ -1195,28 +1195,28 @@ class EditActionsManager:
         # Translation distance (bottom-left)
         MOVE_DISTANCE = 20
 
-        # Safely retrieve item from self.host.data.atoms.values()
-        all_atom_items = list(self.host.scene.atom_items.values())
+        # Safely retrieve item from self.host.state_manager.data.atoms.values()
+        all_atom_items = list(self.host.init_manager.scene.atom_items.values())
 
         if len(all_atom_items) < 2:
             return  # Step 1-3: Handled by core logic
         positions_map = {
-            aid: data["pos"] for aid, data in self.host.data.atoms.items()
+            aid: data["pos"] for aid, data in self.host.state_manager.data.atoms.items()
         }
 
         from moleditpy.core.mol_geometry import resolve_2d_overlaps
 
         def has_bond_check(id1: Any, id2: Any) -> Any:
-            item1 = self.host.scene.atom_items.get(id1)
-            item2 = self.host.scene.atom_items.get(id2)
+            item1 = self.host.init_manager.scene.atom_items.get(id1)
+            item2 = self.host.init_manager.scene.atom_items.get(id2)
             return (
-                self.host.scene.find_bond_between(item1, item2) is not None
+                self.host.init_manager.scene.find_bond_between(item1, item2) is not None
             )
 
         move_operations = resolve_2d_overlaps(
-            set(self.host.data.atoms.keys()),
+            set(self.host.state_manager.data.atoms.keys()),
             positions_map,
-            self.host.data.adjacency_list,
+            self.host.state_manager.data.adjacency_list,
             overlap_threshold=OVERLAP_THRESHOLD,
             move_distance=MOVE_DISTANCE,
             has_bond_check_func=has_bond_check,
@@ -1230,13 +1230,13 @@ class EditActionsManager:
         for group_ids, (vx, vy) in move_operations:
             vector = QPointF(vx, vy)
             for atom_id in group_ids:
-                item = self.host.scene.atom_items.get(atom_id)
+                item = self.host.init_manager.scene.atom_items.get(atom_id)
                 new_pos = item.pos() + vector
                 item.setPos(new_pos)
-                self.host.data.set_atom_pos(atom_id, new_pos)
+                self.host.state_manager.data.set_atom_pos(atom_id, new_pos)
 
         # Step 5: Update display and state
-        for item in self.host.scene.bond_items.values():
+        for item in self.host.init_manager.scene.bond_items.values():
             if not item:
                 continue
             try:
@@ -1251,7 +1251,7 @@ class EditActionsManager:
         # Update labels after resolution
         self.host.edit_3d_manager.update_2d_measurement_labels()
 
-        self.host.scene.update()
+        self.host.init_manager.scene.update()
         self.host.edit_actions_manager.push_undo_state()
         self.host.statusBar().showMessage("Resolved overlapping groups.", 2000)
 
@@ -1453,7 +1453,7 @@ class EditActionsManager:
         target = (
             mol
             if mol is not None
-            else self.host.current_mol
+            else self.host.view_3d_manager.current_mol
         )
         if target is not None:
             # Remove RDKit property _xyz_skip_checks

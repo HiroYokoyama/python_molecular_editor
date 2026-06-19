@@ -203,7 +203,7 @@ class Edit3DManager:
         # Create atom-to-AtomItem mapping
         if (
             not self.host.view_3d_manager.current_mol
-            or not self.host.data.atoms
+            or not self.host.state_manager.data.atoms
         ):
             return
 

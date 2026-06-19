@@ -161,7 +161,7 @@ class DialogManager:
 
     def save_2d_as_template(self) -> None:
         """Save current 2D structure as a template"""
-        if not self.host.data.atoms:
+        if not self.host.state_manager.data.atoms:
             QMessageBox.warning(
                 self.host, "Warning", "No structure to save as template."
             )
@@ -184,7 +184,7 @@ class DialogManager:
             if not os.path.exists(template_dir):
                 os.makedirs(template_dir)
             # Convert current structure to template format using core method
-            template_data = self.host.data.to_template_dict(
+            template_data = self.host.state_manager.data.to_template_dict(
                 name, application_version=VERSION
             )
 

@@ -363,7 +363,7 @@ class MainInitManager:
             self.host.view_3d_manager.apply_3d_settings()
 
             # Redraw if molecule exists
-            mol = self.host.current_mol
+            mol = self.host.view_3d_manager.current_mol
             if mol:
                 self.host.view_3d_manager.draw_molecule_3d(mol)
 
@@ -695,7 +695,7 @@ class MainInitManager:
 
     def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""
-        self.scene = MoleculeScene(self.host.data, self.host)
+        self.scene = MoleculeScene(self.host.state_manager.data, self.host)
         self.scene.setSceneRect(-4000, -4000, 4000, 4000)
         self.scene.setBackgroundBrush(QColor("#FFFFFF"))
 

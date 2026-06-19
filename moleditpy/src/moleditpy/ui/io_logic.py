@@ -293,7 +293,7 @@ class IOManager:
     def save_project(self) -> None:
         """Save (Ctrl+S) - Defaults to PMEPRJ format."""
         if (
-            not self.host.data.atoms
+            not self.host.state_manager.data.atoms
             and not self.host.view_3d_manager.current_mol
         ):
             self.host.statusBar().showMessage("Error: Nothing to save.")
@@ -332,7 +332,7 @@ class IOManager:
         """Save As (Ctrl+Shift+S) — always saves in PMEPRJ format."""
 
         if (
-            not self.host.data.atoms
+            not self.host.state_manager.data.atoms
             and not self.host.view_3d_manager.current_mol
         ):
             self.host.statusBar().showMessage("Error: Nothing to save.")
@@ -403,7 +403,7 @@ class IOManager:
     def save_as_json(self) -> None:
         """Save as PME Project (JSON) format."""
         if (
-            not self.host.data.atoms
+            not self.host.state_manager.data.atoms
             and not self.host.view_3d_manager.current_mol
         ):
             self.host.statusBar().showMessage("Error: Nothing to save.")
@@ -508,7 +508,7 @@ class IOManager:
         """Save as PME Raw (pickle) format."""
 
         if (
-            not self.host.data.atoms
+            not self.host.state_manager.data.atoms
             and not self.host.view_3d_manager.current_mol
         ):
             self.host.statusBar().showMessage("Error: Nothing to save.")
@@ -587,7 +587,7 @@ class IOManager:
             AllChem.WedgeMolBonds(mol, conf)
 
             SCALE_FACTOR = 50.0
-            existing_atoms = self.host.data.atoms
+            existing_atoms = self.host.state_manager.data.atoms
             if existing_atoms:
                 max_x = max(
                     v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0]
@@ -657,7 +657,7 @@ class IOManager:
     def save_as_mol(self) -> None:
         """Save current 2D structure as MOL file."""
         try:
-            mol_block = self.host.data.to_mol_block()
+            mol_block = self.host.state_manager.data.to_mol_block()
             if not mol_block:
                 self.host.statusBar().showMessage("Error: No 2D data to save.")
                 return
