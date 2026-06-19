@@ -146,6 +146,8 @@ If you use this software in your work, please cite it as follows:
 Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Zenodo. https://doi.org/10.5281/zenodo.17268532
 ```
 
+Additionally, please cite the plugins you used.
+
 -----
 
 <div id="japanese"></div>
@@ -277,3 +279,5 @@ moleditpy
 ```
 Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Zenodo. https://doi.org/10.5281/zenodo.17268532
 ```
+
+また、使用したプラグインの引用もお願いいたします。

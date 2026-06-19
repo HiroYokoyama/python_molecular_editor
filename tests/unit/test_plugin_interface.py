@@ -408,6 +408,20 @@ class TestPluginInterface:
         ctx.reset_3d_camera()
         mock_main_window.view_3d_manager.plotter.reset_camera.assert_called_once()
 
+    def test_enter_3d_viewer_mode(self, mock_manager, mock_main_window):
+        mock_manager.get_main_window.return_value = mock_main_window
+        mock_main_window.ui_manager = MagicMock()
+        ctx = PluginContext(mock_manager, "TestPlugin")
+        ctx.enter_3d_viewer_mode()
+        mock_main_window.ui_manager.enter_3d_viewer_mode.assert_called_once()
+
+    def test_enter_3d_mode(self, mock_manager, mock_main_window):
+        mock_manager.get_main_window.return_value = mock_main_window
+        mock_main_window.ui_manager = MagicMock()
+        ctx = PluginContext(mock_manager, "TestPlugin")
+        ctx.enter_3d_mode()
+        mock_main_window.ui_manager.enter_3d_viewer_mode.assert_called_once()
+
     def test_set_bond_color_by_atoms(self, mock_main_window):
         controller = Plugin3DController(mock_main_window)
         mock_mol = MagicMock()

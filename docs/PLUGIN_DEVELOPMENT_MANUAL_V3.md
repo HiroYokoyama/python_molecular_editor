@@ -95,6 +95,8 @@ The `context` object passed to `initialize(context)` is your safe proxy to the a
 | **UI** | `add_export_action(label, cb)` | Add option to the Export menu |
 | **UI** | `add_toolbar_action(cb, text, ...)` | Add button to the Plugin Toolbar |
 | **UI** | `show_status_message(msg, ms)` | Temporary message in status bar |
+| **UI** | `enter_3d_mode()` | Switch layout to 3D mode (alias of `enter_3d_viewer_mode`) |
+| **UI** | `enter_3d_viewer_mode()` | Switch layout to 3D viewer mode |
 | **Files** | `register_file_opener(ext, cb, priority)` | Handle a file extension (Import + CLI) |
 | **Files** | `register_drop_handler(cb, priority)` | Handle drag-and-drop onto the window |
 | **Molecule** | `current_molecule` | Get / set the active RDKit mol |
@@ -165,6 +167,12 @@ Register a tool in the top-level **Analysis** menu. This is the preferred locati
 Register an action in the **Export** menu. Use this for custom file formats or data summaries.
 - **label** (`str`): Text to display (e.g., `"Export as MyFormat..."`).
 - **callback** (`Callable`): Function to execute.
+
+#### `enter_3d_mode()`
+Switch the application UI layout to 3D mode. This minimizes the 2D drawing canvas and maximizes the 3D viewer panel, while enabling all 3D interaction tools. This is a public API alias for `enter_3d_viewer_mode()`.
+
+#### `enter_3d_viewer_mode()`
+Switch the application UI layout to 3D viewer mode. Minimizes the 2D panel, maximizes the 3D scene, and activates 3D features.
 
 ---
 

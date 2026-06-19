@@ -146,12 +146,7 @@ If you use this software in your work, please cite it as follows:
 Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Zenodo. https://doi.org/10.5281/zenodo.17268532
 ```
 
-Additionally, please cite the key libraries and plugins used by MoleditPy:
-- **RDKit**: Landrum, G. et al. RDKit: Open-source cheminformatics. https://www.rdkit.org
-- **PyVista**: Sullivan, C., & Kaszynski, A. (2019). PyVista: 3D plotting and mesh analysis in Python. *Journal of Open Source Software*, 4(37), 1450. https://doi.org/10.21105/joss.01450
-- **Open Babel**: O'Boyle, N. M. et al. (2011). Open Babel: An open chemical toolbox. *Journal of Cheminformatics*, 3(1), 33. https://doi.org/10.1186/1758-2946-3-33
-- **NumPy**: Harris, C. R. et al. (2020). Array programming with NumPy. *Nature*, 585(7825), 357–362. https://doi.org/10.1038/s41586-020-2649-2
-- **PyQt6**: Riverbank Computing. PyQt6. https://www.riverbankcomputing.com/software/pyqt/
+Additionally, please cite the plugins you used.
 
 -----
 
@@ -285,9 +280,4 @@ moleditpy
 Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Zenodo. https://doi.org/10.5281/zenodo.17268532
 ```
 
-また、MoleditPyが使用している主要なライブラリやプラグインの引用もお願いいたします：
-- **RDKit**: Landrum, G. et al. RDKit: Open-source cheminformatics. https://www.rdkit.org
-- **PyVista**: Sullivan, C., & Kaszynski, A. (2019). PyVista: 3D plotting and mesh analysis in Python. *Journal of Open Source Software*, 4(37), 1450. https://doi.org/10.21105/joss.01450
-- **Open Babel**: O'Boyle, N. M. et al. (2011). Open Babel: An open chemical toolbox. *Journal of Cheminformatics*, 3(1), 33. https://doi.org/10.1186/1758-2946-3-33
-- **NumPy**: Harris, C. R. et al. (2020). Array programming with NumPy. *Nature*, 585(7825), 357–362. https://doi.org/10.1038/s41586-020-2649-2
-- **PyQt6**: Riverbank Computing. PyQt6. https://www.riverbankcomputing.com/software/pyqt/
+また、使用したプラグインの引用もお願いいたします。

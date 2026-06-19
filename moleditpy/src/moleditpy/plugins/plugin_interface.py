@@ -178,6 +178,10 @@ class PluginContext:
             elif hasattr(mw.ui_manager, "enter_3d_viewer_ui_mode"):
                 mw.ui_manager.enter_3d_viewer_ui_mode()
 
+    def enter_3d_mode(self) -> None:
+        """Switch UI layout to 3D viewer mode. Alias for enter_3d_viewer_mode."""
+        self.enter_3d_viewer_mode()
+
     @property
     def current_mol(self) -> Any:
         """
