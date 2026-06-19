@@ -115,6 +115,7 @@ def test_bond_item_ring_logic(mock_parser_host):
 
     # Set up mock scene/window environment
     scene = MagicMock(spec=QGraphicsScene)
+    scene.get_setting = MagicMock(return_value=3.5)
     view = MagicMock()
     window = MagicMock()
     scene.views.return_value = [view]
@@ -233,6 +234,7 @@ def test_bond_double_non_ring_parallel(mock_parser_host):
 
     # Mock scene to ensure NOT in ring (no RDKit mol available)
     scene = MagicMock(spec=QGraphicsScene)
+    scene.get_setting = MagicMock(return_value=3.5)
     scene.window = None  # No window means no RDKit mol integration
     bond.scene = MagicMock(return_value=scene)
 

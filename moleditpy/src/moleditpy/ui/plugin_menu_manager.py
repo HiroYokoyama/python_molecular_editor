@@ -39,6 +39,7 @@ class PluginMenuManager:
 
     def _make_safe_callback(self, callback: Callable, plugin_name: str) -> Callable:
         """Wrap a plugin callback so exceptions don't propagate into Qt's signal machinery."""
+
         def _safe(*args: Any, **kwargs: Any) -> None:
             try:
                 callback(*args, **kwargs)
@@ -52,6 +53,7 @@ class PluginMenuManager:
                     )
                 except Exception:
                     pass
+
         return _safe
 
     # ------------------------------------------------------------------
@@ -66,9 +68,7 @@ class PluginMenuManager:
         self._clear_all_plugin_actions(plugin_menu)
 
         manage_action = QAction("Plugin Manager...", self._im.host)
-        manage_action.triggered.connect(
-            lambda: self._show_plugin_manager(plugin_menu)
-        )
+        manage_action.triggered.connect(lambda: self._show_plugin_manager(plugin_menu))
         plugin_menu.addAction(manage_action)
         plugin_menu.addSeparator()
 
@@ -175,7 +175,9 @@ class PluginMenuManager:
                 sep.setData(PLUGIN_ACTION_TAG)
 
             action = QAction(text or parts[-1], self._im.host)
-            action.triggered.connect(self._make_safe_callback(callback, action_def.get("plugin", "Plugin")))
+            action.triggered.connect(
+                self._make_safe_callback(callback, action_def.get("plugin", "Plugin"))
+            )
             if action_def.get("shortcut"):
                 action.setShortcut(QKeySequence(action_def["shortcut"]))
             action.setData(PLUGIN_ACTION_TAG)
@@ -191,7 +193,11 @@ class PluginMenuManager:
             self._im.plugin_toolbar.show()
             for action_def in self._im.host.plugin_manager.toolbar_actions:
                 action = QAction(action_def["text"], self._im.host)
-                action.triggered.connect(self._make_safe_callback(action_def["callback"], action_def.get("plugin", "Plugin")))
+                action.triggered.connect(
+                    self._make_safe_callback(
+                        action_def["callback"], action_def.get("plugin", "Plugin")
+                    )
+                )
                 if action_def["icon"] and os.path.exists(action_def["icon"]):
                     action.setIcon(QIcon(action_def["icon"]))
                 if action_def["tooltip"]:
@@ -296,12 +302,15 @@ class PluginMenuManager:
                     ),
                     None,
                 )
-                current_parent = sub if sub is not None else current_parent.addMenu(part)
+                current_parent = (
+                    sub if sub is not None else current_parent.addMenu(part)
+                )
 
             for p in sorted(categorized[cat], key=lambda x: x["name"]):
                 a = QAction(p["name"], self._im.host)
                 a.triggered.connect(
-                    lambda checked, mod=p["module"]: self._im.host.plugin_manager.run_plugin(
+                    lambda checked,
+                    mod=p["module"]: self._im.host.plugin_manager.run_plugin(
                         mod, self._im.host
                     )
                 )
@@ -310,7 +319,8 @@ class PluginMenuManager:
         for p in sorted(root, key=lambda x: x["name"]):
             a = QAction(p["name"], self._im.host)
             a.triggered.connect(
-                lambda checked, mod=p["module"]: self._im.host.plugin_manager.run_plugin(
+                lambda checked,
+                mod=p["module"]: self._im.host.plugin_manager.run_plugin(
                     mod, self._im.host
                 )
             )
@@ -348,7 +358,11 @@ class PluginMenuManager:
             sep.setData(PLUGIN_ACTION_TAG)
             for exp in self._im.host.plugin_manager.export_actions:
                 a = QAction(exp["label"], self._im.host)
-                a.triggered.connect(self._make_safe_callback(exp["callback"], exp.get("plugin", "Plugin")))
+                a.triggered.connect(
+                    self._make_safe_callback(
+                        exp["callback"], exp.get("plugin", "Plugin")
+                    )
+                )
                 a.setData(PLUGIN_ACTION_TAG)
                 menu.addAction(a)
 
@@ -431,7 +445,11 @@ class PluginMenuManager:
                 a = QAction(
                     f"{tool['label']} ({tool.get('plugin', 'Plugin')})", self._im.host
                 )
-                a.triggered.connect(self._make_safe_callback(tool["callback"], tool.get("plugin", "Plugin")))
+                a.triggered.connect(
+                    self._make_safe_callback(
+                        tool["callback"], tool.get("plugin", "Plugin")
+                    )
+                )
                 a.setData(PLUGIN_ACTION_TAG)
                 analysis_menu.addAction(a)
 
@@ -441,11 +459,5 @@ class PluginMenuManager:
             if action.data() == "plugin_action":
                 plugin_menu.removeAction(action)
 
-        plugin_toolbar = getattr(self._im, "plugin_toolbar", None)
-        if plugin_toolbar:
-            plugin_toolbar.clear()
-            plugin_toolbar.hide()
-        else:
-            logging.debug(
-                "DIAGNOSTIC WARNING: Missing attribute 'plugin_toolbar' on init_manager"
-            )
+        self._im.plugin_toolbar.clear()
+        self._im.plugin_toolbar.hide()

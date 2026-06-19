@@ -112,12 +112,7 @@ class UserTemplateDialog(QDialog):
         """Exit template mode and revert to atom_C (Carbon) mode."""
         # 1. Reset Dialog State
         self.selected_template = None
-        if hasattr(self, "delete_button"):
-            self.delete_button.setEnabled(False)
-        else:
-            logging.debug(
-                "DIAGNOSTIC WARNING: Missing attribute 'delete_button' on self"
-            )
+        self.delete_button.setEnabled(False)
 
         # 2. Reset Main Window Mode (UI/Toolbar)
         target_mode = "atom_C"
@@ -145,12 +140,7 @@ class UserTemplateDialog(QDialog):
                 scene.template_context = {}
 
                 # C. Clear/Hide Preview Item
-                if hasattr(scene, "clear_template_preview"):
-                    scene.clear_template_preview()
-                else:
-                    logging.debug(
-                        "DIAGNOSTIC WARNING: Missing attribute 'clear_template_preview' on scene"
-                    )
+                scene.clear_template_preview()
 
                 if hasattr(scene, "template_preview") and scene.template_preview:
                     scene.template_preview.hide()
@@ -181,14 +171,9 @@ class UserTemplateDialog(QDialog):
                     # Find the TemplatePreviewView within this widget
                     for child in widget.findChildren(TemplatePreviewView):
                         if hasattr(child, "redraw_with_current_size"):
-                            # Use redraw for better scaling adaptation
                             child.redraw_with_current_size()
-                        elif hasattr(child, "refit_view"):
-                            child.refit_view()
                         else:
-                            logging.debug(
-                                "DIAGNOSTIC WARNING: Missing attribute 'refit_view' on child"
-                            )
+                            child.refit_view()
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Warning: Failed to refit template previews: {e}")
 

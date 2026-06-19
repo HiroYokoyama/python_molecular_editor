@@ -248,12 +248,7 @@ class MainInitManager:
         self._init_toolbars()
         self.init_menu_bar()
 
-        if self.toolbar is not None and self.toolbar_bottom is not None:
-            self._setup_action_groups(self.toolbar, self.toolbar_bottom)
-        else:
-            logging.debug(
-                "DIAGNOSTIC WARNING: Toolbars not initialized before setup_action_groups"
-            )
+        self._setup_action_groups(self.toolbar, self.toolbar_bottom)
 
     def init_menu_bar(self) -> None:
         menu_bar = self.host.menuBar()
@@ -414,10 +409,6 @@ class MainInitManager:
                             c.greenF(),
                             c.blueF(),
                         ]
-                else:
-                    logging.debug(
-                        "DIAGNOSTIC WARNING: Missing attribute 'CPK_COLORS_PV' on constants module"
-                    )
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             logging.error(f"Failed to update CPK colors from settings: {e}")
 
@@ -497,10 +488,6 @@ class MainInitManager:
                 for key, action in self.opt3d_actions.items():
                     # Use case-insensitive comparison for robustness
                     action.setChecked(key.upper() == current_method)
-            else:
-                logging.debug(
-                    "DIAGNOSTIC WARNING: Missing attribute 'opt3d_actions' on self"
-                )
 
             # Conversion actions
             if self.conv_actions:
@@ -538,10 +525,6 @@ class MainInitManager:
                             continue
                         if hasattr(item, "update_style"):
                             item.update_style()
-                        else:
-                            logging.debug(
-                                "DIAGNOSTIC WARNING: Missing attribute 'update_style' on item"
-                            )
                 self.scene.update()
                 for v in self.scene.views():
                     v.viewport().update()
@@ -667,13 +650,8 @@ class MainInitManager:
                 plugin_menu.removeAction(action)
 
         # 2. Clear plugin-specific toolbars or buttons
-        if hasattr(self, "plugin_toolbar"):
-            self.plugin_toolbar.clear()
-            self.plugin_toolbar.hide()
-        else:
-            logging.debug(
-                "DIAGNOSTIC WARNING: Missing attribute 'plugin_toolbar' on self"
-            )
+        self.plugin_toolbar.clear()
+        self.plugin_toolbar.hide()
 
     def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""

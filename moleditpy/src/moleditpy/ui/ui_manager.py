@@ -260,18 +260,8 @@ class UIManager(QObject):
             )
             for thr in active_threads:
                 try:
-                    if hasattr(thr, "quit"):
-                        thr.quit()
-                    else:
-                        logging.debug(
-                            "DIAGNOSTIC WARNING: Missing attribute 'quit' on thr"
-                        )
-                    if hasattr(thr, "wait"):
-                        thr.wait(200)
-                    else:
-                        logging.debug(
-                            "DIAGNOSTIC WARNING: Missing attribute 'wait' on thr"
-                        )
+                    thr.quit()
+                    thr.wait(200)
                 except (RuntimeError, TypeError):
                     # Safe defensive fallback catching RuntimeError, TypeError
                     pass
@@ -608,22 +598,15 @@ class UIManager(QObject):
                 right_percent = round(sizes[1] * 100 / total)
 
                 # Show ratio in tooltip
-                if hasattr(splitter, "handle"):
+                try:
+                    handle = splitter.handle(1)
+                except (AttributeError, RuntimeError, TypeError):
+                    return
+                if handle:
                     try:
-                        handle = splitter.handle(1)
+                        handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
                     except (AttributeError, RuntimeError, TypeError):
                         return
-                    if handle:
-                        try:
-                            handle.setToolTip(
-                                f"2D: {left_percent}% | 3D: {right_percent}%"
-                            )
-                        except (AttributeError, RuntimeError, TypeError):
-                            return
-                else:
-                    logging.debug(
-                        "DIAGNOSTIC WARNING: Missing attribute 'handle' on object"
-                    )
 
     def setup_splitter_tooltip(self) -> None:
         """Set initial splitter tooltip."""

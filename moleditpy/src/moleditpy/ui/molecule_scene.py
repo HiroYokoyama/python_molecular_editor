@@ -388,14 +388,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             f"Error in E/Z stereo toggle (mousePressEvent): {e}",
                             exc_info=True,
                         )
-                        if hasattr(self.window, "statusBar"):
-                            sb = self.window.statusBar()
-                            if sb:
-                                sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
-                        else:
-                            logging.debug(
-                                "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
-                            )
+                        sb = self.window.statusBar()
+                        if sb:
+                            sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
                         self.update_all_items()  # Redraw even on error to maintain consistency
                 # AtomItem does nothing
             # --- Normal processing ---
@@ -622,31 +617,17 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         else:  # current_stereo == 4
                             new_stereo = 0  # E -> None
 
-                        if hasattr(
-                            self, "update_bond_stereo"
-                        ):  # guard: mixin may not be composed yet
-                            self.update_bond_stereo(b, new_stereo)
-                            self.update_all_items()  # Force redraw
-                            self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
-                        else:
-                            logging.debug(
-                                "DIAGNOSTIC WARNING: Missing attribute 'update_bond_stereo' on self"
-                            )
+                        self.update_bond_stereo(b, new_stereo)
+                        self.update_all_items()  # Force redraw
+                        self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.error(
                         f"Error in E/Z stereo toggle (mouseReleaseEvent): {e}",
                         exc_info=True,
                     )
-                    if hasattr(self.window, "statusBar"):
-                        sb = self.window.statusBar()
-                        if sb:
-                            sb.showMessage(
-                                f"Error changing E/Z stereochemistry: {e}", 5000
-                            )
-                    else:
-                        logging.debug(
-                            "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
-                        )
+                    sb = self.window.statusBar()
+                    if sb:
+                        sb.showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
                     self.update_all_items()  # Redraw even on error to maintain consistency
                 return  # Do not proceed further
             elif (
@@ -955,19 +936,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         for obj in list(self._deleted_items):
             if not sip_isdeleted_safe(obj):
                 try:
-                    if hasattr(obj, "hide"):
-                        obj.hide()
-                    else:
-                        logging.debug(
-                            "DIAGNOSTIC WARNING: Missing attribute 'hide' on obj"
-                        )
+                    obj.hide()
                     if hasattr(obj, "bonds") and obj.bonds is not None:
-                        if hasattr(obj.bonds, "clear"):
-                            obj.bonds.clear()
-                        else:
-                            logging.debug(
-                                "DIAGNOSTIC WARNING: Missing attribute 'clear' on object"
-                            )
+                        obj.bonds.clear()
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.debug(f"Error purging item {obj} in MoleculeScene: {e}")
 

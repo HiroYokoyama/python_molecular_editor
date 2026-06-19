@@ -381,10 +381,6 @@ class MoveGroupDialog(BasePickingDialog):
                                         f"Failed to reset cursor to arrow: {e}"
                                     )
                                 return True
-                            else:
-                                logging.debug(
-                                    "DIAGNOSTIC WARNING: Missing attribute 'clicked_atom_for_toggle' on self"
-                                )
 
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                         logging.debug(f"Error in mouse release handling: {e}")

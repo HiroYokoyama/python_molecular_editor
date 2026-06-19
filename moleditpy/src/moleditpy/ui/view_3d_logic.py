@@ -130,7 +130,9 @@ class View3DManager:
                     handler(mw, mol)
                     return
                 except Exception:  # plugins have full app access; catch everything to keep 3D view functional
-                    logging.exception("Error in custom 3D style '%s'", self.current_3d_style)
+                    logging.exception(
+                        "Error in custom 3D style '%s'", self.current_3d_style
+                    )
 
         self.draw_standard_3d_style(mol)
 
@@ -1708,10 +1710,6 @@ class View3DManager:
                                 tp.SetBold(True)
                             except (AttributeError, RuntimeError, TypeError) as e:
                                 logging.debug(f"Failed to set bold font: {e}")
-                        else:
-                            logging.debug(
-                                "DIAGNOSTIC WARNING: Missing attribute 'GetTextProperty' on actor"
-                            )
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1960,12 +1958,7 @@ class View3DManager:
         # Force plotter update
         try:
             self.plotter.render()
-            if hasattr(self.plotter, "update"):
-                self.plotter.update()
-            else:
-                logging.debug(
-                    "DIAGNOSTIC WARNING: Missing attribute 'update' on object"
-                )
+            self.plotter.update()
         except (AttributeError, RuntimeError, TypeError) as e:
             logging.debug(
                 f"Suppressed exception: {e}"
