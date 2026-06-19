@@ -126,13 +126,13 @@ class TestUpdatePluginMenu:
         im.host.plugin_manager.discover_plugins.return_value = []
 
         methods = [
-            "_update_style_menu_with_plugins",
+            "update_style_menu_with_plugins",
             "add_registered_plugin_actions",
             "add_plugin_toolbar_actions",
             "_add_legacy_plugin_actions",
-            "_integrate_plugin_export_actions",
-            "_integrate_plugin_file_openers",
-            "_integrate_plugin_analysis_tools",
+            "integrate_plugin_export_actions",
+            "integrate_plugin_file_openers",
+            "integrate_plugin_analysis_tools",
         ]
         mocks = {}
         for m in methods:
@@ -157,10 +157,10 @@ class TestRebuildPluginMenus:
         steps = [
             "add_registered_plugin_actions",
             "add_plugin_toolbar_actions",
-            "_integrate_plugin_export_actions",
-            "_integrate_plugin_file_openers",
-            "_integrate_plugin_analysis_tools",
-            "_update_style_menu_with_plugins",
+            "integrate_plugin_export_actions",
+            "integrate_plugin_file_openers",
+            "integrate_plugin_analysis_tools",
+            "update_style_menu_with_plugins",
         ]
         mocks = {s: MagicMock() for s in steps}
         for s, m in mocks.items():
@@ -195,10 +195,10 @@ class TestRebuildPluginMenus:
 
         pmm.add_registered_plugin_actions = boom
         pmm.add_plugin_toolbar_actions = ok_step("toolbar")
-        pmm._integrate_plugin_export_actions = ok_step("export")
-        pmm._integrate_plugin_file_openers = ok_step("file_openers")
-        pmm._integrate_plugin_analysis_tools = ok_step("analysis")
-        pmm._update_style_menu_with_plugins = ok_step("style")
+        pmm.integrate_plugin_export_actions = ok_step("export")
+        pmm.integrate_plugin_file_openers = ok_step("file_openers")
+        pmm.integrate_plugin_analysis_tools = ok_step("analysis")
+        pmm.update_style_menu_with_plugins = ok_step("style")
 
         pmm.rebuild_plugin_menus()
 
@@ -340,13 +340,13 @@ class TestAddPluginToolbarActions:
 
 
 # ---------------------------------------------------------------------------
-# _integrate_plugin_export_actions
+# integrate_plugin_export_actions
 # ---------------------------------------------------------------------------
 
 class TestIntegratePluginExportActions:
     def test_no_export_actions_does_nothing(self, im, pmm):
         im.host.plugin_manager.export_actions = []
-        pmm._integrate_plugin_export_actions()
+        pmm.integrate_plugin_export_actions()
         im.export_button.menu.return_value.addSeparator.assert_not_called()
 
     def test_adds_actions_to_export_button_menu(self, im, pmm):
@@ -355,7 +355,7 @@ class TestIntegratePluginExportActions:
         ]
         im.host.menuBar.return_value.actions.return_value = []  # no File menu
 
-        pmm._integrate_plugin_export_actions()
+        pmm.integrate_plugin_export_actions()
 
         export_menu = im.export_button.menu.return_value
         export_menu.addSeparator.assert_called_once()
@@ -380,7 +380,7 @@ class TestIntegratePluginExportActions:
 
         im.host.menuBar.return_value.actions.return_value = [file_top_action]
 
-        pmm._integrate_plugin_export_actions()
+        pmm.integrate_plugin_export_actions()
 
         # Both menus received a separator + action
         assert im.export_button.menu.return_value.addAction.called
@@ -388,7 +388,7 @@ class TestIntegratePluginExportActions:
 
 
 # ---------------------------------------------------------------------------
-# _integrate_plugin_analysis_tools
+# integrate_plugin_analysis_tools
 # ---------------------------------------------------------------------------
 
 class TestIntegratePluginAnalysisTools:
@@ -397,7 +397,7 @@ class TestIntegratePluginAnalysisTools:
         im.host.plugin_manager.analysis_tools = [
             {"label": "NMR", "callback": MagicMock(), "plugin": "NMRPlugin"}
         ]
-        pmm._integrate_plugin_analysis_tools()  # must not raise
+        pmm.integrate_plugin_analysis_tools()  # must not raise
 
     def test_no_tools_skips_separator(self, im, pmm):
         analysis_menu = MagicMock()
@@ -407,7 +407,7 @@ class TestIntegratePluginAnalysisTools:
         im.host.menuBar.return_value.actions.return_value = [analysis_action]
         im.host.plugin_manager.analysis_tools = []
 
-        pmm._integrate_plugin_analysis_tools()
+        pmm.integrate_plugin_analysis_tools()
 
         analysis_menu.addSeparator.assert_not_called()
 
@@ -421,25 +421,25 @@ class TestIntegratePluginAnalysisTools:
             {"label": "NMR Predict", "callback": MagicMock(), "plugin": "NMRPlugin"}
         ]
 
-        pmm._integrate_plugin_analysis_tools()
+        pmm.integrate_plugin_analysis_tools()
 
         analysis_menu.addSeparator.assert_called_once()
         analysis_menu.addAction.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
-# _update_style_menu_with_plugins
+# update_style_menu_with_plugins
 # ---------------------------------------------------------------------------
 
 class TestUpdateStyleMenuWithPlugins:
     def test_no_style_button_does_nothing(self):
         im = make_init_manager(has_style_button=False)
         pmm = PluginMenuManager(im)
-        pmm._update_style_menu_with_plugins()  # must not raise
+        pmm.update_style_menu_with_plugins()  # must not raise
 
     def test_no_custom_styles_does_nothing(self, im, pmm):
         im.host.plugin_manager.custom_3d_styles = []
-        pmm._update_style_menu_with_plugins()
+        pmm.update_style_menu_with_plugins()
         im.style_button.menu.return_value.addAction.assert_not_called()
 
     def test_adds_custom_style_actions(self, im, pmm):
@@ -454,7 +454,7 @@ class TestUpdateStyleMenuWithPlugins:
         style_menu.addAction = MagicMock()
         im.style_button.menu.return_value = style_menu
 
-        pmm._update_style_menu_with_plugins()
+        pmm.update_style_menu_with_plugins()
 
         assert style_menu.addAction.call_count == 2  # two new styles
         assert style_menu.addSeparator.called  # separator before new styles
@@ -475,19 +475,19 @@ class TestUpdateStyleMenuWithPlugins:
         style_menu.actions.return_value = [group_action, existing_style_action]
         im.style_button.menu.return_value = style_menu
 
-        pmm._update_style_menu_with_plugins()
+        pmm.update_style_menu_with_plugins()
 
         style_menu.addAction.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
-# _integrate_plugin_file_openers
+# integrate_plugin_file_openers
 # ---------------------------------------------------------------------------
 
 class TestIntegratePluginFileOpeners:
     def test_no_file_openers_does_nothing(self, im, pmm):
         im.host.plugin_manager.file_openers = {}
-        pmm._integrate_plugin_file_openers()
+        pmm.integrate_plugin_file_openers()
         im.import_menu.addSeparator.assert_not_called()
 
     def test_no_import_menu_does_nothing(self):
@@ -496,7 +496,7 @@ class TestIntegratePluginFileOpeners:
         pm.file_openers = {".xyz": [{"callback": MagicMock(), "plugin": "XYZPlugin"}]}
         im.host.plugin_manager = pm
         pmm = PluginMenuManager(im)
-        pmm._integrate_plugin_file_openers()  # must not raise
+        pmm.integrate_plugin_file_openers()  # must not raise
 
     def test_adds_opener_actions(self, im, pmm):
         cb = MagicMock()
@@ -504,7 +504,7 @@ class TestIntegratePluginFileOpeners:
             ".xyz": [{"callback": cb, "plugin": "XYZPlugin"}]
         }
 
-        pmm._integrate_plugin_file_openers()
+        pmm.integrate_plugin_file_openers()
 
         im.import_menu.addSeparator.assert_called_once()
         im.import_menu.addAction.assert_called_once()

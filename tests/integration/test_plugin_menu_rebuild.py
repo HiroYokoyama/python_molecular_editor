@@ -80,10 +80,10 @@ class TestRebuildCompleteness:
 
         pmm.add_registered_plugin_actions = track("menu_actions")
         pmm.add_plugin_toolbar_actions = track("toolbar_actions")
-        pmm._integrate_plugin_export_actions = track("export_actions")
-        pmm._integrate_plugin_file_openers = track("file_openers")
-        pmm._integrate_plugin_analysis_tools = track("analysis_tools")
-        pmm._update_style_menu_with_plugins = track("style_menu")
+        pmm.integrate_plugin_export_actions = track("export_actions")
+        pmm.integrate_plugin_file_openers = track("file_openers")
+        pmm.integrate_plugin_analysis_tools = track("analysis_tools")
+        pmm.update_style_menu_with_plugins = track("style_menu")
 
         pmm.rebuild_plugin_menus()
 
@@ -118,10 +118,10 @@ class TestRebuildCompleteness:
 
         pmm.add_registered_plugin_actions = track("menu_actions")
         pmm.add_plugin_toolbar_actions = track("toolbar_actions")
-        pmm._integrate_plugin_export_actions = track("export_actions")
-        pmm._integrate_plugin_file_openers = track("file_openers")
-        pmm._integrate_plugin_analysis_tools = track("analysis_tools")
-        pmm._update_style_menu_with_plugins = track("style_menu")
+        pmm.integrate_plugin_export_actions = track("export_actions")
+        pmm.integrate_plugin_file_openers = track("file_openers")
+        pmm.integrate_plugin_analysis_tools = track("analysis_tools")
+        pmm.update_style_menu_with_plugins = track("style_menu")
 
         pmm.rebuild_plugin_menus()
 
@@ -151,10 +151,10 @@ class TestRebuildCompleteness:
 
         pmm.add_registered_plugin_actions = lambda: (_ for _ in ()).throw(RuntimeError("boom"))
         pmm.add_plugin_toolbar_actions = step_ok("toolbar")
-        pmm._integrate_plugin_export_actions = step_ok("export")
-        pmm._integrate_plugin_file_openers = step_ok("file_openers")
-        pmm._integrate_plugin_analysis_tools = step_ok("analysis")
-        pmm._update_style_menu_with_plugins = step_ok("style")
+        pmm.integrate_plugin_export_actions = step_ok("export")
+        pmm.integrate_plugin_file_openers = step_ok("file_openers")
+        pmm.integrate_plugin_analysis_tools = step_ok("analysis")
+        pmm.update_style_menu_with_plugins = step_ok("style")
 
         pmm.rebuild_plugin_menus()
 
@@ -243,13 +243,13 @@ class TestUpdatePluginMenuIntegration:
         pmm = PluginMenuManager(im)
 
         integration_methods = [
-            "_update_style_menu_with_plugins",
+            "update_style_menu_with_plugins",
             "add_registered_plugin_actions",
             "add_plugin_toolbar_actions",
             "_add_legacy_plugin_actions",
-            "_integrate_plugin_export_actions",
-            "_integrate_plugin_file_openers",
-            "_integrate_plugin_analysis_tools",
+            "integrate_plugin_export_actions",
+            "integrate_plugin_file_openers",
+            "integrate_plugin_analysis_tools",
         ]
         mocks = {m: MagicMock() for m in integration_methods}
         for m, mock in mocks.items():
@@ -284,7 +284,7 @@ class TestExportActionEndToEnd:
         im = _make_im(pm)
         pmm = PluginMenuManager(im)
 
-        pmm._integrate_plugin_export_actions()
+        pmm.integrate_plugin_export_actions()
 
         export_menu = im.export_button.menu.return_value
         # A separator and at least one action were added
@@ -302,7 +302,7 @@ class TestExportActionEndToEnd:
         im = _make_im(pm)
         pmm = PluginMenuManager(im)
 
-        pmm._integrate_plugin_export_actions()
+        pmm.integrate_plugin_export_actions()
 
         assert im.export_button.menu.return_value.addAction.call_count == 2
 
@@ -327,7 +327,7 @@ class TestAnalysisToolEndToEnd:
         im.host.menuBar.return_value.actions.return_value = [analysis_action]
 
         pmm = PluginMenuManager(im)
-        pmm._integrate_plugin_analysis_tools()
+        pmm.integrate_plugin_analysis_tools()
 
         analysis_menu.addSeparator.assert_called_once()
         assert analysis_menu.addAction.call_count == 1
