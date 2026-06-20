@@ -26,32 +26,14 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QGraphicsItem, QWidget
 
-try:
-    from ..utils.constants import (
-        ATOM_RADIUS,
-        CPK_COLORS,
-        DESIRED_ATOM_PIXEL_RADIUS,
-        FONT_FAMILY,
-        FONT_WEIGHT_BOLD,
-    )
-except ImportError:
-    from moleditpy_linux.utils.constants import (
-        ATOM_RADIUS,
-        CPK_COLORS,
-        DESIRED_ATOM_PIXEL_RADIUS,
-        FONT_FAMILY,
-        FONT_WEIGHT_BOLD,
-    )
-from PyQt6 import sip
-
-
-def sip_isdeleted_safe(obj: Any) -> bool:
-    try:
-        return sip.isdeleted(obj)
-    except (AttributeError, TypeError, ImportError, RuntimeError):
-        # If the object does not support sip.isdeleted or is already in a state
-        # where the check fails, we assume it's unsafe or "deleted" for our purposes.
-        return True
+from ..utils.constants import (
+    ATOM_RADIUS,
+    CPK_COLORS,
+    DESIRED_ATOM_PIXEL_RADIUS,
+    FONT_FAMILY,
+    FONT_WEIGHT_BOLD,
+)
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 
 class AtomItem(QGraphicsItem):
@@ -88,14 +70,9 @@ class AtomItem(QGraphicsItem):
         font_family = FONT_FAMILY
 
         scene = self.scene()
-        if scene is not None:
-            if hasattr(scene, "get_setting"):
-                font_size = scene.get_setting("atom_font_size_2d", 20)
-                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-            else:
-                logging.error(
-                    f"DIAGNOSTIC WARNING: Missing attribute 'get_setting' on scene of type {type(scene)}"
-                )
+        if scene is not None and hasattr(scene, "get_setting"):
+            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
 
         self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         self.prepareGeometryChange()
@@ -115,14 +92,9 @@ class AtomItem(QGraphicsItem):
         font_size = 20
         font_family = FONT_FAMILY
         scene = self.scene()
-        if scene is not None:
-            if hasattr(scene, "get_setting"):
-                font_size = scene.get_setting("atom_font_size_2d", 20)
-                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-            else:
-                logging.error(
-                    f"DIAGNOSTIC WARNING: Missing attribute 'get_setting' on scene of type {type(scene)}"
-                )
+        if scene is not None and hasattr(scene, "get_setting"):
+            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
 
         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
         fm = QFontMetricsF(font)

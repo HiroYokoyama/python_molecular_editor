@@ -279,13 +279,10 @@ class ColorSettingsDialog(QDialog):
             hexv = default_settings.get("ball_stick_bond_color", "#7F7F7F")
 
         self.changed_bs_color = hexv
-        if hasattr(self, "bs_button"):
-            self.bs_button.setStyleSheet(
-                f"background-color: {hexv}; border: 1px solid #888;"
-            )
-            self.bs_button.setToolTip(hexv)
-        else:
-            logging.error("DIAGNOSTIC WARNING: Missing attribute 'bs_button' on self")
+        self.bs_button.setStyleSheet(
+            f"background-color: {hexv}; border: 1px solid #888;"
+        )
+        self.bs_button.setToolTip(hexv)
 
     def apply_changes(self) -> None:
         if not self.parent_window or not hasattr(self.parent_window, "init_manager"):
@@ -308,37 +305,16 @@ class ColorSettingsDialog(QDialog):
             self.parent_window.settings_dirty = True
 
             # Persist to disk immediately
-            if hasattr(self.parent_window, "init_manager"):
-                self.parent_window.init_manager.save_settings()
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'init_manager' on self.parent_window"
-                )
+            self.parent_window.init_manager.save_settings()
 
-        if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
-            self.parent_window.init_manager.update_cpk_colors_from_settings()
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'update_cpk_colors_from_settings' on object"
-            )
+        self.parent_window.init_manager.update_cpk_colors_from_settings()
 
         # Redraw 3D scene
-        if hasattr(self.parent_window, "view_3d_manager"):
-            vm = self.parent_window.view_3d_manager
-            if hasattr(vm, "apply_3d_settings"):
-                vm.apply_3d_settings(redraw=False)
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'apply_3d_settings' on vm"
-                )
-
-            mol = getattr(vm, "current_mol", None)
-            if mol and hasattr(vm, "draw_molecule_3d"):
-                vm.draw_molecule_3d(mol)
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'view_3d_manager' on self.parent_window"
-            )
+        vm = self.parent_window.view_3d_manager
+        vm.apply_3d_settings(redraw=False)
+        mol = getattr(vm, "current_mol", None)
+        if mol:
+            vm.draw_molecule_3d(mol)
 
         # Update 2D scene
         scene = getattr(self.parent_window.init_manager, "scene", None)
@@ -348,18 +324,12 @@ class ColorSettingsDialog(QDialog):
                     try:
                         it.update_style()
                     except (AttributeError, RuntimeError, TypeError):
-                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                         pass
-                elif hasattr(it, "update"):
+                else:
                     try:
                         it.update()
                     except (AttributeError, RuntimeError, TypeError):
-                        # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                         pass
-                else:
-                    logging.error(
-                        "DIAGNOSTIC WARNING: Missing attribute 'update' on it"
-                    )
 
         # Update button styles
         for s, btn in self.element_buttons.items():
@@ -376,60 +346,28 @@ class ColorSettingsDialog(QDialog):
             )
 
         # Refresh SettingsDialog
-        SettingsDialog: Optional[type] = None
-        try:
-            from .settings_dialog import SettingsDialog  # type: ignore[assignment]
-        except (ImportError, ValueError):
-            try:
-                from moleditpy_linux.ui.settings_dialog import SettingsDialog  # type: ignore[assignment]
-            except ImportError:
-                SettingsDialog = None
+        from .settings_dialog import SettingsDialog  # type: ignore[assignment]
 
         if SettingsDialog:
             for w in QApplication.topLevelWidgets():
                 if isinstance(w, SettingsDialog):
-                    if hasattr(w, "update_ui_from_settings"):
-                        w.update_ui_from_settings(settings)
-                    else:
-                        logging.error(
-                            "DIAGNOSTIC WARNING: Missing attribute 'update_ui_from_settings' on w"
-                        )
+                    w.update_ui_from_settings(settings)
 
         # Persist B&S color
         if getattr(self, "changed_bs_color", None):
             settings["ball_stick_bond_color"] = self.changed_bs_color
             self.parent_window.init_manager.settings_dirty = True
-            if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
-                self.parent_window.view_3d_manager.apply_3d_settings()
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'apply_3d_settings' on object"
-                )
-
+            self.parent_window.view_3d_manager.apply_3d_settings()
             mol = getattr(self.parent_window.view_3d_manager, "current_mol", None)
-            if mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
+            if mol:
                 self.parent_window.view_3d_manager.draw_molecule_3d(mol)
         elif self._reset_all_flag:
             settings["ball_stick_bond_color"] = "#7F7F7F"
             self.parent_window.init_manager.settings_dirty = True
-            if hasattr(
-                self.parent_window.init_manager, "update_cpk_colors_from_settings"
-            ):
-                self.parent_window.init_manager.update_cpk_colors_from_settings()
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'update_cpk_colors_from_settings' on object"
-                )
-
-            if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
-                self.parent_window.view_3d_manager.apply_3d_settings()
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'apply_3d_settings' on object"
-                )
-
+            self.parent_window.init_manager.update_cpk_colors_from_settings()
+            self.parent_window.view_3d_manager.apply_3d_settings()
             mol = getattr(self.parent_window.view_3d_manager, "current_mol", None)
-            if mol and hasattr(self.parent_window.view_3d_manager, "draw_molecule_3d"):
+            if mol:
                 self.parent_window.view_3d_manager.draw_molecule_3d(mol)
 
     def accept(self) -> None:
@@ -450,12 +388,7 @@ class ColorSettingsDialog(QDialog):
         if color.isValid():
             hexv = color.name()
             self.changed_bs_color = hexv
-            if hasattr(self, "bs_button"):
-                self.bs_button.setStyleSheet(
-                    f"background-color: {hexv}; border: 1px solid #888;"
-                )
-                self.bs_button.setToolTip(hexv)
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'bs_button' on self"
-                )
+            self.bs_button.setStyleSheet(
+                f"background-color: {hexv}; border: 1px solid #888;"
+            )
+            self.bs_button.setToolTip(hexv)

@@ -158,34 +158,14 @@ class SettingsDialog(QDialog):
         settings = self.get_settings()
         self.parent_window.init_manager.settings.update(settings)
 
-        if hasattr(self.parent_window.init_manager, "settings_dirty"):
-            self.parent_window.init_manager.settings_dirty = True
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'settings_dirty' on object"
-            )
+        self.parent_window.init_manager.settings_dirty = True
 
         # Persist to disk immediately
-        if hasattr(self.parent_window, "init_manager"):
-            self.parent_window.init_manager.save_settings()
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'init_manager' on self.parent_window"
-            )
+        self.parent_window.init_manager.save_settings()
 
-        if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
-            self.parent_window.view_3d_manager.apply_3d_settings()
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'apply_3d_settings' on object"
-            )
+        self.parent_window.view_3d_manager.apply_3d_settings()
 
-        if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
-            self.parent_window.init_manager.update_cpk_colors_from_settings()
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'update_cpk_colors_from_settings' on object"
-            )
+        self.parent_window.init_manager.update_cpk_colors_from_settings()
 
         # Redraw molecule
         current_mol = getattr(self.parent_window.view_3d_manager, "current_mol", None)
@@ -202,12 +182,8 @@ class SettingsDialog(QDialog):
             for item in scene.items():
                 if hasattr(item, "update_style"):
                     item.update_style()
-                elif hasattr(item, "update"):
-                    item.update()
                 else:
-                    logging.error(
-                        "DIAGNOSTIC WARNING: Missing attribute 'update' on item"
-                    )
+                    item.update()
 
         if hasattr(self.parent_window, "statusBar") and self.parent_window.statusBar():
             self.parent_window.statusBar().showMessage("Settings applied successfully")

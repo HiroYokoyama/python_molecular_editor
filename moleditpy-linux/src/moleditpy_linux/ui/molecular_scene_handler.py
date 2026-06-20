@@ -56,12 +56,7 @@ class TemplateMixin:
                     # Best-effort: ignore removal errors during teardown if underlying C++ object is already gone
                     logging.debug(f"Could not remove template preview item: {e}")
         self.template_context: Dict[str, Any] = {}
-        if hasattr(self, "template_preview"):
-            self.template_preview.hide()
-        else:
-            logging.error(
-                "DIAGNOSTIC WARNING: Missing attribute 'template_preview' on self"
-            )
+        self.template_preview.hide()
 
     def _calculate_6ring_rotation(
         self,
@@ -1282,8 +1277,6 @@ class KeyboardMixin:
                 # Force redraw
                 if self.views():
                     self.views()[0].viewport().update()
-                    QApplication.processEvents()
-
                     event.accept()
                     return
 
@@ -1324,14 +1317,9 @@ class KeyboardMixin:
 
             # Execute mode change
             if mode_to_set is not None:
-                if hasattr(self.window.ui_manager, "set_mode_and_update_toolbar"):
-                    self.window.ui_manager.set_mode_and_update_toolbar(mode_to_set)
-                    event.accept()
-                    return
-                else:
-                    logging.error(
-                        "DIAGNOSTIC WARNING: Missing attribute 'set_mode_and_update_toolbar' on object"
-                    )
+                self.window.ui_manager.set_mode_and_update_toolbar(mode_to_set)
+                event.accept()
+                return
 
             # Correctly delegate to the base class (QGraphicsScene) directly
             # to avoid MRO issues in complex Mixin inheritance structures.
@@ -1467,12 +1455,7 @@ class SceneQueryMixin:
                             f"Suppressed exception: {e}"
                         )  # Suppress SIP-stale bond removal errors
 
-                if hasattr(atom, "update_style"):
-                    atom.update_style()
-                else:
-                    logging.error(
-                        "DIAGNOSTIC WARNING: Missing attribute 'update_style' on atom"
-                    )
+                atom.update_style()
 
             # 3. Remove from data model
             for bond in list(bonds_to_delete):
@@ -1537,12 +1520,7 @@ class SceneQueryMixin:
             safe_remove_and_hide(atoms_to_delete)
 
             for atom in list(atoms_to_update):
-                if hasattr(atom, "update_style"):
-                    atom.update_style()
-                else:
-                    logging.error(
-                        "DIAGNOSTIC WARNING: Missing attribute 'update_style' on atom"
-                    )
+                atom.update_style()
 
             self.update_all_items()
             return True
@@ -1599,14 +1577,9 @@ class SceneQueryMixin:
             if key_to_update not in self.data.bonds:
                 key_to_update = (id2, id1)
                 if key_to_update not in self.data.bonds:
-                    if hasattr(self.window, "statusBar"):
-                        self.window.statusBar().showMessage(
-                            f"Warning: Bond {id1}-{id2} not found in model.", 3000
-                        )
-                    else:
-                        logging.error(
-                            "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
-                        )
+                    self.window.statusBar().showMessage(
+                        f"Warning: Bond {id1}-{id2} not found in model.", 3000
+                    )
                     return
 
             # Update data model and visual representation
@@ -1618,10 +1591,5 @@ class SceneQueryMixin:
             logging.error(
                 f"Error updating bond stereo for bond {bond_item}: {e}", exc_info=True
             )
-            if hasattr(self.window, "statusBar"):
-                self.window.statusBar().showMessage(f"Error: {e}", 5000)
-            else:
-                logging.error(
-                    "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
-                )
+            self.window.statusBar().showMessage(f"Error: {e}", 5000)
             self.update_all_items()

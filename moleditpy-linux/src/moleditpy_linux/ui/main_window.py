@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -19,41 +20,23 @@ if TYPE_CHECKING:
 
 # PyQt6 Modules
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QMainWindow
+from PyQt6.QtWidgets import QMainWindow, QMessageBox
 
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .app_state import StateManager
-    from .compute_logic import ComputeManager
-    from .dialog_logic import DialogManager
-    from .edit_3d_logic import Edit3DManager
-    from .edit_actions_logic import EditActionsManager
-    from .io_logic import IOManager
-    from .export_logic import ExportManager
-    from .main_window_init import MainInitManager
-    from .string_importers import StringImporterManager
-    from .ui_manager import UIManager
-    from .view_3d_logic import View3DManager
-    from .molecule_scene import MoleculeScene
-    from ..core.molecular_data import MolecularData
-    from .custom_qt_interactor import CustomQtInteractor
-except (AttributeError, RuntimeError, TypeError, ImportError):
-    # Fallback to absolute imports for script-style execution
-    from moleditpy_linux.ui.app_state import StateManager
-    from moleditpy_linux.ui.compute_logic import ComputeManager
-    from moleditpy_linux.ui.dialog_logic import DialogManager
-    from moleditpy_linux.ui.edit_3d_logic import Edit3DManager
-    from moleditpy_linux.ui.edit_actions_logic import EditActionsManager
-    from moleditpy_linux.ui.io_logic import IOManager
-    from moleditpy_linux.ui.export_logic import ExportManager
-    from moleditpy_linux.ui.main_window_init import MainInitManager
-    from moleditpy_linux.ui.string_importers import StringImporterManager
-    from moleditpy_linux.ui.ui_manager import UIManager
-    from moleditpy_linux.ui.view_3d_logic import View3DManager
-    from moleditpy_linux.ui.molecule_scene import MoleculeScene
-    from moleditpy_linux.core.molecular_data import MolecularData
-    from moleditpy_linux.ui.custom_qt_interactor import CustomQtInteractor
+from .app_state import StateManager
+from .compute_logic import ComputeManager
+from .dialog_logic import DialogManager
+from .edit_3d_logic import Edit3DManager
+from .edit_actions_logic import EditActionsManager
+from .io_logic import IOManager
+from .export_logic import ExportManager
+from .main_window_init import MainInitManager
+from .string_importers import StringImporterManager
+from .ui_manager import UIManager
+from .view_3d_logic import View3DManager
+from .molecule_scene import MoleculeScene
+from ..core.molecular_data import MolecularData
+from .custom_qt_interactor import CustomQtInteractor
 
 
 class MainWindow(QMainWindow):
@@ -245,6 +228,16 @@ class MainWindow(QMainWindow):
         if self.statusBar():
             self.statusBar().showMessage(message, timeout)
 
+    def warning_message_box(self, title: str, message: str) -> None:
+        """Show a modal warning dialog."""
+        QMessageBox.warning(self, title, message)
+
+    def update_formula_label(self, text: str) -> None:
+        """Set the formula/info label text in the main toolbar."""
+        label = getattr(self.init_manager, "formula_label", None)
+        if label is not None:
+            label.setText(text)
+
     def set_last_successful_optimization_method(self, method: Optional[str]) -> None:
         """Set the last successful 3D optimization method."""
         self.compute_manager.last_successful_optimization_method = method
@@ -265,9 +258,8 @@ class MainWindow(QMainWindow):
             self.state_manager.saved_state = copy.deepcopy(
                 self.state_manager.get_current_state()
             )
-        except Exception:
-            # Safe defensive fallback catching Exception
-            pass
+        except (RuntimeError, TypeError, ValueError, AttributeError) as e:
+            logging.error(f"save_state_snapshot failed: {e}")
 
     def update_window_title(self) -> None:
         """Update main window title to reflect file path and save status."""
@@ -285,15 +277,19 @@ class MainWindow(QMainWindow):
         """Reset active calculation threads list."""
         self.compute_manager.reset_active_threads()
 
-    # --- Core Proxy Properties (Legacy Plugin Support Only. Bypassed by Core Logics) ---
+    def reset_undo_redo_stacks(self) -> None:
+        """Clear undo/redo history and push current state as the initial entry."""
+        self.edit_actions_manager.reset_history()
+
+    # --- Core Proxy Properties ---
     @property
     def current_mol(self) -> Optional[Chem.Mol]:
-        """Proxy for current molecule. Not for core logic use."""
+        """Proxy for current 3D molecule (read/write)."""
         return self.view_3d_manager.current_mol
 
     @current_mol.setter
     def current_mol(self, value: Any) -> None:
-        """Proxy for current molecule setter. Not for core logic use."""
+        """Proxy for current 3D molecule (read/write)."""
         self.view_3d_manager.current_mol = value
 
     @property
@@ -303,13 +299,18 @@ class MainWindow(QMainWindow):
 
     @property
     def data(self) -> MolecularData:
-        """Proxy for state data. Not for core logic use."""
+        """Proxy for molecular data (read)."""
         return self.state_manager.data  # type: ignore[return-value, no-any-return]
 
     @property
     def scene(self) -> Optional[MoleculeScene]:
-        """Proxy for 2D scene. Not for core logic use."""
+        """Proxy for 2D scene (read)."""
         return self.init_manager.scene
+
+    @property
+    def plugin_menu_manager(self):
+        """Proxy for plugin UI lifecycle manager. Not for core logic use."""
+        return self.init_manager.plugin_menu_manager
 
     def draw_molecule_3d(self, mol: Any) -> None:
         """Proxy for 3D rendering. Not for core logic use."""

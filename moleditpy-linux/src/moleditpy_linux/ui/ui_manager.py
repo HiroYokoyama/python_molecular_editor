@@ -31,21 +31,15 @@ from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .custom_interactor_style import CustomInteractorStyle
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy_linux.ui.custom_interactor_style import CustomInteractorStyle
+from .custom_interactor_style import CustomInteractorStyle
 
 
 # --- Classes ---
 class UIManager(QObject):
-    def __init__(self, host: Any = None) -> None:
+    def __init__(self, host: Any) -> None:
         super().__init__()
         self.is_2d_editable = False
-        if host is not None:
-            self.host = host
+        self.host = host
 
     def update_status_bar(self, message: str) -> None:
         """Update status bar with worker messages."""
@@ -217,7 +211,7 @@ class UIManager(QObject):
         """
         # 1. Persist settings
         try:
-            modified = getattr(self.host.init_manager, "settings_dirty", False) or (
+            modified = self.host.init_manager.settings_dirty or (
                 self.host.init_manager.settings != self.host.initial_settings
             )
             if modified:
@@ -228,7 +222,7 @@ class UIManager(QObject):
             pass
 
         # 2. Handle unsaved changes
-        if getattr(self.host.state_manager, "has_unsaved_changes", False):
+        if self.host.state_manager.has_unsaved_changes:
             reply = QMessageBox.question(
                 self.host,
                 "Unsaved Changes",
@@ -241,7 +235,7 @@ class UIManager(QObject):
 
             if reply == QMessageBox.StandardButton.Yes:
                 self.host.io_manager.save_project()
-                if getattr(self.host.state_manager, "has_unsaved_changes", False):
+                if self.host.state_manager.has_unsaved_changes:
                     return False
             elif reply == QMessageBox.StandardButton.Cancel:
                 return False
@@ -266,18 +260,8 @@ class UIManager(QObject):
             )
             for thr in active_threads:
                 try:
-                    if hasattr(thr, "quit"):
-                        thr.quit()
-                    else:
-                        logging.error(
-                            "DIAGNOSTIC WARNING: Missing attribute 'quit' on thr"
-                        )
-                    if hasattr(thr, "wait"):
-                        thr.wait(200)
-                    else:
-                        logging.error(
-                            "DIAGNOSTIC WARNING: Missing attribute 'wait' on thr"
-                        )
+                    thr.quit()
+                    thr.wait(200)
                 except (RuntimeError, TypeError):
                     # Safe defensive fallback catching RuntimeError, TypeError
                     pass
@@ -374,8 +358,7 @@ class UIManager(QObject):
                 if handler_def["callback"](file_path):
                     event.acceptProposedAction()
                     return
-            except (AttributeError, RuntimeError, TypeError, ValueError):
-                # Log but suppress plugin-specific drop handler errors to prevent app-wide crash
+            except Exception:  # plugins have full app access; catch everything to prevent app-wide crash
                 logging.exception("Error in plugin drop handler")
 
         # 2. Built-in Handlers
@@ -615,22 +598,15 @@ class UIManager(QObject):
                 right_percent = round(sizes[1] * 100 / total)
 
                 # Show ratio in tooltip
-                if hasattr(splitter, "handle"):
+                try:
+                    handle = splitter.handle(1)
+                except (AttributeError, RuntimeError, TypeError):
+                    return
+                if handle:
                     try:
-                        handle = splitter.handle(1)
+                        handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
                     except (AttributeError, RuntimeError, TypeError):
                         return
-                    if handle:
-                        try:
-                            handle.setToolTip(
-                                f"2D: {left_percent}% | 3D: {right_percent}%"
-                            )
-                        except (AttributeError, RuntimeError, TypeError):
-                            return
-                else:
-                    logging.error(
-                        "DIAGNOSTIC WARNING: Missing attribute 'handle' on object"
-                    )
 
     def setup_splitter_tooltip(self) -> None:
         """Set initial splitter tooltip."""

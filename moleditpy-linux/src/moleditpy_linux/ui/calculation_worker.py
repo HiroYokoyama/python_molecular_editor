@@ -16,7 +16,6 @@ import re
 import numpy as np
 import sys
 import subprocess
-import time
 from typing import Any, Callable, Dict, Optional, Set, Tuple
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
@@ -26,10 +25,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry
 from rdkit.DistanceGeometry import DoTriangleSmoothing
 
-try:
-    from .. import OBABEL_AVAILABLE
-except ImportError:
-    from moleditpy_linux import OBABEL_AVAILABLE
+from .. import OBABEL_AVAILABLE
 
 # Only import pybel on demand
 if OBABEL_AVAILABLE:
@@ -82,6 +78,20 @@ _OPT_METHOD_LABELS = {
     "GAFF_OBABEL": "GAFF (Open Babel)",
     "GHEMICAL_OBABEL": "Ghemical (Open Babel)",
 }
+
+
+def _resolve_method_key(opt_method: str) -> str:
+    """Resolve an optimization method string to the force-field key used by RDKit/OpenBabel."""
+    upper = opt_method.upper()
+    if "UFF" in upper:
+        return "UFF"
+    if "GAFF" in upper:
+        return "GAFF"
+    if "GHEMICAL" in upper:
+        return "GHEMICAL"
+    if "MMFF94" in upper and "MMFF94S" not in upper:
+        return "MMFF94"
+    return "MMFF94s"
 
 
 def _adjust_collision_avoidance(
@@ -252,7 +262,6 @@ def _iterative_optimize(
             chunk = min(chunk_size, max_iters - iters_done)
             res = ff.Minimize(maxIts=chunk)
             iters_done += chunk
-            time.sleep(0.001)
 
             if res == 0:
                 break
@@ -290,7 +299,6 @@ def _iterative_optimize_obabel(
             if check_halted_cb():
                 raise WorkerHaltError("Halted")
             ff.ConjugateGradients(chunk_size)
-            time.sleep(0.001)
 
         ff.GetCoordinates(ob_mol.OBMol)
         conf = mol.GetConformer()
@@ -528,17 +536,7 @@ def _perform_direct_conversion(
 
         opt_method = (options or {}).get("optimization_method") or "MMFF94s_RDKIT"
         backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
-        method_key = (
-            "UFF"
-            if "UFF" in opt_method.upper()
-            else (
-                "GAFF"
-                if "GAFF" in opt_method.upper()
-                else ("GHEMICAL" if "GHEMICAL" in opt_method.upper() else "MMFF94s")
-            )
-        )
-        if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper():
-            method_key = "MMFF94"
+        method_key = _resolve_method_key(opt_method)
 
         # Best-effort property assignment for UI feedback
         with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -575,17 +573,7 @@ def _perform_optimize_only(
     _safe_status("Optimizing existing 3D structure...")
     opt_method = str((options or {}).get("optimization_method") or "MMFF_RDKIT").upper()
     backend = "OBABEL" if "OBABEL" in opt_method else "RDKIT"
-    method_key = (
-        "UFF"
-        if "UFF" in opt_method
-        else (
-            "GAFF"
-            if "GAFF" in opt_method
-            else ("GHEMICAL" if "GHEMICAL" in opt_method else "MMFF94s")
-        )
-    )
-    if "MMFF94" in opt_method and "MMFF94S" not in opt_method:
-        method_key = "MMFF94"
+    method_key = _resolve_method_key(opt_method)
 
     # Best-effort property assignment for UI feedback
     with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -604,7 +592,7 @@ def _perform_optimize_only(
         _safe_status(
             f"Warning: Optimization with {opt_method} failed. Structure preserved."
         )
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(KeyError):
             mol.ClearProp("_pme_optimization_method")
 
     # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
@@ -668,17 +656,7 @@ print(ob_mol.write("mol"))
         _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
         opt_method = opt_method or "MMFF94s_RDKIT"
         backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
-        method_key = (
-            "UFF"
-            if "UFF" in opt_method.upper()
-            else (
-                "GAFF"
-                if "GAFF" in opt_method.upper()
-                else ("GHEMICAL" if "GHEMICAL" in opt_method.upper() else "MMFF94s")
-            )
-        )
-        if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper():
-            method_key = "MMFF94"
+        method_key = _resolve_method_key(opt_method)
 
         # Best-effort property assignment for UI feedback
         with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -726,6 +704,7 @@ class CalculationWorker(QObject):
     def __init__(self, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self.halt_ids: Optional[Set[Any]] = None
+        self.halt_all: bool = False
         self.start_work.connect(self.run_calculation)
 
     @pyqtSlot(str, object)
@@ -738,7 +717,7 @@ class CalculationWorker(QObject):
 
         def _check_halted() -> bool:
             h_ids = getattr(self, "halt_ids", None)
-            if getattr(self, "halt_all", False):
+            if self.halt_all:
                 return True  # type: ignore[return-value]
             if not isinstance(h_ids, set):
                 return False
@@ -840,20 +819,10 @@ class CalculationWorker(QObject):
             # Swallow here; the loop has already been notified
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 self.error.emit((w_id, "Halted"))
-        except (
-            Exception,
-            RuntimeError,
-            ValueError,
-            TypeError,
-            AttributeError,
-            ImportError,
-            OSError,
-            UnicodeDecodeError,
-        ) as e:
+        except Exception as e:
             try:
                 _safe_error(str(e))
             except WorkerHaltError:
-                # Swallowed if safe_error itself detected a halt
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                     self.error.emit((w_id, "Halted"))
 
@@ -947,17 +916,7 @@ class CalculationWorker(QObject):
         _adjust_collision_avoidance(mol, _check_halted, _safe_status)
         opt_method = options.get("optimization_method") or "MMFF94s_RDKIT"
         backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
-        method_key = (
-            "UFF"
-            if "UFF" in opt_method.upper()
-            else (
-                "GAFF"
-                if "GAFF" in opt_method.upper()
-                else ("GHEMICAL" if "GHEMICAL" in opt_method.upper() else "MMFF94s")
-            )
-        )
-        if "MMFF94" in opt_method.upper() and "MMFF94S" not in opt_method.upper():
-            method_key = "MMFF94"
+        method_key = _resolve_method_key(opt_method)
 
         with contextlib.suppress(AttributeError, RuntimeError, TypeError):
             mol.SetProp("_pme_optimization_method", opt_method)

@@ -23,24 +23,16 @@ import pyvista as pv
 from PyQt6.QtCore import QRectF, QSize, Qt
 from PyQt6.QtGui import QBrush, QImage, QPainter
 from PyQt6.QtSvg import QSvgGenerator
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .atom_item import AtomItem
-    from .bond_item import BondItem
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy_linux.ui.atom_item import AtomItem
-    from moleditpy_linux.ui.bond_item import BondItem
+from .atom_item import AtomItem
+from .bond_item import BondItem
 
 
 # --- Class Definition ---
 class ExportManager:
     """Independent manager for export logic, ported from MainWindowExport mixin."""
-
-    _cls: Optional[type[ExportManager]] = None
 
     def __init__(self, host: Any) -> None:
         self.host = host
@@ -523,10 +515,6 @@ class ExportManager:
                             ):
                                 vtk_color = actor.prop.GetColor()
                                 color = [int(c * 255) for c in vtk_color]
-                            else:
-                                logging.error(
-                                    "DIAGNOSTIC WARNING: Missing color attribute on actor/property"
-                                )
                         except (AttributeError, RuntimeError, TypeError):
                             # Use default color on failure to avoid console noise during complex mesh export
                             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
@@ -725,8 +713,6 @@ class ExportManager:
             return
 
         is_transparent = reply == QMessageBox.StandardButton.Yes
-
-        QApplication.processEvents()
 
         items_to_restore = {}
         original_background = None
@@ -964,6 +950,3 @@ class ExportManager:
             self.host.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
         except (AttributeError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
-
-
-ExportManager._cls = ExportManager

@@ -4623,6 +4623,21 @@ _No description provided._
 
 - mock_main_window.ui_manager.enter_3d_viewer_mode.assert_called_once()
 
+### TestPluginInterface.test_load_from_smiles
+_No description provided._
+
+- mock_main_window.string_importer_manager.load_from_smiles.assert_called_once_with('C')
+
+### TestPluginInterface.test_to_xyz_block
+_No description provided._
+
+- assert xyz is not None
+- assert 'C' in xyz
+- assert '1.23' in xyz
+- assert '4.56' in xyz
+- assert '7.89' in xyz
+- assert ctx.to_xyz_block() is None
+
 ### TestPluginInterface.test_set_bond_color_by_atoms
 _No description provided._
 

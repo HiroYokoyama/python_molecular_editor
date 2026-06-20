@@ -28,20 +28,12 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
-try:
-    from .geometry_base_dialog import GeometryBaseDialog
-    from ..core.mol_geometry import (
-        adjust_dihedral,
-        calculate_dihedral,
-        get_connected_group,
-    )
-except ImportError:
-    from moleditpy_linux.ui.geometry_base_dialog import GeometryBaseDialog
-    from moleditpy_linux.core.mol_geometry import (
-        adjust_dihedral,
-        calculate_dihedral,
-        get_connected_group,
-    )
+from .geometry_base_dialog import GeometryBaseDialog
+from ..core.mol_geometry import (
+    adjust_dihedral,
+    calculate_dihedral,
+    get_connected_group,
+)
 
 if TYPE_CHECKING:
     from .main_window import MainWindow

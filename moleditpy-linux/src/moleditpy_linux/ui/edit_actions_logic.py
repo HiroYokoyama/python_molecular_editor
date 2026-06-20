@@ -40,6 +40,15 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
+from .atom_item import AtomItem
+from .bond_item import BondItem
+from ..utils.constants import CLIPBOARD_MIME_TYPE
+from ..core.molecular_data import MolecularData
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
+
+if TYPE_CHECKING:
+    from .main_window import MainWindow
+
 
 class Rotate2DDialog(QDialog):
     def __init__(
@@ -86,22 +95,9 @@ class Rotate2DDialog(QDialog):
         return self.angle_spin.value()
 
 
-from .atom_item import AtomItem
-from .bond_item import BondItem
-from ..utils.constants import CLIPBOARD_MIME_TYPE
-from ..core.molecular_data import MolecularData
-from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-
-
-if TYPE_CHECKING:
-    from .main_window import MainWindow
-
-
 # --- Class Definition ---
 class EditActionsManager:
     """Independent manager for molecular editing actions, ported from MainWindowEditActions mixin."""
-
-    _cls = None
 
     def __init__(self, host: MainWindow) -> None:
         self.dragged_atom_info = None
@@ -110,6 +106,12 @@ class EditActionsManager:
         self.last_rotation_angle: float = 0
         self.undo_stack: List[Dict[str, Any]] = []
         self.redo_stack: List[Dict[str, Any]] = []
+
+    def reset_history(self) -> None:
+        """Clear undo/redo stacks and push current state as the initial entry."""
+        self.undo_stack.clear()
+        self.redo_stack.clear()
+        self.push_undo_state()
 
     def push_undo_state(self) -> None:
         """Saves current molecular state to undo stack for history tracking."""
@@ -499,12 +501,6 @@ class EditActionsManager:
                     # Continue with next batch on unexpected errors
                     continue
 
-                try:
-                    QApplication.processEvents()
-                except RuntimeError:
-                    # Suppress non-critical error
-                    # Safe defensive fallback catching RuntimeError
-                    pass
             # Determine how many hydrogens actually were removed by re-scanning data
             remaining_h = 0
             try:
@@ -835,11 +831,7 @@ class EditActionsManager:
 
     def clear_all(self, skip_check: bool = False) -> bool:
         # Check for unsaved changes
-        if (
-            not skip_check
-            and hasattr(self.host, "state_manager")
-            and self.host.state_manager
-        ):
+        if not skip_check and self.host.state_manager:
             if not self.host.state_manager.check_unsaved_changes():
                 # Cancel if requested
                 return False
@@ -896,9 +888,6 @@ class EditActionsManager:
         # Update menu text and state
         self.host.view_3d_manager.update_atom_id_menu_text()
         self.host.view_3d_manager.update_atom_id_menu_state()
-
-        # Force UI event processing
-        QApplication.processEvents()
 
         # Call plugin document reset handlers
         if self.host.plugin_manager:
@@ -1064,7 +1053,7 @@ class EditActionsManager:
                         # Suppress transient errors during item update.
                         it.update()
                 else:
-                    logging.error("REPORT ERROR: Missing attribute 'update' on it")
+                    logging.warning("REPORT ERROR: Missing attribute 'update' on it")
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Ignore any unexpected errors when touching the item
                 continue
@@ -1461,11 +1450,7 @@ class EditActionsManager:
         Optimize 3D button is re-evaluated (enabled unless chem_check_failed
         is True).
         """
-        target = (
-            mol
-            if mol is not None
-            else getattr(self.host.view_3d_manager, "current_mol", None)
-        )
+        target = mol if mol is not None else self.host.view_3d_manager.current_mol
         if target is not None:
             # Remove RDKit property _xyz_skip_checks
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -1488,6 +1473,3 @@ class EditActionsManager:
             self.host.init_manager.optimize_3d_button.setEnabled(
                 not getattr(self.host, "chem_check_failed", False)
             )
-
-
-EditActionsManager._cls = EditActionsManager  # type: ignore[assignment]

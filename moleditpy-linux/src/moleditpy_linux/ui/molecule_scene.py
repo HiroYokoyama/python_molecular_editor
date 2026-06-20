@@ -45,7 +45,6 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.template_preview = None
         self.template_preview_points = []
         self.was_selected_on_press = False
-        self.data, self.window = data, window
         self.mode: str = "select"
         self.current_atom_symbol: str = "C"
         self.bond_order: int = 1
@@ -97,7 +96,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         """Update the positions of all bonds connected to the specified atom list."""
         bonds_to_update = set()
         for atom in atoms:
-            if hasattr(atom, "bonds"):
+            if hasattr(
+                atom, "bonds"
+            ):  # guard: non-AtomItem QGraphicsItems may be passed
                 bonds_to_update.update(atom.bonds)
 
         for bond in bonds_to_update:
@@ -199,6 +200,87 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 item.update()
         if self.views():
             self.views()[0].viewport().update()
+
+    def restore_atoms_and_bonds(self, raw_atoms: dict, raw_bonds: dict) -> None:
+        """Restore scene items from undo/redo state (dict-of-dicts format)."""
+        for atom_id, data in raw_atoms.items():
+            raw_pos = tuple(data["pos"])
+            pos_q = QPointF(raw_pos[0], raw_pos[1])
+            charge = data.get("charge", 0)
+            radical = data.get("radical", 0)
+            atom_item = AtomItem(
+                atom_id, data["symbol"], pos_q, charge=charge, radical=radical
+            )
+            self.data.atoms[atom_id] = {
+                "symbol": data["symbol"],
+                "pos": raw_pos,
+                "charge": charge,
+                "radical": radical,
+            }
+            self.atom_items[atom_id] = atom_item
+            self.addItem(atom_item)
+
+        for key_tuple, data in raw_bonds.items():
+            id1, id2 = key_tuple
+            if id1 in self.data.atoms and id2 in self.data.atoms:
+                atom1_item = self.atom_items[id1]
+                atom2_item = self.atom_items[id2]
+                bond_item = BondItem(
+                    atom1_item, atom2_item, data.get("order", 1), data.get("stereo", 0)
+                )
+                self.data.bonds[key_tuple] = {
+                    "order": data.get("order", 1),
+                    "stereo": data.get("stereo", 0),
+                }
+                self.bond_items[key_tuple] = bond_item
+                atom1_item.bonds.append(bond_item)
+                atom2_item.bonds.append(bond_item)
+                self.addItem(bond_item)
+
+        for atom_item in self.atom_items.values():
+            atom_item.update_style()
+        self.update_all_items()
+
+    def restore_atoms_and_bonds_from_json(self, atoms_2d: list, bonds_2d: list) -> None:
+        """Restore scene items from PMEPRJ JSON (list-of-dicts format)."""
+        for atom_data in atoms_2d:
+            atom_id = atom_data["id"]
+            symbol = atom_data["symbol"]
+            raw_pos = (float(atom_data["x"]), float(atom_data["y"]))
+            pos_q = QPointF(raw_pos[0], raw_pos[1])
+            charge = atom_data.get("charge", 0)
+            radical = atom_data.get("radical", 0)
+            atom_item = AtomItem(atom_id, symbol, pos_q, charge=charge, radical=radical)
+            self.data.atoms[atom_id] = {
+                "symbol": symbol,
+                "pos": raw_pos,
+                "charge": charge,
+                "radical": radical,
+            }
+            self.atom_items[atom_id] = atom_item
+            self.addItem(atom_item)
+
+        for bond_data in bonds_2d:
+            atom1_id = bond_data["atom1"]
+            atom2_id = bond_data["atom2"]
+            if atom1_id in self.data.atoms and atom2_id in self.data.atoms:
+                atom1_item = self.atom_items[atom1_id]
+                atom2_item = self.atom_items[atom2_id]
+                bond_order = bond_data["order"]
+                stereo = bond_data.get("stereo", 0)
+                bond_item = BondItem(atom1_item, atom2_item, bond_order, stereo=stereo)
+                atom1_item.bonds.append(bond_item)
+                atom2_item.bonds.append(bond_item)
+                self.data.bonds[(atom1_id, atom2_id)] = {
+                    "order": bond_order,
+                    "stereo": stereo,
+                }
+                self.bond_items[(atom1_id, atom2_id)] = bond_item
+                self.addItem(bond_item)
+
+        for atom_item in self.atom_items.values():
+            atom_item.update_style()
+        self.update_all_items()
 
     def reinitialize_items(self) -> None:
         self.template_preview = TemplatePreviewItem()
@@ -306,14 +388,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             f"Error in E/Z stereo toggle (mousePressEvent): {e}",
                             exc_info=True,
                         )
-                        if hasattr(self.window, "statusBar"):
-                            sb = self.window.statusBar()
-                            if sb:
-                                sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
-                        else:
-                            logging.error(
-                                "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
-                            )
+                        sb = self.window.statusBar()
+                        if sb:
+                            sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
                         self.update_all_items()  # Redraw even on error to maintain consistency
                 # AtomItem does nothing
             # --- Normal processing ---
@@ -472,9 +549,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 # Complete event processing here to prevent selection of underlying items
                 self.start_atom = None
                 self.press_pos = None
-                if self.data_changed_in_event:
-                    self.update_all_items()
-                    self.window.edit_actions_manager.push_undo_state()
+                self.update_all_items()
+                self.window.edit_actions_manager.push_undo_state()
                 return
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
@@ -503,8 +579,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.start_atom = None
             self.start_pos = None
             self.press_pos = None
-            if self.data_changed_in_event:
-                self.window.edit_actions_manager.push_undo_state()
+            self.window.edit_actions_manager.push_undo_state()
             return
         elif (
             (self.mode == "charge_plus" or self.mode == "charge_minus")
@@ -522,8 +597,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.start_atom = None
             self.start_pos = None
             self.press_pos = None
-            if self.data_changed_in_event:
-                self.window.edit_actions_manager.push_undo_state()
+            self.window.edit_actions_manager.push_undo_state()
             return
 
         elif (
@@ -534,8 +608,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             b = released_item
             if self.mode == "bond_2_5":
                 try:
-                    if hasattr(b, "order") and b.order == 2:
-                        current_stereo = getattr(b, "stereo", 0)
+                    if b.order == 2:
+                        current_stereo = b.stereo
                         if current_stereo not in [3, 4]:
                             new_stereo = 3  # None -> Z
                         elif current_stereo == 3:
@@ -543,29 +617,17 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         else:  # current_stereo == 4
                             new_stereo = 0  # E -> None
 
-                        if hasattr(self, "update_bond_stereo"):
-                            self.update_bond_stereo(b, new_stereo)
-                            self.update_all_items()  # Force redraw
-                            self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
-                        else:
-                            logging.error(
-                                "DIAGNOSTIC WARNING: Missing attribute 'update_bond_stereo' on self"
-                            )
+                        self.update_bond_stereo(b, new_stereo)
+                        self.update_all_items()  # Force redraw
+                        self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.error(
                         f"Error in E/Z stereo toggle (mouseReleaseEvent): {e}",
                         exc_info=True,
                     )
-                    if hasattr(self.window, "statusBar"):
-                        sb = self.window.statusBar()
-                        if sb:
-                            sb.showMessage(
-                                f"Error changing E/Z stereochemistry: {e}", 5000
-                            )
-                    else:
-                        logging.error(
-                            "DIAGNOSTIC WARNING: Missing attribute 'statusBar' on self.window"
-                        )
+                    sb = self.window.statusBar()
+                    if sb:
+                        sb.showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
                     self.update_all_items()  # Redraw even on error to maintain consistency
                 return  # Do not proceed further
             elif (
@@ -734,8 +796,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             if self.views():
                 self.views()[0].viewport().update()
 
-        if getattr(self, "data_changed_in_event", False):
+        if self.data_changed_in_event:
             self.update_all_items()
+            self.window.edit_actions_manager.push_undo_state()
 
         self.start_atom = None
         self.start_pos = None
@@ -743,8 +806,6 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.temp_line = None
         # Clear template context but NOT the template data itself to allow multiple placements
         self.template_context = {}
-        if getattr(self, "data_changed_in_event", False):
-            self.window.edit_actions_manager.push_undo_state()
 
     def mouseDoubleClickEvent(self, event: Any) -> None:
         """Handle double click events."""
@@ -875,19 +936,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         for obj in list(self._deleted_items):
             if not sip_isdeleted_safe(obj):
                 try:
-                    if hasattr(obj, "hide"):
-                        obj.hide()
-                    else:
-                        logging.error(
-                            "DIAGNOSTIC WARNING: Missing attribute 'hide' on obj"
-                        )
+                    obj.hide()
                     if hasattr(obj, "bonds") and obj.bonds is not None:
-                        if hasattr(obj.bonds, "clear"):
-                            obj.bonds.clear()
-                        else:
-                            logging.error(
-                                "DIAGNOSTIC WARNING: Missing attribute 'clear' on object"
-                            )
+                        obj.bonds.clear()
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.debug(f"Error purging item {obj} in MoleculeScene: {e}")
 

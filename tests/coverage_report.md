@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **82.45%**
+- **Overall Project Coverage**: **82.46%**
 
 ### Coverage Breakdown
 
@@ -10,7 +10,7 @@
 | moleditpy\src\moleditpy\main.py                         |     77 |     21 |   72.7% |
 | moleditpy\src\moleditpy\core\mol_geometry.py            |    260 |     19 |   92.7% |
 | moleditpy\src\moleditpy\core\molecular_data.py          |    245 |     29 |   88.2% |
-| moleditpy\src\moleditpy\plugins\plugin_interface.py     |    197 |      4 |   98.0% |
+| moleditpy\src\moleditpy\plugins\plugin_interface.py     |    216 |      6 |   97.2% |
 | moleditpy\src\moleditpy\plugins\plugin_manager.py       |    369 |     10 |   97.3% |
 | moleditpy\src\moleditpy\plugins\plugin_manager_window.py |    185 |      2 |   98.9% |
 | moleditpy\src\moleditpy\ui\__init__.py                  |      7 |      3 |   57.1% |
@@ -66,7 +66,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      0 |  100.0% |
-| **TOTAL** | **15508** | **2722** | **82.45%** |
+| **TOTAL** | **15527** | **2724** | **82.46%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

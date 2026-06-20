@@ -167,7 +167,11 @@ class ComputeManager:
         menu.exec(self.host.init_manager.convert_button.mapToGlobal(pos))
 
     def _trigger_conversion_with_temp_mode(self, mode_key: str) -> None:
-        QTimer.singleShot(0, lambda: self.trigger_conversion(conversion_mode=mode_key))
+        # Store mode as instance attribute so it reaches trigger_conversion
+        # without passing a kwarg — plugins may wrap trigger_conversion without
+        # forwarding **kwargs, which would cause a TypeError.
+        self._pending_conversion_mode = mode_key
+        QTimer.singleShot(0, self.trigger_conversion)
 
     def show_optimize_menu(self, pos: QPoint) -> None:
         """Temporary 3D optimization menu (right-click)."""
@@ -204,6 +208,9 @@ class ComputeManager:
         optimization_method: Optional[str] = None,
     ) -> None:
         """Main entry point for 2D to 3D conversion."""
+        if conversion_mode is None:
+            conversion_mode = self.__dict__.get("_pending_conversion_mode")
+            self.__dict__.pop("_pending_conversion_mode", None)
         self.last_successful_optimization_method = None
         self.host.set_constraints_3d([])
 
@@ -271,7 +278,7 @@ class ComputeManager:
             "conversion_mode": conversion_mode
             or self.host.init_manager.settings.get("3d_conversion_mode", "fallback"),
             "optimization_method": optimization_method
-            or getattr(self.host.init_manager, "optimization_method", "MMFF_RDKIT"),
+            or self.host.init_manager.optimization_method,
             "optimize_intermolecular_interaction_rdkit": self.host.init_manager.settings.get(
                 "optimize_intermolecular_interaction_rdkit", True
             ),
@@ -306,14 +313,11 @@ class ComputeManager:
             )
             return
 
-        method = method_key or getattr(
-            self.host.init_manager, "optimization_method", "MMFF_RDKIT"
-        )
+        method = method_key or self.host.init_manager.optimization_method
         method = method.upper() if method else "MMFF_RDKIT"
 
         # Validate method against known labels (from init_manager) and registered plugins
-        _init_mgr = getattr(self.host, "init_manager", None)
-        _init_methods = set(getattr(_init_mgr, "opt3d_method_labels", None) or {})
+        _init_methods = set(self.host.init_manager.opt3d_method_labels or {})
         _plugin_mgr = getattr(self.host, "plugin_manager", None)
         _plugin_methods = set(getattr(_plugin_mgr, "optimization_methods", {}) or {})
         _all_known = _init_methods | _plugin_methods | {"OPTIMIZE_ONLY"}
@@ -376,7 +380,7 @@ class ComputeManager:
         self.host.init_manager.scene.clear_all_problem_flags()
         try:
             Chem.SanitizeMol(mol)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logging.error(f"Sanitization failed: {e}")
             self.host.statusBar().showMessage("Error: Invalid chemical structure.")
             return None
@@ -387,11 +391,11 @@ class ComputeManager:
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
         self.host.statusBar().showMessage(msg)
 
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(RuntimeError):
             QMessageBox.critical(self.host, "Chemistry Problem", msg)
 
         for prob in problems:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(AttributeError, KeyError, RuntimeError):
                 atom_idx = prob.GetAtomIdx()
                 rd_atom = mol.GetAtomWithIdx(atom_idx)
                 orig_id = rd_atom.GetIntProp("_original_atom_id")
@@ -480,11 +484,9 @@ class ComputeManager:
             if mol and mol.HasProp("_pme_optimization_method"):
                 method_key = mol.GetProp("_pme_optimization_method")
             if not method_key:
-                method_key = getattr(self, "optimization_method", None) or getattr(
-                    self.host.init_manager, "optimization_method", None
-                )
+                method_key = self.host.init_manager.optimization_method
             if method_key:
-                labels = getattr(self.host.init_manager, "opt3d_method_labels", {})
+                labels = self.host.init_manager.opt3d_method_labels or {}
                 self.last_successful_optimization_method = labels.get(
                     method_key, method_key
                 )
@@ -592,7 +594,7 @@ class ComputeManager:
                 if all(mol.GetAtomWithIdx(i).GetIsAromatic() for i in ring):
                     aromatic_rings.append(ring)
             self.host.init_manager.scene.set_aromatic_rings(aromatic_rings)
-        except Exception as e:
+        except (RuntimeError, AttributeError) as e:
             logging.debug(f"Aromatic ring update failed: {e}")
 
     def select_connected_atoms(self) -> None:

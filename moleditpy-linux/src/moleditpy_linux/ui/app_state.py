@@ -29,11 +29,9 @@ from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
 
 # PyQt6 Modules
-from PyQt6.QtCore import QDateTime, QPointF, Qt
+from PyQt6.QtCore import QDateTime, Qt
 from PyQt6.QtWidgets import QMessageBox
 
-from .atom_item import AtomItem
-from .bond_item import BondItem
 from ..utils.constants import VERSION
 from ..core.molecular_data import MolecularData
 
@@ -45,9 +43,34 @@ if TYPE_CHECKING:
 
 
 # --- Class Definition ---
-class StateManager:
-    _cls = None
+def _serialize_constraints(constraints: list) -> list:
+    """Convert internal constraint tuples to JSON-serializable lists."""
+    result = []
+    for const in constraints:
+        if len(const) == 4:
+            result.append([const[0], list(const[1]), const[2], const[3]])
+        else:
+            result.append([const[0], list(const[1]), const[2], 1.0e5])
+    return result
 
+
+def _deserialize_constraints(raw: list) -> list:
+    """Convert JSON-loaded constraint lists back to internal tuples."""
+    result = []
+    for const in raw:
+        if not isinstance(const, (list, tuple)):
+            continue
+        try:
+            if len(const) == 4:
+                result.append((const[0], tuple(const[1]), const[2], const[3]))
+            elif len(const) == 3:
+                result.append((const[0], tuple(const[1]), const[2], 1.0e5))
+        except (TypeError, ValueError, IndexError) as e:
+            logging.debug(f"Failed to parse constraint {const}: {e}")
+    return result
+
+
+class StateManager:
     def __init__(self, host: MainWindow) -> None:
         self.host = host
         self.data: MolecularData  # Dynamically assigned in main_window_init.py
@@ -96,20 +119,9 @@ class StateManager:
 
         state["is_3d_viewer_mode"] = not self.host.ui_manager.is_2d_editable
 
-        json_safe_constraints = []
-        constraints = self.host.edit_3d_manager.constraints_3d
-        for const in constraints:
-            # (Type, (Idx...), Value, Force) -> [Type, [Idx...], Value, Force]
-            if len(const) == 4:
-                json_safe_constraints.append(
-                    [const[0], list(const[1]), const[2], const[3]]
-                )
-            else:
-                # Backward compatibility
-                json_safe_constraints.append(
-                    [const[0], list(const[1]), const[2], 1.0e5]
-                )
-        state["constraints_3d"] = json_safe_constraints
+        state["constraints_3d"] = _serialize_constraints(
+            self.host.edit_3d_manager.constraints_3d
+        )
 
         return state
 
@@ -147,69 +159,18 @@ class StateManager:
         raw_atoms = loaded_data.get("atoms", {})
         raw_bonds = loaded_data.get("bonds", {})
 
-        # Restore constraints
         loaded_constraints = loaded_data.get("constraints_3d", [])
-        constraints = []
-        if loaded_constraints and isinstance(loaded_constraints, list):
-            for const in loaded_constraints:
-                if isinstance(const, (list, tuple)):
-                    try:
-                        if len(const) == 4:
-                            constraints.append(
-                                (const[0], tuple(const[1]), const[2], const[3])
-                            )
-                        elif len(const) == 3:
-                            constraints.append(
-                                (const[0], tuple(const[1]), const[2], 1.0e5)
-                            )
-                    except (TypeError, ValueError, IndexError) as e:
-                        logging.debug(f"Failed to parse constraint {const}: {e}")
-        self.host.set_constraints_3d(constraints)
+        self.host.set_constraints_3d(
+            _deserialize_constraints(loaded_constraints)
+            if isinstance(loaded_constraints, list)
+            else []
+        )
 
-        for atom_id, data in raw_atoms.items():
-            raw_pos = tuple(data["pos"])
-            pos_q = QPointF(raw_pos[0], raw_pos[1])
-            charge = data.get("charge", 0)
-            radical = data.get("radical", 0)
-            # Pass QPointF to AtomItem for UI positioning
-            atom_item = AtomItem(
-                atom_id, data["symbol"], pos_q, charge=charge, radical=radical
-            )
-            self.host.state_manager.data.atoms[atom_id] = {
-                "symbol": data["symbol"],
-                "pos": raw_pos,
-                "charge": charge,
-                "radical": radical,
-            }
-            self.host.init_manager.scene.atom_items[atom_id] = atom_item
-            self.host.init_manager.scene.addItem(atom_item)
-
+        self.host.scene.restore_atoms_and_bonds(raw_atoms, raw_bonds)
         self.data.next_atom_id = loaded_data.get(
             "_next_atom_id",
             max(self.data.atoms.keys()) + 1 if self.data.atoms else 0,
         )
-
-        for key_tuple, data in raw_bonds.items():
-            id1, id2 = key_tuple
-            if id1 in self.data.atoms and id2 in self.data.atoms:
-                scene = self.host.init_manager.scene
-                atom1_item = scene.atom_items[id1]
-                atom2_item = scene.atom_items[id2]
-                bond_item = BondItem(
-                    atom1_item, atom2_item, data.get("order", 1), data.get("stereo", 0)
-                )
-                self.data.bonds[key_tuple] = {
-                    "order": data.get("order", 1),
-                    "stereo": data.get("stereo", 0),
-                }
-                self.host.init_manager.scene.bond_items[key_tuple] = bond_item
-                atom1_item.bonds.append(bond_item)
-                atom2_item.bonds.append(bond_item)
-                self.host.init_manager.scene.addItem(bond_item)
-
-        for atom_item in self.host.init_manager.scene.atom_items.values():
-            atom_item.update_style()
-        self.host.init_manager.scene.update_all_items()
         mol_3d_data = loaded_data.get("mol_3d")
         if mol_3d_data is not None:
             try:
@@ -246,7 +207,7 @@ class StateManager:
                             self.host.compute_manager.create_atom_id_mapping()
                             self.host.view_3d_manager.update_atom_id_menu_text()
                             self.host.view_3d_manager.update_atom_id_menu_state()
-                        except Exception as e:
+                        except (RuntimeError, AttributeError) as e:
                             logging.debug(
                                 f"Partial failure during ID mapping restoration: {e}"
                             )
@@ -303,24 +264,21 @@ class StateManager:
         if self.host.init_manager.current_file_path:
             filename = os.path.basename(self.host.init_manager.current_file_path)
             title = f"{filename} - {base_title}"
-            if self.host.state_manager.has_unsaved_changes:
+            if self.has_unsaved_changes:
                 title = f"*{title}"
         else:
             # Handle as Untitled
             title = f"Untitled - {base_title}"
-            if self.host.state_manager.has_unsaved_changes:
+            if self.has_unsaved_changes:
                 title = f"*{title}"
         self.host.setWindowTitle(title)
 
     def check_unsaved_changes(self) -> bool:
         """Check for unsaved changes and show warning."""
-        if not self.host.state_manager.has_unsaved_changes:
+        if not self.has_unsaved_changes:
             return True  # Saved or no changes
 
-        if (
-            not self.host.state_manager.data.atoms
-            and self.host.view_3d_manager.current_mol is None
-        ):
+        if not self.data.atoms and self.host.view_3d_manager.current_mol is None:
             return True  # Empty document
 
         reply = QMessageBox.question(
@@ -341,7 +299,7 @@ class StateManager:
             else:
                 self.host.io_manager.save_project()
             return (
-                not self.host.state_manager.has_unsaved_changes
+                not self.has_unsaved_changes
             )  # Return True only if save was successful
         elif reply == QMessageBox.StandardButton.No:
             return True  # Continue without saving
@@ -349,36 +307,29 @@ class StateManager:
             return False  # Cancel
 
     def reset_undo_stack(self) -> None:
-        self.host.edit_actions_manager.undo_stack.clear()
-        self.host.edit_actions_manager.redo_stack.clear()
-        self.host.edit_actions_manager.push_undo_state()
+        self.host.reset_undo_redo_stacks()
 
     def update_realtime_info(self) -> None:
         """Show molecular info in status bar."""
         if not self.data.atoms:
-            self.host.init_manager.formula_label.setText("")  # Clear label if no atoms
+            self.host.update_formula_label("")
             return
 
         if self.data:
             try:
                 mol = self.data.to_rdkit_mol()
                 if mol:
-                    # Generate mol with explicit Hs
                     mol_with_hs = Chem.AddHs(mol)
                     mol_formula = rdMolDescriptors.CalcMolFormula(mol)
-                    # Get atom count with Hs
                     num_atoms = mol_with_hs.GetNumAtoms()
-                    # Update label text
-                    if self.host.init_manager.formula_label:
-                        self.host.init_manager.formula_label.setText(
-                            f"Formula: {mol_formula}   |   Atoms: {num_atoms}"
-                        )
+                    self.host.update_formula_label(
+                        f"Formula: {mol_formula}   |   Atoms: {num_atoms}"
+                    )
             except (RuntimeError, TypeError, ValueError) as e:
                 logging.debug(
                     f"Molecular info update suppressed for unstable structure: {e}"
                 )
-                if self.host.init_manager.formula_label:
-                    self.host.init_manager.formula_label.setText("Invalid structure")
+                self.host.update_formula_label("Invalid structure")
 
     def create_json_data(self) -> Dict[str, Any]:
         """Convert current state to PMEJSON."""
@@ -393,9 +344,9 @@ class StateManager:
         }
 
         # 2D data
-        if self.host.state_manager.data.atoms:
+        if self.data.atoms:
             atoms_2d = []
-            for atom_id, data in self.host.state_manager.data.atoms.items():
+            for atom_id, data in self.data.atoms.items():
                 pos = data["pos"]
                 atom_data = {
                     "id": atom_id,
@@ -411,7 +362,7 @@ class StateManager:
             for (
                 atom1_id,
                 atom2_id,
-            ), bond_data in self.host.state_manager.data.bonds.items():
+            ), bond_data in self.data.bonds.items():
                 bond_info = {
                     "atom1": atom1_id,
                     "atom2": atom2_id,
@@ -423,7 +374,7 @@ class StateManager:
             json_data["2d_structure"] = {
                 "atoms": atoms_2d,
                 "bonds": bonds_2d,
-                "next_atom_id": self.host.state_manager.data.next_atom_id,
+                "next_atom_id": self.data.next_atom_id,
             }
 
         # 3D data
@@ -483,20 +434,11 @@ class StateManager:
                     }
                     bonds_3d.append(bond_3d)
 
-                # Convert constraints to JSON compatible format
-                json_safe_constraints = []
                 try:
-                    for const in self.host.edit_3d_manager.constraints_3d:
-                        if len(const) == 4:
-                            json_safe_constraints.append(
-                                [const[0], list(const[1]), const[2], const[3]]
-                            )
-                        else:
-                            json_safe_constraints.append(
-                                [const[0], list(const[1]), const[2], 1.0e5]
-                            )
+                    json_safe_constraints = _serialize_constraints(
+                        self.host.edit_3d_manager.constraints_3d
+                    )
                 except (AttributeError, TypeError, KeyError, ValueError):
-                    # Reset constraints if serialization fails
                     json_safe_constraints = []
 
                 json_data["3d_structure"] = {
@@ -576,8 +518,8 @@ class StateManager:
                     try:
                         p_state = callback()
                         plugin_data[name] = p_state
-                    except Exception as e:
-                        logging.error(f"Error saving state for plugin {name}: {e}")
+                    except Exception:  # plugins have full app access; catch everything to prevent save corruption
+                        logging.exception("Error saving state for plugin %s", name)
 
         if plugin_data:
             json_data["plugins"] = plugin_data
@@ -616,8 +558,8 @@ class StateManager:
                     if load_hand and callable(load_hand):
                         try:
                             load_hand(p_state)
-                        except (RuntimeError, ValueError, TypeError) as e:
-                            logging.error(f"Error loading state for plugin {name}: {e}")
+                        except Exception:  # plugins have full app access; catch everything to prevent load corruption
+                            logging.exception("Error loading state for plugin %s", name)
                     else:
                         # No handler found (plugin disabled or missing)
                         # Preserve data so it's not lost on next save
@@ -629,89 +571,20 @@ class StateManager:
             atoms_2d = structure_2d.get("atoms", [])
             bonds_2d = structure_2d.get("bonds", [])
 
-            # Restore atoms
-            for atom_data in atoms_2d:
-                atom_id = atom_data["id"]
-                symbol = atom_data["symbol"]
-                raw_pos = (float(atom_data["x"]), float(atom_data["y"]))
-                pos_q = QPointF(raw_pos[0], raw_pos[1])
-                charge = atom_data.get("charge", 0)
-                radical = atom_data.get("radical", 0)
-
-                atom_item = AtomItem(
-                    atom_id, symbol, pos_q, charge=charge, radical=radical
-                )
-                self.data.atoms[atom_id] = {
-                    "symbol": symbol,
-                    "pos": raw_pos,
-                    "charge": charge,
-                    "radical": radical,
-                }
-                self.host.init_manager.scene.atom_items[atom_id] = atom_item
-                self.host.init_manager.scene.addItem(atom_item)
-
-            # Restore next_atom_id
-
+            self.host.scene.restore_atoms_and_bonds_from_json(atoms_2d, bonds_2d)
             self.data.next_atom_id = structure_2d.get(
                 "next_atom_id",
                 max([atom["id"] for atom in atoms_2d]) + 1 if atoms_2d else 0,
             )
-
-            # Restore bonds
-            for bond_data in bonds_2d:
-                atom1_id = bond_data["atom1"]
-                atom2_id = bond_data["atom2"]
-
-                if atom1_id in self.data.atoms and atom2_id in self.data.atoms:
-                    scene = self.host.init_manager.scene
-                    atom1_item = scene.atom_items[atom1_id]
-                    atom2_item = scene.atom_items[atom2_id]
-
-                    bond_order = bond_data["order"]
-                    stereo = bond_data.get("stereo", 0)
-
-                    bond_item = BondItem(
-                        atom1_item, atom2_item, bond_order, stereo=stereo
-                    )
-                    # Add to bond list (used for C visibility)
-                    atom1_item.bonds.append(bond_item)
-                    atom2_item.bonds.append(bond_item)
-
-                    self.data.bonds[(atom1_id, atom2_id)] = {
-                        "order": bond_order,
-                        "stereo": stereo,
-                    }
-                    self.host.init_manager.scene.bond_items[(atom1_id, atom2_id)] = (
-                        bond_item
-                    )
-                    self.host.init_manager.scene.addItem(bond_item)
-
-            # Update all AtomItem styles
-            for atom_item in self.host.init_manager.scene.atom_items.values():
-                atom_item.update_style()
-            self.host.init_manager.scene.update_all_items()
         # Restore 3D data
         structure_3d = json_data.get("3d_structure")
         if isinstance(structure_3d, dict):
-            # Restore constraints
             loaded_constraints = structure_3d.get("constraints_3d", [])
-            constraints = []
-            if loaded_constraints and isinstance(loaded_constraints, list):
-                for const in loaded_constraints:
-                    if isinstance(const, (list, tuple)):
-                        try:
-                            if len(const) == 4:
-                                constraints.append(
-                                    (const[0], tuple(const[1]), const[2], const[3])
-                                )
-                            elif len(const) == 3:
-                                constraints.append(
-                                    (const[0], tuple(const[1]), const[2], 1.0e5)
-                                )
-                        except (TypeError, ValueError, IndexError):
-                            # Safe defensive fallback catching TypeError, ValueError, IndexError
-                            pass
-            self.host.set_constraints_3d(constraints)
+            self.host.set_constraints_3d(
+                _deserialize_constraints(loaded_constraints)
+                if isinstance(loaded_constraints, list)
+                else []
+            )
             try:
                 # Restore binary data
                 mol_base64 = structure_3d.get("mol_binary_base64")
@@ -788,6 +661,3 @@ class StateManager:
             except (RuntimeError, ValueError, TypeError, binascii.Error) as e:
                 logging.error(f"Could not restore 3D molecular data: {e}")
                 self.host.set_current_molecule(None)
-
-
-StateManager._cls = StateManager  # type: ignore[assignment]
