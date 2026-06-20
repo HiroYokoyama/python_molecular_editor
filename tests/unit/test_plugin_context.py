@@ -85,5 +85,140 @@ class TestMarkProjectModified(unittest.TestCase):
         self.assertTrue(callable(getattr(PluginContext, "mark_project_modified")))
 
 
+class TestRefreshUi(unittest.TestCase):
+    def test_calls_update_realtime_info(self):
+        mw = MagicMock()
+        _make_context(mw).refresh_ui()
+        mw.state_manager.update_realtime_info.assert_called_once()
+
+    def test_calls_update_undo_redo_actions(self):
+        mw = MagicMock()
+        _make_context(mw).refresh_ui()
+        mw.edit_actions_manager.update_undo_redo_actions.assert_called_once()
+
+    def test_calls_update_window_title(self):
+        mw = MagicMock()
+        _make_context(mw).refresh_ui()
+        mw.state_manager.update_window_title.assert_called_once()
+
+    def test_no_crash_when_mw_is_none(self):
+        _make_context(None).refresh_ui()
+
+    def test_no_crash_when_managers_missing(self):
+        _make_context(MagicMock(spec=[])).refresh_ui()
+
+
+class TestFit3dView(unittest.TestCase):
+    def test_calls_fit_to_view(self):
+        mw = MagicMock()
+        _make_context(mw).fit_3d_view()
+        mw.view_3d_manager.fit_to_view.assert_called_once()
+
+    def test_no_crash_when_mw_is_none(self):
+        _make_context(None).fit_3d_view()
+
+    def test_no_crash_when_fit_to_view_missing(self):
+        mw = MagicMock(spec=["view_3d_manager"])
+        mw.view_3d_manager = MagicMock(spec=[])
+        _make_context(mw).fit_3d_view()
+
+
+class TestClearCanvas(unittest.TestCase):
+    def test_calls_clear_2d_editor_default(self):
+        mw = MagicMock()
+        _make_context(mw).clear_canvas()
+        mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(
+            push_to_undo=True
+        )
+
+    def test_calls_clear_2d_editor_no_undo(self):
+        mw = MagicMock()
+        _make_context(mw).clear_canvas(push_to_undo=False)
+        mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(
+            push_to_undo=False
+        )
+
+    def test_no_crash_when_mw_is_none(self):
+        _make_context(None).clear_canvas()
+
+    def test_no_crash_when_manager_missing(self):
+        _make_context(MagicMock(spec=[])).clear_canvas()
+
+
+class TestSet3dFeaturesEnabled(unittest.TestCase):
+    def test_calls_enable_3d_features_true(self):
+        mw = MagicMock()
+        _make_context(mw).set_3d_features_enabled(True)
+        mw.ui_manager.enable_3d_features.assert_called_once_with(True)
+
+    def test_calls_enable_3d_features_false(self):
+        mw = MagicMock()
+        _make_context(mw).set_3d_features_enabled(False)
+        mw.ui_manager.enable_3d_features.assert_called_once_with(False)
+
+    def test_no_crash_when_mw_is_none(self):
+        _make_context(None).set_3d_features_enabled(True)
+
+    def test_no_crash_when_ui_manager_missing(self):
+        _make_context(MagicMock(spec=[])).set_3d_features_enabled(False)
+
+
+class TestSetAnalysisEnabled(unittest.TestCase):
+    def test_calls_set_enabled_true(self):
+        mw = MagicMock()
+        _make_context(mw).set_analysis_enabled(True)
+        mw.init_manager.analysis_action.setEnabled.assert_called_once_with(True)
+
+    def test_calls_set_enabled_false(self):
+        mw = MagicMock()
+        _make_context(mw).set_analysis_enabled(False)
+        mw.init_manager.analysis_action.setEnabled.assert_called_once_with(False)
+
+    def test_no_crash_when_mw_is_none(self):
+        _make_context(None).set_analysis_enabled(True)
+
+    def test_no_crash_when_analysis_action_missing(self):
+        mw = MagicMock(spec=["init_manager"])
+        mw.init_manager = MagicMock(spec=[])
+        _make_context(mw).set_analysis_enabled(True)
+
+
+class TestCheckChemistryProblems(unittest.TestCase):
+    def test_calls_fallback(self):
+        mw = MagicMock()
+        _make_context(mw).check_chemistry_problems()
+        mw.compute_manager.check_chemistry_problems_fallback.assert_called_once()
+
+    def test_no_crash_when_mw_is_none(self):
+        _make_context(None).check_chemistry_problems()
+
+    def test_no_crash_when_compute_manager_missing(self):
+        _make_context(MagicMock(spec=[])).check_chemistry_problems()
+
+
+class TestRefresh2dScene(unittest.TestCase):
+    def test_calls_update_all_items(self):
+        mw = MagicMock()
+        _make_context(mw).refresh_2d_scene()
+        mw.init_manager.scene.update_all_items.assert_called_once()
+
+    def test_no_crash_when_mw_is_none(self):
+        _make_context(None).refresh_2d_scene()
+
+    def test_no_crash_when_init_manager_missing(self):
+        _make_context(MagicMock(spec=[])).refresh_2d_scene()
+
+    def test_no_crash_when_scene_missing(self):
+        mw = MagicMock(spec=["init_manager"])
+        mw.init_manager = MagicMock(spec=[])
+        _make_context(mw).refresh_2d_scene()
+
+    def test_no_crash_when_update_all_items_missing(self):
+        mw = MagicMock(spec=["init_manager"])
+        mw.init_manager = MagicMock(spec=["scene"])
+        mw.init_manager.scene = MagicMock(spec=[])
+        _make_context(mw).refresh_2d_scene()
+
+
 if __name__ == "__main__":
     unittest.main()

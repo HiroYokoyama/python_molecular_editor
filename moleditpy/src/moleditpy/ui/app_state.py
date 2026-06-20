@@ -278,10 +278,7 @@ class StateManager:
         if not self.has_unsaved_changes:
             return True  # Saved or no changes
 
-        if (
-            not self.data.atoms
-            and self.host.view_3d_manager.current_mol is None
-        ):
+        if not self.data.atoms and self.host.view_3d_manager.current_mol is None:
             return True  # Empty document
 
         reply = QMessageBox.question(

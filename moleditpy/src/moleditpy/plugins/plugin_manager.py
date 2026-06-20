@@ -610,7 +610,9 @@ class PluginManager:
             try:
                 handler["callback"]()
             except Exception as e:  # plugins have full app access; catch everything to prevent data loss on document reset
-                logging.exception("Error in document reset handler for %s", handler["plugin"])
+                logging.exception(
+                    "Error in document reset handler for %s", handler["plugin"]
+                )
 
     def get_plugin_info_safe(self, file_path: str) -> Dict[str, str]:
         """Extracts plugin metadata using AST parsing (safe, no execution)."""

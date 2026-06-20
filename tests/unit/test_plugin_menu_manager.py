@@ -1,4 +1,5 @@
 """Unit tests for PluginMenuManager — plugin UI lifecycle management."""
+
 import pytest
 from unittest.mock import MagicMock, patch, call
 from PyQt6.QtGui import QAction
@@ -11,6 +12,7 @@ from moleditpy.ui.plugin_menu_manager import PluginMenuManager
 # Module-level patch: QAction(text, MagicMock) fails because PyQt6 strictly
 # validates the parent type. Strip the mock parent so tests stay lightweight.
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def _patch_qaction(monkeypatch):
@@ -26,6 +28,7 @@ def _patch_qaction(monkeypatch):
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
+
 
 def make_init_manager(
     *,
@@ -90,6 +93,7 @@ def pmm(im) -> PluginMenuManager:
 # Construction
 # ---------------------------------------------------------------------------
 
+
 class TestConstruction:
     def test_holds_init_manager_reference(self, im):
         mgr = PluginMenuManager(im)
@@ -99,6 +103,7 @@ class TestConstruction:
 # ---------------------------------------------------------------------------
 # update_plugin_menu
 # ---------------------------------------------------------------------------
+
 
 class TestUpdatePluginMenu:
     def test_does_nothing_when_no_plugin_manager(self, im, pmm):
@@ -149,6 +154,7 @@ class TestUpdatePluginMenu:
 # rebuild_plugin_menus
 # ---------------------------------------------------------------------------
 
+
 class TestRebuildPluginMenus:
     def test_calls_all_six_rebuild_steps(self, im):
         pmm = PluginMenuManager(im)
@@ -191,6 +197,7 @@ class TestRebuildPluginMenus:
         def ok_step(name):
             def _step():
                 call_order.append(name)
+
             return _step
 
         pmm.add_registered_plugin_actions = boom
@@ -230,6 +237,7 @@ class TestRebuildPluginMenus:
 # add_registered_plugin_actions
 # ---------------------------------------------------------------------------
 
+
 class TestAddRegisteredPluginActions:
     def test_no_menu_actions_does_nothing(self, im, pmm):
         im.host.plugin_manager.menu_actions = []
@@ -239,7 +247,12 @@ class TestAddRegisteredPluginActions:
     def test_creates_new_top_level_menu_with_separator(self, im, pmm):
         callback = MagicMock()
         im.host.plugin_manager.menu_actions = [
-            {"path": "MyPlugin/Action", "callback": callback, "text": "Run It", "shortcut": None}
+            {
+                "path": "MyPlugin/Action",
+                "callback": callback,
+                "text": "Run It",
+                "shortcut": None,
+            }
         ]
         im.host.menuBar.return_value.actions.return_value = []  # no existing menus
         new_menu = MagicMock()
@@ -256,7 +269,12 @@ class TestAddRegisteredPluginActions:
     def test_reuses_existing_top_level_menu(self, im, pmm):
         callback = MagicMock()
         im.host.plugin_manager.menu_actions = [
-            {"path": "File/ExportXYZ", "callback": callback, "text": "Export XYZ", "shortcut": None}
+            {
+                "path": "File/ExportXYZ",
+                "callback": callback,
+                "text": "Export XYZ",
+                "shortcut": None,
+            }
         ]
         existing_menu = MagicMock()
         existing_menu.actions.return_value = []
@@ -276,8 +294,18 @@ class TestAddRegisteredPluginActions:
         """The menubar separator is added exactly once even with multiple new menus."""
         im.plugin_menubar_separator_added = False
         im.host.plugin_manager.menu_actions = [
-            {"path": "PlugA/Action1", "callback": MagicMock(), "text": "A1", "shortcut": None},
-            {"path": "PlugB/Action2", "callback": MagicMock(), "text": "B1", "shortcut": None},
+            {
+                "path": "PlugA/Action1",
+                "callback": MagicMock(),
+                "text": "A1",
+                "shortcut": None,
+            },
+            {
+                "path": "PlugB/Action2",
+                "callback": MagicMock(),
+                "text": "B1",
+                "shortcut": None,
+            },
         ]
         im.host.menuBar.return_value.actions.return_value = []
         im.host.menuBar.return_value.addMenu.return_value = MagicMock(
@@ -291,7 +319,12 @@ class TestAddRegisteredPluginActions:
     def test_shortcut_applied_when_present(self, im, pmm):
         callback = MagicMock()
         im.host.plugin_manager.menu_actions = [
-            {"path": "Plug/Act", "callback": callback, "text": "Act", "shortcut": "Ctrl+P"}
+            {
+                "path": "Plug/Act",
+                "callback": callback,
+                "text": "Act",
+                "shortcut": "Ctrl+P",
+            }
         ]
         im.host.menuBar.return_value.actions.return_value = []
         new_menu = MagicMock(**{"actions.return_value": []})
@@ -307,6 +340,7 @@ class TestAddRegisteredPluginActions:
 # ---------------------------------------------------------------------------
 # add_plugin_toolbar_actions
 # ---------------------------------------------------------------------------
+
 
 class TestAddPluginToolbarActions:
     def test_no_toolbar_attribute_does_nothing(self):
@@ -332,7 +366,12 @@ class TestAddPluginToolbarActions:
         icon_file = tmp_path / "icon.png"
         icon_file.write_bytes(b"")  # create the file
         im.host.plugin_manager.toolbar_actions = [
-            {"text": "Icon Action", "callback": MagicMock(), "icon": str(icon_file), "tooltip": ""}
+            {
+                "text": "Icon Action",
+                "callback": MagicMock(),
+                "icon": str(icon_file),
+                "tooltip": "",
+            }
         ]
         pmm.add_plugin_toolbar_actions()
         added = im.plugin_toolbar.addAction.call_args[0][0]
@@ -342,6 +381,7 @@ class TestAddPluginToolbarActions:
 # ---------------------------------------------------------------------------
 # integrate_plugin_export_actions
 # ---------------------------------------------------------------------------
+
 
 class TestIntegratePluginExportActions:
     def test_no_export_actions_does_nothing(self, im, pmm):
@@ -391,6 +431,7 @@ class TestIntegratePluginExportActions:
 # integrate_plugin_analysis_tools
 # ---------------------------------------------------------------------------
 
+
 class TestIntegratePluginAnalysisTools:
     def test_no_analysis_menu_does_nothing(self, im, pmm):
         im.host.menuBar.return_value.actions.return_value = []
@@ -430,6 +471,7 @@ class TestIntegratePluginAnalysisTools:
 # ---------------------------------------------------------------------------
 # update_style_menu_with_plugins
 # ---------------------------------------------------------------------------
+
 
 class TestUpdateStyleMenuWithPlugins:
     def test_no_style_button_does_nothing(self):
@@ -484,6 +526,7 @@ class TestUpdateStyleMenuWithPlugins:
 # integrate_plugin_file_openers
 # ---------------------------------------------------------------------------
 
+
 class TestIntegratePluginFileOpeners:
     def test_no_file_openers_does_nothing(self, im, pmm):
         im.host.plugin_manager.file_openers = {}
@@ -513,6 +556,7 @@ class TestIntegratePluginFileOpeners:
 # ---------------------------------------------------------------------------
 # _clear_all_plugin_actions
 # ---------------------------------------------------------------------------
+
 
 class TestClearAllPluginActions:
     def test_clears_plugin_menu(self, im, pmm):

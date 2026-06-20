@@ -644,7 +644,14 @@ class IOManager:
             self.host.init_manager.scene.update_all_items()
             self.host.edit_actions_manager.push_undo_state()
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
-        except (OSError, IOError, ValueError, RuntimeError, AttributeError, KeyError) as e:
+        except (
+            OSError,
+            IOError,
+            ValueError,
+            RuntimeError,
+            AttributeError,
+            KeyError,
+        ) as e:
             self.host.statusBar().showMessage(f"Error loading file: {e}")
 
     def save_as_mol(self) -> None:

@@ -4,6 +4,7 @@ Verifies that PluginMenuManager.rebuild_plugin_menus fully rebuilds all
 six integration points: menus, toolbar, export, file-openers, analysis, and
 3D styles — and that MainInitManager correctly delegates to it.
 """
+
 import pytest
 from unittest.mock import MagicMock, patch, call
 
@@ -25,6 +26,7 @@ def _patch_qaction(monkeypatch):
 # ---------------------------------------------------------------------------
 # Fixture helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_plugin_manager(
     *,
@@ -63,6 +65,7 @@ def _make_im(plugin_manager: MagicMock | None = None) -> MagicMock:
 # rebuild_plugin_menus — completeness
 # ---------------------------------------------------------------------------
 
+
 class TestRebuildCompleteness:
     """rebuild_plugin_menus must always call all six integration points."""
 
@@ -76,6 +79,7 @@ class TestRebuildCompleteness:
         def track(name):
             def _fn():
                 called.append(name)
+
             return _fn
 
         pmm.add_registered_plugin_actions = track("menu_actions")
@@ -99,8 +103,12 @@ class TestRebuildCompleteness:
     def test_all_six_steps_run_when_all_registries_populated(self):
         """With all registries populated, all six steps still run."""
         pm = _make_plugin_manager(
-            menu_actions=[{"path": "P/A", "callback": MagicMock(), "text": "A", "shortcut": None}],
-            toolbar_actions=[{"text": "TB", "callback": MagicMock(), "icon": "", "tooltip": ""}],
+            menu_actions=[
+                {"path": "P/A", "callback": MagicMock(), "text": "A", "shortcut": None}
+            ],
+            toolbar_actions=[
+                {"text": "TB", "callback": MagicMock(), "icon": "", "tooltip": ""}
+            ],
             export_actions=[{"label": "EXP", "callback": MagicMock()}],
             file_openers={".xyz": [{"callback": MagicMock(), "plugin": "Xyz"}]},
             analysis_tools=[{"label": "NMR", "callback": MagicMock(), "plugin": "NMR"}],
@@ -114,6 +122,7 @@ class TestRebuildCompleteness:
         def track(name):
             def _fn():
                 called.append(name)
+
             return _fn
 
         pmm.add_registered_plugin_actions = track("menu_actions")
@@ -126,8 +135,12 @@ class TestRebuildCompleteness:
         pmm.rebuild_plugin_menus()
 
         assert set(called) == {
-            "menu_actions", "toolbar_actions", "export_actions",
-            "file_openers", "analysis_tools", "style_menu",
+            "menu_actions",
+            "toolbar_actions",
+            "export_actions",
+            "file_openers",
+            "analysis_tools",
+            "style_menu",
         }
 
     def test_separator_flag_reset_before_rebuild(self):
@@ -147,9 +160,12 @@ class TestRebuildCompleteness:
         def step_ok(name):
             def _fn():
                 survived.append(name)
+
             return _fn
 
-        pmm.add_registered_plugin_actions = lambda: (_ for _ in ()).throw(RuntimeError("boom"))
+        pmm.add_registered_plugin_actions = lambda: (_ for _ in ()).throw(
+            RuntimeError("boom")
+        )
         pmm.add_plugin_toolbar_actions = step_ok("toolbar")
         pmm.integrate_plugin_export_actions = step_ok("export")
         pmm.integrate_plugin_file_openers = step_ok("file_openers")
@@ -167,6 +183,7 @@ class TestRebuildCompleteness:
 # MainWindow.plugin_menu_manager proxy and PluginManager call path
 # ---------------------------------------------------------------------------
 
+
 class TestPluginMenuManagerRouting:
     """Verify the direct-routing architecture: callers go through
     MainWindow.plugin_menu_manager, not through MainInitManager wrappers."""
@@ -174,6 +191,7 @@ class TestPluginMenuManagerRouting:
     def test_main_window_proxy_returns_init_manager_pmm(self):
         """MainWindow.plugin_menu_manager property reads from init_manager."""
         from moleditpy.ui.main_window import MainWindow
+
         # Read the property descriptor directly without constructing MainWindow
         # (QMainWindow requires a QApplication and full Qt setup to instantiate).
         prop = MainWindow.__dict__.get("plugin_menu_manager")
@@ -190,6 +208,7 @@ class TestPluginMenuManagerRouting:
     def test_plugin_manager_rebuild_calls_main_window_pmm(self):
         """PluginManager.rebuild_plugin_menus() calls main_window.plugin_menu_manager."""
         from moleditpy.plugins.plugin_manager import PluginManager
+
         pm = PluginManager.__new__(PluginManager)
         pmm_mock = MagicMock()
         pm.main_window = MagicMock()
@@ -202,6 +221,7 @@ class TestPluginMenuManagerRouting:
     def test_plugin_manager_rebuild_no_main_window_does_nothing(self):
         """PluginManager.rebuild_plugin_menus() with no main_window is a no-op."""
         from moleditpy.plugins.plugin_manager import PluginManager
+
         pm = PluginManager.__new__(PluginManager)
         pm.main_window = None
 
@@ -210,8 +230,13 @@ class TestPluginMenuManagerRouting:
     def test_main_init_manager_has_no_wrapper_methods(self):
         """MainInitManager no longer exposes the old wrapper methods directly."""
         from moleditpy.ui.main_window_init import MainInitManager
-        for method in ("rebuild_plugin_menus", "update_plugin_menu",
-                       "add_registered_plugin_actions", "add_plugin_toolbar_actions"):
+
+        for method in (
+            "rebuild_plugin_menus",
+            "update_plugin_menu",
+            "add_registered_plugin_actions",
+            "add_plugin_toolbar_actions",
+        ):
             assert not hasattr(MainInitManager, method), (
                 f"MainInitManager should not have {method!r} — "
                 "callers must use host.plugin_menu_manager directly"
@@ -221,6 +246,7 @@ class TestPluginMenuManagerRouting:
 # ---------------------------------------------------------------------------
 # update_plugin_menu — discovers and integrates
 # ---------------------------------------------------------------------------
+
 
 class TestUpdatePluginMenuIntegration:
     def test_discover_plugins_called_with_host(self):
@@ -273,12 +299,15 @@ class TestUpdatePluginMenuIntegration:
 # Export action propagation end-to-end
 # ---------------------------------------------------------------------------
 
+
 class TestExportActionEndToEnd:
     """Export actions from the plugin manager appear in the export button menu."""
 
     def test_export_action_appears_in_button_menu(self):
         callback = MagicMock()
-        pm = _make_plugin_manager(export_actions=[{"label": "Export XYZ", "callback": callback}])
+        pm = _make_plugin_manager(
+            export_actions=[{"label": "Export XYZ", "callback": callback}]
+        )
         im = _make_im(pm)
         pmm = PluginMenuManager(im)
 
@@ -293,10 +322,12 @@ class TestExportActionEndToEnd:
         assert added_action.text() == "Export XYZ"
 
     def test_multiple_export_actions_all_added(self):
-        pm = _make_plugin_manager(export_actions=[
-            {"label": "Export XYZ", "callback": MagicMock()},
-            {"label": "Export CIF", "callback": MagicMock()},
-        ])
+        pm = _make_plugin_manager(
+            export_actions=[
+                {"label": "Export XYZ", "callback": MagicMock()},
+                {"label": "Export CIF", "callback": MagicMock()},
+            ]
+        )
         im = _make_im(pm)
         pmm = PluginMenuManager(im)
 
@@ -309,11 +340,14 @@ class TestExportActionEndToEnd:
 # Analysis tool propagation end-to-end
 # ---------------------------------------------------------------------------
 
+
 class TestAnalysisToolEndToEnd:
     def test_analysis_tools_appear_in_analysis_menu(self):
         callback = MagicMock()
         pm = _make_plugin_manager(
-            analysis_tools=[{"label": "NMR Predict", "callback": callback, "plugin": "NMRPro"}]
+            analysis_tools=[
+                {"label": "NMR Predict", "callback": callback, "plugin": "NMRPro"}
+            ]
         )
         im = _make_im(pm)
 

@@ -119,14 +119,21 @@ The `context` object passed to `initialize(context)` is your safe proxy to the a
 | **UI** | `enter_3d_mode()` | Switch layout to 3D mode (alias of `enter_3d_viewer_mode`) |
 | **UI** | `enter_3d_viewer_mode()` | Switch layout to 3D viewer mode |
 | **UI** | `mark_project_modified()` | Mark project as modified and update the title bar |
+| **UI** | `refresh_ui()` | Sync info panel, undo buttons, and title bar after an edit |
+| **UI** | `set_3d_features_enabled(bool)` | Enable / disable the 3D panel and related actions |
+| **UI** | `set_analysis_enabled(bool)` | Enable / disable the Analysis menu action |
 | **Files** | `register_file_opener(ext, cb, priority)` | Handle a file extension (Import + CLI) |
 | **Files** | `register_drop_handler(cb, priority)` | Handle drag-and-drop onto the window |
 | **Molecule** | `current_molecule` | Get / set the active RDKit mol |
 | **Molecule** | `get_selected_atom_indices()` | Indices of user-selected atoms |
 | **Molecule** | `push_undo_checkpoint()` | Snapshot state to undo stack |
+| **Molecule** | `clear_canvas(push_to_undo=True)` | Clear the 2D editor canvas |
+| **Molecule** | `check_chemistry_problems()` | Trigger chemistry validation pass |
+| **2D** | `refresh_2d_scene()` | Full 2D canvas redraw — recalculates rings and repaints all atoms/bonds |
 | **3D** | `refresh_3d_view()` | Lightweight 3D redraw |
 | **3D** | `draw_molecule_3d(mol)` | Full 3D scene rebuild |
 | **3D** | `reset_3d_camera()` | Fit camera to molecule |
+| **3D** | `fit_3d_view()` | Zoom viewport to fit the current molecule |
 | **3D** | `get_3d_controller()` | Atom/bond color overrides |
 | **3D** | `register_3d_style(name, cb)` | Custom visualization mode |
 | **3D** | `register_optimization_method(name, cb)` | Custom geometry optimizer |
@@ -208,6 +215,36 @@ def on_calculation_finished(self, result_data):
     self.context.mark_project_modified()
 ```
 
+#### `refresh_ui()`
+Synchronize all UI chrome after modifying molecular data: updates the realtime-info panel, the undo/redo button states, and the window title bar in one call.
+
+> [!TIP]
+> Call this at the end of any edit that touches `scene.atom_items` / `scene.bond_items` directly instead of going through `context.current_molecule`. The three-line manual block `update_realtime_info(); update_undo_redo_actions(); update_window_title()` should always be replaced with this single call.
+
+```python
+# After manually adding atoms via scene.create_atom(...)
+context.push_undo_checkpoint()
+context.refresh_ui()
+```
+
+#### `set_3d_features_enabled(enabled)`
+Enable or disable the 3D visualization panel and its related toolbar/menu actions.
+- **enabled** (`bool`): `True` to show and activate 3D features, `False` to hide/disable them.
+
+```python
+# Disable 3D panel while showing a 2D-only result
+context.set_3d_features_enabled(False)
+```
+
+#### `set_analysis_enabled(enabled)`
+Enable or disable the **Analysis** menu action.
+- **enabled** (`bool`): `True` to make the action clickable, `False` to grey it out.
+
+```python
+# Enable analysis only when a molecule is loaded
+context.set_analysis_enabled(bool(context.current_molecule))
+```
+
 ---
 
 ### 2.2 Files & Interoperability
@@ -253,6 +290,37 @@ Snapshots the current application state and adds it to the Undo history.
 > [!IMPORTANT]
 > **Usage Timing**: You should call this method **AFTER** you have finished modifying the molecule. The system only pushes a new state if it detects a difference from the previous one.
 
+#### `clear_canvas(push_to_undo=True)`
+Clear the 2D editor canvas, removing all atoms and bonds from the scene.
+- **push_to_undo** (`bool`): Whether to push the cleared state onto the undo stack before clearing (default `True`). Pass `False` when you intend to immediately reconstruct a new molecule on the same undo level.
+
+```python
+# Clear and then draw new structure from SMILES
+context.clear_canvas(push_to_undo=False)
+# ... add atoms via scene API ...
+context.push_undo_checkpoint()
+```
+
+#### `check_chemistry_problems()`
+Trigger a chemistry validation pass on the current molecule. Updates problem flags on atoms (e.g., valence violations), which are reflected in the 2D view.
+
+```python
+# After a structural edit, validate chemistry
+context.check_chemistry_problems()
+context.refresh_ui()
+```
+
+#### `refresh_2d_scene()`
+Force a full redraw of the 2D canvas. This recalculates ring geometry, then repaints every `AtomItem` and `BondItem` in the scene.
+
+Use this after directly manipulating scene items (e.g., via `context.scene.create_atom()`) without going through the undo system or `context.current_molecule`. For a lightweight Qt repaint only (no geometry recalculation), use `context.scene.update()` instead.
+
+```python
+# After manually placing atoms on the scene, force a full visual refresh
+context.push_undo_checkpoint()
+context.refresh_2d_scene()
+```
+
 ---
 
 ### 2.4 Lifecycle & Project Data
@@ -287,6 +355,9 @@ Directly trigger a full redraw of the 3D scene using a specific RDKit molecule. 
 
 #### `reset_3d_camera()`
 Zoom in and re-center the 3D viewport to perfectly fit the current molecule.
+
+#### `fit_3d_view()`
+Zoom and re-center the 3D viewport to fit the current molecule. This is equivalent to `reset_3d_camera()` but uses the scene's internal fit-to-view logic rather than the plotter's camera reset, which may give a tighter fit for certain molecule shapes.
 
 #### `get_3d_controller()`
 Returns a `Plugin3DController` instance (see Section 3). Use this for high-level visual overrides (atom/bond colors).
@@ -488,6 +559,14 @@ def highlight_selection(context):
 | `context.register_menu_action(path, text, cb)` | `context.add_menu_action(path, cb, text)` |
 | `mw.settings.get(key)` | `context.get_setting(key)` |
 | `mw.state_manager.has_unsaved_changes = True` + `mw.state_manager.update_window_title()` | `context.mark_project_modified()` |
+| `mw.state_manager.update_realtime_info()` + `mw.edit_actions_manager.update_undo_redo_actions()` + `mw.state_manager.update_window_title()` | `context.refresh_ui()` |
+| `mw.view_3d_manager.fit_to_view()` | `context.fit_3d_view()` |
+| `mw.edit_actions_manager.clear_2d_editor(push_to_undo=False)` | `context.clear_canvas(push_to_undo=False)` |
+| `mw.ui_manager.enable_3d_features(enabled)` | `context.set_3d_features_enabled(enabled)` |
+| `mw.init_manager.analysis_action.setEnabled(enabled)` | `context.set_analysis_enabled(enabled)` |
+| `mw.compute_manager.check_chemistry_problems_fallback()` | `context.check_chemistry_problems()` |
+| `mw.init_manager.scene.update_all_items()` | `context.refresh_2d_scene()` |
+| `mw.view_3d_manager.draw_molecule_3d(mol)` | `context.draw_molecule_3d(mol)` |
 
 > [!NOTE]
 > `mw.trigger_conversion()` is still accessible via `context.get_main_window()` and delegates to the internal compute manager. Prefer `context.add_menu_action` or `context.add_analysis_tool` for triggering computation workflows from menus.

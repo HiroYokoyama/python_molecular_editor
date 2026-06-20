@@ -7,6 +7,7 @@ Verifies that:
    forwarding **kwargs (the original TypeError bug scenario).
 3. _pending_conversion_mode is consumed exactly once per call.
 """
+
 import pytest
 from unittest.mock import MagicMock, patch
 from rdkit import Chem
@@ -18,6 +19,7 @@ from moleditpy.ui.compute_logic import ComputeManager
 # Minimal test double that re-uses DummyCompute logic from unit tests
 # ---------------------------------------------------------------------------
 
+
 class _PluginWrappedCompute(ComputeManager):
     """Simulates a plugin that wraps trigger_conversion without forwarding kwargs."""
 
@@ -27,9 +29,11 @@ class _PluginWrappedCompute(ComputeManager):
 
         if not hasattr(host, "init_manager"):
             host.init_manager = MagicMock()
-        host.init_manager.settings = host.init_manager.settings if isinstance(
-            getattr(host.init_manager, "settings", None), dict
-        ) else {}
+        host.init_manager.settings = (
+            host.init_manager.settings
+            if isinstance(getattr(host.init_manager, "settings", None), dict)
+            else {}
+        )
         host.init_manager.opt3d_method_labels = {
             "MMFF_RDKIT": "MMFF94s (RDKit)",
             "UFF_RDKIT": "UFF (RDKit)",
@@ -37,8 +41,14 @@ class _PluginWrappedCompute(ComputeManager):
         for attr in ("view_3d_manager", "state_manager", "ui_manager"):
             if not hasattr(host, attr):
                 setattr(host, attr, MagicMock())
-        for btn in ("convert_button", "cleanup_button", "optimize_3d_button",
-                    "export_button", "analysis_action", "edit_3d_action"):
+        for btn in (
+            "convert_button",
+            "cleanup_button",
+            "optimize_3d_button",
+            "export_button",
+            "analysis_action",
+            "edit_3d_action",
+        ):
             if not hasattr(host.init_manager, btn):
                 setattr(host.init_manager, btn, MagicMock())
 
@@ -104,6 +114,7 @@ def host(app):
 # Test: _trigger_conversion_with_temp_mode passes the mode correctly
 # ---------------------------------------------------------------------------
 
+
 class TestTriggerConversionTempMode:
     def test_temp_mode_stored_and_consumed(self, host, app):
         """_trigger_conversion_with_temp_mode sets _pending_conversion_mode
@@ -148,8 +159,11 @@ class TestTriggerConversionTempMode:
             patch.object(host.state_manager.data, "to_rdkit_mol", return_value=mol),
             patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
             patch("rdkit.Chem.SanitizeMol"),
-            patch.object(host.state_manager.data, "to_mol_block",
-                         return_value=Chem.MolToMolBlock(mol)),
+            patch.object(
+                host.state_manager.data,
+                "to_mol_block",
+                return_value=Chem.MolToMolBlock(mol),
+            ),
             patch.object(compute, "_start_calculation_worker"),
         ):
             compute.trigger_conversion()
@@ -174,8 +188,11 @@ class TestTriggerConversionTempMode:
             patch.object(host.state_manager.data, "to_rdkit_mol", return_value=mol),
             patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
             patch("rdkit.Chem.SanitizeMol"),
-            patch.object(host.state_manager.data, "to_mol_block",
-                         return_value=Chem.MolToMolBlock(mol)),
+            patch.object(
+                host.state_manager.data,
+                "to_mol_block",
+                return_value=Chem.MolToMolBlock(mol),
+            ),
             patch.object(compute, "_start_calculation_worker") as mock_start,
         ):
             compute.trigger_conversion()
@@ -199,8 +216,11 @@ class TestTriggerConversionTempMode:
             patch.object(host.state_manager.data, "to_rdkit_mol", return_value=mol),
             patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
             patch("rdkit.Chem.SanitizeMol"),
-            patch.object(host.state_manager.data, "to_mol_block",
-                         return_value=Chem.MolToMolBlock(mol)),
+            patch.object(
+                host.state_manager.data,
+                "to_mol_block",
+                return_value=Chem.MolToMolBlock(mol),
+            ),
             patch.object(compute, "_start_calculation_worker") as mock_start,
         ):
             compute.trigger_conversion()
@@ -212,6 +232,7 @@ class TestTriggerConversionTempMode:
 # ---------------------------------------------------------------------------
 # Test: plugin wrapping trigger_conversion without **kwargs does NOT raise
 # ---------------------------------------------------------------------------
+
 
 class TestPluginWrappedTriggerConversion:
     def test_no_typeerror_when_plugin_wraps_without_kwargs(self, host, app):
@@ -236,8 +257,11 @@ class TestPluginWrappedTriggerConversion:
             patch.object(host.state_manager.data, "to_rdkit_mol", return_value=mol),
             patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
             patch("rdkit.Chem.SanitizeMol"),
-            patch.object(host.state_manager.data, "to_mol_block",
-                         return_value=Chem.MolToMolBlock(mol)),
+            patch.object(
+                host.state_manager.data,
+                "to_mol_block",
+                return_value=Chem.MolToMolBlock(mol),
+            ),
             patch.object(compute, "_start_calculation_worker"),
         ):
             # This must not raise TypeError
@@ -259,12 +283,21 @@ class TestPluginWrappedTriggerConversion:
                 if not hasattr(h, "init_manager"):
                     h.init_manager = MagicMock()
                 h.init_manager.settings = {}
-                h.init_manager.opt3d_method_labels = {"MMFF_RDKIT": "MMFF94s", "UFF_RDKIT": "UFF"}
+                h.init_manager.opt3d_method_labels = {
+                    "MMFF_RDKIT": "MMFF94s",
+                    "UFF_RDKIT": "UFF",
+                }
                 for attr in ("view_3d_manager", "state_manager", "ui_manager"):
                     if not hasattr(h, attr):
                         setattr(h, attr, MagicMock())
-                for btn in ("convert_button", "cleanup_button", "optimize_3d_button",
-                            "export_button", "analysis_action", "edit_3d_action"):
+                for btn in (
+                    "convert_button",
+                    "cleanup_button",
+                    "optimize_3d_button",
+                    "export_button",
+                    "analysis_action",
+                    "edit_3d_action",
+                ):
                     if not hasattr(h.init_manager, btn):
                         setattr(h.init_manager, btn, MagicMock())
 
@@ -305,12 +338,17 @@ class TestPluginWrappedTriggerConversion:
             patch.object(host.state_manager.data, "to_rdkit_mol", return_value=mol),
             patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
             patch("rdkit.Chem.SanitizeMol"),
-            patch.object(host.state_manager.data, "to_mol_block",
-                         return_value=Chem.MolToMolBlock(mol)),
+            patch.object(
+                host.state_manager.data,
+                "to_mol_block",
+                return_value=Chem.MolToMolBlock(mol),
+            ),
         ):
             compute._trigger_conversion_with_temp_mode("fallback")
             for cb in timer_callbacks:
                 cb()
 
-        assert hasattr(compute, "_captured_options"), "trigger_conversion never reached _start_calculation_worker"
+        assert hasattr(compute, "_captured_options"), (
+            "trigger_conversion never reached _start_calculation_worker"
+        )
         assert compute._captured_options["conversion_mode"] == "fallback"
