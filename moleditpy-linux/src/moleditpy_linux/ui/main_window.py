@@ -308,7 +308,7 @@ class MainWindow(QMainWindow):
         return self.init_manager.scene
 
     @property
-    def plugin_menu_manager(self):
+    def plugin_menu_manager(self) -> Any:
         """Proxy for plugin UI lifecycle manager. Not for core logic use."""
         return self.init_manager.plugin_menu_manager
 
