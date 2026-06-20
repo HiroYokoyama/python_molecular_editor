@@ -6,10 +6,11 @@ from pathlib import Path
 spec_dir = Path(SPECPATH).resolve()
 repo_root = spec_dir.parent.parent
 linux_package_dir = repo_root / 'moleditpy-linux' / 'src' / 'moleditpy_linux'
+src_dir = linux_package_dir.parent  # moleditpy-linux/src/ — makes `import moleditpy_linux` work
 
 a = Analysis(
-    [str(linux_package_dir / '__main__.py')],
-    pathex=[str(linux_package_dir)],
+    [str(spec_dir / '_launcher.py')],
+    pathex=[str(src_dir)],
     binaries=[],
     hiddenimports=[],
     hookspath=[],
