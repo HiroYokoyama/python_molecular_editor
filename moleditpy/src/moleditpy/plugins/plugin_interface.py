@@ -492,6 +492,34 @@ class PluginContext:
             if scene is not None and hasattr(scene, "update_all_items"):
                 scene.update_all_items()
 
+    def load_from_smiles(self, smiles: str) -> None:
+        """Add a molecule from a SMILES string to the 2D editor."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "string_importer_manager"):
+            mw.string_importer_manager.load_from_smiles(smiles)
+
+    def to_xyz_block(self) -> Optional[str]:
+        """Return the current 3D structure as an XYZ block (only element x y z lines)."""
+        mol = self.current_mol
+        if not mol:
+            return None
+
+        try:
+            conf = mol.GetConformer()
+            num_atoms = mol.GetNumAtoms()
+            xyz_lines = []
+
+            for i in range(num_atoms):
+                pos = conf.GetAtomPosition(i)
+                symbol = mol.GetAtomWithIdx(i).GetSymbol()
+                xyz_lines.append(
+                    f"  {symbol:<5}{pos.x:>15.8f}{pos.y:>15.8f}{pos.z:>15.8f}"
+                )
+
+            return "\n".join(xyz_lines)
+        except Exception:
+            return None
+
 
 class Plugin3DController:
     """Helper to manipulate the 3D scene."""

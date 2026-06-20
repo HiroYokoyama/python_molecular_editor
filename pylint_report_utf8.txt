@@ -1,0 +1,2479 @@
+﻿************* Module moleditpy.main
+moleditpy\src\moleditpy\main.py:29:0: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\main.py:51:0: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\main.py:51:0: R0914: Too many local variables (18/15) (too-many-locals)
+moleditpy\src\moleditpy\main.py:91:12: C0415: Import outside toplevel (moleditpy.plugins.plugin_manager.PluginManager) (import-outside-toplevel)
+moleditpy\src\moleditpy\main.py:93:12: C0415: Import outside toplevel (plugins.plugin_manager.PluginManager) (import-outside-toplevel)
+moleditpy\src\moleditpy\main.py:149:12: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\main.py:145:12: C0415: Import outside toplevel (PyQt6.QtCore.QTimer) (import-outside-toplevel)
+moleditpy\src\moleditpy\main.py:51:0: R0915: Too many statements (62/50) (too-many-statements)
+moleditpy\src\moleditpy\main.py:24:0: C0411: third party import "PyQt6.QtWidgets.QApplication" should be placed before local import "utils.constants.VERSION" (wrong-import-order)
+************* Module moleditpy.core.molecular_data
+moleditpy\src\moleditpy\core\molecular_data.py:142:0: C0301: Line too long (104/100) (line-too-long)
+moleditpy\src\moleditpy\core\molecular_data.py:166:0: C0301: Line too long (105/100) (line-too-long)
+moleditpy\src\moleditpy\core\molecular_data.py:232:0: C0301: Line too long (105/100) (line-too-long)
+moleditpy\src\moleditpy\core\molecular_data.py:302:0: C0301: Line too long (119/100) (line-too-long)
+moleditpy\src\moleditpy\core\molecular_data.py:367:0: C0301: Line too long (111/100) (line-too-long)
+moleditpy\src\moleditpy\core\molecular_data.py:392:0: C0301: Line too long (101/100) (line-too-long)
+moleditpy\src\moleditpy\core\molecular_data.py:24:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\core\molecular_data.py:27:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\core\molecular_data.py:31:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\core\molecular_data.py:43:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\core\molecular_data.py:77:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\core\molecular_data.py:95:8: R1705: Unnecessary "else" after "return", remove the "else" and de-indent the code inside it (no-else-return)
+moleditpy\src\moleditpy\core\molecular_data.py:102:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\core\molecular_data.py:125:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\core\molecular_data.py:140:4: R0914: Too many local variables (37/15) (too-many-locals)
+moleditpy\src\moleditpy\core\molecular_data.py:140:4: R0912: Too many branches (35/12) (too-many-branches)
+moleditpy\src\moleditpy\core\molecular_data.py:140:4: R0915: Too many statements (99/50) (too-many-statements)
+moleditpy\src\moleditpy\core\molecular_data.py:320:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\core\molecular_data.py:320:4: R0914: Too many local variables (26/15) (too-many-locals)
+moleditpy\src\moleditpy\core\molecular_data.py:326:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\core\molecular_data.py:320:4: R0912: Too many branches (17/12) (too-many-branches)
+moleditpy\src\moleditpy\core\molecular_data.py:387:8: C0415: Import outside toplevel (datetime) (import-outside-toplevel)
+************* Module moleditpy.core.mol_geometry
+moleditpy\src\moleditpy\core\mol_geometry.py:155:0: C0301: Line too long (118/100) (line-too-long)
+moleditpy\src\moleditpy\core\mol_geometry.py:158:0: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\core\mol_geometry.py:158:0: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\core\mol_geometry.py:158:0: R0914: Too many local variables (24/15) (too-many-locals)
+moleditpy\src\moleditpy\core\mol_geometry.py:257:0: R0914: Too many local variables (20/15) (too-many-locals)
+moleditpy\src\moleditpy\core\mol_geometry.py:308:0: R0913: Too many arguments (7/5) (too-many-arguments)
+moleditpy\src\moleditpy\core\mol_geometry.py:308:0: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\core\mol_geometry.py:308:0: R0914: Too many local variables (17/15) (too-many-locals)
+moleditpy\src\moleditpy\core\mol_geometry.py:424:0: R0914: Too many local variables (21/15) (too-many-locals)
+moleditpy\src\moleditpy\core\mol_geometry.py:459:16: C0415: Import outside toplevel (rdkit.Chem) (import-outside-toplevel)
+moleditpy\src\moleditpy\core\mol_geometry.py:526:4: C0415: Import outside toplevel (rdkit.Chem.AllChem) (import-outside-toplevel)
+moleditpy\src\moleditpy\core\mol_geometry.py:569:0: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\core\mol_geometry.py:569:0: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\core\mol_geometry.py:569:0: R0914: Too many local variables (39/15) (too-many-locals)
+moleditpy\src\moleditpy\core\mol_geometry.py:583:4: C0200: Consider using enumerate instead of iterating with range and len (consider-using-enumerate)
+moleditpy\src\moleditpy\core\mol_geometry.py:627:4: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\core\mol_geometry.py:569:0: R0912: Too many branches (19/12) (too-many-branches)
+moleditpy\src\moleditpy\core\mol_geometry.py:569:0: R0915: Too many statements (57/50) (too-many-statements)
+************* Module moleditpy.plugins.plugin_interface
+moleditpy\src\moleditpy\plugins\plugin_interface.py:334:0: C0301: Line too long (115/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:26:4: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:26:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:48:4: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:48:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:67:4: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:67:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:331:8: C0415: Import outside toplevel (warnings) (import-outside-toplevel)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:329:39: W0613: Unused argument 'callback' (unused-argument)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:329:59: W0613: Unused argument 'label' (unused-argument)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:404:19: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\plugins\plugin_interface.py:16:0: R0904: Too many public methods (41/20) (too-many-public-methods)
+************* Module moleditpy.plugins.plugin_manager
+moleditpy\src\moleditpy\plugins\plugin_manager.py:317:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:362:0: C0301: Line too long (122/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:365:0: C0301: Line too long (110/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:374:0: C0301: Line too long (110/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:394:0: C0301: Line too long (118/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:401:0: C0301: Line too long (119/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:612:0: C0301: Line too long (123/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:640:0: C0301: Line too long (125/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:657:0: C0301: Line too long (129/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:31:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:31:0: R0902: Too many instance attributes (15/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:100:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:103:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:112:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:119:4: R0912: Too many branches (22/12) (too-many-branches)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:119:4: R0915: Too many statements (56/50) (too-many-statements)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:283:4: R0914: Too many local variables (25/15) (too-many-locals)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:394:15: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:307:24: C0415: Import outside toplevel (types) (import-outside-toplevel)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:365:27: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:374:27: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:283:4: R0912: Too many branches (14/12) (too-many-branches)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:283:4: R0915: Too many statements (56/50) (too-many-statements)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:401:15: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:414:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:414:4: R0913: Too many arguments (7/5) (too-many-arguments)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:414:4: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:434:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:434:4: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:434:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:447:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:456:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:463:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:473:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:492:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:500:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:503:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:506:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:593:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:561:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:612:19: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:612:12: W0612: Unused variable 'e' (unused-variable)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:625:8: R1702: Too many nested blocks (9/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:625:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:706:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:617:4: R0912: Too many branches (24/12) (too-many-branches)
+moleditpy\src\moleditpy\plugins\plugin_manager.py:31:0: R0904: Too many public methods (29/20) (too-many-public-methods)
+************* Module moleditpy.plugins.plugin_manager_window
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:254:0: C0301: Line too long (111/100) (line-too-long)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:35:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:48:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:108:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:148:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:153:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:166:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:218:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:233:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:233:4: C0103: Method name "dragEnterEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:241:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:241:4: C0103: Method name "dropEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:241:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\plugins\plugin_manager_window.py:241:4: R0912: Too many branches (18/12) (too-many-branches)
+************* Module moleditpy.ui.about_dialog
+moleditpy\src\moleditpy\ui\about_dialog.py:82:0: C0301: Line too long (111/100) (line-too-long)
+moleditpy\src\moleditpy\ui\about_dialog.py:32:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\about_dialog.py:41:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\about_dialog.py:72:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\about_dialog.py:99:28: W0613: Unused argument 'event' (unused-argument)
+moleditpy\src\moleditpy\ui\about_dialog.py:121:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+************* Module moleditpy.ui.alignment_dialog
+moleditpy\src\moleditpy\ui\alignment_dialog.py:41:0: R0902: Too many instance attributes (9/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\alignment_dialog.py:44:4: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\alignment_dialog.py:44:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\ui\alignment_dialog.py:178:4: R0914: Too many local variables (24/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\alignment_dialog.py:282:4: C0103: Method name "closeEvent" doesn't conform to snake_case naming style (invalid-name)
+************* Module moleditpy.ui.align_plane_dialog
+moleditpy\src\moleditpy\ui\align_plane_dialog.py:37:0: R0902: Too many instance attributes (9/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\align_plane_dialog.py:40:4: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\align_plane_dialog.py:40:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\ui\align_plane_dialog.py:197:4: C0103: Method name "apply_PlaneAlign" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\align_plane_dialog.py:197:4: R0914: Too many local variables (27/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\align_plane_dialog.py:197:4: R0912: Too many branches (15/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\align_plane_dialog.py:197:4: R0915: Too many statements (56/50) (too-many-statements)
+************* Module moleditpy.ui.analysis_window
+moleditpy\src\moleditpy\ui\analysis_window.py:139:0: C0301: Line too long (168/100) (line-too-long)
+moleditpy\src\moleditpy\ui\analysis_window.py:35:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\analysis_window.py:49:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\analysis_window.py:49:4: R0914: Too many local variables (42/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\analysis_window.py:49:4: R0912: Too many branches (22/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\analysis_window.py:49:4: R0915: Too many statements (94/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\analysis_window.py:75:28: W0612: Unused variable 'x' (unused-variable)
+moleditpy\src\moleditpy\ui\analysis_window.py:75:31: W0612: Unused variable 'y' (unused-variable)
+moleditpy\src\moleditpy\ui\analysis_window.py:75:34: W0612: Unused variable 'z' (unused-variable)
+moleditpy\src\moleditpy\ui\analysis_window.py:232:4: C0116: Missing function or method docstring (missing-function-docstring)
+************* Module moleditpy.ui.angle_dialog
+moleditpy\src\moleditpy\ui\angle_dialog.py:82:0: C0301: Line too long (112/100) (line-too-long)
+moleditpy\src\moleditpy\ui\angle_dialog.py:248:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\angle_dialog.py:270:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\angle_dialog.py:294:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\angle_dialog.py:301:0: C0301: Line too long (113/100) (line-too-long)
+moleditpy\src\moleditpy\ui\angle_dialog.py:409:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\ui\angle_dialog.py:42:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\angle_dialog.py:42:0: R0902: Too many instance attributes (15/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\angle_dialog.py:75:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\angle_dialog.py:75:4: R0915: Too many statements (59/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\angle_dialog.py:228:4: R0915: Too many statements (82/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\angle_dialog.py:388:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\angle_dialog.py:411:8: W0621: Redefining name 'calc_angle_deg' from outer scope (line 32) (redefined-outer-name)
+moleditpy\src\moleditpy\ui\angle_dialog.py:411:8: C0415: Import outside toplevel (moleditpy.core.mol_geometry.calc_angle_deg) (import-outside-toplevel)
+************* Module moleditpy.ui.app_state
+moleditpy\src\moleditpy\ui\app_state.py:156:0: C0301: Line too long (115/100) (line-too-long)
+moleditpy\src\moleditpy\ui\app_state.py:201:0: C0301: Line too long (110/100) (line-too-long)
+moleditpy\src\moleditpy\ui\app_state.py:484:0: C0301: Line too long (107/100) (line-too-long)
+moleditpy\src\moleditpy\ui\app_state.py:485:0: C0301: Line too long (110/100) (line-too-long)
+moleditpy\src\moleditpy\ui\app_state.py:521:0: C0301: Line too long (114/100) (line-too-long)
+moleditpy\src\moleditpy\ui\app_state.py:561:0: C0301: Line too long (118/100) (line-too-long)
+moleditpy\src\moleditpy\ui\app_state.py:614:0: C0301: Line too long (111/100) (line-too-long)
+moleditpy\src\moleditpy\ui\app_state.py:627:0: C0301: Line too long (134/100) (line-too-long)
+moleditpy\src\moleditpy\ui\app_state.py:637:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\ui\app_state.py:659:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\app_state.py:69:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\app_state.py:73:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\app_state.py:82:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\app_state.py:128:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\app_state.py:128:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\app_state.py:175:8: R1702: Too many nested blocks (8/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\app_state.py:211:28: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\app_state.py:228:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\app_state.py:128:4: R0912: Too many branches (17/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\app_state.py:128:4: R0915: Too many statements (70/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\app_state.py:258:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\app_state.py:294:8: R1705: Unnecessary "elif" after "return", remove the leading "el" from "elif" (no-else-return)
+moleditpy\src\moleditpy\ui\app_state.py:309:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\app_state.py:329:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\app_state.py:334:4: R0914: Too many local variables (32/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\app_state.py:381:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\app_state.py:521:27: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\app_state.py:334:4: R0912: Too many branches (20/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\app_state.py:334:4: R0915: Too many statements (68/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\app_state.py:529:4: R0914: Too many local variables (24/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\app_state.py:561:31: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\app_state.py:577:16: R1728: Consider using a generator instead 'max(atom['id'] for atom in atoms_2d)' (consider-using-generator)
+moleditpy\src\moleditpy\ui\app_state.py:581:8: R1702: Too many nested blocks (11/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\app_state.py:581:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\app_state.py:662:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\app_state.py:529:4: R0912: Too many branches (25/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\app_state.py:529:4: R0915: Too many statements (81/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\app_state.py:39:0: C0411: standard import "typing.TYPE_CHECKING" should be placed before third party imports "numpy", "rdkit.Chem", "rdkit.Chem.Descriptors", "PyQt6.QtCore.QDateTime", "PyQt6.QtWidgets.QMessageBox" and local imports "utils.constants.VERSION", "core.molecular_data.MolecularData" (wrong-import-order)
+************* Module moleditpy.ui.atom_item
+moleditpy\src\moleditpy\ui\atom_item.py:353:0: C0301: Line too long (157/100) (line-too-long)
+moleditpy\src\moleditpy\ui\atom_item.py:39:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\atom_item.py:39:0: R0902: Too many instance attributes (11/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\atom_item.py:40:4: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\atom_item.py:40:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\ui\atom_item.py:65:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\atom_item.py:88:4: C0103: Method name "boundingRect" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\atom_item.py:88:4: R0914: Too many local variables (28/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\atom_item.py:88:4: R0912: Too many branches (24/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\atom_item.py:88:4: R0915: Too many statements (73/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\atom_item.py:200:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\atom_item.py:200:4: R0914: Too many local variables (21/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\atom_item.py:200:4: R0912: Too many branches (18/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\atom_item.py:200:4: R0915: Too many statements (54/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\atom_item.py:289:4: R0914: Too many local variables (29/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\atom_item.py:309:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\atom_item.py:289:4: R0912: Too many branches (33/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\atom_item.py:289:4: R0915: Too many statements (104/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\atom_item.py:292:8: W0613: Unused argument 'option' (unused-argument)
+moleditpy\src\moleditpy\ui\atom_item.py:293:8: W0613: Unused argument 'widget' (unused-argument)
+moleditpy\src\moleditpy\ui\atom_item.py:471:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\atom_item.py:471:4: C0103: Method name "itemChange" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\atom_item.py:483:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\atom_item.py:483:4: C0103: Method name "hoverEnterEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\atom_item.py:489:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\atom_item.py:489:4: C0103: Method name "hoverLeaveEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\atom_item.py:14:0: W0611: Unused import logging (unused-import)
+************* Module moleditpy.ui.atom_picking
+moleditpy\src\moleditpy\ui\atom_picking.py:296:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\atom_picking.py:103:0: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\atom_picking.py:103:0: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\ui\atom_picking.py:103:0: R0914: Too many local variables (21/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\atom_picking.py:165:0: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\atom_picking.py:165:0: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\ui\atom_picking.py:165:0: R0914: Too many local variables (36/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\atom_picking.py:165:0: R0911: Too many return statements (9/6) (too-many-return-statements)
+moleditpy\src\moleditpy\ui\atom_picking.py:165:0: R0912: Too many branches (15/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\atom_picking.py:165:0: R0915: Too many statements (58/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\atom_picking.py:288:0: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\atom_picking.py:288:0: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+************* Module moleditpy.ui.base_picking_dialog
+moleditpy\src\moleditpy\ui\base_picking_dialog.py:48:0: W0223: Method 'on_atom_picked' is abstract in class 'Dialog3DPickingMixin' but is not overridden in child class 'BasePickingDialog' (abstract-method)
+moleditpy\src\moleditpy\ui\base_picking_dialog.py:68:4: C0103: Method name "keyPressEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\base_picking_dialog.py:80:4: C0103: Method name "closeEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\base_picking_dialog.py:13:0: W0611: Unused import logging (unused-import)
+************* Module moleditpy.ui.bond_item
+moleditpy\src\moleditpy\ui\bond_item.py:276:0: C0301: Line too long (113/100) (line-too-long)
+moleditpy\src\moleditpy\ui\bond_item.py:453:0: C0301: Line too long (133/100) (line-too-long)
+moleditpy\src\moleditpy\ui\bond_item.py:459:0: C0301: Line too long (110/100) (line-too-long)
+moleditpy\src\moleditpy\ui\bond_item.py:519:0: C0301: Line too long (114/100) (line-too-long)
+moleditpy\src\moleditpy\ui\bond_item.py:581:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\bond_item.py:43:0: R0902: Too many instance attributes (8/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\bond_item.py:161:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\bond_item.py:207:12: R1705: Unnecessary "else" after "return", remove the "else" and de-indent the code inside it (no-else-return)
+moleditpy\src\moleditpy\ui\bond_item.py:161:4: R0912: Too many branches (15/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\bond_item.py:216:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\bond_item.py:216:4: C0103: Method name "boundingRect" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\bond_item.py:216:4: R0914: Too many local variables (18/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\bond_item.py:312:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\bond_item.py:312:4: R0914: Too many local variables (68/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\bond_item.py:369:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\bond_item.py:369:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\bond_item.py:312:4: R0912: Too many branches (38/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\bond_item.py:312:4: R0915: Too many statements (170/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\bond_item.py:315:8: W0613: Unused argument 'option' (unused-argument)
+moleditpy\src\moleditpy\ui\bond_item.py:316:8: W0613: Unused argument 'widget' (unused-argument)
+moleditpy\src\moleditpy\ui\bond_item.py:586:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\bond_item.py:597:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\bond_item.py:597:4: C0103: Method name "hoverEnterEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\bond_item.py:604:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\bond_item.py:604:4: C0103: Method name "hoverLeaveEvent" doesn't conform to snake_case naming style (invalid-name)
+************* Module moleditpy.ui.bond_length_dialog
+moleditpy\src\moleditpy\ui\bond_length_dialog.py:233:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\bond_length_dialog.py:256:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\bond_length_dialog.py:39:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\bond_length_dialog.py:39:0: R0902: Too many instance attributes (14/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\bond_length_dialog.py:70:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\bond_length_dialog.py:70:4: R0915: Too many statements (59/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\bond_length_dialog.py:213:4: R0915: Too many statements (59/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\bond_length_dialog.py:325:4: R0914: Too many local variables (22/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\bond_length_dialog.py:16:0: C0411: standard import "typing.TYPE_CHECKING" should be placed before third party import "numpy" (wrong-import-order)
+************* Module moleditpy.ui.calculation_worker
+moleditpy\src\moleditpy\ui\calculation_worker.py:61:4: C0103: Constant name "pybel" doesn't conform to UPPER_CASE naming style (invalid-name)
+moleditpy\src\moleditpy\ui\calculation_worker.py:67:4: W0107: Unnecessary pass statement (unnecessary-pass)
+moleditpy\src\moleditpy\ui\calculation_worker.py:97:0: R0914: Too many local variables (55/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\calculation_worker.py:210:4: W0706: The except handler raises immediately (try-except-raise)
+moleditpy\src\moleditpy\ui\calculation_worker.py:103:4: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\calculation_worker.py:103:4: R1702: Too many nested blocks (8/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\calculation_worker.py:103:4: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\calculation_worker.py:97:0: R0912: Too many branches (26/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\calculation_worker.py:97:0: R0915: Too many statements (67/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\calculation_worker.py:218:0: R0913: Too many arguments (7/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\calculation_worker.py:218:0: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\ui\calculation_worker.py:269:4: W0706: The except handler raises immediately (try-except-raise)
+moleditpy\src\moleditpy\ui\calculation_worker.py:276:0: R0913: Too many arguments (7/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\calculation_worker.py:276:0: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\ui\calculation_worker.py:309:4: W0706: The except handler raises immediately (try-except-raise)
+moleditpy\src\moleditpy\ui\calculation_worker.py:283:4: W0613: Unused argument 'options' (unused-argument)
+moleditpy\src\moleditpy\ui\calculation_worker.py:375:0: R0914: Too many local variables (55/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\calculation_worker.py:411:16: W0621: Redefining name 'm' from outer scope (line 48) (redefined-outer-name)
+moleditpy\src\moleditpy\ui\calculation_worker.py:456:4: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\calculation_worker.py:456:4: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\calculation_worker.py:375:0: R0912: Too many branches (31/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\calculation_worker.py:375:0: R0915: Too many statements (97/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\calculation_worker.py:689:4: W0706: The except handler raises immediately (try-except-raise)
+moleditpy\src\moleditpy\ui\calculation_worker.py:635:21: W1510: 'subprocess.run' used without explicitly defining the value for 'check'. (subprocess-run-check)
+moleditpy\src\moleditpy\ui\calculation_worker.py:648:12: W0707: Consider explicitly re-raising using 'except Exception as exc' and 'raise RuntimeError('Open Babel make3D() timed out.') from exc' (raise-missing-from)
+moleditpy\src\moleditpy\ui\calculation_worker.py:650:12: W0707: Consider explicitly re-raising using 'raise RuntimeError(f'Open Babel isolated execution failed: {e}') from e' (raise-missing-from)
+moleditpy\src\moleditpy\ui\calculation_worker.py:693:12: W0707: Consider explicitly re-raising using 'raise RuntimeError(f'Open Babel conversion failed: {e}') from e' (raise-missing-from)
+moleditpy\src\moleditpy\ui\calculation_worker.py:698:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\calculation_worker.py:822:15: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\calculation_worker.py:711:4: R0912: Too many branches (14/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\calculation_worker.py:711:4: R0915: Too many statements (60/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\calculation_worker.py:845:4: R0914: Too many local variables (24/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\calculation_worker.py:845:4: R0912: Too many branches (17/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\calculation_worker.py:845:4: R0915: Too many statements (59/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\calculation_worker.py:17:0: C0411: standard import "sys" should be placed before third party import "numpy" (wrong-import-order)
+moleditpy\src\moleditpy\ui\calculation_worker.py:18:0: C0411: standard import "subprocess" should be placed before third party import "numpy" (wrong-import-order)
+moleditpy\src\moleditpy\ui\calculation_worker.py:19:0: C0411: standard import "typing.Any" should be placed before third party import "numpy" (wrong-import-order)
+************* Module moleditpy.ui.color_settings_dialog
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:189:0: C0301: Line too long (118/100) (line-too-long)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:257:0: C0301: Line too long (116/100) (line-too-long)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:272:0: C0301: Line too long (118/100) (line-too-long)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:345:0: C0301: Line too long (118/100) (line-too-long)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:39:4: R0914: Too many local variables (24/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:39:4: R0915: Too many statements (58/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:243:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:260:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:287:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:349:8: C0415: Import outside toplevel (settings_dialog.SettingsDialog) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:351:11: W0125: Using a conditional statement with a constant value (using-constant-test)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:287:4: R0912: Too many branches (20/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:287:4: R0915: Too many statements (57/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:373:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:377:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\color_settings_dialog.py:13:0: W0611: Unused import logging (unused-import)
+************* Module moleditpy.ui.compute_logic
+moleditpy\src\moleditpy\ui\compute_logic.py:391:0: C0301: Line too long (125/100) (line-too-long)
+moleditpy\src\moleditpy\ui\compute_logic.py:36:0: R0902: Too many instance attributes (9/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\compute_logic.py:120:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\compute_logic.py:384:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\compute_logic.py:417:55: W0613: Unused argument 'run_id' (unused-argument)
+moleditpy\src\moleditpy\ui\compute_logic.py:450:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\compute_logic.py:502:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\compute_logic.py:511:19: R1714: Consider merging these comparisons with 'in' by using 'msg in ('Halt', 'Halted')'. Use a set instead if elements are hashable. (consider-using-in)
+moleditpy\src\moleditpy\ui\compute_logic.py:527:11: R1714: Consider merging these comparisons with 'in' by using 'msg in ('Halt', 'Halted')'. Use a set instead if elements are hashable. (consider-using-in)
+moleditpy\src\moleditpy\ui\compute_logic.py:569:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\compute_logic.py:598:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\compute_logic.py:173:8: W0201: Attribute '_pending_conversion_mode' defined outside __init__ (attribute-defined-outside-init)
+************* Module moleditpy.ui.constrained_optimization_dialog
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:547:0: C0301: Line too long (104/100) (line-too-long)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:558:0: C0301: Line too long (110/100) (line-too-long)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:36:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:45:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:49:15: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:53:0: R0902: Too many instance attributes (15/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:56:4: R0914: Too many local variables (17/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:56:4: R0912: Too many branches (15/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:56:4: R0915: Too many statements (61/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:158:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:258:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:294:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:370:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:407:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:407:4: R0914: Too many local variables (17/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:452:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:474:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:407:4: R0912: Too many branches (13/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:423:47: W0612: Unused variable 'value' (unused-variable)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:476:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:483:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:489:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:489:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:590:15: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:489:4: R0912: Too many branches (13/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:668:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:668:4: C0103: Method name "closeEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:672:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:749:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:775:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:854:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:777:4: R0912: Too many branches (13/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:858:4: C0103: Method name "keyPressEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:863:11: R1714: Consider merging these comparisons with 'in' by using 'key in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace)'. Use a set instead if elements are hashable. (consider-using-in)
+moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py:874:11: R1714: Consider merging these comparisons with 'in' by using 'key in (Qt.Key.Key_Return, Qt.Key.Key_Enter)'. Use a set instead if elements are hashable. (consider-using-in)
+************* Module moleditpy.ui.custom_interactor_style
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:42:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:45:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:687:0: C0301: Line too long (118/100) (line-too-long)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:694:0: C0301: Line too long (117/100) (line-too-long)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:29:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:90:4: R0914: Too many local variables (27/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:121:16: W1201: Use lazy % formatting in logging functions (logging-not-lazy)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:134:16: R1705: Unnecessary "else" after "return", remove the "else" and de-indent the code inside it (no-else-return)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:232:16: R1725: Consider using Python 3 style super() without arguments (super-with-arguments)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:262:27: W0125: Using a conditional statement with a constant value (using-constant-test)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:300:27: W0125: Using a conditional statement with a constant value (using-constant-test)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:90:4: R0911: Too many return statements (7/6) (too-many-return-statements)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:90:4: R0912: Too many branches (28/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:90:4: R0915: Too many statements (107/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:90:34: W0613: Unused argument 'obj' (unused-argument)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:90:44: W0613: Unused argument 'event' (unused-argument)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:335:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:317:35: W0613: Unused argument 'obj' (unused-argument)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:317:45: W0613: Unused argument 'event' (unused-argument)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:396:12: W1201: Use lazy % formatting in logging functions (logging-not-lazy)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:378:4: R0912: Too many branches (17/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:378:28: W0613: Unused argument 'obj' (unused-argument)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:378:38: W0613: Unused argument 'event' (unused-argument)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:474:4: R0914: Too many local variables (36/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:492:12: W1201: Use lazy % formatting in logging functions (logging-not-lazy)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:504:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:628:8: R1702: Too many nested blocks (8/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:715:24: W1201: Use lazy % formatting in logging functions (logging-not-lazy)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:725:28: W1201: Use lazy % formatting in logging functions (logging-not-lazy)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:750:28: W1201: Use lazy % formatting in logging functions (logging-not-lazy)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:780:12: W1201: Use lazy % formatting in logging functions (logging-not-lazy)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:786:12: W1201: Use lazy % formatting in logging functions (logging-not-lazy)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:474:4: R0912: Too many branches (37/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:474:4: R0915: Too many statements (153/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:474:32: W0613: Unused argument 'obj' (unused-argument)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:474:42: W0613: Unused argument 'event' (unused-argument)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:792:4: R0914: Too many local variables (33/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:810:12: W1201: Use lazy % formatting in logging functions (logging-not-lazy)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:881:28: C0103: Variable name "K" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:811:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:792:4: R0912: Too many branches (13/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:792:4: R0915: Too many statements (65/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:792:33: W0613: Unused argument 'obj' (unused-argument)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:792:43: W0613: Unused argument 'event' (unused-argument)
+moleditpy\src\moleditpy\ui\custom_interactor_style.py:26:0: C0411: third party import "rdkit.Geometry" should be placed before local import "atom_picking.pick_atom_index_from_screen" (wrong-import-order)
+************* Module moleditpy.ui.custom_qt_interactor
+moleditpy\src\moleditpy\ui\custom_qt_interactor.py:19:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\custom_qt_interactor.py:19:0: R0901: Too many ancestors (12/7) (too-many-ancestors)
+moleditpy\src\moleditpy\ui\custom_qt_interactor.py:32:4: W0237: Parameter 'ev' has been renamed to 'event' in overriding 'CustomQtInteractor.wheelEvent' method (arguments-renamed)
+moleditpy\src\moleditpy\ui\custom_qt_interactor.py:43:4: W0237: Parameter 'ev' has been renamed to 'event' in overriding 'CustomQtInteractor.mouseReleaseEvent' method (arguments-renamed)
+moleditpy\src\moleditpy\ui\custom_qt_interactor.py:58:4: W0237: Parameter 'ev' has been renamed to 'event' in overriding 'CustomQtInteractor.mousePressEvent' method (arguments-renamed)
+moleditpy\src\moleditpy\ui\custom_qt_interactor.py:80:4: C0103: Method name "mouseDoubleClickEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\custom_qt_interactor.py:80:4: R1711: Useless return at end of function or method (useless-return)
+************* Module moleditpy.ui.dialog_3d_picking_mixin
+moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py:42:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py:41:4: C0103: Method name "eventFilter" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py:88:24: C0415: Import outside toplevel (PyQt6.QtCore.QTimer) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py:141:24: C0415: Import outside toplevel (PyQt6.QtCore.QTimer) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py:41:4: R0911: Too many return statements (8/6) (too-many-return-statements)
+moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py:41:4: R0912: Too many branches (16/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py:18:0: C0411: standard import "typing.Any" should be placed before third party imports "PyQt6.QtCore.QEvent", "PyQt6.QtGui.QMouseEvent" (wrong-import-order)
+************* Module moleditpy.ui.dialog_logic
+moleditpy\src\moleditpy\ui\dialog_logic.py:311:36: W0613: Unused argument 'plane' (unused-argument)
+************* Module moleditpy.ui.dihedral_dialog
+moleditpy\src\moleditpy\ui\dihedral_dialog.py:84:0: C0301: Line too long (107/100) (line-too-long)
+moleditpy\src\moleditpy\ui\dihedral_dialog.py:265:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\dihedral_dialog.py:290:0: C0301: Line too long (120/100) (line-too-long)
+moleditpy\src\moleditpy\ui\dihedral_dialog.py:304:0: C0301: Line too long (140/100) (line-too-long)
+moleditpy\src\moleditpy\ui\dihedral_dialog.py:42:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\dihedral_dialog.py:42:0: R0902: Too many instance attributes (16/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\dihedral_dialog.py:77:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\dihedral_dialog.py:77:4: R0915: Too many statements (59/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\dihedral_dialog.py:245:4: R0915: Too many statements (72/50) (too-many-statements)
+************* Module moleditpy.ui.edit_3d_logic
+moleditpy\src\moleditpy\ui\edit_3d_logic.py:373:0: C0301: Line too long (107/100) (line-too-long)
+moleditpy\src\moleditpy\ui\edit_3d_logic.py:374:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\edit_3d_logic.py:396:0: C0301: Line too long (108/100) (line-too-long)
+moleditpy\src\moleditpy\ui\edit_3d_logic.py:432:0: C0301: Line too long (112/100) (line-too-long)
+moleditpy\src\moleditpy\ui\edit_3d_logic.py:37:0: R0902: Too many instance attributes (11/7) (too-many-instance-attributes)
+************* Module moleditpy.ui.edit_actions_logic
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:100:0: C0301: Line too long (101/100) (line-too-long)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:402:0: C0301: Line too long (103/100) (line-too-long)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:905:0: C0301: Line too long (122/100) (line-too-long)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1158:0: C0301: Line too long (109/100) (line-too-long)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1433:0: C0301: Line too long (109/100) (line-too-long)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1:0: C0302: Too many lines in module (1475/1000) (too-many-lines)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:53:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:94:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:251:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:412:4: R0914: Too many local variables (17/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:414:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:412:4: R0912: Too many branches (29/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:412:4: R0915: Too many statements (74/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:542:4: R0914: Too many local variables (40/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:545:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:545:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:665:24: C0200: Consider using enumerate instead of iterating with range and len (consider-using-enumerate)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:542:4: R0912: Too many branches (32/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:542:4: R0915: Too many statements (110/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:801:12: C0415: Import outside toplevel (moleditpy.core.mol_geometry.rotate_2d_points) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:827:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:832:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:899:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:957:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:952:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:978:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:982:4: R0914: Too many local variables (19/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:982:4: R0912: Too many branches (15/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:998:21: W0612: Unused variable 'atom_data' (unused-variable)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1080:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1096:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1098:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1098:4: R0914: Too many local variables (18/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1116:12: C0415: Import outside toplevel (moleditpy.core.mol_geometry.optimize_2d_coords) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1135:12: C0103: Variable name "SCALE" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1189:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1194:8: C0103: Variable name "OVERLAP_THRESHOLD" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1196:8: C0103: Variable name "MOVE_DISTANCE" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1207:8: C0415: Import outside toplevel (moleditpy.core.mol_geometry.resolve_2d_overlaps) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1249:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1258:4: R0914: Too many local variables (48/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1313:12: C0200: Consider using enumerate instead of iterating with range and len (consider-using-enumerate)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1330:12: C0200: Consider using enumerate instead of iterating with range and len (consider-using-enumerate)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1380:31: R1716: Simplify chained comparison between the operands (chained-comparison)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1308:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1258:4: R0912: Too many branches (16/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:1258:4: R0915: Too many statements (68/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:99:0: R0904: Too many public methods (22/20) (too-many-public-methods)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:26:0: C0411: third party import "PyQt6.QtCore.QByteArray" should be placed before local import "core.mol_geometry.identify_valence_problems" (wrong-import-order)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:27:0: C0411: third party import "PyQt6.QtGui.QCursor" should be placed before local import "core.mol_geometry.identify_valence_problems" (wrong-import-order)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:30:0: C0411: third party import "PyQt6.QtWidgets.QApplication" should be placed before local import "core.mol_geometry.identify_valence_problems" (wrong-import-order)
+moleditpy\src\moleditpy\ui\edit_actions_logic.py:41:0: C0411: third party import "rdkit.Chem" should be placed before local import "core.mol_geometry.identify_valence_problems" (wrong-import-order)
+************* Module moleditpy.ui.export_logic
+moleditpy\src\moleditpy\ui\export_logic.py:174:0: C0301: Line too long (116/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:209:0: C0301: Line too long (103/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:519:0: C0301: Line too long (108/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:520:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:566:0: C0301: Line too long (134/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:618:0: C0301: Line too long (116/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:652:0: C0301: Line too long (103/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:657:0: C0301: Line too long (119/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:660:0: C0301: Line too long (114/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:698:0: C0325: Unnecessary parens after 'not' keyword (superfluous-parens)
+moleditpy\src\moleditpy\ui\export_logic.py:704:0: C0301: Line too long (103/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:817:0: C0325: Unnecessary parens after 'not' keyword (superfluous-parens)
+moleditpy\src\moleditpy\ui\export_logic.py:824:0: C0301: Line too long (103/100) (line-too-long)
+moleditpy\src\moleditpy\ui\export_logic.py:927:0: C0325: Unnecessary parens after 'not' keyword (superfluous-parens)
+moleditpy\src\moleditpy\ui\export_logic.py:65:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\export_logic.py:130:4: R0914: Too many local variables (25/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\export_logic.py:138:17: W1514: Using open without explicitly specifying an encoding (unspecified-encoding)
+moleditpy\src\moleditpy\ui\export_logic.py:159:17: W1514: Using open without explicitly specifying an encoding (unspecified-encoding)
+moleditpy\src\moleditpy\ui\export_logic.py:228:12: W0707: Consider explicitly re-raising using 'raise Exception(f'Failed to create multi-material OBJ: {e}') from e' (raise-missing-from)
+moleditpy\src\moleditpy\ui\export_logic.py:228:12: W0719: Raising too general exception: Exception (broad-exception-raised)
+moleditpy\src\moleditpy\ui\export_logic.py:130:4: R0915: Too many statements (61/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\export_logic.py:263:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:263:8: R1702: Too many nested blocks (9/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:263:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:261:4: R0912: Too many branches (21/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\export_logic.py:261:4: R0915: Too many statements (54/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\export_logic.py:271:16: W0612: Unused variable 'actor_name' (unused-variable)
+moleditpy\src\moleditpy\ui\export_logic.py:372:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:372:8: R1702: Too many nested blocks (9/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:372:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:370:4: R0912: Too many branches (20/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\export_logic.py:380:16: W0612: Unused variable 'actor_name' (unused-variable)
+moleditpy\src\moleditpy\ui\export_logic.py:443:4: R0914: Too many local variables (33/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\export_logic.py:445:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:445:8: R1702: Too many nested blocks (9/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:445:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:445:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:445:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:445:8: R1702: Too many nested blocks (8/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:445:8: R1702: Too many nested blocks (8/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:445:8: R1702: Too many nested blocks (9/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:443:4: R0912: Too many branches (44/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\export_logic.py:443:4: R0915: Too many statements (117/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\export_logic.py:445:8: R1702: Too many nested blocks (8/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\export_logic.py:684:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\export_logic.py:684:4: R0914: Too many local variables (22/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\export_logic.py:692:8: C0103: Variable name "filePath" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\export_logic.py:699:12: C0103: Variable name "filePath" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\export_logic.py:684:4: R0912: Too many branches (20/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\export_logic.py:684:4: R0915: Too many statements (60/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\export_logic.py:802:4: R0914: Too many local variables (19/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\export_logic.py:811:8: C0103: Variable name "filePath" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\export_logic.py:818:12: C0103: Variable name "filePath" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\export_logic.py:802:4: R0912: Too many branches (18/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\export_logic.py:802:4: R0915: Too many statements (57/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\export_logic.py:921:8: C0103: Variable name "filePath" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\export_logic.py:928:12: C0103: Variable name "filePath" doesn't conform to snake_case naming style (invalid-name)
+************* Module moleditpy.ui.geometry_base_dialog
+moleditpy\src\moleditpy\ui\geometry_base_dialog.py:13:0: W0611: Unused import logging (unused-import)
+************* Module moleditpy.ui.io_logic
+moleditpy\src\moleditpy\ui\io_logic.py:205:0: C0301: Line too long (117/100) (line-too-long)
+moleditpy\src\moleditpy\ui\io_logic.py:240:0: C0301: Line too long (104/100) (line-too-long)
+moleditpy\src\moleditpy\ui\io_logic.py:876:0: C0301: Line too long (101/100) (line-too-long)
+moleditpy\src\moleditpy\ui\io_logic.py:72:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\io_logic.py:78:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\io_logic.py:85:4: R0914: Too many local variables (28/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\io_logic.py:118:24: W0707: Consider explicitly re-raising using 'except (RuntimeError, ValueError) as exc' and 'raise ValueError(f'Unrecognized element symbol: {parts[0]}') from exc' (raise-missing-from)
+moleditpy\src\moleditpy\ui\io_logic.py:151:24: C0415: Import outside toplevel (rdkit.Chem.rdDetermineBonds) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\io_logic.py:85:4: R0912: Too many branches (28/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\io_logic.py:85:4: R0915: Too many statements (95/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\io_logic.py:252:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\io_logic.py:367:4: R1710: Either all return statements in a function should return an expression, or none of them should. (inconsistent-return-statements)
+moleditpy\src\moleditpy\ui\io_logic.py:484:20: W0108: Lambda may not be necessary (unnecessary-lambda)
+moleditpy\src\moleditpy\ui\io_logic.py:486:35: W0108: Lambda may not be necessary (unnecessary-lambda)
+moleditpy\src\moleditpy\ui\io_logic.py:539:4: R0914: Too many local variables (28/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\io_logic.py:582:12: C0103: Variable name "SCALE_FACTOR" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\io_logic.py:539:4: R0912: Too many branches (17/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\io_logic.py:539:4: R0915: Too many statements (60/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\io_logic.py:712:12: C0415: Import outside toplevel (contextlib) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\io_logic.py:724:20: W0108: Lambda may not be necessary (unnecessary-lambda)
+moleditpy\src\moleditpy\ui\io_logic.py:726:35: W0108: Lambda may not be necessary (unnecessary-lambda)
+moleditpy\src\moleditpy\ui\io_logic.py:787:20: W0108: Lambda may not be necessary (unnecessary-lambda)
+moleditpy\src\moleditpy\ui\io_logic.py:789:35: W0108: Lambda may not be necessary (unnecessary-lambda)
+moleditpy\src\moleditpy\ui\io_logic.py:926:20: W0108: Lambda may not be necessary (unnecessary-lambda)
+moleditpy\src\moleditpy\ui\io_logic.py:928:35: W0108: Lambda may not be necessary (unnecessary-lambda)
+moleditpy\src\moleditpy\ui\io_logic.py:968:4: C0415: Import outside toplevel (contextlib) (import-outside-toplevel)
+************* Module moleditpy.ui.main_window
+moleditpy\src\moleditpy\ui\main_window.py:22:0: C0413: Import "from PyQt6.QtCore import pyqtSignal" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:23:0: C0413: Import "from PyQt6.QtWidgets import QMainWindow, QMessageBox" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:26:0: C0413: Import "from .app_state import StateManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:27:0: C0413: Import "from .compute_logic import ComputeManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:28:0: C0413: Import "from .dialog_logic import DialogManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:29:0: C0413: Import "from .edit_3d_logic import Edit3DManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:30:0: C0413: Import "from .edit_actions_logic import EditActionsManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:31:0: C0413: Import "from .io_logic import IOManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:32:0: C0413: Import "from .export_logic import ExportManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:33:0: C0413: Import "from .main_window_init import MainInitManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:34:0: C0413: Import "from .string_importers import StringImporterManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:35:0: C0413: Import "from .ui_manager import UIManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:36:0: C0413: Import "from .view_3d_logic import View3DManager" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:37:0: C0413: Import "from .molecule_scene import MoleculeScene" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:38:0: C0413: Import "from ..core.molecular_data import MolecularData" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:39:0: C0413: Import "from .custom_qt_interactor import CustomQtInteractor" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\main_window.py:42:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\main_window.py:42:0: R0902: Too many instance attributes (41/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\main_window.py:46:4: R0915: Too many statements (70/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\main_window.py:255:8: C0415: Import outside toplevel (copy) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\main_window.py:262:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window.py:42:0: R0904: Too many public methods (39/20) (too-many-public-methods)
+************* Module moleditpy.ui.main_window_init
+moleditpy\src\moleditpy\ui\main_window_init.py:127:0: C0301: Line too long (105/100) (line-too-long)
+moleditpy\src\moleditpy\ui\main_window_init.py:219:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\main_window_init.py:368:0: C0301: Line too long (103/100) (line-too-long)
+moleditpy\src\moleditpy\ui\main_window_init.py:552:0: C0301: Line too long (107/100) (line-too-long)
+moleditpy\src\moleditpy\ui\main_window_init.py:1:0: C0302: Too many lines in module (1744/1000) (too-many-lines)
+moleditpy\src\moleditpy\ui\main_window_init.py:79:0: R0902: Too many instance attributes (53/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\main_window_init.py:149:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:194:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:226:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:82:4: R0915: Too many statements (106/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\main_window_init.py:230:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\main_window_init.py:245:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:253:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\main_window_init.py:271:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\main_window_init.py:330:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:360:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:385:20: C0415: Import outside toplevel (.constants) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\main_window_init.py:389:20: C0415: Import outside toplevel (moleditpy.utils.constants) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\main_window_init.py:413:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:415:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\main_window_init.py:472:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:515:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:532:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:564:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\main_window_init.py:575:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:692:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:738:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:984:4: R0914: Too many local variables (19/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\main_window_init.py:1094:4: R0914: Too many local variables (26/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\main_window_init.py:1094:4: R0915: Too many statements (75/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\main_window_init.py:1205:4: R0915: Too many statements (58/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\main_window_init.py:1295:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\main_window_init.py:1295:4: R0915: Too many statements (90/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\main_window_init.py:1448:4: R0914: Too many local variables (21/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\main_window_init.py:1448:4: R0915: Too many statements (87/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\main_window_init.py:1587:12: C0415: Import outside toplevel (plugins.plugin_manager_window.PluginManagerWindow) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\main_window_init.py:1597:4: R0914: Too many local variables (19/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\main_window_init.py:1622:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\main_window_init.py:1597:4: R0915: Too many statements (64/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\main_window_init.py:21:0: W0611: Unused List imported from typing (unused-import)
+moleditpy\src\moleditpy\ui\main_window_init.py:42:0: W0611: Unused QFileDialog imported from PyQt6.QtWidgets (unused-import)
+moleditpy\src\moleditpy\ui\main_window_init.py:64:4: W0611: Unused import winreg (unused-import)
+************* Module moleditpy.ui.mirror_dialog
+moleditpy\src\moleditpy\ui\mirror_dialog.py:118:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\mirror_dialog.py:45:4: C0116: Missing function or method docstring (missing-function-docstring)
+************* Module moleditpy.ui.molecular_scene_handler
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:56:0: C0301: Line too long (113/100) (line-too-long)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:169:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:754:0: C0301: Line too long (113/100) (line-too-long)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1487:0: C0301: Line too long (101/100) (line-too-long)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1488:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1:0: C0302: Too many lines in module (1595/1000) (too-many-lines)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:57:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:61:4: R0914: Too many local variables (29/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:140:20: R0916: Too many boolean expressions in if statement (6/5) (too-many-boolean-expressions)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:61:4: R0912: Too many branches (25/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:61:4: R0915: Too many statements (57/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:187:4: R0914: Too many local variables (47/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:212:16: W0707: Consider explicitly re-raising using 'except (AttributeError, RuntimeError, ValueError, TypeError) as exc' and 'raise ValueError('point has no x/y') from exc' (raise-missing-from)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:247:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:347:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:187:4: R0912: Too many branches (29/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:187:4: R0915: Too many statements (86/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:353:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:353:4: R0914: Too many local variables (33/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:424:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:424:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:353:4: R0912: Too many branches (33/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:353:4: R0915: Too many statements (91/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:496:4: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:496:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:496:4: R0914: Too many local variables (20/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:543:4: R0914: Too many local variables (28/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:543:4: R0912: Too many branches (16/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:619:4: R0914: Too many local variables (31/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:619:4: R0912: Too many branches (16/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:619:4: R0915: Too many statements (51/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:620:28: W0613: Unused argument 'alt_pressed' (unused-argument)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:724:4: R0914: Too many local variables (28/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:742:8: C0103: Variable name "num_non_H_neighbors" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:724:4: R0912: Too many branches (15/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:724:4: R0915: Too many statements (53/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:806:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:806:4: C0103: Method name "keyPressEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:806:4: R0914: Too many local variables (62/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:809:16: C0415: Import outside toplevel (PyQt6.QtWidgets.QGraphicsScene) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:835:8: R1702: Too many nested blocks (9/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:965:15: R1714: Consider merging these comparisons with 'in' by using 'key in (Qt.Key.Key_Plus, Qt.Key.Key_Minus)'. Use a set instead if elements are hashable. (consider-using-in)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1027:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:835:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1129:16: R1705: Unnecessary "elif" after "return", remove the leading "el" from "elif" (no-else-return)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1210:15: R1714: Consider merging these comparisons with 'in' by using 'key in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace)'. Use a set instead if elements are hashable. (consider-using-in)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1226:32: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:835:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1238:28: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1326:12: C0415: Import outside toplevel (PyQt6.QtWidgets.QGraphicsScene) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1331:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:806:4: R0911: Too many return statements (15/6) (too-many-return-statements)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:806:4: R0912: Too many branches (92/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:806:4: R0915: Too many statements (292/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:708:0: R0903: Too few public methods (1/2) (too-few-public-methods)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1351:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1360:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1394:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1454:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1470:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1479:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1502:28: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1515:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1529:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1397:4: R0912: Too many branches (28/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1397:4: R0915: Too many statements (73/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1533:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1547:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecular_scene_handler.py:1591:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+************* Module moleditpy.ui.molecule_scene
+moleditpy\src\moleditpy\ui\molecule_scene.py:353:0: C0301: Line too long (104/100) (line-too-long)
+moleditpy\src\moleditpy\ui\molecule_scene.py:385:0: C0301: Line too long (111/100) (line-too-long)
+moleditpy\src\moleditpy\ui\molecule_scene.py:428:0: C0301: Line too long (113/100) (line-too-long)
+moleditpy\src\moleditpy\ui\molecule_scene.py:622:0: C0301: Line too long (101/100) (line-too-long)
+moleditpy\src\moleditpy\ui\molecule_scene.py:655:0: C0301: Line too long (101/100) (line-too-long)
+moleditpy\src\moleditpy\ui\molecule_scene.py:36:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\molecule_scene.py:36:0: R0902: Too many instance attributes (24/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\molecule_scene.py:109:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:111:4: R0914: Too many local variables (31/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecule_scene.py:111:4: R0912: Too many branches (20/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecule_scene.py:204:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecule_scene.py:244:4: R0914: Too many local variables (19/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecule_scene.py:285:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecule_scene.py:299:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:311:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecule_scene.py:311:4: C0103: Method name "mousePressEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\molecule_scene.py:354:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:387:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:334:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\molecule_scene.py:311:4: R0912: Too many branches (37/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecule_scene.py:311:4: R0915: Too many statements (106/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\molecule_scene.py:473:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecule_scene.py:473:4: C0103: Method name "mouseMoveEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\molecule_scene.py:512:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecule_scene.py:512:4: C0103: Method name "mouseReleaseEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\molecule_scene.py:512:4: R0914: Too many local variables (35/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecule_scene.py:532:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:559:8: R1705: Unnecessary "elif" after "return", remove the leading "el" from "elif" (no-else-return)
+moleditpy\src\moleditpy\ui\molecule_scene.py:585:13: R1714: Consider merging these comparisons with 'in' by using 'self.mode in ('charge_plus', 'charge_minus')'. Use a set instead if elements are hashable. (consider-using-in)
+moleditpy\src\moleditpy\ui\molecule_scene.py:609:12: R1705: Unnecessary "elif" after "return", remove the leading "el" from "elif" (no-else-return)
+moleditpy\src\moleditpy\ui\molecule_scene.py:624:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:512:4: R0912: Too many branches (55/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecule_scene.py:512:4: R0915: Too many statements (179/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\molecule_scene.py:810:4: C0103: Method name "mouseDoubleClickEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\molecule_scene.py:810:4: R0914: Too many local variables (17/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\molecule_scene.py:837:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\molecule_scene.py:837:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\molecule_scene.py:906:28: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:918:28: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:923:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:810:4: R0912: Too many branches (26/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\molecule_scene.py:810:4: R0915: Too many statements (72/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\molecule_scene.py:943:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:948:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\molecule_scene.py:951:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\molecule_scene.py:951:4: C0103: Method name "leaveEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\molecule_scene.py:951:25: W0613: Unused argument 'event' (unused-argument)
+moleditpy\src\moleditpy\ui\molecule_scene.py:956:8: C0415: Import outside toplevel (PyQt6.QtGui) (import-outside-toplevel)
+************* Module moleditpy.ui.move_group_dialog
+moleditpy\src\moleditpy\ui\move_group_dialog.py:194:0: C0301: Line too long (105/100) (line-too-long)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:457:0: C0301: Line too long (131/100) (line-too-long)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:526:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:534:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:542:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:34:0: R0902: Too many instance attributes (28/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:85:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:85:4: R0915: Too many statements (71/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:193:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:238:24: R1705: Unnecessary "else" after "return", remove the "else" and de-indent the code inside it (no-else-return)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:257:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:295:32: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:297:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:199:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:314:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:336:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:380:36: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:386:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:199:8: R1702: Too many nested blocks (8/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:402:28: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:193:4: R0911: Too many return statements (19/6) (too-many-return-statements)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:193:4: R0912: Too many branches (40/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:193:4: R0915: Too many statements (115/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:199:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:447:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:545:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:578:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:583:4: R0914: Too many local variables (18/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:606:8: C0103: Variable name "Rx" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:613:8: C0103: Variable name "Ry" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:620:8: C0103: Variable name "Rz" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\move_group_dialog.py:627:8: C0103: Variable name "R" doesn't conform to snake_case naming style (invalid-name)
+************* Module moleditpy.ui.move_selected_atoms_dialog
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:527:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:535:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:543:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:34:0: R0902: Too many instance attributes (10/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:227:4: R0914: Too many local variables (17/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:278:20: R1705: Unnecessary "else" after "return", remove the "else" and de-indent the code inside it (no-else-return)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:297:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:331:28: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:333:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:300:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:350:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:372:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:410:32: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:414:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:376:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:425:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:227:4: R0911: Too many return statements (20/6) (too-many-return-statements)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:227:4: R0912: Too many branches (40/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py:227:4: R0915: Too many statements (116/50) (too-many-statements)
+************* Module moleditpy.ui.periodic_table_dialog
+moleditpy\src\moleditpy\ui\periodic_table_dialog.py:23:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\periodic_table_dialog.py:192:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\periodic_table_dialog.py:20:0: C0411: third party import "PyQt6.QtCore.pyqtSignal" should be placed before local import "utils.constants.CPK_COLORS" (wrong-import-order)
+************* Module moleditpy.ui.planarize_dialog
+moleditpy\src\moleditpy\ui\planarize_dialog.py:60:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\planarize_dialog.py:111:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\planarize_dialog.py:116:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\planarize_dialog.py:147:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\planarize_dialog.py:155:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\planarize_dialog.py:155:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\planarize_dialog.py:175:12: C0415: Import outside toplevel (moleditpy.core.mol_geometry.calculate_best_fit_plane_projection) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\planarize_dialog.py:178:12: W0612: Unused variable 'u' (unused-variable)
+moleditpy\src\moleditpy\ui\planarize_dialog.py:178:15: W0612: Unused variable 's' (unused-variable)
+moleditpy\src\moleditpy\ui\planarize_dialog.py:15:0: C0411: standard import "typing.TYPE_CHECKING" should be placed before third party import "numpy" (wrong-import-order)
+************* Module moleditpy.ui.plugin_menu_manager
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:46:19: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:54:23: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:43:0: W0613: Unused argument 'args' (unused-argument)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:43:0: W0613: Unused argument 'kwargs' (unused-argument)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:94:8: C0103: Variable name "PLUGIN_ACTION_TAG" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:111:15: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:126:19: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:131:8: C0103: Variable name "PLUGIN_ACTION_TAG" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:220:8: C0415: Import outside toplevel (plugins.plugin_manager_window.PluginManagerWindow) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:228:8: C0103: Variable name "PLUGIN_ACTION_TAG" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:334:8: C0103: Variable name "PLUGIN_ACTION_TAG" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:369:4: R0914: Too many local variables (16/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:380:8: C0103: Variable name "PLUGIN_ACTION_TAG" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:412:35: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\plugin_menu_manager.py:441:12: C0103: Variable name "PLUGIN_ACTION_TAG" doesn't conform to snake_case naming style (invalid-name)
+************* Module moleditpy.ui.settings_dialog
+moleditpy\src\moleditpy\ui\settings_dialog.py:62:0: C0301: Line too long (116/100) (line-too-long)
+moleditpy\src\moleditpy\ui\settings_dialog.py:140:0: C0301: Line too long (121/100) (line-too-long)
+moleditpy\src\moleditpy\ui\settings_dialog.py:33:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\settings_dialog.py:33:0: R0902: Too many instance attributes (10/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\settings_dialog.py:125:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\settings_dialog.py:129:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\settings_dialog.py:135:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\settings_dialog.py:143:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\settings_dialog.py:154:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\settings_dialog.py:191:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\settings_dialog.py:13:0: W0611: Unused import logging (unused-import)
+************* Module moleditpy.ui.string_importers
+moleditpy\src\moleditpy\ui\string_importers.py:103:8: C0103: Variable name "SCALE_FACTOR" doesn't conform to snake_case naming style (invalid-name)
+************* Module moleditpy.ui.template_preview_item
+moleditpy\src\moleditpy\ui\template_preview_item.py:160:0: C0301: Line too long (111/100) (line-too-long)
+moleditpy\src\moleditpy\ui\template_preview_item.py:24:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\template_preview_item.py:36:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\template_preview_item.py:43:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\template_preview_item.py:58:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\template_preview_item.py:58:4: C0103: Method name "boundingRect" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\template_preview_item.py:70:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\template_preview_item.py:73:8: W0613: Unused argument 'option' (unused-argument)
+moleditpy\src\moleditpy\ui\template_preview_item.py:74:8: W0613: Unused argument 'widget' (unused-argument)
+moleditpy\src\moleditpy\ui\template_preview_item.py:83:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\template_preview_item.py:93:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\template_preview_item.py:93:4: R0914: Too many local variables (22/15) (too-many-locals)
+************* Module moleditpy.ui.template_preview_view
+moleditpy\src\moleditpy\ui\template_preview_view.py:37:4: C0103: Method name "resizeEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\template_preview_view.py:54:4: C0103: Method name "showEvent" doesn't conform to snake_case naming style (invalid-name)
+************* Module moleditpy.ui.translation_dialog
+moleditpy\src\moleditpy\ui\translation_dialog.py:35:0: R0902: Too many instance attributes (15/7) (too-many-instance-attributes)
+************* Module moleditpy.ui.ui_manager
+moleditpy\src\moleditpy\ui\ui_manager.py:221:0: C0301: Line too long (107/100) (line-too-long)
+moleditpy\src\moleditpy\ui\ui_manager.py:361:0: C0301: Line too long (105/100) (line-too-long)
+moleditpy\src\moleditpy\ui\ui_manager.py:462:0: C0301: Line too long (107/100) (line-too-long)
+moleditpy\src\moleditpy\ui\ui_manager.py:463:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\ui_manager.py:38:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\ui_manager.py:48:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\ui_manager.py:48:4: R0912: Too many branches (16/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\ui_manager.py:48:4: R0915: Too many statements (56/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\ui_manager.py:131:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\ui_manager.py:137:16: W0612: Unused variable 'key' (unused-variable)
+moleditpy\src\moleditpy\ui\ui_manager.py:169:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\ui_manager.py:178:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\ui_manager.py:178:4: C0103: Method name "eventFilter" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\ui_manager.py:207:33: W0613: Unused argument 'event' (unused-argument)
+moleditpy\src\moleditpy\ui\ui_manager.py:274:4: C0103: Method name "closeEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\ui_manager.py:361:19: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\ui_manager.py:388:25: W0108: Lambda may not be necessary (unnecessary-lambda)
+moleditpy\src\moleditpy\ui\ui_manager.py:391:25: W0108: Lambda may not be necessary (unnecessary-lambda)
+moleditpy\src\moleditpy\ui\ui_manager.py:342:4: R0912: Too many branches (13/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\ui_manager.py:583:32: W0613: Unused argument 'pos' (unused-argument)
+moleditpy\src\moleditpy\ui\ui_manager.py:583:42: W0613: Unused argument 'index' (unused-argument)
+moleditpy\src\moleditpy\ui\ui_manager.py:38:0: R0904: Too many public methods (23/20) (too-many-public-methods)
+************* Module moleditpy.ui.user_template_dialog
+moleditpy\src\moleditpy\ui\user_template_dialog.py:70:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:327:0: C0301: Line too long (113/100) (line-too-long)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:391:0: C0301: Line too long (118/100) (line-too-long)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:493:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:54:4: C0116: Missing function or method docstring (missing-function-docstring)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:106:4: C0103: Method name "closeEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:124:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:156:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:158:4: C0103: Method name "resizeEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:178:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:180:4: C0103: Method name "showEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:210:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:220:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:230:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:337:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:339:4: R0914: Too many local variables (61/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:339:4: R0912: Too many branches (19/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:339:4: R0915: Too many statements (95/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:556:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:34:0: C0411: standard import "json" should be placed before third party imports "PyQt6.QtCore.QDateTime", "PyQt6.QtGui.QBrush", "PyQt6.QtWidgets.QDialog" and local imports "template_preview_view.TemplatePreviewView", "utils.constants.CPK_COLORS" (wrong-import-order)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:35:0: C0411: standard import "logging" should be placed before third party imports "PyQt6.QtCore.QDateTime", "PyQt6.QtGui.QBrush", "PyQt6.QtWidgets.QDialog" and local imports "template_preview_view.TemplatePreviewView", "utils.constants.CPK_COLORS" (wrong-import-order)
+moleditpy\src\moleditpy\ui\user_template_dialog.py:36:0: C0411: standard import "os" should be placed before third party imports "PyQt6.QtCore.QDateTime", "PyQt6.QtGui.QBrush", "PyQt6.QtWidgets.QDialog" and local imports "template_preview_view.TemplatePreviewView", "utils.constants.CPK_COLORS" (wrong-import-order)
+************* Module moleditpy.ui.view_3d_logic
+moleditpy\src\moleditpy\ui\view_3d_logic.py:132:0: C0301: Line too long (110/100) (line-too-long)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:224:0: C0301: Line too long (123/100) (line-too-long)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:266:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:408:0: C0301: Line too long (102/100) (line-too-long)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:636:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:661:0: C0301: Line too long (141/100) (line-too-long)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:662:0: C0301: Line too long (107/100) (line-too-long)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:681:0: C0301: Line too long (116/100) (line-too-long)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1684:0: C0301: Line too long (109/100) (line-too-long)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1687:0: C0301: Line too long (113/100) (line-too-long)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1:0: C0302: Too many lines in module (1993/1000) (too-many-lines)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:22:0: C0413: Import "import numpy as np" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:23:0: C0413: Import "import vtk" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:26:0: C0413: Import "from rdkit import Chem" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:29:0: C0413: Import "import pyvista as pv" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:30:0: C0413: Import "from PyQt6.QtCore import QRectF, Qt" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:31:0: C0413: Import "from PyQt6.QtGui import QColor, QTransform" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:32:0: C0413: Import "from PyQt6.QtWidgets import QGraphicsView" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:35:0: C0413: Import "from ..utils.constants import CPK_COLORS_PV, VDW_RADII, pt" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:36:0: C0413: Import "from .template_preview_item import TemplatePreviewItem" should be placed at the top of the module (wrong-import-position)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:39:0: R0902: Too many instance attributes (20/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:132:23: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:170:4: R0914: Too many local variables (21/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:270:21: R1735: Consider using '{"smooth_shading": True, "specular": self.host.init_manager.settings.get('specular', 0.2), ... }' instead of a call to 'dict'. (use-dict-literal)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:297:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:170:4: R0912: Too many branches (14/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:170:4: R0915: Too many statements (64/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:307:4: R0913: Too many arguments (8/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:307:4: R0917: Too many positional arguments (8/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:307:4: R0914: Too many local variables (46/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:355:8: R1702: Too many nested blocks (9/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:355:8: R1702: Too many nested blocks (9/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:355:8: R1702: Too many nested blocks (8/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:494:20: C0200: Consider using enumerate instead of iterating with range and len (consider-using-enumerate)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:307:4: R0912: Too many branches (30/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:307:4: R0915: Too many statements (98/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:502:34: W0612: Unused variable 'bond_order' (unused-variable)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:548:4: R0913: Too many arguments (6/5) (too-many-arguments)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:548:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:548:4: R0914: Too many local variables (63/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:591:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:668:20: R1714: Consider merging these comparisons with 'in' by using 'bt in (Chem.rdchem.BondType.SINGLE, Chem.rdchem.BondType.AROMATIC)'. Use a set instead if elements are hashable. (consider-using-in)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:548:4: R0912: Too many branches (33/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:548:4: R0915: Too many statements (157/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:872:4: R0914: Too many local variables (41/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:989:20: C0415: Import outside toplevel (collections.Counter) (import-outside-toplevel)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:883:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1038:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:872:4: R0912: Too many branches (24/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:872:4: R0915: Too many statements (79/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1059:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1040:39: W0613: Unused argument 'mol_to_draw' (unused-argument)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1089:4: R0914: Too many local variables (26/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1089:4: R0912: Too many branches (19/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1180:4: R0914: Too many local variables (21/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1193:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1212:12: W1201: Use lazy % formatting in logging functions (logging-not-lazy)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1214:8: R1702: Too many nested blocks (7/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1180:4: R0912: Too many branches (16/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1329:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1298:4: R0912: Too many branches (14/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1464:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1503:4: R0914: Too many local variables (33/15) (too-many-locals)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1657:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1666:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1712:32: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1714:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1721:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1503:4: R0912: Too many branches (38/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1503:4: R0915: Too many statements (115/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1660:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1735:28: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1740:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1744:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1757:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1761:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1725:4: R0912: Too many branches (13/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1840:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1872:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1933:15: W0718: Catching too general exception Exception (broad-exception-caught)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1939:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1952:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1963:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1844:4: R0912: Too many branches (19/12) (too-many-branches)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:1844:4: R0915: Too many statements (64/50) (too-many-statements)
+moleditpy\src\moleditpy\ui\view_3d_logic.py:39:0: R0904: Too many public methods (24/20) (too-many-public-methods)
+************* Module moleditpy.ui.zoomable_view
+moleditpy\src\moleditpy\ui\zoomable_view.py:23:0: C0301: Line too long (112/100) (line-too-long)
+moleditpy\src\moleditpy\ui\zoomable_view.py:41:4: C0103: Method name "wheelEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\zoomable_view.py:62:4: C0103: Method name "mousePressEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\zoomable_view.py:85:4: C0103: Method name "mouseMoveEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\zoomable_view.py:102:4: C0103: Method name "mouseReleaseEvent" doesn't conform to snake_case naming style (invalid-name)
+moleditpy\src\moleditpy\ui\zoomable_view.py:124:4: C0103: Method name "viewportEvent" doesn't conform to snake_case naming style (invalid-name)
+************* Module moleditpy.ui.settings_tabs.settings_2d_tab
+moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py:30:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py:30:0: R0902: Too many instance attributes (26/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py:45:4: R0915: Too many statements (55/50) (too-many-statements)
+************* Module moleditpy.ui.settings_tabs.settings_3d_tabs
+moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py:29:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py:29:0: R0902: Too many instance attributes (11/7) (too-many-instance-attributes)
+moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py:124:0: C0115: Missing class docstring (missing-class-docstring)
+moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py:124:0: R0902: Too many instance attributes (19/7) (too-many-instance-attributes)
+************* Module moleditpy.ui.settings_tabs.settings_other_tab
+moleditpy\src\moleditpy\ui\settings_tabs\settings_other_tab.py:29:0: C0115: Missing class docstring (missing-class-docstring)
+************* Module moleditpy.utils.constants
+moleditpy\src\moleditpy\utils\constants.py:26:0: C0301: Line too long (122/100) (line-too-long)
+moleditpy\src\moleditpy\utils\constants.py:60:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\utils\constants.py:62:0: C0301: Line too long (106/100) (line-too-long)
+moleditpy\src\moleditpy\utils\constants.py:22:8: C0415: Import outside toplevel (importlib.metadata.version, importlib.metadata.PackageNotFoundError) (import-outside-toplevel)
+moleditpy\src\moleditpy\utils\constants.py:43:8: W0718: Catching too general exception Exception (broad-exception-caught)
+************* Module moleditpy.utils.sip_isdeleted_safe
+moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py:24:8: C0103: Constant name "_sip_isdeleted" doesn't conform to UPPER_CASE naming style (invalid-name)
+************* Module moleditpy.utils.system_utils
+moleditpy\src\moleditpy\utils\system_utils.py:54:16: W1510: 'subprocess.run' used without explicitly defining the value for 'check'. (subprocess-run-check)
+moleditpy\src\moleditpy\utils\system_utils.py:66:16: W1510: 'subprocess.run' used without explicitly defining the value for 'check'. (subprocess-run-check)
+************* Module moleditpy.utils.__init__
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.color_settings_dialog:[52:177]
+==moleditpy.ui.periodic_table_dialog:[31:158]
+        elements = [
+            ("H", 1, 1),
+            ("He", 1, 18),
+            ("Li", 2, 1),
+            ("Be", 2, 2),
+            ("B", 2, 13),
+            ("C", 2, 14),
+            ("N", 2, 15),
+            ("O", 2, 16),
+            ("F", 2, 17),
+            ("Ne", 2, 18),
+            ("Na", 3, 1),
+            ("Mg", 3, 2),
+            ("Al", 3, 13),
+            ("Si", 3, 14),
+            ("P", 3, 15),
+            ("S", 3, 16),
+            ("Cl", 3, 17),
+            ("Ar", 3, 18),
+            ("K", 4, 1),
+            ("Ca", 4, 2),
+            ("Sc", 4, 3),
+            ("Ti", 4, 4),
+            ("V", 4, 5),
+            ("Cr", 4, 6),
+            ("Mn", 4, 7),
+            ("Fe", 4, 8),
+            ("Co", 4, 9),
+            ("Ni", 4, 10),
+            ("Cu", 4, 11),
+            ("Zn", 4, 12),
+            ("Ga", 4, 13),
+            ("Ge", 4, 14),
+            ("As", 4, 15),
+            ("Se", 4, 16),
+            ("Br", 4, 17),
+            ("Kr", 4, 18),
+            ("Rb", 5, 1),
+            ("Sr", 5, 2),
+            ("Y", 5, 3),
+            ("Zr", 5, 4),
+            ("Nb", 5, 5),
+            ("Mo", 5, 6),
+            ("Tc", 5, 7),
+            ("Ru", 5, 8),
+            ("Rh", 5, 9),
+            ("Pd", 5, 10),
+            ("Ag", 5, 11),
+            ("Cd", 5, 12),
+            ("In", 5, 13),
+            ("Sn", 5, 14),
+            ("Sb", 5, 15),
+            ("Te", 5, 16),
+            ("I", 5, 17),
+            ("Xe", 5, 18),
+            ("Cs", 6, 1),
+            ("Ba", 6, 2),
+            ("Hf", 6, 4),
+            ("Ta", 6, 5),
+            ("W", 6, 6),
+            ("Re", 6, 7),
+            ("Os", 6, 8),
+            ("Ir", 6, 9),
+            ("Pt", 6, 10),
+            ("Au", 6, 11),
+            ("Hg", 6, 12),
+            ("Tl", 6, 13),
+            ("Pb", 6, 14),
+            ("Bi", 6, 15),
+            ("Po", 6, 16),
+            ("At", 6, 17),
+            ("Rn", 6, 18),
+            ("Fr", 7, 1),
+            ("Ra", 7, 2),
+            ("Rf", 7, 4),
+            ("Db", 7, 5),
+            ("Sg", 7, 6),
+            ("Bh", 7, 7),
+            ("Hs", 7, 8),
+            ("Mt", 7, 9),
+            ("Ds", 7, 10),
+            ("Rg", 7, 11),
+            ("Cn", 7, 12),
+            ("Nh", 7, 13),
+            ("Fl", 7, 14),
+            ("Mc", 7, 15),
+            ("Lv", 7, 16),
+            ("Ts", 7, 17),
+            ("Og", 7, 18),
+            ("La", 8, 3),
+            ("Ce", 8, 4),
+            ("Pr", 8, 5),
+            ("Nd", 8, 6),
+            ("Pm", 8, 7),
+            ("Sm", 8, 8),
+            ("Eu", 8, 9),
+            ("Gd", 8, 10),
+            ("Tb", 8, 11),
+            ("Dy", 8, 12),
+            ("Ho", 8, 13),
+            ("Er", 8, 14),
+            ("Tm", 8, 15),
+            ("Yb", 8, 16),
+            ("Lu", 8, 17),
+            ("Ac", 9, 3),
+            ("Th", 9, 4),
+            ("Pa", 9, 5),
+            ("U", 9, 6),
+            ("Np", 9, 7),
+            ("Pu", 9, 8),
+            ("Am", 9, 9),
+            ("Cm", 9, 10),
+            ("Bk", 9, 11),
+            ("Cf", 9, 12),
+            ("Es", 9, 13),
+            ("Fm", 9, 14),
+            ("Md", 9, 15),
+            ("No", 9, 16),
+            ("Lr", 9, 17),
+        ]
+
+        for symbol, row, col in elements:
+            b = QPushButton(symbol)
+            b.setFixedSize(40, 40)
+            # Choose override color (if present) else default CPK color (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[473:500]
+==moleditpy.ui.move_selected_atoms_dialog:[476:503]
+        if self.main_window.view_3d_manager.atom_positions_3d is None:
+            logging.error("atom_positions_3d is None in update_atom_labels")
+            return
+        selected_positions = self.main_window.view_3d_manager.atom_positions_3d[
+            selected_indices
+        ]
+        selected_radii = np.array(
+            [
+                VDW_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
+                for i in selected_indices
+            ]
+        )
+
+        highlight_source = pv.PolyData(selected_positions)
+        highlight_source["radii"] = selected_radii
+        highlight_glyphs = highlight_source.glyph(
+            scale="radii",
+            geom=pv.Sphere(radius=1.0, theta_resolution=16, phi_resolution=16),
+            orient=False,
+        )
+
+        if plotter is None:
+            return
+        self.highlight_actor = plotter.add_mesh(
+            highlight_glyphs,
+            color="yellow",
+            opacity=0.3, (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[140:178]
+==moleditpy.ui.dihedral_dialog:[144:181]
+        group_layout.addWidget(self.both_groups_radio)
+
+        layout.addWidget(group_box)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+
+        button_layout.addStretch()
+
+        self.apply_button = QPushButton("Apply")
+        self.apply_button.clicked.connect(self.apply_changes)
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
+
+        layout.addLayout(button_layout)
+
+        # Connect to main window's picker
+        self.picker_connection = None
+        self.enable_picking()
+
+        # Update display if atoms are preselected
+        if self.atom1_idx is not None:
+            self.show_atom_labels()
+            self.update_display()
+
+    def on_atom_picked(self, atom_idx: int) -> None:
+        """Handle atom picking event in the 3D view."""
+        # Deselection logic: if already selected, remove and shift down
+        if atom_idx == self.atom1_idx:
+            self.atom1_idx = self.atom2_idx
+            self.atom2_idx = self.atom3_idx (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.bond_length_dialog:[135:172]
+==moleditpy.ui.dihedral_dialog:[143:180]
+        )
+        group_layout.addWidget(self.both_groups_radio)
+
+        layout.addWidget(group_box)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+
+        button_layout.addStretch()
+
+        self.apply_button = QPushButton("Apply")
+        self.apply_button.clicked.connect(self.apply_changes)
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
+
+        layout.addLayout(button_layout)
+
+        # Connect to main window's picker
+        self.picker_connection = None
+        self.enable_picking()
+
+        # Update display if atoms are preselected
+        if self.atom1_idx is not None:
+            self.show_atom_labels()
+            self.update_display()
+
+    def on_atom_picked(self, atom_idx: int) -> None:
+        """Handle atom picking event in the 3D view."""
+        if atom_idx == self.atom1_idx:
+            self.atom1_idx = self.atom2_idx (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[140:177]
+==moleditpy.ui.bond_length_dialog:[136:172]
+        group_layout.addWidget(self.both_groups_radio)
+
+        layout.addWidget(group_box)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+
+        button_layout.addStretch()
+
+        self.apply_button = QPushButton("Apply")
+        self.apply_button.clicked.connect(self.apply_changes)
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
+
+        layout.addLayout(button_layout)
+
+        # Connect to main window's picker
+        self.picker_connection = None
+        self.enable_picking()
+
+        # Update display if atoms are preselected
+        if self.atom1_idx is not None:
+            self.show_atom_labels()
+            self.update_display()
+
+    def on_atom_picked(self, atom_idx: int) -> None:
+        """Handle atom picking event in the 3D view."""
+        if atom_idx == self.atom1_idx:
+            self.atom1_idx = self.atom2_idx (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[263:285]
+==moleditpy.ui.move_selected_atoms_dialog:[301:323]
+            if (
+                getattr(self, "potential_drag", False)
+                and self.drag_start_pos
+                and not self.is_dragging_group
+            ):
+                try:
+                    plotter_ref = self.main_window.view_3d_manager.plotter
+                    if plotter_ref is None or plotter_ref.interactor is None:
+                        return False
+                    interactor = plotter_ref.interactor
+                    current_pos = interactor.GetEventPosition()
+                    dx = current_pos[0] - self.drag_start_pos[0]
+                    dy = current_pos[1] - self.drag_start_pos[1]
+
+                    # Start drag if threshold is exceeded
+                    drag_threshold = 5  # pixels
+                    if abs(dx) > drag_threshold or abs(dy) > drag_threshold:
+                        self.is_dragging_group = True
+                        self.potential_drag = False
+                        try:
+                            plotter_ptr = self.main_window.view_3d_manager.plotter
+                            if plotter_ptr is not None: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.io_logic:[598:619]
+==moleditpy.ui.string_importers:[103:123]
+            positions = [conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())]
+            mol_center_x = (
+                sum(p.x for p in positions) / len(positions) if positions else 0.0
+            )
+            mol_center_y = (
+                sum(p.y for p in positions) / len(positions) if positions else 0.0
+            )
+
+            rdkit_idx_to_my_id = {}
+            for i in range(mol.GetNumAtoms()):
+                atom = mol.GetAtomWithIdx(i)
+                pos = conf.GetAtomPosition(i)
+                scene_x = ((pos.x - mol_center_x) * SCALE_FACTOR) + place_center.x()
+                scene_y = (-(pos.y - mol_center_y) * SCALE_FACTOR) + place_center.y()
+                atom_id = self.host.init_manager.scene.create_atom(
+                    atom.GetSymbol(),
+                    QPointF(scene_x, scene_y),
+                    charge=atom.GetFormalCharge(),
+                )
+                rdkit_idx_to_my_id[i] = atom_id
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.export_logic:[37:65]
+==moleditpy.ui.io_logic:[44:72]
+            self.host = host
+
+    def _get_default_basename(self) -> str:
+        """Helper to get a default filename base from the current file path."""
+        try:
+            if self.host.init_manager.current_file_path:
+                base = os.path.basename(self.host.init_manager.current_file_path)
+                name = os.path.splitext(base)[0]
+                if name:
+                    return str(name)
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
+            pass
+        return "untitled"
+
+    def _get_default_path(self, suffix: str = "") -> str:
+        """Get the full default path (dir + basename + suffix) based on the current file."""
+        basename = self._get_default_basename() + suffix
+        try:
+            cur_path = self.host.init_manager.current_file_path
+            if cur_path:
+                return os.path.join(os.path.dirname(cur_path), basename)
+        except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
+            pass
+        return basename
+
+    def fix_mol_counts_line(self, line: str) -> str: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[239:259]
+==moleditpy.ui.move_selected_atoms_dialog:[279:299]
+                            self.is_dragging_group = False
+                            self.drag_start_pos = click_pos
+                            self.drag_atom_idx = clicked_atom_idx
+                            self.mouse_moved_during_drag = False
+                            self.potential_drag = True
+                            self.clicked_atom_for_toggle = clicked_atom_idx
+                            return False
+                        else:
+                            # Atom outside group - select new group
+                            self.on_atom_picked(clicked_atom_idx)
+                            self._consume_next_left_release = True
+                            return True
+                    else:
+                        # Clicked outside atoms
+                        return False
+
+                except (AttributeError, RuntimeError, ValueError) as e:
+                    logging.debug(f"Error in mouse press: {e}")
+                    return False
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[288:317]
+==moleditpy.ui.move_selected_atoms_dialog:[324:353]
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ) as e:
+                                logging.debug(f"Failed to set closed hand cursor: {e}")
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error initiating drag on move: {e}")
+
+                    if not self.is_dragging_group:
+                        return False
+
+                if self.is_dragging_group and self.drag_start_pos:
+                    try:
+                        plotter_ref = self.main_window.view_3d_manager.plotter
+                        if plotter_ref is None or plotter_ref.interactor is None:
+                            return False
+                        interactor = plotter_ref.interactor
+                        current_pos = interactor.GetEventPosition()
+                        dx = current_pos[0] - self.drag_start_pos[0]
+                        dy = current_pos[1] - self.drag_start_pos[1]
+                        if abs(dx) > 5 or abs(dy) > 5:
+                            self.mouse_moved_during_drag = True
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error tracking drag movement: {e}")
+                    return True
+
+                # Hover handling (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[524:545]
+==moleditpy.ui.move_selected_atoms_dialog:[525:547]
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
+                pass
+
+        if self.highlight_actor:
+            if plotter is not None:
+                try:
+                    plotter.remove_actor(self.highlight_actor)
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
+                    pass
+            self.highlight_actor = None
+
+        if plotter is not None:
+            try:
+                plotter.render()
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
+                pass
+
+    def reset_translation_inputs(self) -> None:
+        """Reset translation entry fields to 0.0.""" (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[501:523]
+==moleditpy.ui.move_selected_atoms_dialog:[504:524]
+            pickable=False,
+            reset_camera=False,
+        )
+
+        if cam is not None:
+            try:
+                plotter.camera_position = cam
+            except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
+                pass
+
+        plotter.render()
+
+    def clear_atom_labels(self) -> None:
+        """Clear highlights."""
+        super().clear_atom_labels()
+
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is not None:
+            try: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.align_plane_dialog:[146:163]
+==moleditpy.ui.planarize_dialog:[129:143]
+        try:
+            # Prefer RDKit molecule if available
+            if hasattr(self, "mol") and self.mol is not None:
+                n = self.mol.GetNumAtoms()
+                self.selected_atoms = set(range(n))
+            else:
+                # fallback to main_window data map
+                self.selected_atoms = (
+                    set(self.main_window.state_manager.data.atoms.keys())
+                    if hasattr(self.main_window.state_manager, "data")
+                    else set()
+                )
+
+            # Update labels and display
+            self.show_atom_labels()
+            self.update_display()
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[220:237]
+==moleditpy.ui.move_selected_atoms_dialog:[260:277]
+                    return False
+
+                # Mouse press handling
+                try:
+                    interactor = plotter.interactor
+                    if interactor is None:
+                        return False
+                    click_pos = interactor.GetEventPosition()
+
+                    clicked_atom_idx = pick_atom_index_from_screen(
+                        self.main_window.view_3d_manager,
+                        (int(click_pos[0]), int(click_pos[1])),
+                        self.mol,
+                    )
+
+                    # Handle clicked atom
+                    if clicked_atom_idx is not None: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.core.molecular_data:[390:403]
+==moleditpy.ui.user_template_dialog:[645:658]
+            pos = atom_info["pos"]
+            atoms_data.append(
+                {
+                    "id": atom_id,
+                    "symbol": atom_info["symbol"],
+                    "x": pos[0],
+                    "y": pos[1],
+                    "charge": atom_info.get("charge", 0),
+                    "radical": atom_info.get("radical", 0),
+                }
+            )
+
+        # Convert bonds (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[318:330]
+==moleditpy.ui.move_selected_atoms_dialog:[354:366]
+                try:
+                    plotter_ref = self.main_window.view_3d_manager.plotter
+                    if plotter_ref is None or plotter_ref.interactor is None:
+                        return False
+                    interactor = plotter_ref.interactor
+                    current_pos = interactor.GetEventPosition()
+                    closest_atom_idx = pick_atom_index_from_screen(
+                        self.main_window.view_3d_manager,
+                        (int(current_pos[0]), int(current_pos[1])),
+                        self.mol,
+                    )
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[389:402]
+==moleditpy.ui.dihedral_dialog:[398:411]
+        conf = self.mol.GetConformer()
+
+        # Use baseline positions (fixed for dialog session) to keep the rotation axis stable.
+        if (
+            hasattr(self, "_baseline_positions")
+            and self._baseline_positions is not None
+        ):
+            positions = self._baseline_positions.copy()
+        elif self._snapshot_positions is not None:
+            positions = self._snapshot_positions.copy()
+        else:
+            positions = conf.GetPositions()
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.app_state:[283:295]
+==moleditpy.ui.ui_manager:[225:236]
+            reply = QMessageBox.question(
+                self.host,
+                "Unsaved Changes",
+                "You have unsaved changes. Do you want to save them?",
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Yes,
+            )
+
+            if reply == QMessageBox.StandardButton.Yes: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.edit_3d_logic:[455:470]
+==moleditpy.ui.move_group_dialog:[482:494]
+                for i in selected_indices
+            ]
+        )
+
+        highlight_source = pv.PolyData(selected_positions)
+        highlight_source["radii"] = selected_radii
+        highlight_glyphs = highlight_source.glyph(
+            scale="radii",
+            geom=pv.Sphere(radius=1.0, theta_resolution=16, phi_resolution=16),
+            orient=False,
+        )
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[162:177]
+==moleditpy.ui.move_selected_atoms_dialog:[198:213]
+        rot_button_layout = QHBoxLayout()
+        reset_rot_button = QPushButton("Reset")
+        reset_rot_button.clicked.connect(self.reset_rotation_inputs)
+        rot_button_layout.addWidget(reset_rot_button)
+
+        apply_rot_button = QPushButton("Apply Rotation")
+        apply_rot_button.clicked.connect(self.apply_rotation)
+        rot_button_layout.addWidget(apply_rot_button)
+
+        rot_layout.addLayout(rot_button_layout, 3, 0, 1, 2)
+        layout.addLayout(rot_layout)
+
+    def _init_buttons_ui(self, layout: QVBoxLayout) -> None:
+        """Initialize bottom buttons."""
+        button_layout = QHBoxLayout() (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[341:352]
+==moleditpy.ui.move_selected_atoms_dialog:[377:388]
+                and isinstance(event, QMouseEvent)
+                and event.button() == Qt.MouseButton.LeftButton
+            ):
+                if self._consume_next_left_release:
+                    self._consume_next_left_release = False
+                    return True
+
+                if getattr(self, "potential_drag", False) or (
+                    self.is_dragging_group and self.drag_start_pos
+                ):
+                    try: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.align_plane_dialog:[151:164]
+==moleditpy.ui.translation_dialog:[349:358]
+            else:
+                self.selected_atoms = (
+                    set(self.main_window.state_manager.data.atoms.keys())
+                    if hasattr(self.main_window.state_manager, "data")
+                    else set()
+                )
+            self.show_atom_labels()
+            self.update_display()
+        except (AttributeError, RuntimeError, TypeError, KeyError) as e: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.compute_logic:[182:191]
+==moleditpy.ui.main_window_init:[1657:1666]
+            ("MMFF94s (RDKit)", "MMFF_RDKIT"),
+            ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
+            ("UFF (RDKit)", "UFF_RDKIT"),
+            ("MMFF94s (Open Babel)", "MMFF94s_OBABEL"),
+            ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
+            ("UFF (Open Babel)", "UFF_OBABEL"),
+            ("GAFF (Open Babel)", "GAFF_OBABEL"),
+            ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
+        ] (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.io_logic:[622:631]
+==moleditpy.ui.string_importers:[79:89]
+                if b_dir == Chem.BondDir.BEGINWEDGE:
+                    stereo = 1
+                elif b_dir == Chem.BondDir.BEGINDASH:
+                    stereo = 2
+                if bond.GetBondType() == Chem.BondType.DOUBLE:
+                    if bond.GetStereo() == Chem.BondStereo.STEREOZ:
+                        stereo = 3
+                    elif bond.GetStereo() == Chem.BondStereo.STEREOE:
+                        stereo = 4 (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[125:138]
+==moleditpy.ui.move_selected_atoms_dialog:[159:173]
+        trans_button_layout = QHBoxLayout()
+        reset_trans_button = QPushButton("Reset")
+        reset_trans_button.clicked.connect(self.reset_translation_inputs)
+        trans_button_layout.addWidget(reset_trans_button)
+
+        apply_trans_button = QPushButton("Apply Translation")
+        apply_trans_button.clicked.connect(self.apply_translation)
+        trans_button_layout.addWidget(apply_trans_button)
+
+        trans_layout.addLayout(trans_button_layout, 3, 0, 1, 2)
+        layout.addLayout(trans_layout)
+
+    def _init_rotation_ui(self, layout: QVBoxLayout) -> None:
+        """Initialize rotation widgets.""" (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.align_plane_dialog:[115:130]
+==moleditpy.ui.alignment_dialog:[114:129]
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
+
+        layout.addLayout(button_layout)
+
+        # Connect to main window's picker
+        self.picker_connection = None
+        self.enable_picking()
+
+    def on_atom_picked(self, atom_idx: int) -> None:
+        """Handle atom selection event.""" (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.align_plane_dialog:[94:106]
+==moleditpy.ui.planarize_dialog:[70:81]
+        self.selection_label = QLabel("No atoms selected")
+        layout.addWidget(self.selection_label)
+
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+
+        # Add Select All Atoms button
+        self.select_all_button = QPushButton("Select All Atoms")
+        self.select_all_button.setToolTip( (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[186:197]
+==moleditpy.ui.dihedral_dialog:[195:203]
+            self._snapshot_positions = None
+        else:
+            # Selection logic
+            if self.atom1_idx is None:
+                self.atom1_idx = atom_idx
+            elif self.atom2_idx is None:
+                self.atom2_idx = atom_idx
+            elif self.atom3_idx is None:
+                self.atom3_idx = atom_idx
+                # Capture the ABSOLUTE baseline for this selection session.
+                # This prevents 'direction change' drift during multiple slider drags. (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.custom_interactor_style:[179:190]
+==moleditpy.ui.move_group_dialog:[425:436]
+                begin_idx = bond.GetBeginAtomIdx()
+                end_idx = bond.GetEndAtomIdx()
+
+                if begin_idx == current_idx and end_idx not in visited:
+                    visited.add(end_idx)
+                    queue.append(end_idx)
+                elif end_idx == current_idx and begin_idx not in visited:
+                    visited.add(begin_idx)
+                    queue.append(begin_idx)
+
+        # Toggle group (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.edit_3d_logic:[69:80]
+==moleditpy.ui.ui_manager:[294:303]
+            try:
+                interactor_style = (
+                    self.host.view_3d_manager.plotter.interactor.GetInteractorStyle()
+                )
+                if hasattr(interactor_style, "reset_interactor_state"):
+                    interactor_style.reset_interactor_state()
+            except (AttributeError, RuntimeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError
+                pass
+
+        # Update status message (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[268:278]
+==moleditpy.ui.move_selected_atoms_dialog:[338:346]
+                    try:
+                        plotter_ref = self.main_window.view_3d_manager.plotter
+                        if plotter_ref is None or plotter_ref.interactor is None:
+                            return False
+                        interactor = plotter_ref.interactor
+                        current_pos = interactor.GetEventPosition()
+                        dx = current_pos[0] - self.drag_start_pos[0]
+                        dy = current_pos[1] - self.drag_start_pos[1]
+
+                        # Start drag if threshold is exceeded (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[302:310]
+==moleditpy.ui.move_selected_atoms_dialog:[306:316]
+                    try:
+                        plotter_ref = self.main_window.view_3d_manager.plotter
+                        if plotter_ref is None or plotter_ref.interactor is None:
+                            return False
+                        interactor = plotter_ref.interactor
+                        current_pos = interactor.GetEventPosition()
+                        dx = current_pos[0] - self.drag_start_pos[0]
+                        dy = current_pos[1] - self.drag_start_pos[1] (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[391:401]
+==moleditpy.ui.move_selected_atoms_dialog:[399:409]
+                            try:
+                                plotter_ptr = self.main_window.view_3d_manager.plotter
+                                if plotter_ptr is not None:
+                                    plotter_ptr.setCursor(Qt.CursorShape.ArrowCursor)
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ) as e: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[382:395]
+==moleditpy.ui.move_selected_atoms_dialog:[410:423]
+                            return True
+
+                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                    logging.debug(f"Error in mouse release handling: {e}")
+                finally:
+                    self.is_dragging_group = False
+                    self.drag_start_pos = None
+                    self.mouse_moved_during_drag = False
+                    self.potential_drag = False
+                    try:
+                        plotter_ptr = self.main_window.view_3d_manager.plotter
+                        if plotter_ptr is not None:
+                            plotter_ptr.setCursor(Qt.CursorShape.ArrowCursor) (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.planarize_dialog:[133:143]
+==moleditpy.ui.translation_dialog:[349:357]
+            else:
+                self.selected_atoms = (
+                    set(self.main_window.state_manager.data.atoms.keys())
+                    if hasattr(self.main_window.state_manager, "data")
+                    else set()
+                )
+
+            self.show_atom_labels()
+            self.update_display()
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.template_preview_item:[120:129]
+==moleditpy.ui.user_template_dialog:[444:453]
+                    line1 = QLineF(
+                        pos1 + normal.p2() - normal.p1(),
+                        pos2 + normal.p2() - normal.p1(),
+                    )
+                    line2 = QLineF(
+                        pos1 - normal.p2() + normal.p1(),
+                        pos2 - normal.p2() + normal.p1(),
+                    )
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.template_preview_item:[138:147]
+==moleditpy.ui.user_template_dialog:[467:476]
+                    line1 = QLineF(
+                        pos1 + normal.p2() - normal.p1(),
+                        pos2 + normal.p2() - normal.p1(),
+                    )
+                    line2 = QLineF(
+                        pos1 - normal.p2() + normal.p1(),
+                        pos2 - normal.p2() + normal.p1(),
+                    )
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.plugins.plugin_manager:[651:659]
+==moleditpy.ui.custom_interactor_style:[681:688]
+                                    except (
+                                        AttributeError,
+                                        RuntimeError,
+                                        ValueError,
+                                        TypeError,
+                                    ):  # [VTK SYNC] atom_positions_3d update may race with VTK teardown; skip safely.
+                                        pass (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[222:234]
+==moleditpy.ui.bond_length_dialog:[207:219]
+        pairs = [
+            (idx, labels[i]) for i, idx in enumerate(selected_atoms) if idx is not None
+        ]
+        self.show_atom_labels_for(pairs)
+
+    def update_display(self) -> None:
+        """Update the UI display."""
+        # Clear existing labels
+        self.clear_selection_labels()
+
+        if self.atom1_idx is None:
+            self.selection_label.setText("No atoms selected") (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[246:254]
+==moleditpy.ui.bond_length_dialog:[231:240]
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
+                pass
+
+        elif self.atom2_idx is None:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            self.selection_label.setText(
+                f"First atom: {symbol1} (index {self.atom1_idx})"
+            ) (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[58:67]
+==moleditpy.ui.dihedral_dialog:[58:65]
+        self.picker_connection = None
+        self.rotate_atom_radio = None
+        self.rotate_group_radio = None
+        self.selection_label = None
+        self.atom1_idx: Optional[int] = None
+        self.atom2_idx: Optional[int] = None  # vertex atom
+        self.atom3_idx: Optional[int] = None
+
+        # Set preselected atoms (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.edit_3d_logic:[159:169]
+==moleditpy.ui.view_3d_logic:[1068:1075]
+                always_visible=True,
+                shape="rect",
+                shape_color="gray",
+                shape_opacity=0.5,
+                tolerance=0.01,
+                show_points=False,
+            )
+
+    def clear_measurement_selection(self) -> None:
+        """Clear measurement selection.""" (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.molecular_scene_handler:[1219:1226]
+==moleditpy.ui.move_group_dialog:[373:380]
+                                except (
+                                    AttributeError,
+                                    RuntimeError,
+                                    ValueError,
+                                    TypeError,
+                                ) as e:
+                                    logging.debug( (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.molecular_scene_handler:[1231:1238]
+==moleditpy.ui.move_group_dialog:[395:402]
+                        except (
+                            AttributeError,
+                            RuntimeError,
+                            ValueError,
+                            TypeError,
+                        ) as e:
+                            logging.debug( (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[202:210]
+==moleditpy.ui.move_selected_atoms_dialog:[242:250]
+            self.is_dragging_group = False
+            self.drag_start_pos = None
+            self.mouse_moved_during_drag = False
+            self.potential_drag = False
+            self.clicked_atom_for_toggle = None
+            return False
+
+        if ( (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[331:340]
+==moleditpy.ui.move_selected_atoms_dialog:[367:376]
+                            plotter_ref.setCursor(Qt.CursorShape.OpenHandCursor)
+                        else:
+                            plotter_ref.setCursor(Qt.CursorShape.ArrowCursor)
+                    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                        logging.debug(f"Error updating hover cursor: {e}")
+
+                return False
+
+            elif ( (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[356:366]
+==moleditpy.ui.move_selected_atoms_dialog:[390:400]
+                        if self.clicked_atom_for_toggle is not None:
+                            clicked_atom = self.clicked_atom_for_toggle
+                            self.clicked_atom_for_toggle = None
+                            self.is_dragging_group = False
+                            self.drag_start_pos = None
+                            self.mouse_moved_during_drag = False
+                            self.potential_drag = False
+                            if clicked_atom is not None:
+                                self.on_atom_picked(clicked_atom)
+                            try: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[457:469]
+==moleditpy.ui.move_selected_atoms_dialog:[460:472]
+            )
+
+    def show_atom_labels(self) -> None:
+        """Highlight selected atoms."""
+        plotter = self.main_window.view_3d_manager.plotter
+        try:
+            cam = plotter.camera_position if plotter else None
+        except (AttributeError, RuntimeError, TypeError):
+            cam = None
+
+        self.clear_atom_labels()
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[559:567]
+==moleditpy.ui.move_selected_atoms_dialog:[561:569]
+        except ValueError:
+            QMessageBox.warning(
+                self, "Warning", "Please enter valid translation values."
+            )
+            return
+
+        translation_vector = np.array([dx, dy, dz])
+        positions = self.mol.GetConformer().GetPositions() (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.plugins.plugin_manager:[618:624]
+==moleditpy.plugins.plugin_manager_window:[271:278]
+        info = {
+            "name": os.path.basename(file_path),
+            "version": "Unknown",
+            "author": "Unknown",
+            "description": "",
+        } (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.plugins.plugin_manager:[651:657]
+==moleditpy.ui.edit_actions_logic:[488:495]
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ):
+                                # If single deletion also fails, skip that item (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.align_plane_dialog:[94:104]
+==moleditpy.ui.alignment_dialog:[101:110]
+        self.selection_label = QLabel("No atoms selected")
+        layout.addWidget(self.selection_label)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[197:204]
+==moleditpy.ui.dihedral_dialog:[206:213]
+                self._baseline_positions = self.mol.GetConformer().GetPositions().copy()
+                self._snapshot_positions = self._baseline_positions.copy()
+            else:
+                # Reset and start over
+                self.atom1_idx = atom_idx
+                self.atom2_idx = None
+                self.atom3_idx = None (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[271:277]
+==moleditpy.ui.dihedral_dialog:[273:279]
+        elif self.atom3_idx is None:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
+            self.selection_label.setText(
+                f"Selected: {symbol1}({self.atom1_idx}) - {symbol2}({self.atom2_idx}) - ?"
+            ) (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.compute_logic:[224:231]
+==moleditpy.ui.edit_actions_logic:[841:850]
+        if self.host.edit_3d_manager.measurement_mode:
+            self.host.init_manager.measurement_action.setChecked(False)
+            self.host.edit_3d_manager.toggle_measurement_mode(False)
+
+        if self.host.edit_3d_manager.is_3d_edit_mode:
+            self.host.init_manager.edit_3d_action.setChecked(False)
+            self.host.ui_manager.toggle_3d_edit_mode(False)
+
+        # Clear 3D selection (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.constrained_optimization_dialog:[460:466]
+==moleditpy.ui.dialog_3d_picking_mixin:[210:216]
+                always_visible=True,
+                show_points=False,
+                shape="rect",
+                shape_color="gray",
+                shape_opacity=0.5,
+            ) (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.constrained_optimization_dialog:[757:764]
+==moleditpy.ui.dialog_3d_picking_mixin:[249:255]
+                    always_visible=True,
+                    show_points=False,
+                    shape="rect",
+                    shape_color="gray",
+                    shape_opacity=0.5,
+                )
+                # Consider case where add_point_labels returns a list (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.custom_interactor_style:[681:687]
+==moleditpy.ui.molecule_scene:[878:884]
+                                    except (
+                                        AttributeError,
+                                        RuntimeError,
+                                        ValueError,
+                                        TypeError,
+                                    ):  # [VTK SYNC] atom_positions_3d update may race with VTK teardown; skip safely. (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.custom_interactor_style:[688:694]
+==moleditpy.ui.view_3d_logic:[449:455]
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                TypeError,
+                                ValueError,
+                            ):  # [VTK SYNC] Outer drag-loop coordinate sync may race with VTK teardown; skip safely. (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.dialog_logic:[174:181]
+==moleditpy.ui.user_template_dialog:[620:627]
+                    "Overwrite Template",
+                    f"Template '{name}' already exists. Overwrite?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.edit_3d_logic:[159:165]
+==moleditpy.ui.view_3d_logic:[1595:1601]
+                always_visible=True,
+                shape="rect",
+                shape_color="gray",
+                shape_opacity=0.5,
+                tolerance=0.01,
+                show_points=False, (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.export_logic:[559:565]
+==moleditpy.ui.move_group_dialog:[287:293]
+                                    )
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError, (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.molecular_scene_handler:[1219:1225]
+==moleditpy.ui.move_group_dialog:[288:294]
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ) as e: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.molecular_scene_handler:[1231:1237]
+==moleditpy.ui.move_selected_atoms_dialog:[324:330]
+                        except (
+                            AttributeError,
+                            RuntimeError,
+                            ValueError,
+                            TypeError,
+                        ) as e: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[211:219]
+==moleditpy.ui.move_selected_atoms_dialog:[251:259]
+            and isinstance(event, QMouseEvent)
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            # Clean up previous state (triple-click countermeasure)
+            self.is_dragging_group = False
+            self.potential_drag = False
+            self.clicked_atom_for_toggle = None
+            # Delegate to CustomInteractorStyle if atoms are already selected (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[268:274]
+==moleditpy.ui.move_selected_atoms_dialog:[354:360]
+                    try:
+                        plotter_ref = self.main_window.view_3d_manager.plotter
+                        if plotter_ref is None or plotter_ref.interactor is None:
+                            return False
+                        interactor = plotter_ref.interactor
+                        current_pos = interactor.GetEventPosition() (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[318:324]
+==moleditpy.ui.move_selected_atoms_dialog:[306:312]
+                try:
+                    plotter_ref = self.main_window.view_3d_manager.plotter
+                    if plotter_ref is None or plotter_ref.interactor is None:
+                        return False
+                    interactor = plotter_ref.interactor
+                    current_pos = interactor.GetEventPosition() (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[373:379]
+==moleditpy.ui.move_selected_atoms_dialog:[403:409]
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError,
+                            ) as e: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.plugins.plugin_manager:[651:656]
+==moleditpy.ui.molecular_scene_handler:[1219:1224]
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError, (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.alignment_dialog:[105:112]
+==moleditpy.ui.angle_dialog:[145:152]
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+
+        button_layout.addStretch()
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.alignment_dialog:[114:121]
+==moleditpy.ui.planarize_dialog:[88:95]
+        self.apply_button.setEnabled(False)
+        button_layout.addWidget(self.apply_button)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.align_plane_dialog:[140:149]
+==moleditpy.ui.translation_dialog:[340:348]
+        self.selected_atoms.clear()
+        self.clear_atom_labels()
+        self.update_display()
+
+    def select_all_atoms(self) -> None:
+        """Select all atoms in the molecule for relative translation."""
+        try:
+            if hasattr(self, "mol") and self.mol is not None: (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[197:203]
+==moleditpy.ui.bond_length_dialog:[184:190]
+                self._baseline_positions = self.mol.GetConformer().GetPositions().copy()
+                self._snapshot_positions = self._baseline_positions.copy()
+            else:
+                # Reset and start over
+                self.atom1_idx = atom_idx
+                self.atom2_idx = None (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[292:298]
+==moleditpy.ui.bond_length_dialog:[254:260]
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
+                pass
+        else:
+            symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
+            symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol() (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[204:213]
+==moleditpy.ui.dihedral_dialog:[215:224]
+                self._snapshot_positions = None
+
+        self.update_display()
+
+    def clear_selection(self) -> None:
+        """Clear the current atom selection."""
+        self.atom1_idx = None
+        self.atom2_idx = None  # vertex atom
+        self.atom3_idx = None (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.angle_dialog:[330:341]
+==moleditpy.ui.dihedral_dialog:[324:332]
+            except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
+                pass
+
+            # Add labels
+            self.add_selection_label(self.atom1_idx, "1")
+            self.add_selection_label(self.atom2_idx, "2")
+            self.add_selection_label(self.atom3_idx, "3") (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.bond_length_dialog:[190:199]
+==moleditpy.ui.dihedral_dialog:[214:223]
+                self._baseline_positions = None
+                self._snapshot_positions = None
+
+        self.update_display()
+
+    def clear_selection(self) -> None:
+        """Clear the current atom selection."""
+        self.atom1_idx = None
+        self.atom2_idx = None (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.bond_length_dialog:[141:148]
+==moleditpy.ui.move_group_dialog:[176:183]
+        button_layout = QHBoxLayout()
+        self.clear_button = QPushButton("Clear Selection")
+        self.clear_button.clicked.connect(self.clear_selection)
+        button_layout.addWidget(self.clear_button)
+
+        button_layout.addStretch()
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.color_settings_dialog:[183:188]
+==moleditpy.ui.periodic_table_dialog:[175:182]
+            brightness = (
+                q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114
+            ) / 1000
+            text_color = "white" if brightness < 128 else "black"
+            b.setStyleSheet( (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.custom_interactor_style:[681:686]
+==moleditpy.ui.molecular_scene_handler:[1231:1236]
+                                    except (
+                                        AttributeError,
+                                        RuntimeError,
+                                        ValueError,
+                                        TypeError, (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.custom_interactor_style:[688:693]
+==moleditpy.ui.view_3d_logic:[259:264]
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                TypeError,
+                                ValueError, (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.dialog_3d_picking_mixin:[59:65]
+==moleditpy.ui.move_group_dialog:[223:229]
+            try:
+                # Retrieve VTK event coordinates (matches original logic)
+                interactor = plotter.interactor
+                if interactor is None:
+                    return False
+                click_pos = interactor.GetEventPosition() (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.dialog_3d_picking_mixin:[218:229]
+==moleditpy.ui.move_group_dialog:[505:512]
+        if cam is not None:
+            try:
+                plotter.camera_position = cam
+            except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
+                pass
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.dialog_3d_picking_mixin:[257:263]
+==moleditpy.ui.move_selected_atoms_dialog:[508:515]
+        if cam is not None:
+            try:
+                plotter.camera_position = cam
+            except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
+                pass
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.edit_actions_logic:[488:493]
+==moleditpy.ui.move_group_dialog:[288:293]
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                ValueError,
+                                TypeError, (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.export_logic:[560:565]
+==moleditpy.ui.move_group_dialog:[395:400]
+                                except (
+                                    AttributeError,
+                                    RuntimeError,
+                                    ValueError,
+                                    TypeError, (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.molecule_scene:[878:883]
+==moleditpy.ui.move_group_dialog:[373:378]
+                                except (
+                                    AttributeError,
+                                    RuntimeError,
+                                    ValueError,
+                                    TypeError, (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[74:79]
+==moleditpy.ui.move_selected_atoms_dialog:[51:56]
+        self.drag_atom_idx: Optional[int] = None
+        self.potential_drag: bool = False
+        self.is_dragging_group: bool = False
+        self.drag_start_pos: Optional[Any] = None
+        self.mouse_moved_during_drag: bool = False (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[181:190]
+==moleditpy.ui.move_selected_atoms_dialog:[218:231]
+        button_layout.addStretch()
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.reject)
+        button_layout.addWidget(close_button)
+
+        layout.addLayout(button_layout)
+
+        # Enable picking to handle atom selection (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[405:417]
+==moleditpy.ui.move_selected_atoms_dialog:[426:437]
+                return True
+
+            return False
+
+        return super().eventFilter(obj, event)
+
+    def on_atom_picked(self, atom_idx: int) -> None:
+        """Select or deselect the clicked atom."""
+        if getattr(self, "is_dragging_group", False):
+            return
+ (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.move_group_dialog:[631:643]
+==moleditpy.ui.move_selected_atoms_dialog:[634:643]
+            positions[atom_idx] = new_pos
+
+        self._update_molecule_geometry(positions)
+        self._push_undo()
+        self.show_atom_labels()
+
+    def clear_selection(self) -> None:
+        """Clear selection."""
+        self.selected_atoms.clear() (duplicate-code)
+moleditpy\src\moleditpy\utils\__init__.py:1:0: R0801: Similar lines in 2 files
+==moleditpy.ui.planarize_dialog:[104:111]
+==moleditpy.ui.translation_dialog:[239:244]
+        if atom_idx in self.selected_atoms:
+            self.selected_atoms.remove(atom_idx)
+        else:
+            self.selected_atoms.add(atom_idx)
+        self.update_display()
+
+    def clear_selection(self) -> None: (duplicate-code)
+
+------------------------------------------------------------------
+Your code has been rated at 9.28/10 (previous run: 9.28/10, +0.00)
+

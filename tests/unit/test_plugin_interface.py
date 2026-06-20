@@ -422,6 +422,45 @@ class TestPluginInterface:
         ctx.enter_3d_mode()
         mock_main_window.ui_manager.enter_3d_viewer_mode.assert_called_once()
 
+    def test_load_from_smiles(self, mock_manager, mock_main_window):
+        mock_manager.get_main_window.return_value = mock_main_window
+        mock_main_window.string_importer_manager = MagicMock()
+        ctx = PluginContext(mock_manager, "TestPlugin")
+        ctx.load_from_smiles("C")
+        mock_main_window.string_importer_manager.load_from_smiles.assert_called_once_with(
+            "C"
+        )
+
+        # Test safe handling when no manager exists
+        del mock_main_window.string_importer_manager
+        ctx.load_from_smiles("C")  # Should not raise
+
+    def test_to_xyz_block(self, mock_manager, mock_main_window):
+        from rdkit import Chem
+        from rdkit.Chem import rdGeometry
+
+        mol = Chem.RWMol()
+        atom = Chem.Atom("C")
+        mol.AddAtom(atom)
+        conf = Chem.Conformer(1)
+        conf.SetAtomPosition(0, rdGeometry.Point3D(1.23, 4.56, 7.89))
+        mol.AddConformer(conf)
+
+        mock_main_window.view_3d_manager.current_mol = mol.GetMol()
+        mock_manager.get_main_window.return_value = mock_main_window
+        ctx = PluginContext(mock_manager, "TestPlugin")
+
+        xyz = ctx.to_xyz_block()
+        assert xyz is not None
+        assert "C" in xyz
+        assert "1.23" in xyz
+        assert "4.56" in xyz
+        assert "7.89" in xyz
+
+        # Test no mol
+        mock_main_window.view_3d_manager.current_mol = None
+        assert ctx.to_xyz_block() is None
+
     def test_set_bond_color_by_atoms(self, mock_main_window):
         controller = Plugin3DController(mock_main_window)
         mock_mol = MagicMock()

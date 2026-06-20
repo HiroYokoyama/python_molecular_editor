@@ -125,6 +125,8 @@ The `context` object passed to `initialize(context)` is your safe proxy to the a
 | **Files** | `register_file_opener(ext, cb, priority)` | Handle a file extension (Import + CLI) |
 | **Files** | `register_drop_handler(cb, priority)` | Handle drag-and-drop onto the window |
 | **Molecule** | `current_molecule` | Get / set the active RDKit mol |
+| **Molecule** | `load_from_smiles(smiles)` | Add molecule from SMILES string |
+| **Molecule** | `to_xyz_block()` | Export current 3D coordinates as an XYZ block |
 | **Molecule** | `get_selected_atom_indices()` | Indices of user-selected atoms |
 | **Molecule** | `push_undo_checkpoint()` | Snapshot state to undo stack |
 | **Molecule** | `clear_canvas(push_to_undo=True)` | Clear the 2D editor canvas |
@@ -281,6 +283,14 @@ Get or set the active RDKit molecule object.
 
 > [!NOTE]
 > `current_mol` is a shorthand alias for `current_molecule` — both are available.
+
+#### `load_from_smiles(smiles)`
+Generate a 2D structure from a SMILES string and automatically add it to the 2D editor canvas.
+- **smiles** (`str`): The SMILES string.
+
+#### `to_xyz_block()`
+Extracts the current 3D molecule structure and returns it as a string containing only the atomic elements and X, Y, Z coordinates. Omits standard XYZ headers (like atom count).
+- **Returns** (`Optional[str]`): XYZ coordinate block, or None if no molecule is loaded.
 
 #### `get_selected_atom_indices()`
 Returns the RDKit indices of atoms currently selected by the user in either the 2D canvas or the 3D viewer.
