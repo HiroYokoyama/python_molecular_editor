@@ -18,7 +18,7 @@ import json
 import math
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
@@ -41,7 +41,6 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
-    QFileDialog,
     QHBoxLayout,
     QLabel,
     QMenu,

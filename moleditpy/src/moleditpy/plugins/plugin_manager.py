@@ -392,7 +392,7 @@ class PluginManager:
                 )
 
         except Exception as e:  # plugins have full app access; isolate any load failure to prevent crashing discovery
-            logging.exception("Failed to load plugin %s", module_name)
+            logging.exception("Failed to load plugin %s: %s", module_name, e)
 
     def run_plugin(self, module: Any, main_window: Any) -> None:
         """Executes the plugin's run method (Legacy manual trigger)."""
@@ -611,7 +611,7 @@ class PluginManager:
                 handler["callback"]()
             except Exception as e:  # plugins have full app access; catch everything to prevent data loss on document reset
                 logging.exception(
-                    "Error in document reset handler for %s", handler["plugin"]
+                    "Error in document reset handler for %s: %s", handler["plugin"], e
                 )
 
     def get_plugin_info_safe(self, file_path: str) -> Dict[str, str]:
