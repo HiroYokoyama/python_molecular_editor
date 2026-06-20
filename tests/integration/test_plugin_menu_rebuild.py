@@ -6,6 +6,7 @@ six integration points: menus, toolbar, export, file-openers, analysis, and
 """
 
 import pytest
+from typing import Optional
 from unittest.mock import MagicMock, patch, call
 
 from moleditpy.ui.plugin_menu_manager import PluginMenuManager
@@ -47,7 +48,7 @@ def _make_plugin_manager(
     return pm
 
 
-def _make_im(plugin_manager: MagicMock | None = None) -> MagicMock:
+def _make_im(plugin_manager: Optional[MagicMock] = None) -> MagicMock:
     im = MagicMock()
     im.plugin_menubar_separator_added = False
     im.host.menuBar.return_value.actions.return_value = []

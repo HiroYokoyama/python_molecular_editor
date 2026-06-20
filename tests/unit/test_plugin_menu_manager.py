@@ -1,6 +1,7 @@
 """Unit tests for PluginMenuManager — plugin UI lifecycle management."""
 
 import pytest
+from typing import Optional
 from unittest.mock import MagicMock, patch, call
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu
@@ -36,7 +37,7 @@ def make_init_manager(
     has_export_button: bool = True,
     has_style_button: bool = True,
     has_import_menu: bool = True,
-    plugin_manager: MagicMock | None = None,
+    plugin_manager: Optional[MagicMock] = None,
 ) -> MagicMock:
     """Return a minimal MainInitManager mock suitable for PluginMenuManager."""
     im = MagicMock()
