@@ -1,5 +1,8 @@
 # MoleditPy Plugin Development Manual (Version 4.0)
 
+> [!TIP]
+> [Use this link to download the manual for offline reading or AI.](https://raw.githubusercontent.com/HiroYokoyama/python_molecular_editor/main/docs/PLUGIN_DEVELOPMENT_MANUAL_V4.md)
+
 > [!NOTE]
 > This is the manual for the **Version 4.0** API. For the previous version, see the [Plugin Development Manual (Version 3.0)](old/PLUGIN_DEVELOPMENT_MANUAL_V3.md).
 
