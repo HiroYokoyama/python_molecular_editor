@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
 from typing import TYPE_CHECKING, Optional, Union
 
 from PyQt6.QtWidgets import QLineEdit, QSlider, QWidget

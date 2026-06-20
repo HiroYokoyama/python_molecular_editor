@@ -475,7 +475,7 @@ class TemplateMixin:
                                 d = math.hypot(
                                     p.x() - a_item.pos().x(), p.y() - a_item.pos().y()
                                 )
-                            except (AttributeError, TypeError):
+                            except (AttributeError, RuntimeError, TypeError):
                                 continue
                             if d < best_d:
                                 best_d, nearby = d, a_item

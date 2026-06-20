@@ -11,7 +11,6 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-import logging
 from typing import Any, List, Optional
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
