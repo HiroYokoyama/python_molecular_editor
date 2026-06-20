@@ -1345,9 +1345,6 @@ class SceneQueryMixin:
         self.data_changed_in_event = False
         super().__init__(*args, **kwargs)
 
-    # -------------------------------------------------------------------------
-    # CUT AND PASTE THE FOLLOWING METHODS FROM molecule_scene.py HERE:
-    # -------------------------------------------------------------------------
     def create_atom(
         self, symbol: Any, pos: Any, charge: int = 0, radical: int = 0
     ) -> Any:
