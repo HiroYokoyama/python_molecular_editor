@@ -26,14 +26,9 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-try:
-    from .atom_picking import pick_atom_index_from_screen
-    from .base_picking_dialog import BasePickingDialog
-    from ..utils.constants import VDW_RADII
-except ImportError:
-    from moleditpy_linux.ui.atom_picking import pick_atom_index_from_screen
-    from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
-    from moleditpy_linux.utils.constants import VDW_RADII
+from .atom_picking import pick_atom_index_from_screen
+from .base_picking_dialog import BasePickingDialog
+from ..utils.constants import VDW_RADII
 
 
 class MoveSelectedAtomsDialog(BasePickingDialog):
@@ -414,10 +409,6 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                             ) as e:
                                 logging.debug(f"Failed to reset cursor to arrow: {e}")
                             return True
-                        else:
-                            logging.error(
-                                "REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self"
-                            )
 
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.debug(f"Error in mouse release handling: {e}")
@@ -519,6 +510,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
             try:
                 plotter.camera_position = cam
             except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                 pass
 
         plotter.render()
@@ -532,6 +524,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
             try:
                 plotter.remove_actor("move_selected_atoms_highlight")
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
 
         if self.highlight_actor:
@@ -539,6 +532,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                 try:
                     plotter.remove_actor(self.highlight_actor)
                 except (AttributeError, RuntimeError, ValueError, TypeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                     pass
             self.highlight_actor = None
 
@@ -546,6 +540,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
             try:
                 plotter.render()
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
 
     def reset_translation_inputs(self) -> None:

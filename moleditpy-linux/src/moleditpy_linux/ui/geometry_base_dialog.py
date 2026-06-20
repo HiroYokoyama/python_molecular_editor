@@ -16,10 +16,7 @@ from typing import TYPE_CHECKING, Optional, Union
 from PyQt6.QtWidgets import QLineEdit, QSlider, QWidget
 from rdkit import Chem
 
-try:
-    from .base_picking_dialog import BasePickingDialog
-except ImportError:
-    from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
+from .base_picking_dialog import BasePickingDialog
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -58,6 +55,7 @@ class GeometryBaseDialog(BasePickingDialog):
             slider.setValue(int(round(f_val * scale)))
             slider.blockSignals(False)
         except (ValueError, TypeError):
+            # Safe defensive fallback catching ValueError, TypeError
             pass
 
     def on_slider_pressed(self) -> None:
@@ -78,10 +76,6 @@ class GeometryBaseDialog(BasePickingDialog):
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
             self.main_window.view_3d_manager.update_chiral_labels()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
-            )
 
     def on_slider_value_changed_click(
         self, value: int, input_box: QLineEdit, scale: float = 1.0
@@ -108,10 +102,6 @@ class GeometryBaseDialog(BasePickingDialog):
 
         if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
             self.main_window.view_3d_manager.update_chiral_labels()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
-            )
 
     def on_slider_moved_realtime(
         self, value: int, input_box: QLineEdit, scale: float = 1.0

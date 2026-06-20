@@ -101,6 +101,44 @@ def mock_parser_host(app):
     # Ensure scene.data is the same object
     host.init_manager.scene.data = host.state_manager.data
 
+    scene = host.init_manager.scene
+
+    def mock_restore_atoms_and_bonds(raw_atoms, raw_bonds):
+        for atom_id, data in raw_atoms.items():
+            host.state_manager.data.atoms[atom_id] = {
+                "symbol": data["symbol"],
+                "pos": tuple(data["pos"]),
+                "charge": data.get("charge", 0),
+                "radical": data.get("radical", 0),
+            }
+        for key_tuple, data in raw_bonds.items():
+            host.state_manager.data.bonds[key_tuple] = {
+                "order": data.get("order", 1),
+                "stereo": data.get("stereo", 0),
+            }
+
+    def mock_restore_atoms_and_bonds_from_json(atoms_2d, bonds_2d):
+        for atom_data in atoms_2d:
+            atom_id = atom_data["id"]
+            host.state_manager.data.atoms[atom_id] = {
+                "symbol": atom_data["symbol"],
+                "pos": (float(atom_data["x"]), float(atom_data["y"])),
+                "charge": atom_data.get("charge", 0),
+                "radical": atom_data.get("radical", 0),
+            }
+        for bond_data in bonds_2d:
+            atom1_id = bond_data["atom1"]
+            atom2_id = bond_data["atom2"]
+            host.state_manager.data.bonds[(atom1_id, atom2_id)] = {
+                "order": bond_data["order"],
+                "stereo": bond_data.get("stereo", 0),
+            }
+
+    scene.restore_atoms_and_bonds.side_effect = mock_restore_atoms_and_bonds
+    scene.restore_atoms_and_bonds_from_json.side_effect = (
+        mock_restore_atoms_and_bonds_from_json
+    )
+
     # 2. UI and Settings
     host.init_manager.view_2d = MagicMock()
     host.view_3d_manager.view_3d = MagicMock()
@@ -143,7 +181,7 @@ def mock_parser_host(app):
     host.is_xyz_derived = False
     host.compute_manager.active_worker_ids = set()
     host.compute_manager.halt_ids = set()
-    host._ih_update_counter = 0
+    host.ih_update_counter = 0
 
     # Status Bar
     host.statusBar_mock = MagicMock()
@@ -157,11 +195,12 @@ def mock_parser_host(app):
             "2d_structure": {
                 "atoms": [],
                 "bonds": [],
-                "next_atom_id": host.state_manager.data._next_atom_id,
+                "next_atom_id": host.state_manager.data.next_atom_id,
             },
         }
         for aid, data in host.state_manager.data.atoms.items():
-            pos = data["item"].pos()
+            item = host.init_manager.scene.atom_items.get(aid)
+            pos = item.pos() if item else QPointF(0, 0)
             json_data["2d_structure"]["atoms"].append(
                 {
                     "id": aid,
@@ -195,8 +234,8 @@ def mock_parser_host(app):
                 radical=adata.get("radical", 0),
             )
         for bdata in s2d.get("bonds", []):
-            a1 = host.state_manager.data.atoms[bdata["atom1"]]["item"]
-            a2 = host.state_manager.data.atoms[bdata["atom2"]]["item"]
+            a1 = host.init_manager.scene.atom_items[bdata["atom1"]]
+            a2 = host.init_manager.scene.atom_items[bdata["atom2"]]
             host.init_manager.scene.create_bond(
                 a1, a2, bond_order=bdata["order"], bond_stereo=bdata.get("stereo", 0)
             )
@@ -221,6 +260,8 @@ def mock_parser_host(app):
     host.check_unsaved_changes.return_value = True
 
     # Scene helpers
+    host.init_manager.scene.atom_items = {}
+    host.init_manager.scene.bond_items = {}
     host.init_manager.scene.find_bond_between.return_value = None
 
     def default_create_atom(symbol, pos, charge=0, radical=0):
@@ -236,7 +277,7 @@ def mock_parser_host(app):
         item.has_problem = False
         item.__class__ = AtomItem
         item.scene.return_value = host.init_manager.scene
-        host.state_manager.data.atoms[aid]["item"] = item
+        host.init_manager.scene.atom_items[aid] = item
         return aid
 
     def default_create_bond(a1_item, a2_item, bond_order=1, bond_stereo=0):
@@ -246,6 +287,114 @@ def mock_parser_host(app):
             id1, id2, order=bond_order, stereo=bond_stereo
         )
 
+    # 5. Mediator methods
+    def set_current_molecule(mol):
+        host.view_3d_manager.current_mol = mol
+
+    def set_3d_atom_positions(positions):
+        host.view_3d_manager.atom_positions_3d = positions
+
+    def clear_3d_view():
+        host.view_3d_manager.current_mol = None
+        if host.view_3d_manager.plotter:
+            host.view_3d_manager.plotter.clear()
+
+    def set_plotter_camera_position(camera_position):
+        if host.view_3d_manager.plotter:
+            host.view_3d_manager.plotter.camera_position = camera_position
+
+    def set_plotter_picker(picker):
+        if host.view_3d_manager.plotter:
+            host.view_3d_manager.plotter.picker = picker
+
+    def set_constraints_3d(constraints):
+        host.edit_3d_manager.constraints_3d = constraints
+
+    def get_constraints_3d():
+        return host.edit_3d_manager.constraints_3d
+
+    def set_has_unsaved_changes(value):
+        host.state_manager.has_unsaved_changes = value
+
+    def set_current_file_path(path):
+        host.init_manager.current_file_path = path
+
+    def get_current_file_path():
+        return host.init_manager.current_file_path
+
+    def get_molecule_data():
+        return host.state_manager.data
+
+    def set_molecule_data(data):
+        host.state_manager.data = data
+        if host.init_manager.scene:
+            host.init_manager.scene.data = data
+
+    def set_settings_dirty(value):
+        host.init_manager.settings_dirty = value
+
+    def set_is_2d_editable(value):
+        host.ui_manager.is_2d_editable = value
+
+    def set_optimization_method(method):
+        host.init_manager.optimization_method = method
+
+    def set_3d_edit_mode(enabled):
+        host.edit_3d_manager.is_3d_edit_mode = enabled
+
+    def is_3d_measurement_mode():
+        return bool(host.edit_3d_manager.measurement_mode)
+
+    def set_scene_mode(mode):
+        if host.init_manager.scene:
+            host.init_manager.scene.mode = mode
+
+    def set_scene_atom_symbol(symbol):
+        if host.init_manager.scene:
+            host.init_manager.scene.current_atom_symbol = symbol
+
+    def set_scene_bond_properties(order, stereo=0):
+        if host.init_manager.scene:
+            host.init_manager.scene.bond_order = order
+            host.init_manager.scene.bond_stereo = stereo
+
+    def set_scene_user_template_data(data):
+        if host.init_manager.scene:
+            host.init_manager.scene.user_template_data = data
+
+    def update_status_message(message, timeout=0):
+        if host.statusBar():
+            if timeout == 0:
+                host.statusBar().showMessage(message)
+            else:
+                host.statusBar().showMessage(message, timeout)
+
+    def get_settings():
+        return host.init_manager.settings
+
+    host.set_current_molecule.side_effect = set_current_molecule
+    host.set_3d_atom_positions.side_effect = set_3d_atom_positions
+    host.clear_3d_view.side_effect = clear_3d_view
+    host.set_plotter_camera_position.side_effect = set_plotter_camera_position
+    host.set_plotter_picker.side_effect = set_plotter_picker
+    host.set_constraints_3d.side_effect = set_constraints_3d
+    host.get_constraints_3d.side_effect = get_constraints_3d
+    host.set_has_unsaved_changes.side_effect = set_has_unsaved_changes
+    host.set_current_file_path.side_effect = set_current_file_path
+    host.get_current_file_path.side_effect = get_current_file_path
+    host.get_molecule_data.side_effect = get_molecule_data
+    host.set_molecule_data.side_effect = set_molecule_data
+    host.set_settings_dirty.side_effect = set_settings_dirty
+    host.set_is_2d_editable.side_effect = set_is_2d_editable
+    host.set_optimization_method.side_effect = set_optimization_method
+    host.set_3d_edit_mode.side_effect = set_3d_edit_mode
+    host.is_3d_measurement_mode.side_effect = is_3d_measurement_mode
+    host.set_scene_mode.side_effect = set_scene_mode
+    host.set_scene_atom_symbol.side_effect = set_scene_atom_symbol
+    host.set_scene_bond_properties.side_effect = set_scene_bond_properties
+    host.set_scene_user_template_data.side_effect = set_scene_user_template_data
+    host.update_status_message.side_effect = update_status_message
+    host.get_settings.side_effect = get_settings
     host.init_manager.scene.create_atom.side_effect = default_create_atom
     host.init_manager.scene.create_bond.side_effect = default_create_bond
 

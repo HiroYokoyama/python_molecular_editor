@@ -1,6 +1,6 @@
 # Plugin System Internals
 
-This document explains the internal architecture of the MoleditPy plugin system. For a guide on *how to write* plugins, please refer to the **Plugin Development Manual**.
+This document explains the internal architecture of the MoleditPy plugin system. For a guide on *how to write* plugins, please refer to the [Plugin Development Manual (V3)](PLUGIN_DEVELOPMENT_MANUAL_V3.md) or the [Plugin Development Manual (V4)](PLUGIN_DEVELOPMENT_MANUAL_V4.md).
 
 ## Overview
 

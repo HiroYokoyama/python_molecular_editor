@@ -28,20 +28,11 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem, Geometry
 
-try:
-    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
-except ImportError:
-    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 
-try:
-    from .base_picking_dialog import SelectionList
-except ImportError:
-    from moleditpy.ui.base_picking_dialog import SelectionList
+from .base_picking_dialog import SelectionList
 
-try:
-    from ..core.mol_geometry import rodrigues_rotate
-except ImportError:
-    from moleditpy.core.mol_geometry import rodrigues_rotate
+from ..core.mol_geometry import rodrigues_rotate
 
 if TYPE_CHECKING:
     from .main_window import MainWindow

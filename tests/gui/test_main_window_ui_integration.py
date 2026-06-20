@@ -32,7 +32,7 @@ def test_plugin_menu_actions_population(window, qtbot):
     ]
 
     # 2. Trigger update
-    window.init_manager.update_plugin_menu(window.init_manager.plugin_menu)
+    window.plugin_menu_manager.update_plugin_menu(window.init_manager.plugin_menu)
 
     # 3. Verify top-level "Plugins" menu was found/created
     plugins_action = next(
@@ -83,7 +83,7 @@ def test_plugin_toolbar_actions_visibility(window, qtbot):
 
     # 1. Empty plugins -> Toolbar hidden
     window.plugin_manager.toolbar_actions = []
-    window.init_manager._add_plugin_toolbar_actions()
+    window.plugin_menu_manager.add_plugin_toolbar_actions()
     assert window.init_manager.plugin_toolbar.isHidden()
 
     # 2. With plugins -> Toolbar shown
@@ -91,7 +91,7 @@ def test_plugin_toolbar_actions_visibility(window, qtbot):
     window.plugin_manager.toolbar_actions = [
         {"text": "ToolBtn", "callback": mock_cb, "icon": None, "tooltip": "Hint"}
     ]
-    window.init_manager._add_plugin_toolbar_actions()
+    window.plugin_menu_manager.add_plugin_toolbar_actions()
     assert not window.init_manager.plugin_toolbar.isHidden()
 
     # Verify action
@@ -161,7 +161,7 @@ def test_custom_3d_style_integration(window, qtbot):
     window.plugin_manager.custom_3d_styles = {
         "Vantablack": {"plugin": "CoolPlugin", "callback": MagicMock()}
     }
-    window.init_manager._update_style_menu_with_plugins()
+    window.plugin_menu_manager.update_style_menu_with_plugins()
 
     style_action = next(
         (a for a in style_menu.actions() if "Vantablack" in a.text()), None
@@ -205,7 +205,7 @@ def test_integrate_plugin_export_actions(window, qtbot):
         {"plugin": "Xerox", "label": "Export to Fax", "callback": MagicMock()}
     ]
 
-    window.init_manager._integrate_plugin_export_actions()
+    window.plugin_menu_manager.integrate_plugin_export_actions()
 
     assert any("Export to Fax" in a.text() for a in btn_menu.actions()), (
         "Missing in button menu"
@@ -232,7 +232,7 @@ def test_integrate_plugin_analysis_tools(window, qtbot):
         {"plugin": "StatBot", "label": "Calculate Karma", "callback": MagicMock()}
     ]
 
-    window.init_manager._integrate_plugin_analysis_tools()
+    window.plugin_menu_manager.integrate_plugin_analysis_tools()
 
     found = any("Calculate Karma" in a.text() for a in analysis_menu.actions())
     assert found, (
@@ -250,7 +250,7 @@ def test_integrate_plugin_file_openers_ui(window, qtbot):
         ".fake": [{"plugin": "FakePlugin", "callback": cb, "priority": 10}]
     }
 
-    window.init_manager._integrate_plugin_file_openers()
+    window.plugin_menu_manager.integrate_plugin_file_openers()
 
     # Verify action existence
     import_action = next(

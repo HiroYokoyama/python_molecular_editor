@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
+import logging
 from typing import Dict, Optional
 
 from PyQt6.QtCore import Qt
@@ -58,8 +59,8 @@ class AnalysisWindow(QDialog):
                 # (Avoids inaccuracies from bond estimation)
 
                 # Retrieve original atomic data from XYZ file
-                if hasattr(self.mol, "_xyz_atom_data"):
-                    xyz_atoms = self.mol._xyz_atom_data
+                if hasattr(self.mol, "xyz_atom_data"):
+                    xyz_atoms = self.mol.xyz_atom_data
                 else:
                     # Fallback: Retrieve from RDKit object
                     xyz_atoms = [
@@ -118,8 +119,9 @@ class AnalysisWindow(QDialog):
                         exact_mw += exact_mass * count
                     except (ValueError, RuntimeError):
                         # Skip unrecognized elements
-                        print(
-                            f"Warning: Unknown element {symbol}, skipping in mass calculation"
+                        logging.warning(
+                            "Unknown element %s, skipping in mass calculation",
+                            symbol,
                         )
                         continue
 

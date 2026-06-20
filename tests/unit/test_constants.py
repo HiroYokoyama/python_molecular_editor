@@ -2,11 +2,9 @@
 Unit tests for utils/constants.py.
 """
 
-import sys
 import importlib
 import builtins
 from unittest.mock import patch, MagicMock, mock_open
-import pytest
 
 # We want to test different import and file states for constants._get_version()
 # using importlib.reload.

@@ -234,10 +234,20 @@ jobs:
         with:
           packages-dir: dist/moleditpy-linux
 
+      - name: Detect Pre-release
+        id: prerelease_check
+        run: |
+          if echo "$APP_VERSION" | grep -qE '[a-zA-Z]'; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.APP_VERSION }}
+          prerelease: ${{ steps.prerelease_check.outputs.is_prerelease == 'true' }}
           files: |
             dist/moleditpy/*
             dist/moleditpy-linux/*

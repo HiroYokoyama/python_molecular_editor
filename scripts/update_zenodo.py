@@ -135,7 +135,7 @@ def main():
     if args.dry_run:
         print("\n--- DRY RUN: Listing Actions ---")
         print(f"[DRY-RUN] Would call POST {base_url}/records/{deposition_id}/versions")
-        print(f"[DRY-RUN] Would fetch draft details using GET on the draft link.")
+        print("[DRY-RUN] Would fetch draft details using GET on the draft link.")
         if args.files:
             print(
                 f"[DRY-RUN] Would register {len(args.files)} files via POST on draft files endpoint."
@@ -145,7 +145,7 @@ def main():
                 print(f"[DRY-RUN] Would commit file: {fpath} via POST commit endpoint.")
         print(f"[DRY-RUN] Would update metadata with PUT request: version={version}")
         if args.publish:
-            print(f"[DRY-RUN] Would publish draft via POST publish endpoint.")
+            print("[DRY-RUN] Would publish draft via POST publish endpoint.")
         print("--- DRY RUN COMPLETE ---")
         return
 
@@ -168,7 +168,7 @@ def main():
     print(f"Draft Files URL: {draft_files_url}")
 
     # 2. Fetch the draft details to inspect current state
-    print(f"\n[2/6] Fetching current draft details...")
+    print("\n[2/6] Fetching current draft details...")
     draft = make_request(draft_self_url, headers=headers, method="GET")
 
     # 3. Register files to the draft

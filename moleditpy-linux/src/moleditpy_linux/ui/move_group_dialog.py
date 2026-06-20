@@ -26,14 +26,9 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-try:
-    from .atom_picking import pick_atom_index_from_screen
-    from .base_picking_dialog import BasePickingDialog
-    from ..utils.constants import VDW_RADII
-except ImportError:
-    from moleditpy_linux.ui.atom_picking import pick_atom_index_from_screen
-    from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog
-    from moleditpy_linux.utils.constants import VDW_RADII
+from .atom_picking import pick_atom_index_from_screen
+from .base_picking_dialog import BasePickingDialog
+from ..utils.constants import VDW_RADII
 
 
 class MoveGroupDialog(BasePickingDialog):
@@ -47,6 +42,14 @@ class MoveGroupDialog(BasePickingDialog):
         parent: Any = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
+        self.clear_button = None
+        self.selection_label = None
+        self.x_rot_input = None
+        self.x_trans_input = None
+        self.y_rot_input = None
+        self.y_trans_input = None
+        self.z_rot_input = None
+        self.z_trans_input = None
         self.selected_atoms: set[int] = set()
         self.group_atoms: set[int] = set()  # All atoms connected to selected atoms
 
@@ -57,16 +60,16 @@ class MoveGroupDialog(BasePickingDialog):
 
         self.clicked_atom_for_toggle: Optional[int] = None
         # State for group movement (used by CustomInteractorStyle)
-        self._initial_positions: dict = {}
-        self._is_dragging_group_vtk = False
-        self._is_rotating_group_vtk = False
-        self._drag_atom_idx: Optional[int] = None
-        self._drag_start_pos: Optional[Any] = None
-        self._mouse_moved: bool = False
-        self._rotation_start_pos: Optional[Any] = None
-        self._rotation_mouse_moved: bool = False
-        self._rotation_atom_idx: Optional[int] = None
-        self._group_centroid: Optional[np.ndarray] = None
+        self.initial_positions: dict = {}
+        self.is_dragging_group_vtk = False
+        self.is_rotating_group_vtk = False
+        self.drag_atom_idx_vtk: Optional[int] = None
+        self.drag_start_pos_vtk: Optional[Any] = None
+        self.mouse_moved_vtk: bool = False
+        self.rotation_start_pos: Optional[Any] = None
+        self.rotation_mouse_moved: bool = False
+        self.rotation_atom_idx: Optional[int] = None
+        self.group_centroid: Optional[np.ndarray] = None
 
         # State for group movement (used by dialog's own event filter)
         self.drag_atom_idx: Optional[int] = None
@@ -378,10 +381,6 @@ class MoveGroupDialog(BasePickingDialog):
                                         f"Failed to reset cursor to arrow: {e}"
                                     )
                                 return True
-                            else:
-                                logging.error(
-                                    "REPORT ERROR: Missing attribute 'clicked_atom_for_toggle' on self"
-                                )
 
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                         logging.debug(f"Error in mouse release handling: {e}")
@@ -508,6 +507,7 @@ class MoveGroupDialog(BasePickingDialog):
             try:
                 plotter.camera_position = cam
             except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                 pass
 
         plotter.render()
@@ -523,6 +523,7 @@ class MoveGroupDialog(BasePickingDialog):
             try:
                 plotter.remove_actor("move_group_highlight")
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
 
         if self.highlight_actor:
@@ -530,6 +531,7 @@ class MoveGroupDialog(BasePickingDialog):
                 try:
                     plotter.remove_actor(self.highlight_actor)
                 except (AttributeError, RuntimeError, ValueError, TypeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                     pass
             self.highlight_actor = None
 
@@ -537,6 +539,7 @@ class MoveGroupDialog(BasePickingDialog):
             try:
                 plotter.render()
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
 
     def reset_translation_inputs(self) -> None:

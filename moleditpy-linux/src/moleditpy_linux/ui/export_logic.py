@@ -23,31 +23,16 @@ import pyvista as pv
 from PyQt6.QtCore import QRectF, QSize, Qt
 from PyQt6.QtGui import QBrush, QImage, QPainter
 from PyQt6.QtSvg import QSvgGenerator
-from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-try:
-    from PyQt6 import sip as _sip  # type: ignore
 
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
-
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .atom_item import AtomItem
-    from .bond_item import BondItem
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy_linux.ui.atom_item import AtomItem
-    from moleditpy_linux.ui.bond_item import BondItem
+from .atom_item import AtomItem
+from .bond_item import BondItem
 
 
 # --- Class Definition ---
 class ExportManager:
     """Independent manager for export logic, ported from MainWindowExport mixin."""
-
-    _cls: Optional[type[ExportManager]] = None
 
     def __init__(self, host: Any) -> None:
         self.host = host
@@ -55,15 +40,13 @@ class ExportManager:
     def _get_default_basename(self) -> str:
         """Helper to get a default filename base from the current file path."""
         try:
-            if (
-                hasattr(self.host.init_manager, "current_file_path")
-                and self.host.init_manager.current_file_path
-            ):
+            if self.host.init_manager.current_file_path:
                 base = os.path.basename(self.host.init_manager.current_file_path)
                 name = os.path.splitext(base)[0]
                 if name:
                     return str(name)
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
             pass
         return "untitled"
 
@@ -75,6 +58,7 @@ class ExportManager:
             if cur_path:
                 return os.path.join(os.path.dirname(cur_path), basename)
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
             pass
         return basename
 
@@ -531,12 +515,9 @@ class ExportManager:
                             ):
                                 vtk_color = actor.prop.GetColor()
                                 color = [int(c * 255) for c in vtk_color]
-                            else:
-                                logging.error(
-                                    "REPORT ERROR: Missing color attribute on actor/property"
-                                )
                         except (AttributeError, RuntimeError, TypeError):
                             # Use default color on failure to avoid console noise during complex mesh export
+                            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                             pass
 
                         # Create mesh copy
@@ -582,8 +563,7 @@ class ExportManager:
                                     RuntimeError,
                                     ValueError,
                                     TypeError,
-                                ):
-                                    # Fail silently and fall through to default mesh addition
+                                ):  # [PYVISTA] Mesh color extraction may fail on headless/incomplete meshes; fall through to default.
                                     pass
                             if colors is not None and colors.size > 0:
                                 # Normalize float colors to 0-255
@@ -677,6 +657,7 @@ class ExportManager:
                                     # Do not continue here; let the default addition handle it (color has been updated)
                         except (AttributeError, RuntimeError, ValueError, TypeError):
                             # Fallback: add single mesh on failure
+                            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                             pass
 
                         meshes_with_colors.append(
@@ -696,8 +677,8 @@ class ExportManager:
 
             return meshes_with_colors
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            print(f"Error in export_from_3d_view_with_colors: {e}")
+        except (AttributeError, RuntimeError, ValueError):
+            logging.exception("Error in export_from_3d_view_with_colors")
             return []
 
     def export_2d_png(self) -> None:
@@ -733,14 +714,13 @@ class ExportManager:
 
         is_transparent = reply == QMessageBox.StandardButton.Yes
 
-        QApplication.processEvents()
-
         items_to_restore = {}
         original_background = None
         try:
             original_background = self.host.init_manager.scene.backgroundBrush()
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Minimal risk; keep default brush
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
             pass
 
         try:
@@ -901,11 +881,10 @@ class ExportManager:
             generator.setViewBox(rect_to_render)
             generator.setTitle("MoleditPy Molecule")
             dpi = 96
-            if hasattr(self.host, "logicalDpiX"):
-                try:
-                    dpi = int(self.host.logicalDpiX())
-                except (AttributeError, RuntimeError, TypeError, ValueError):
-                    pass
+            try:
+                dpi = int(self.host.logicalDpiX())
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                pass
             generator.setResolution(dpi)
 
             # 4. Render
@@ -971,6 +950,3 @@ class ExportManager:
             self.host.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
         except (AttributeError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error exporting 3D PNG: {e}")
-
-
-ExportManager._cls = ExportManager

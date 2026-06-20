@@ -113,15 +113,15 @@ def test_right_click_bond_deletion(scene_setup, monkeypatch):
     # Create two connected atoms
     a1_id = scene.create_atom("C", QPointF(0, 0))
     a2_id = scene.create_atom("C", QPointF(50, 0))
-    a1_item = data.atoms[a1_id]["item"]
-    a2_item = data.atoms[a2_id]["item"]
+    a1_item = scene.atom_items[a1_id]
+    a2_item = scene.atom_items[a2_id]
 
     scene.create_bond(a1_item, a2_item)
 
     # Verify bond exists
     assert len(data.bonds) == 1
     bond_key = list(data.bonds.keys())[0]
-    bond_item = data.bonds[bond_key]["item"]
+    bond_item = scene.bond_items[bond_key]
 
     # Right click on the middle of the bond
     mid_point = QPointF(25, 0)
@@ -145,7 +145,7 @@ def test_drag_and_drop_atom(scene_setup, monkeypatch):
 
     start_pos = QPointF(0, 0)
     a1_id = scene.create_atom("C", start_pos)
-    a1_item = data.atoms[a1_id]["item"]
+    a1_item = scene.atom_items[a1_id]
 
     scene.mode = "select"
 
@@ -179,10 +179,10 @@ def test_delete_mixed_selection(scene_setup):
     # Create C-C bond
     a1_id = scene.create_atom("C", QPointF(0, 0))
     a2_id = scene.create_atom("C", QPointF(50, 0))
-    a1_item = data.atoms[a1_id]["item"]
-    a2_item = data.atoms[a2_id]["item"]
+    a1_item = scene.atom_items[a1_id]
+    a2_item = scene.atom_items[a2_id]
     scene.create_bond(a1_item, a2_item)
-    bond_item = list(data.bonds.values())[0]["item"]
+    bond_item = list(scene.bond_items.values())[0]
 
     # Select atom 1 and the bond (but not atom 2)
     a1_item.setSelected(True)
@@ -313,8 +313,8 @@ def test_benzene_terminal_120_deg_alignment(scene_setup, monkeypatch):
     # Create terminal bond: a1 (0, 0) -> a2 (0, 50)
     a1_id = scene.create_atom("C", QPointF(0, 0))
     a2_id = scene.create_atom("C", QPointF(0, 50))
-    a1_item = data.atoms[a1_id]["item"]
-    a2_item = data.atoms[a2_id]["item"]
+    a1_item = scene.atom_items[a1_id]
+    a2_item = scene.atom_items[a2_id]
     scene.create_bond(a1_item, a2_item)
 
     # Hover cursor slightly to the right
@@ -357,7 +357,7 @@ def test_click_selected_atom_deselects(scene_setup, monkeypatch):
 
     start_pos = QPointF(0, 0)
     a1_id = scene.create_atom("C", start_pos)
-    a1_item = data.atoms[a1_id]["item"]
+    a1_item = scene.atom_items[a1_id]
 
     scene.mode = "select"
 
@@ -382,7 +382,7 @@ def test_drag_selected_atom_keeps_selected(scene_setup, monkeypatch):
 
     start_pos = QPointF(0, 0)
     a1_id = scene.create_atom("C", start_pos)
-    a1_item = data.atoms[a1_id]["item"]
+    a1_item = scene.atom_items[a1_id]
 
     scene.mode = "select"
 

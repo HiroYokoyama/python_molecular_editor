@@ -12,14 +12,12 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
+import logging
 from PyQt6.QtCore import QEvent, Qt, QObject, QPoint
 from PyQt6.QtGui import QMouseEvent
 from typing import Any, Optional, TYPE_CHECKING
 
-try:
-    from .atom_picking import pick_atom_index_from_screen
-except ImportError:
-    from moleditpy.ui.atom_picking import pick_atom_index_from_screen
+from .atom_picking import pick_atom_index_from_screen
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -77,13 +75,14 @@ class Dialog3DPickingMixin:
                 ):
                     atom = self.mol.GetAtomWithIdx(int(closest_atom_idx))
                     if atom:
-                        if hasattr(self.main_window, "_picking_consumed"):
-                            self.main_window._picking_consumed = True
+                        if hasattr(self.main_window, "picking_consumed"):
+                            self.main_window.picking_consumed = True
 
-                        def _deferred_pick(idx=int(closest_atom_idx), target=self):
+                        def _deferred_pick() -> None:
                             try:
-                                target.on_atom_picked(idx)
+                                self.on_atom_picked(int(closest_atom_idx))
                             except (AttributeError, RuntimeError):
+                                # Safe defensive fallback catching AttributeError, RuntimeError
                                 pass
 
                         from PyQt6.QtCore import QTimer
@@ -98,8 +97,8 @@ class Dialog3DPickingMixin:
                 # Clicked something other than an atom
                 return False
 
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                print(f"Error in eventFilter: {e}")
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                logging.exception("Error in eventFilter")
                 return False
 
         # Add movement tracking for smart selection
@@ -132,10 +131,11 @@ class Dialog3DPickingMixin:
                     # Pure click (no drag) on background -> Clear selection
                     if hasattr(self, "clear_selection"):
 
-                        def _deferred_clear(target=self):
+                        def _deferred_clear() -> None:
                             try:
-                                target.clear_selection()
+                                self.clear_selection()
                             except (AttributeError, RuntimeError):
+                                # Safe defensive fallback catching AttributeError, RuntimeError
                                 pass
 
                         from PyQt6.QtCore import QTimer
@@ -158,8 +158,8 @@ class Dialog3DPickingMixin:
         if plotter is not None and plotter.interactor is not None:
             plotter.interactor.installEventFilter(self)
             self.picking_enabled = True
-        if hasattr(self.main_window, "_picking_consumed"):
-            self.main_window._picking_consumed = False
+        if hasattr(self.main_window, "picking_consumed"):
+            self.main_window.picking_consumed = False
 
     def disable_picking(self) -> None:
         """Disable atom selection in the 3D view."""
@@ -169,8 +169,8 @@ class Dialog3DPickingMixin:
                 plotter.interactor.removeEventFilter(self)
             self.picking_enabled = False
         self._consume_next_left_release = False
-        if hasattr(self.main_window, "_picking_consumed"):
-            self.main_window._picking_consumed = False
+        if hasattr(self.main_window, "picking_consumed"):
+            self.main_window.picking_consumed = False
 
     def clear_atom_labels(self) -> None:
         """Remove all label actors from the plotter."""
@@ -181,6 +181,7 @@ class Dialog3DPickingMixin:
                     if label_actor is not None:
                         plotter.remove_actor(label_actor)
                 except (AttributeError, RuntimeError, TypeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                     pass
         self.selection_labels = []
 
@@ -219,6 +220,7 @@ class Dialog3DPickingMixin:
                 try:
                     plotter.camera_position = cam
                 except (AttributeError, RuntimeError, TypeError):
+                    # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                     pass
 
     def show_atom_labels_for(
@@ -257,4 +259,5 @@ class Dialog3DPickingMixin:
             try:
                 plotter.camera_position = cam
             except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                 pass

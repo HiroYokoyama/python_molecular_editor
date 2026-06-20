@@ -17,23 +17,13 @@ import logging
 import os
 from typing import Any
 
-try:
-    from .utils.constants import VERSION
-except ImportError:
-    # Add the parent directory (src) to sys.path so 'moleditpy.*' imports work
-    src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    if src_dir not in sys.path:
-        sys.path.insert(0, src_dir)
-    from moleditpy.utils.constants import VERSION
+from .utils.constants import VERSION
 
 # VERSION is resolved above (before Qt) so --version works without launching the app.
 
 from PyQt6.QtWidgets import QApplication
 
-try:
-    from .ui.main_window import MainWindow
-except ImportError:
-    from moleditpy.ui.main_window import MainWindow
+from .ui.main_window import MainWindow
 
 
 def setup_logging() -> None:
@@ -103,7 +93,7 @@ def main() -> None:
             from .plugins.plugin_manager import PluginManager
 
         pm = PluginManager()
-        sha256 = pm._compute_sha256(plugin_path)
+        sha256 = pm.compute_sha256(plugin_path)
 
         # Extract metadata
         metadata_file = plugin_path
@@ -155,7 +145,9 @@ def main() -> None:
             from PyQt6.QtCore import QTimer
 
             QTimer.singleShot(100, lambda: window.setWindowIcon(window.windowIcon()))
-        except Exception:
+        except (
+            Exception
+        ):  # [COSMETIC] Icon refresh is best-effort; Qt timing errors are non-fatal.
             pass
 
     sys.exit(app.exec())

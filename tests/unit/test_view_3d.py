@@ -13,12 +13,20 @@ def _make_view3d(mock_host):
     view3d._drawing_3d = False
     view3d.current_3d_style = "Ball and Stick"
     view3d.atom_info_display_mode = None
+    view3d._3d_color_map = {}
+    view3d._plugin_color_overrides = {}
+    view3d._plugin_bond_color_overrides = {}
+    view3d.atom_positions_3d = None
+    view3d.atom_label_legend_names = []
+    view3d.current_atom_info_labels = None
+    view3d.axes_widget = None
+    view3d.current_mol = None
+    view3d.plotter = MagicMock()
     return view3d
 
 
 def test_view_3d_draw_standard_3d_style(app, mock_parser_host):
     """Verify that draw_standard_3d_style clears the plotter and constructs the correct VTK meshes."""
-    mock_parser_host.view_3d_manager.plotter = MagicMock()
     mock_parser_host.init_manager.settings.update(
         {
             "projection_mode": "Perspective",
@@ -29,6 +37,7 @@ def test_view_3d_draw_standard_3d_style(app, mock_parser_host):
     mock_parser_host.edit_3d_manager = MagicMock()
 
     view3d = _make_view3d(mock_parser_host)
+    view3d.plotter = MagicMock()
 
     mol = Chem.MolFromSmiles("CCO")
     AllChem.EmbedMolecule(mol)
@@ -40,12 +49,10 @@ def test_view_3d_draw_standard_3d_style(app, mock_parser_host):
 
         view3d.draw_standard_3d_style(mol)
 
-        mock_parser_host.view_3d_manager.plotter.clear.assert_called()
-        mock_parser_host.view_3d_manager.plotter.set_background.assert_called_with(
-            "#ffffff"
-        )
-        assert mock_parser_host.view_3d_manager.plotter.add_mesh.call_count >= 1
-        mock_parser_host.view_3d_manager.plotter.render.assert_called()
+        view3d.plotter.clear.assert_called()
+        view3d.plotter.set_background.assert_called_with("#ffffff")
+        assert view3d.plotter.add_mesh.call_count >= 1
+        view3d.plotter.render.assert_called()
 
         import numpy as np
 
@@ -56,17 +63,17 @@ def test_view_3d_draw_standard_3d_style(app, mock_parser_host):
 
 def test_view_3d_draw_none(app, mock_parser_host):
     """Verify that calling draw with None safely clears the renderer."""
-    mock_parser_host.view_3d_manager.plotter = MagicMock()
     mock_parser_host.init_manager.settings.update({"background_color": "#000000"})
     mock_parser_host.edit_3d_manager = MagicMock()
 
     view3d = _make_view3d(mock_parser_host)
+    view3d.plotter = MagicMock()
 
     view3d.draw_standard_3d_style(None)
 
-    mock_parser_host.view_3d_manager.plotter.clear.assert_called()
-    mock_parser_host.view_3d_manager.plotter.render.assert_called()
-    assert mock_parser_host.view_3d_manager.current_mol is None
+    view3d.plotter.clear.assert_called()
+    view3d.plotter.render.assert_called()
+    assert view3d.current_mol is None
 
 
 def test_original_id_mode_hides_rdkit_id_labels(app, mock_parser_host):

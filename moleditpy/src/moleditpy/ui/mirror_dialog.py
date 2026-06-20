@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 from typing import Any, Optional
 
 from PyQt6.QtWidgets import (
@@ -122,8 +123,8 @@ class MirrorDialog(QDialog):
                         atom.SetChiralTag(Chem.rdchem.ChiralType.CHI_UNSPECIFIED)
                     # Calculate new chiral tags from 3D coordinates
                     Chem.AssignAtomChiralTagsFromStructure(self.mol, confId=0)
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                print(f"Error updating chiral tags: {e}")
+            except (AttributeError, RuntimeError, ValueError, TypeError):
+                logging.exception("Error updating chiral tags")
 
             # Update 3D view (which also draws 3D chiral labels)
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)

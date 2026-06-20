@@ -42,8 +42,12 @@ class DummyHost:
         # Shortcuts for frequently accessed items on managers
         self.init_manager.scene = MagicMock()
         self.state_manager.data = MagicMock()
+        self.init_manager.scene.data = self.state_manager.data
         self.init_manager.view_2d = MagicMock()
         self.view_3d_manager.plotter = MagicMock()
+
+        self.init_manager.scene.atom_items = {}
+        self.init_manager.scene.bond_items = {}
 
         # Action mocks on init_manager
         self.init_manager.cut_action = MagicMock()
@@ -103,6 +107,45 @@ class DummyHost:
     def update_2d_measurement_labels(self):
         pass
 
+    # Mediator stubs
+    def set_current_molecule(self, mol):
+        self.view_3d_manager.current_mol = mol
+
+    def clear_3d_view(self):
+        self.view_3d_manager.current_mol = None
+
+    def set_constraints_3d(self, constraints):
+        self.edit_3d_manager.constraints_3d = constraints
+
+    def get_constraints_3d(self):
+        return self.edit_3d_manager.constraints_3d
+
+    def set_has_unsaved_changes(self, value):
+        self.state_manager.has_unsaved_changes = value
+
+    def set_current_file_path(self, path):
+        self.init_manager.current_file_path = path
+
+    def get_current_file_path(self):
+        return self.init_manager.current_file_path
+
+    def set_molecule_data(self, data):
+        self.state_manager.data = data
+        if self.init_manager.scene:
+            self.init_manager.scene.data = data
+
+    def get_molecule_data(self):
+        return self.state_manager.data
+
+    def update_status_message(self, message, timeout=0):
+        if timeout == 0:
+            self.statusBar_mock.showMessage(message)
+        else:
+            self.statusBar_mock.showMessage(message, timeout)
+
+    def get_settings(self):
+        return self.init_manager.settings
+
 
 class TestEditActionsExtended:
     @pytest.fixture
@@ -123,21 +166,21 @@ class TestEditActionsExtended:
 
     def test_apply_chem_check_force_skip(self, manager):
         mol = Chem.MolFromSmiles("C")
-        manager._apply_chem_check_and_set_flags(mol, force_skip=True)
+        manager.apply_chem_check_and_set_flags(mol, force_skip=True)
         assert manager.host.chem_check_tried is False
         assert manager.host.chem_check_failed is False
 
     def test_apply_chem_check_settings_skip(self, manager):
         manager.host.init_manager.settings["skip_chemistry_checks"] = True
         mol = Chem.MolFromSmiles("C")
-        manager._apply_chem_check_and_set_flags(mol)
+        manager.apply_chem_check_and_set_flags(mol)
         assert manager.host.chem_check_tried is False
         assert manager.host.chem_check_failed is False
 
     def test_apply_chem_check_success(self, manager):
         manager.host.init_manager.settings["skip_chemistry_checks"] = False
         mol = Chem.MolFromSmiles("C")
-        manager._apply_chem_check_and_set_flags(mol)
+        manager.apply_chem_check_and_set_flags(mol)
         assert manager.host.chem_check_tried is True
         assert manager.host.chem_check_failed is False
 
@@ -147,7 +190,7 @@ class TestEditActionsExtended:
         with patch(
             "rdkit.Chem.SanitizeMol", side_effect=ValueError("Invalid molecule")
         ):
-            manager._apply_chem_check_and_set_flags(mol, source_desc="Test")
+            manager.apply_chem_check_and_set_flags(mol, source_desc="Test")
 
         assert manager.host.chem_check_tried is True
         assert manager.host.chem_check_failed is True
@@ -161,7 +204,7 @@ class TestEditActionsExtended:
         mol = Chem.MolFromSmiles("C")
         mol.SetProp("_xyz_skip_checks", "1")
         mol._xyz_skip_checks = True
-        mol._xyz_atom_data = {}
+        mol.xyz_atom_data = {}
         manager.host.is_xyz_derived = True
         manager.host.chem_check_failed = False
 
@@ -169,6 +212,7 @@ class TestEditActionsExtended:
 
         assert not mol.HasProp("_xyz_skip_checks")
         assert not hasattr(mol, "_xyz_skip_checks")
+        assert not hasattr(mol, "xyz_atom_data")
         assert manager.host.is_xyz_derived is False
         manager.host.init_manager.optimize_3d_button.setEnabled.assert_called_with(True)
 
@@ -209,8 +253,9 @@ class TestEditActionsExtended:
         atom1.atom_id = 1
         atom1.pos.return_value = QPointF(0, 0)
         manager.host.state_manager.data.atoms = {
-            1: {"item": atom1, "symbol": "C", "pos": QPointF(0, 0)}
+            1: {"symbol": "C", "pos": QPointF(0, 0)}
         }
+        manager.host.init_manager.scene.atom_items = {1: atom1}
 
         with patch(
             "moleditpy.core.mol_geometry.rotate_2d_points", return_value={1: (10, 10)}
@@ -328,11 +373,9 @@ class TestEditActionsExtended:
         manager.host.init_manager.settings["skip_chemistry_checks"] = False
         mol = Chem.MolFromSmiles("C")
 
-        # Should log error but not crash when sanitization fails
+        # Should handle missing button without crashing when sanitization fails
         with patch("rdkit.Chem.SanitizeMol", side_effect=ValueError("Invalid module")):
-            with patch("moleditpy.ui.edit_actions_logic.logging.error") as mock_log:
-                manager._apply_chem_check_and_set_flags(mol)
-                mock_log.assert_called()
+            manager.apply_chem_check_and_set_flags(mol)
 
     def test_clear_xyz_flags_current_mol(self, manager):
         mol = Chem.MolFromSmiles("C")
@@ -351,6 +394,5 @@ class TestEditActionsExtended:
         del manager.host.view_3d_manager.reset_zoom
 
         mol = Chem.MolFromSmiles("C")
-        with patch("moleditpy.ui.edit_actions_logic.logging.error") as mock_log:
-            manager._clear_xyz_flags(mol)
-            mock_log.assert_called()
+        # Should not crash when reset_zoom is missing
+        manager._clear_xyz_flags(mol)

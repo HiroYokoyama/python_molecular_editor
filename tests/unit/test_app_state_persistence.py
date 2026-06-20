@@ -30,6 +30,46 @@ class DummyMainWindow(StateManager):
         self.plugin_manager.load_handlers = {}
 
         self.init_manager.scene = MagicMock()
+        self.init_manager.scene.atom_items = {}
+        self.init_manager.scene.bond_items = {}
+
+        def mock_restore_atoms_and_bonds(raw_atoms, raw_bonds):
+            for atom_id, data in raw_atoms.items():
+                self.data.atoms[atom_id] = {
+                    "symbol": data["symbol"],
+                    "pos": tuple(data["pos"]),
+                    "charge": data.get("charge", 0),
+                    "radical": data.get("radical", 0),
+                }
+            for key_tuple, data in raw_bonds.items():
+                self.data.bonds[key_tuple] = {
+                    "order": data.get("order", 1),
+                    "stereo": data.get("stereo", 0),
+                }
+
+        def mock_restore_atoms_and_bonds_from_json(atoms_2d, bonds_2d):
+            for atom_data in atoms_2d:
+                atom_id = atom_data["id"]
+                self.data.atoms[atom_id] = {
+                    "symbol": atom_data["symbol"],
+                    "pos": (float(atom_data["x"]), float(atom_data["y"])),
+                    "charge": atom_data.get("charge", 0),
+                    "radical": atom_data.get("radical", 0),
+                }
+            for bond_data in bonds_2d:
+                atom1_id = bond_data["atom1"]
+                atom2_id = bond_data["atom2"]
+                self.data.bonds[(atom1_id, atom2_id)] = {
+                    "order": bond_data["order"],
+                    "stereo": bond_data.get("stereo", 0),
+                }
+
+        self.init_manager.scene.restore_atoms_and_bonds.side_effect = (
+            mock_restore_atoms_and_bonds
+        )
+        self.init_manager.scene.restore_atoms_and_bonds_from_json.side_effect = (
+            mock_restore_atoms_and_bonds_from_json
+        )
         self.init_manager.view_2d = MagicMock()
         self.init_manager.settings = MagicMock()
         self.view_3d_manager.view_3d = MagicMock()
@@ -43,7 +83,7 @@ class DummyMainWindow(StateManager):
         self.is_2d_editable = True
         self.edit_actions_manager.undo_stack = []
         self.edit_actions_manager.redo_stack = []
-        self._is_restoring_state = False
+        self.is_restoring_state = False
         self.initialization_complete = True
         self._preserved_plugin_data = {}
         self.init_manager.formula_label = MagicMock()
@@ -110,6 +150,48 @@ class DummyMainWindow(StateManager):
     def set_state_from_data(self, data):
         return super().set_state_from_data(data)
 
+    # --- Mediator stubs required by app_state.py ---
+
+    def set_current_molecule(self, mol):
+        self.view_3d_manager.current_mol = mol
+
+    def set_3d_atom_positions(self, positions):
+        self.view_3d_manager.atom_positions_3d = positions
+
+    def clear_3d_view(self):
+        self.view_3d_manager.current_mol = None
+
+    def set_constraints_3d(self, constraints):
+        self.edit_3d_manager.constraints_3d = constraints
+
+    def get_constraints_3d(self):
+        return self.edit_3d_manager.constraints_3d
+
+    def set_has_unsaved_changes(self, value):
+        self.state_manager.has_unsaved_changes = value
+
+    def set_current_file_path(self, path):
+        self.init_manager.current_file_path = path
+
+    def get_current_file_path(self):
+        return self.init_manager.current_file_path
+
+    def set_is_2d_editable(self, value):
+        self.ui_manager.is_2d_editable = value
+
+    def update_status_message(self, message, timeout=0):
+        pass
+
+    def set_last_successful_optimization_method(self, method):
+        self.compute_manager.last_successful_optimization_method = method
+
+    def get_settings(self):
+        return self.init_manager.settings
+
+    @property
+    def scene(self):
+        return self.init_manager.scene
+
 
 @pytest.fixture
 def dummy_window(app):
@@ -124,10 +206,6 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     aid1 = mw.state_manager.data.add_atom("C", QPointF(10, 20))
     aid2 = mw.state_manager.data.add_atom("O", QPointF(30, 40))
     mw.state_manager.data.add_bond(aid1, aid2, order=1)
-
-    # Mock visual items for 2D serialization
-    mw.state_manager.data.atoms[aid1]["item"] = MagicMock(pos=lambda: QPointF(10, 20))
-    mw.state_manager.data.atoms[aid2]["item"] = MagicMock(pos=lambda: QPointF(30, 40))
 
     # 3D structure (Methanol)
     mol = Chem.MolFromSmiles("CO")
@@ -196,7 +274,6 @@ def test_undo_state_binary_roundtrip(dummy_window):
 
     # Setup state
     aid = mw.state_manager.data.add_atom("N", QPointF(5, 5))
-    mw.state_manager.data.atoms[aid]["item"] = MagicMock(pos=lambda: QPointF(5, 5))
 
     # 3D with property
     mol = Chem.MolFromSmiles("N")

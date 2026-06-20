@@ -35,6 +35,9 @@ python tests/run_all_tests.py --no-cov
 # Skip the reporting phase (Markdown/Catalog generation)
 python tests/run_all_tests.py --no-report
 
+# Exit instantly on the first error or failure (fail-fast, run each suite at most once, no retries)
+python tests/run_all_tests.py -x
+
 # Reporting and maintenance
 python tests/run_all_tests.py --report-only    # Regenerate all reports without running tests
 python tests/run_all_tests.py --catalog-only   # Update only the assertion catalog

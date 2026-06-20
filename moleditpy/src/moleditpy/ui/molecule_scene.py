@@ -23,43 +23,28 @@ from PyQt6.QtWidgets import (
     QGraphicsScene,
 )
 
-try:
-    from .atom_item import AtomItem
-    from .bond_item import BondItem
-    from .template_preview_item import TemplatePreviewItem
-except ImportError:
-    from moleditpy.ui.atom_item import AtomItem
-    from moleditpy.ui.bond_item import BondItem
-    from moleditpy.ui.template_preview_item import TemplatePreviewItem
+from .atom_item import AtomItem
+from .bond_item import BondItem
+from .template_preview_item import TemplatePreviewItem
 
 
-try:
-    from PyQt6 import sip as _sip  # type: ignore
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
-
-try:
-    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-except ImportError:
-    from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
-
-try:
-    from .molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMixin
-except ImportError:
-    from moleditpy.ui.molecular_scene_handler import (
-        TemplateMixin,
-        KeyboardMixin,
-        SceneQueryMixin,
-    )
+from .molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMixin
 
 
 class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene):
     def __init__(self, data: Any, window: Any) -> None:
         super().__init__()
         self.data, self.window = data, window
+        self.atom_items: Dict[Any, Any] = {}
+        self.bond_items: Dict[Any, Any] = {}
+        self._deleted_items = []
+        self.initial_positions_in_event = {}
+        self.template_context = {}
+        self.template_preview = None
+        self.template_preview_points = []
+        self.was_selected_on_press = False
         self.mode: str = "select"
         self.current_atom_symbol: str = "C"
         self.bond_order: int = 1
@@ -102,11 +87,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
     def get_setting(self, key: str, default: Any = None) -> Any:
         """Safe gateway to access MainWindow settings without deep traversal from items."""
-        if (
-            hasattr(self, "window")
-            and self.window
-            and hasattr(self.window, "init_manager")
-        ):
+        if self.window and self.window.init_manager:
             settings = self.window.init_manager.settings
             return settings.get(key, default)
         return default
@@ -115,37 +96,191 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         """Update the positions of all bonds connected to the specified atom list."""
         bonds_to_update = set()
         for atom in atoms:
-            if hasattr(atom, "bonds"):
+            if hasattr(
+                atom, "bonds"
+            ):  # guard: non-AtomItem QGraphicsItems may be passed
                 bonds_to_update.update(atom.bonds)
-            else:
-                logging.error("REPORT ERROR: Missing attribute 'bonds' on atom")
 
         for bond in bonds_to_update:
             if not sip_isdeleted_safe(bond):
-                if hasattr(bond, "update_position"):
-                    try:
-                        bond.update_position()
-                    except (RuntimeError, ValueError, TypeError) as e:
-                        logging.debug(f"Failed to update bond position for {bond}: {e}")
-                else:
-                    logging.error(
-                        "REPORT ERROR: Missing attribute 'update_position' on bond"
-                    )
+                try:
+                    bond.update_position()
+                except (RuntimeError, ValueError, TypeError) as e:
+                    logging.debug(f"Failed to update bond position for {bond}: {e}")
+
+    def update_ring_info_2d(self) -> None:
+        """Update is_in_ring and ring_center for all BondItems based on 2D topology."""
+        if not self.data.atoms or not self.data.bonds:
+            return
+
+        # 1. Generate RDKit molecule for topology analysis
+        mol = self.data.to_rdkit_mol(use_2d_stereo=False)
+        if not mol:
+            # Fallback: reset all ring info if molecule generation fails
+            for bond_item in self.bond_items.values():
+                if bond_item:
+                    bond_item.is_in_ring = False
+                    bond_item.ring_center = None
+            return
+
+        # 2. Extract ring information
+        ring_info = mol.GetRingInfo()
+        atom_rings = ring_info.AtomRings()
+        bond_rings = ring_info.BondRings()
+
+        # 3. Create mapping from RDKit atom index to editor atom item
+        rdkit_idx_to_item = {}
+        for atom in mol.GetAtoms():
+            if atom.HasProp("_original_atom_id"):
+                orig_id = atom.GetIntProp("_original_atom_id")
+                if orig_id in self.atom_items:
+                    rdkit_idx_to_item[atom.GetIdx()] = self.atom_items[orig_id]
+
+        # 4. Map RDKit bond index to editor bond item
+        rdkit_bond_idx_to_item = {}
+        for bidx, rdkit_bond in enumerate(mol.GetBonds()):
+            a1_idx = rdkit_bond.GetBeginAtomIdx()
+            a2_idx = rdkit_bond.GetEndAtomIdx()
+            if a1_idx in rdkit_idx_to_item and a2_idx in rdkit_idx_to_item:
+                # Find corresponding editor bond item
+                item1 = rdkit_idx_to_item[a1_idx]
+                item2 = rdkit_idx_to_item[a2_idx]
+                id1, id2 = item1.atom_id, item2.atom_id
+                key = (id1, id2) if (id1, id2) in self.bond_items else (id2, id1)
+                if key in self.bond_items:
+                    rdkit_bond_idx_to_item[bidx] = self.bond_items[key]
+
+        # 5. Initialize/Reset all bond items and track best ring size
+        bond_to_best_size: Dict[
+            int, int
+        ] = {}  # bond_item_id -> smallest_ring_size_found
+        for bond_item in self.bond_items.values():
+            if bond_item:
+                bond_item.is_in_ring = False
+                bond_item.ring_center = None
+
+        # 6. Apply ring information
+        for a_ring, b_ring in zip(atom_rings, bond_rings):
+            ring_size = len(a_ring)
+            # Calculate ring center (geometric mean of atom positions)
+            positions = []
+            for aidx in a_ring:
+                item = rdkit_idx_to_item.get(aidx)
+                if item and hasattr(item, "pos"):
+                    pos = item.pos()
+                    if pos is not None:
+                        positions.append(pos)
+
+            if not positions:
+                continue
+
+            center_x = sum(p.x() for p in positions) / len(positions)
+            center_y = sum(p.y() for p in positions) / len(positions)
+            ring_center = (center_x, center_y)
+
+            # Update all bonds in this ring
+            for bidx in b_ring:
+                bond_item = rdkit_bond_idx_to_item.get(bidx)
+                if bond_item:
+                    bond_item.is_in_ring = True
+                    item_id = id(bond_item)
+                    if (
+                        item_id not in bond_to_best_size
+                        or ring_size < bond_to_best_size[item_id]
+                    ):
+                        bond_item.ring_center = ring_center
+                        bond_to_best_size[item_id] = ring_size
 
     def update_all_items(self) -> None:
         """Force redraw of all items."""
-        if hasattr(self.data, "update_ring_info_2d"):
-            self.data.update_ring_info_2d()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'update_ring_info_2d' on self.data"
-            )
+        self.update_ring_info_2d()
 
         for item in self.items():
             if isinstance(item, (AtomItem, BondItem)):
                 item.update()
         if self.views():
             self.views()[0].viewport().update()
+
+    def restore_atoms_and_bonds(self, raw_atoms: dict, raw_bonds: dict) -> None:
+        """Restore scene items from undo/redo state (dict-of-dicts format)."""
+        for atom_id, data in raw_atoms.items():
+            raw_pos = tuple(data["pos"])
+            pos_q = QPointF(raw_pos[0], raw_pos[1])
+            charge = data.get("charge", 0)
+            radical = data.get("radical", 0)
+            atom_item = AtomItem(
+                atom_id, data["symbol"], pos_q, charge=charge, radical=radical
+            )
+            self.data.atoms[atom_id] = {
+                "symbol": data["symbol"],
+                "pos": raw_pos,
+                "charge": charge,
+                "radical": radical,
+            }
+            self.atom_items[atom_id] = atom_item
+            self.addItem(atom_item)
+
+        for key_tuple, data in raw_bonds.items():
+            id1, id2 = key_tuple
+            if id1 in self.data.atoms and id2 in self.data.atoms:
+                atom1_item = self.atom_items[id1]
+                atom2_item = self.atom_items[id2]
+                bond_item = BondItem(
+                    atom1_item, atom2_item, data.get("order", 1), data.get("stereo", 0)
+                )
+                self.data.bonds[key_tuple] = {
+                    "order": data.get("order", 1),
+                    "stereo": data.get("stereo", 0),
+                }
+                self.bond_items[key_tuple] = bond_item
+                atom1_item.bonds.append(bond_item)
+                atom2_item.bonds.append(bond_item)
+                self.addItem(bond_item)
+
+        for atom_item in self.atom_items.values():
+            atom_item.update_style()
+        self.update_all_items()
+
+    def restore_atoms_and_bonds_from_json(self, atoms_2d: list, bonds_2d: list) -> None:
+        """Restore scene items from PMEPRJ JSON (list-of-dicts format)."""
+        for atom_data in atoms_2d:
+            atom_id = atom_data["id"]
+            symbol = atom_data["symbol"]
+            raw_pos = (float(atom_data["x"]), float(atom_data["y"]))
+            pos_q = QPointF(raw_pos[0], raw_pos[1])
+            charge = atom_data.get("charge", 0)
+            radical = atom_data.get("radical", 0)
+            atom_item = AtomItem(atom_id, symbol, pos_q, charge=charge, radical=radical)
+            self.data.atoms[atom_id] = {
+                "symbol": symbol,
+                "pos": raw_pos,
+                "charge": charge,
+                "radical": radical,
+            }
+            self.atom_items[atom_id] = atom_item
+            self.addItem(atom_item)
+
+        for bond_data in bonds_2d:
+            atom1_id = bond_data["atom1"]
+            atom2_id = bond_data["atom2"]
+            if atom1_id in self.data.atoms and atom2_id in self.data.atoms:
+                atom1_item = self.atom_items[atom1_id]
+                atom2_item = self.atom_items[atom2_id]
+                bond_order = bond_data["order"]
+                stereo = bond_data.get("stereo", 0)
+                bond_item = BondItem(atom1_item, atom2_item, bond_order, stereo=stereo)
+                atom1_item.bonds.append(bond_item)
+                atom2_item.bonds.append(bond_item)
+                self.data.bonds[(atom1_id, atom2_id)] = {
+                    "order": bond_order,
+                    "stereo": stereo,
+                }
+                self.bond_items[(atom1_id, atom2_id)] = bond_item
+                self.addItem(bond_item)
+
+        for atom_item in self.atom_items.values():
+            atom_item.update_style()
+        self.update_all_items()
 
     def reinitialize_items(self) -> None:
         self.template_preview = TemplatePreviewItem()
@@ -166,9 +301,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
     def clear_all_problem_flags(self) -> bool:
         """Reset the has_problem flag for all AtomItems and redraw them."""
         needs_update = False
-        for atom_data in self.data.atoms.values():
-            item = atom_data.get("item")
-            # hasattr is a safety check
+        for item in self.atom_items.values():
             if item and hasattr(item, "has_problem") and item.has_problem:
                 item.has_problem = False
                 item.update()
@@ -244,9 +377,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         if hasattr(item, "stereo") and item.stereo in [3, 4]:
                             item.set_stereo(0)
                             # Also update the data model
-                            for bdata in self.data.bonds.values():
-                                if bdata.get("item") is item:
-                                    bdata["stereo"] = 0
+                            for bond_key, bond_item_check in self.bond_items.items():
+                                if bond_item_check is item:
+                                    self.data.bonds[bond_key]["stereo"] = 0
                                     break
                             self.window.edit_actions_manager.push_undo_state()
                             data_changed = False  # Already added to undo stack, so skip redundant pushes later
@@ -255,14 +388,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             f"Error in E/Z stereo toggle (mousePressEvent): {e}",
                             exc_info=True,
                         )
-                        if hasattr(self.window, "statusBar"):
-                            sb = self.window.statusBar()
-                            if sb:
-                                sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
-                        else:
-                            logging.error(
-                                "REPORT ERROR: Missing attribute 'statusBar' on self.window"
-                            )
+                        sb = self.window.statusBar()
+                        if sb:
+                            sb.showMessage(f"Error clearing E/Z label: {e}", 5000)
                         self.update_all_items()  # Redraw even on error to maintain consistency
                 # AtomItem does nothing
             # --- Normal processing ---
@@ -421,9 +549,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 # Complete event processing here to prevent selection of underlying items
                 self.start_atom = None
                 self.press_pos = None
-                if self.data_changed_in_event:
-                    self.update_all_items()
-                    self.window.edit_actions_manager.push_undo_state()
+                self.update_all_items()
+                self.window.edit_actions_manager.push_undo_state()
                 return
 
         released_item = self.itemAt(end_pos, self.views()[0].transform())
@@ -452,8 +579,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.start_atom = None
             self.start_pos = None
             self.press_pos = None
-            if self.data_changed_in_event:
-                self.window.edit_actions_manager.push_undo_state()
+            self.window.edit_actions_manager.push_undo_state()
             return
         elif (
             (self.mode == "charge_plus" or self.mode == "charge_minus")
@@ -471,8 +597,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self.start_atom = None
             self.start_pos = None
             self.press_pos = None
-            if self.data_changed_in_event:
-                self.window.edit_actions_manager.push_undo_state()
+            self.window.edit_actions_manager.push_undo_state()
             return
 
         elif (
@@ -483,8 +608,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             b = released_item
             if self.mode == "bond_2_5":
                 try:
-                    if hasattr(b, "order") and b.order == 2:
-                        current_stereo = getattr(b, "stereo", 0)
+                    if b.order == 2:
+                        current_stereo = b.stereo
                         if current_stereo not in [3, 4]:
                             new_stereo = 3  # None -> Z
                         elif current_stereo == 3:
@@ -492,29 +617,17 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         else:  # current_stereo == 4
                             new_stereo = 0  # E -> None
 
-                        if hasattr(self, "update_bond_stereo"):
-                            self.update_bond_stereo(b, new_stereo)
-                            self.update_all_items()  # Force redraw
-                            self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
-                        else:
-                            logging.error(
-                                "REPORT ERROR: Missing attribute 'update_bond_stereo' on self"
-                            )
+                        self.update_bond_stereo(b, new_stereo)
+                        self.update_all_items()  # Force redraw
+                        self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.error(
                         f"Error in E/Z stereo toggle (mouseReleaseEvent): {e}",
                         exc_info=True,
                     )
-                    if hasattr(self.window, "statusBar"):
-                        sb = self.window.statusBar()
-                        if sb:
-                            sb.showMessage(
-                                f"Error changing E/Z stereochemistry: {e}", 5000
-                            )
-                    else:
-                        logging.error(
-                            "REPORT ERROR: Missing attribute 'statusBar' on self.window"
-                        )
+                    sb = self.window.statusBar()
+                    if sb:
+                        sb.showMessage(f"Error changing E/Z stereochemistry: {e}", 5000)
                     self.update_all_items()  # Redraw even on error to maintain consistency
                 return  # Do not proceed further
             elif (
@@ -532,7 +645,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 )
                 # 3. Swap atom references and link to new data in BondItem
                 b.atom1, b.atom2 = b.atom2, b.atom1
-                self.data.bonds[new_key]["item"] = b
+                self.bond_items[new_key] = b
                 # 4. Update visual state
                 b.update_position()
             else:
@@ -547,7 +660,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 b.prepareGeometryChange()
                 b.order = self.bond_order
                 b.stereo = self.bond_stereo
-                self.data.bonds[new_key]["item"] = b
+                self.bond_items[new_key] = b
                 b.update()
             self.clearSelection()
             self.data_changed_in_event = True
@@ -592,7 +705,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     )
                 else:
                     new_id = self.create_atom(self.current_atom_symbol, end_pos)
-                    new_item = self.data.atoms[new_id]["item"]
+                    new_item = self.atom_items[new_id]
                     self.create_bond(
                         self.start_atom,
                         new_item,
@@ -624,7 +737,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     start_id = self.create_atom(
                         self.current_atom_symbol, self.start_pos
                     )
-                    start_item = self.data.atoms[start_id]["item"]
+                    start_item = self.atom_items[start_id]
                     self.create_bond(
                         start_item,
                         end_item,
@@ -637,8 +750,8 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     )
                     end_id = self.create_atom(self.current_atom_symbol, end_pos)
                     self.create_bond(
-                        self.data.atoms[start_id]["item"],
-                        self.data.atoms[end_id]["item"],
+                        self.atom_items[start_id],
+                        self.atom_items[end_id],
                         bond_order=order_to_use,
                         bond_stereo=stereo_to_use,
                     )
@@ -683,8 +796,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             if self.views():
                 self.views()[0].viewport().update()
 
-        if getattr(self, "data_changed_in_event", False):
+        if self.data_changed_in_event:
             self.update_all_items()
+            self.window.edit_actions_manager.push_undo_state()
 
         self.start_atom = None
         self.start_pos = None
@@ -692,8 +806,6 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.temp_line = None
         # Clear template context but NOT the template data itself to allow multiple placements
         self.template_context = {}
-        if getattr(self, "data_changed_in_event", False):
-            self.window.edit_actions_manager.push_undo_state()
 
     def mouseDoubleClickEvent(self, event: Any) -> None:
         """Handle double click events."""
@@ -824,17 +936,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         for obj in list(self._deleted_items):
             if not sip_isdeleted_safe(obj):
                 try:
-                    if hasattr(obj, "hide"):
-                        obj.hide()
-                    else:
-                        logging.error("REPORT ERROR: Missing attribute 'hide' on obj")
+                    obj.hide()
                     if hasattr(obj, "bonds") and obj.bonds is not None:
-                        if hasattr(obj.bonds, "clear"):
-                            obj.bonds.clear()
-                        else:
-                            logging.error(
-                                "REPORT ERROR: Missing attribute 'clear' on object"
-                            )
+                        obj.bonds.clear()
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.debug(f"Error purging item {obj} in MoleculeScene: {e}")
 

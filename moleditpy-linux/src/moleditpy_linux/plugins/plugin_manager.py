@@ -25,15 +25,11 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QMessageBox
 
-try:
-    from .plugin_interface import PluginContext
-except ImportError:
-    # Fallback if running as script
-    from moleditpy_linux.plugins.plugin_interface import PluginContext
+from .plugin_interface import PluginContext
 
 
 class PluginManager:
-    def _compute_sha256(self, path: str) -> str:
+    def compute_sha256(self, path: str) -> str:
         """Computes SHA-256 for a file or a directory (concatenated hashes of all files)."""
         if os.path.isfile(path):
             return self._sha256_for_file(path)
@@ -66,7 +62,10 @@ class PluginManager:
                     hasher.update(rel_path.encode("utf-8", errors="replace"))
                     hasher.update(b"\0")
                     with open(file_path, "rb") as f:
-                        for chunk in iter(lambda: f.read(8192), b""):
+                        while True:
+                            chunk = f.read(8192)
+                            if not chunk:
+                                break
                             hasher.update(chunk)
                     hasher.update(b"\0")
             return hasher.hexdigest()
@@ -363,35 +362,18 @@ class PluginManager:
                     # Pass category to context if needed, currently not storing it in context directly but could be useful
                     try:
                         module.initialize(context)
-                    except (
-                        AttributeError,
-                        RuntimeError,
-                        ValueError,
-                        OSError,
-                        ImportError,
-                        SyntaxError,
-                    ) as e:
-                        # [BROAD EXCEPTION] Plugins have root power; catch all potential failures during init.
+                    except Exception as e:  # plugins have full app access; catch everything to isolate faults
                         status = f"Error (Init): {e}"
-                        # Initialization errors are stored in plugin status for display in Plugin Dialog
-                        logging.error(f"Plugin {plugin_name} initialize error: {e}")
+                        logging.exception("Plugin %s initialize error", plugin_name)
                 elif has_autorun:
                     try:
                         if self.main_window:
                             module.autorun(self.main_window)
                         else:
                             status = "Skipped (No MW)"
-                    except (
-                        AttributeError,
-                        RuntimeError,
-                        ValueError,
-                        OSError,
-                        ImportError,
-                        SyntaxError,
-                    ) as e:
+                    except Exception as e:  # plugins have full app access; catch everything to isolate faults
                         status = f"Error (Autorun): {e}"
-                        # Autorun errors are stored in plugin status
-                        print(f"Plugin {plugin_name} autorun error: {e}")
+                        logging.exception("Plugin %s autorun error", plugin_name)
                 elif not has_run:
                     status = "No Entry Point"
 
@@ -409,35 +391,24 @@ class PluginManager:
                     }
                 )
 
-        except (
-            AttributeError,
-            RuntimeError,
-            ValueError,
-            OSError,
-            ImportError,
-            SyntaxError,
-        ) as e:
-            # [BROAD EXCEPTION] Loading failures are caught to prevent a single buggy plugin from
-            # crashing the entire discovery process.
-            logging.error(f"Failed to load plugin {module_name}: {e}")
+        except Exception as e:  # plugins have full app access; isolate any load failure to prevent crashing discovery
+            logging.exception("Failed to load plugin %s", module_name)
 
     def run_plugin(self, module: Any, main_window: Any) -> None:
         """Executes the plugin's run method (Legacy manual trigger)."""
         try:
             module.run(main_window)
-        except (
-            AttributeError,
-            RuntimeError,
-            ValueError,
-            OSError,
-            ImportError,
-            SyntaxError,
-        ) as e:
+        except Exception as e:  # plugins have full app access; catch everything so the error dialog can show the cause
             QMessageBox.critical(
                 main_window,
                 "Plugin Error",
                 f"Error running plugin '{getattr(module, 'PLUGIN_NAME', 'Unknown')}':\n{e}",
             )
+
+    def rebuild_plugin_menus(self) -> None:
+        """Rebuild all plugin menus and toolbars."""
+        if self.main_window and hasattr(self.main_window, "plugin_menu_manager"):
+            self.main_window.plugin_menu_manager.rebuild_plugin_menus()
 
     # --- Registration Callbacks ---
     def register_menu_action(
@@ -614,9 +585,11 @@ class PluginManager:
                                     selected_indices.append(i)
                             except (RuntimeError, ValueError, TypeError):
                                 continue
-        except ImportError:
+        except (
+            ImportError
+        ):  # [OPTIONAL DEP] importlib.metadata unavailable (<3.8); silently skip.
             pass
-        except Exception as e:
+        except (RuntimeError, AttributeError) as e:
             logging.error(f"Error retrieving selected atom indices: {e}")
 
         return selected_indices
@@ -636,17 +609,9 @@ class PluginManager:
         for handler in self.document_reset_handlers:
             try:
                 handler["callback"]()
-            except (
-                AttributeError,
-                RuntimeError,
-                ValueError,
-                OSError,
-                ImportError,
-                SyntaxError,
-            ) as e:
-                # [BROAD EXCEPTION] Document reset handlers are user plugins; catch all to prevent data loss.
-                logging.error(
-                    f"Error in document reset handler for {handler['plugin']}: {e}"
+            except Exception as e:  # plugins have full app access; catch everything to prevent data loss on document reset
+                logging.exception(
+                    "Error in document reset handler for %s", handler["plugin"]
                 )
 
     def get_plugin_info_safe(self, file_path: str) -> Dict[str, str]:
@@ -675,10 +640,6 @@ class PluginManager:
                         if node.value:  # AnnAssign might presumably not have value? (though usually does for module globals)
                             if isinstance(node.value, ast.Constant):  # Py3.8+
                                 val = node.value.value
-                            elif hasattr(ast, "Str") and isinstance(
-                                node.value, getattr(ast, "Str", type(None))
-                            ):  # Py3.7 and below
-                                val = node.value.s
                             elif isinstance(node.value, ast.Tuple):
                                 # Handle version tuples e.g. (1, 0, 0)
                                 try:
@@ -687,18 +648,13 @@ class PluginManager:
                                     for elt in node.value.elts:
                                         if isinstance(elt, ast.Constant):
                                             elts.append(elt.value)
-                                        elif hasattr(ast, "Num") and isinstance(
-                                            elt, getattr(ast, "Num", type(None))
-                                        ):
-                                            elts.append(elt.n)
                                     val = ".".join(map(str, elts))
                                 except (
                                     AttributeError,
                                     RuntimeError,
                                     ValueError,
                                     TypeError,
-                                ):
-                                    # Fallback for complex AST structures during metadata extraction
+                                ):  # [AST PARSE] Complex/unexpected AST node shapes during metadata extraction; skip gracefully.
                                     pass
 
                         if val is not None:

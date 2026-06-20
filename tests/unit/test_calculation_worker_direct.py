@@ -79,6 +79,16 @@ def test_calculation_worker_error_empty_input(worker):
     assert any("No atoms to convert" in str(val) for val in error_captor.emitted_values)
 
 
+def test_calculation_worker_none_conversion_mode_defaults_to_fallback(worker):
+    """Explicit None should behave like an omitted conversion mode."""
+    mol_block = Chem.MolToMolBlock(Chem.MolFromSmiles("C"))
+
+    with patch.object(worker, "_run_rdkit_workflow", return_value=True) as mock_rdkit:
+        worker.run_calculation(mol_block, {"conversion_mode": None})
+
+    assert mock_rdkit.called
+
+
 def test_calculation_worker_safe_helpers_halted(worker):
     """Test that safe helpers don't emit finished if halted."""
     # We need to set halt_all on the worker object

@@ -143,7 +143,7 @@ class TestClearAllProblemFlags:
     def test_returns_true_when_flags_were_set(self, mock_parser_host):
         scene = _scene(mock_parser_host)
         aid = scene.create_atom("C", QPointF(0, 0))
-        item = mock_parser_host.state_manager.data.atoms[aid]["item"]
+        item = scene.atom_items[aid]
         item.has_problem = True
         item.update = MagicMock()
 
@@ -152,7 +152,7 @@ class TestClearAllProblemFlags:
     def test_returns_false_when_no_flags_set(self, mock_parser_host):
         scene = _scene(mock_parser_host)
         aid = scene.create_atom("C", QPointF(0, 0))
-        item = mock_parser_host.state_manager.data.atoms[aid]["item"]
+        item = scene.atom_items[aid]
         item.has_problem = False
 
         assert scene.clear_all_problem_flags() is False
@@ -160,7 +160,7 @@ class TestClearAllProblemFlags:
     def test_flag_is_reset_to_false(self, mock_parser_host):
         scene = _scene(mock_parser_host)
         aid = scene.create_atom("C", QPointF(0, 0))
-        item = mock_parser_host.state_manager.data.atoms[aid]["item"]
+        item = scene.atom_items[aid]
         item.has_problem = True
         item.update = MagicMock()
 
@@ -250,12 +250,12 @@ class TestEZStereoCycling:
         a1_id = scene.create_atom("C", QPointF(0, 0))
         a2_id = scene.create_atom("C", QPointF(50, 0))
         scene.create_bond(
-            mock_parser_host.state_manager.data.atoms[a1_id]["item"],
-            mock_parser_host.state_manager.data.atoms[a2_id]["item"],
+            scene.atom_items[a1_id],
+            scene.atom_items[a2_id],
             bond_order=2,
         )
         bond_key = (a1_id, a2_id)
-        bond_item = mock_parser_host.state_manager.data.bonds[bond_key]["item"]
+        bond_item = scene.bond_items[bond_key]
         bond_item.order = 2
         bond_item.stereo = 0
         bond_item.set_stereo = MagicMock()
@@ -336,16 +336,16 @@ class TestBondDirectionInversion:
         a1_id = scene.create_atom("C", QPointF(0, 0))
         a2_id = scene.create_atom("C", QPointF(50, 0))
         scene.create_bond(
-            mock_parser_host.state_manager.data.atoms[a1_id]["item"],
-            mock_parser_host.state_manager.data.atoms[a2_id]["item"],
+            scene.atom_items[a1_id],
+            scene.atom_items[a2_id],
             bond_order=1,
             bond_stereo=1,
         )
-        bond_item = mock_parser_host.state_manager.data.bonds[(a1_id, a2_id)]["item"]
+        bond_item = scene.bond_items[(a1_id, a2_id)]
         bond_item.order = 1
         bond_item.stereo = 1
-        bond_item.atom1 = mock_parser_host.state_manager.data.atoms[a1_id]["item"]
-        bond_item.atom2 = mock_parser_host.state_manager.data.atoms[a2_id]["item"]
+        bond_item.atom1 = scene.atom_items[a1_id]
+        bond_item.atom2 = scene.atom_items[a2_id]
         bond_item.update_position = MagicMock()
 
         with (
@@ -378,10 +378,10 @@ class TestDoubleClickSelectMode:
         a1_id = scene.create_atom("C", QPointF(0, 0))
         a2_id = scene.create_atom("C", QPointF(50, 0))
         scene.create_bond(
-            mock_parser_host.state_manager.data.atoms[a1_id]["item"],
-            mock_parser_host.state_manager.data.atoms[a2_id]["item"],
+            scene.atom_items[a1_id],
+            scene.atom_items[a2_id],
         )
-        atom_item = mock_parser_host.state_manager.data.atoms[a1_id]["item"]
+        atom_item = scene.atom_items[a1_id]
         atom_item.setSelected = MagicMock()
 
         with (
@@ -413,7 +413,7 @@ class TestDoubleClickChargeRadical:
         scene.mode = "radical"
 
         aid = scene.create_atom("C", QPointF(100, 100))
-        item = mock_parser_host.state_manager.data.atoms[aid]["item"]
+        item = scene.atom_items[aid]
         item.radical = 0
         item.prepareGeometryChange = MagicMock()
         item.update_style = MagicMock()
@@ -431,7 +431,7 @@ class TestDoubleClickChargeRadical:
         scene.mode = "charge_plus"
 
         aid = scene.create_atom("C", QPointF(100, 100))
-        item = mock_parser_host.state_manager.data.atoms[aid]["item"]
+        item = scene.atom_items[aid]
         item.charge = 0
         item.prepareGeometryChange = MagicMock()
         item.update_style = MagicMock()
@@ -449,7 +449,7 @@ class TestDoubleClickChargeRadical:
         scene.mode = "charge_minus"
 
         aid = scene.create_atom("C", QPointF(100, 100))
-        item = mock_parser_host.state_manager.data.atoms[aid]["item"]
+        item = scene.atom_items[aid]
         item.charge = 0
         item.prepareGeometryChange = MagicMock()
         item.update_style = MagicMock()

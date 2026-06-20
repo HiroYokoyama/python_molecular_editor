@@ -6,8 +6,7 @@
 [![Python Versions](https://img.shields.io/pypi/pyversions/MoleditPy.svg)](https://pypi.org/project/MoleditPy/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Build Status](https://github.com/HiroYokoyama/python_molecular_editor/actions/workflows/tests.yml/badge.svg)](https://github.com/HiroYokoyama/python_molecular_editor/actions)
-![Core Logic Coverage](https://img.shields.io/badge/core_logic_coverage->80%25-green)
-![Overall Coverage](https://img.shields.io/badge/coverage->75%25-green)
+![Overall Coverage](https://img.shields.io/badge/coverage->80%25-green)
 ![GUI Status](https://img.shields.io/badge/GUI-Manually_Verified-blue)
 ![Pylint Score](https://img.shields.io/badge/pylint->9%2F10-brightgreen)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/moleditpy)
@@ -147,6 +146,8 @@ If you use this software in your work, please cite it as follows:
 Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Zenodo. https://doi.org/10.5281/zenodo.17268532
 ```
 
+Additionally, please cite the plugins you used.
+
 -----
 
 <div id="japanese"></div>
@@ -278,3 +279,5 @@ moleditpy
 ```
 Yokoyama, H. (2026). MoleditPy — A Python-based molecular editing software. Zenodo. https://doi.org/10.5281/zenodo.17268532
 ```
+
+また、使用したプラグインの引用もお願いいたします。

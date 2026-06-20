@@ -47,7 +47,7 @@ def test_analysis_window_xyz_derived(qtbot):
     """Verify AnalysisWindow uses manual logic for XYZ-derived structures."""
     mol = Chem.MolFromSmiles("CCO")  # Placeholder
     # Manually attach XYZ metadata
-    mol._xyz_atom_data = [
+    mol.xyz_atom_data = [
         ("C", 0, 0, 0),
         ("C", 1.5, 0, 0),
         ("O", 2.0, 1.0, 0),

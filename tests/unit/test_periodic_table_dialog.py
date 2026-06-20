@@ -2,9 +2,8 @@
 Unit tests for ui/periodic_table_dialog.py.
 """
 
-from unittest.mock import MagicMock
 import pytest
-from PyQt6.QtWidgets import QWidget, QDialog
+from PyQt6.QtWidgets import QWidget
 from moleditpy.ui.periodic_table_dialog import PeriodicTableDialog
 
 

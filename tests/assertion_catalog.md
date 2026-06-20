@@ -685,6 +685,11 @@ _No description provided._
 
 - assert any(('No atoms to convert' in str(val) for val in error_captor.emitted_values))
 
+### test_calculation_worker_none_conversion_mode_defaults_to_fallback
+_Explicit None should behave like an omitted conversion mode._
+
+- assert mock_rdkit.called
+
 ### test_calculation_worker_safe_helpers_halted
 _Test that safe helpers don't emit finished if halted._
 
@@ -1036,7 +1041,7 @@ _Test early exits in trigger_conversion (empty mol, etc.)._
 ### test_check_chemistry_problems_fallback
 _Test the manual valence check when RDKit fails._
 
-- assert compute.data.atoms[0]['item'].has_problem == True
+- assert mock_item.has_problem == True
 - assert any(('chemistry problems found' in msg for msg in msgs))
 
 ### test_trigger_conversion_happy_path
@@ -1082,6 +1087,11 @@ _Test that data.to_mol_block() is used preferentially over RDKit's generation._
 - assert call_args is not None
 - assert sent_block == custom_block
 
+### test_trigger_conversion_uses_default_when_temp_mode_is_none
+_Preinitialized temp conversion mode should not suppress the saved setting._
+
+- assert options['conversion_mode'] == 'fallback'
+
 ### test_trigger_conversion_ez_stereo_injection
 _Test that M CFG lines are injected for E/Z stereo bonds._
 
@@ -1091,8 +1101,7 @@ _Test that M CFG lines are injected for E/Z stereo bonds._
 ### test_on_calculation_error_uff_fallback_temporary
 _Verify that UFF fallback uses _temp_optimization_method and doesn't change persistent setting._
 
-- assert compute._temp_optimization_method == 'UFF_RDKIT'
-- assert mock_optimize.called
+- mock_optimize.assert_called_once_with('UFF_RDKIT')
 - assert compute.optimization_method == 'MMFF_RDKIT'
 
 ## tests/unit/test_constants.py
@@ -1391,6 +1400,19 @@ _Verify that clicking outside selection in MoveSelectedAtomsDialog toggles only 
 - mock_timer.assert_called_once()
 - mock_dialog.on_atom_picked.assert_called_once_with(1)
 
+### test_custom_interactor_style_right_click_rotation
+_Verify right-click triggers group rotation and release finalizes it._
+
+- assert mock_dialog.is_rotating_group_vtk is True
+- assert mock_dialog.rotation_start_pos == (100, 100)
+- assert mock_dialog.rotation_atom_idx == 0
+- assert mock_dialog.group_centroid is not None
+- assert mock_dialog.is_rotating_group_vtk is False
+- assert mock_dialog.rotation_start_pos is None
+- assert mock_dialog.is_rotating_group_vtk is False
+- assert mock_dialog.rotation_start_pos is None
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+
 ## tests/unit/test_dialog_3d_picking_mixin.py
 
 ### test_init_defaults
@@ -1626,7 +1648,6 @@ _No description provided._
 _No description provided._
 
 - assert result == []
-- mock_log.assert_called_once()
 
 ### TestShowAboutDialog.test_creates_and_execs_dialog
 _No description provided._
@@ -2150,6 +2171,7 @@ _No description provided._
 
 - assert not mol.HasProp('_xyz_skip_checks')
 - assert not hasattr(mol, '_xyz_skip_checks')
+- assert not hasattr(mol, 'xyz_atom_data')
 - assert manager.host.is_xyz_derived is False
 - manager.host.init_manager.optimize_3d_button.setEnabled.assert_called_with(True)
 
@@ -2217,7 +2239,6 @@ _No description provided._
 ### TestEditActionsExtended.test_apply_chem_check_missing_button
 _No description provided._
 
-- mock_log.assert_called()
 
 ### TestEditActionsExtended.test_clear_xyz_flags_current_mol
 _No description provided._
@@ -2228,7 +2249,6 @@ _No description provided._
 ### TestEditActionsExtended.test_clear_xyz_flags_missing_zoom
 _No description provided._
 
-- mock_log.assert_called()
 
 ## tests/unit/test_export_logic.py
 
@@ -2469,12 +2489,10 @@ _No description provided._
 ### TestLoggingErrorFallback.test_missing_chiral_labels_on_released
 _No description provided._
 
-- mock_log.assert_called_once_with("REPORT ERROR: Missing attribute 'update_chiral_labels' on object")
 
 ### TestLoggingErrorFallback.test_missing_chiral_labels_on_click
 _No description provided._
 
-- mock_log.assert_called_once_with("REPORT ERROR: Missing attribute 'update_chiral_labels' on object")
 
 ## tests/unit/test_geometry_dialogs.py
 
@@ -2748,7 +2766,7 @@ _Verify remove_hydrogen_atoms finds and deletes H items using app logic._
 
 - actions.scene.delete_items.assert_called()
 - assert h_item in deleted_set
-- assert actions.data.atoms[c_id]['item'] not in deleted_set
+- assert actions.scene.atom_items[c_id] not in deleted_set
 
 ## tests/unit/test_io.py
 
@@ -2837,8 +2855,8 @@ _load_xyz_file returning None shows error on status bar._
 ### TestLoadXYZFor3DViewing.test_ui_modes_enabled_on_success
 _3D viewer UI mode methods are called after successful load._
 
-- host.ui_manager._enter_3d_viewer_ui_mode.assert_called_once()
-- host.ui_manager._enable_3d_features.assert_called_once_with(True)
+- host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+- host.ui_manager.enable_3d_features.assert_called_once_with(True)
 
 ### TestLoadXYZFor3DViewing.test_is_xyz_derived_with_skip_prop
 _is_xyz_derived=True when _xyz_skip_checks property is set on mol._
@@ -3099,7 +3117,7 @@ _No description provided._
 ### test_mainwindow_is_restoring_state_default
 _No description provided._
 
-- assert mw._is_restoring_state is False
+- assert mw.is_restoring_state is False
 
 ### test_mainwindow_start_calculation_signal_exists
 _No description provided._
@@ -3953,6 +3971,13 @@ _No description provided._
 - assert plotter.camera_position == [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
 - plotter.render.assert_called()
 
+## tests/unit/test_no_external_private_calls.py
+
+### TestNoExternalPrivateCalls.test_no_external_private_calls
+_No description provided._
+
+- self.assertTrue(os.path.isdir(pkg_dir), f'Directory not found: {pkg_dir}')
+
 ## tests/unit/test_parser_robustness.py
 
 ### test_set_mol_prop_safe_robustness
@@ -4205,6 +4230,164 @@ _No description provided._
 
 - mw.view_3d_manager.draw_molecule_3d.assert_called()
 
+## tests/unit/test_plugin_context.py
+
+### TestMarkProjectModified.test_sets_has_unsaved_changes
+_No description provided._
+
+- self.assertTrue(mw.state_manager.has_unsaved_changes)
+
+### TestMarkProjectModified.test_calls_update_window_title
+_No description provided._
+
+- mw.state_manager.update_window_title.assert_called_once()
+
+### TestMarkProjectModified.test_no_crash_when_mw_is_none
+_No description provided._
+
+
+### TestMarkProjectModified.test_no_crash_when_state_manager_missing
+_No description provided._
+
+
+### TestMarkProjectModified.test_no_crash_when_update_window_title_missing
+_No description provided._
+
+
+### TestMarkProjectModified.test_no_crash_when_state_manager_raises
+_No description provided._
+
+
+### TestMarkProjectModified.test_method_exists_on_plugincontext
+_No description provided._
+
+- self.assertTrue(hasattr(PluginContext, 'mark_project_modified'), 'PluginContext must expose mark_project_modified()')
+- self.assertTrue(callable(getattr(PluginContext, 'mark_project_modified')))
+
+### TestRefreshUi.test_calls_update_realtime_info
+_No description provided._
+
+- mw.state_manager.update_realtime_info.assert_called_once()
+
+### TestRefreshUi.test_calls_update_undo_redo_actions
+_No description provided._
+
+- mw.edit_actions_manager.update_undo_redo_actions.assert_called_once()
+
+### TestRefreshUi.test_calls_update_window_title
+_No description provided._
+
+- mw.state_manager.update_window_title.assert_called_once()
+
+### TestRefreshUi.test_no_crash_when_mw_is_none
+_No description provided._
+
+
+### TestRefreshUi.test_no_crash_when_managers_missing
+_No description provided._
+
+
+### TestFit3dView.test_calls_fit_to_view
+_No description provided._
+
+- mw.view_3d_manager.fit_to_view.assert_called_once()
+
+### TestFit3dView.test_no_crash_when_mw_is_none
+_No description provided._
+
+
+### TestFit3dView.test_no_crash_when_fit_to_view_missing
+_No description provided._
+
+
+### TestClearCanvas.test_calls_clear_2d_editor_default
+_No description provided._
+
+- mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(push_to_undo=True)
+
+### TestClearCanvas.test_calls_clear_2d_editor_no_undo
+_No description provided._
+
+- mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(push_to_undo=False)
+
+### TestClearCanvas.test_no_crash_when_mw_is_none
+_No description provided._
+
+
+### TestClearCanvas.test_no_crash_when_manager_missing
+_No description provided._
+
+
+### TestSet3dFeaturesEnabled.test_calls_enable_3d_features_true
+_No description provided._
+
+- mw.ui_manager.enable_3d_features.assert_called_once_with(True)
+
+### TestSet3dFeaturesEnabled.test_calls_enable_3d_features_false
+_No description provided._
+
+- mw.ui_manager.enable_3d_features.assert_called_once_with(False)
+
+### TestSet3dFeaturesEnabled.test_no_crash_when_mw_is_none
+_No description provided._
+
+
+### TestSet3dFeaturesEnabled.test_no_crash_when_ui_manager_missing
+_No description provided._
+
+
+### TestSetAnalysisEnabled.test_calls_set_enabled_true
+_No description provided._
+
+- mw.init_manager.analysis_action.setEnabled.assert_called_once_with(True)
+
+### TestSetAnalysisEnabled.test_calls_set_enabled_false
+_No description provided._
+
+- mw.init_manager.analysis_action.setEnabled.assert_called_once_with(False)
+
+### TestSetAnalysisEnabled.test_no_crash_when_mw_is_none
+_No description provided._
+
+
+### TestSetAnalysisEnabled.test_no_crash_when_analysis_action_missing
+_No description provided._
+
+
+### TestCheckChemistryProblems.test_calls_fallback
+_No description provided._
+
+- mw.compute_manager.check_chemistry_problems_fallback.assert_called_once()
+
+### TestCheckChemistryProblems.test_no_crash_when_mw_is_none
+_No description provided._
+
+
+### TestCheckChemistryProblems.test_no_crash_when_compute_manager_missing
+_No description provided._
+
+
+### TestRefresh2dScene.test_calls_update_all_items
+_No description provided._
+
+- mw.init_manager.scene.update_all_items.assert_called_once()
+
+### TestRefresh2dScene.test_no_crash_when_mw_is_none
+_No description provided._
+
+
+### TestRefresh2dScene.test_no_crash_when_init_manager_missing
+_No description provided._
+
+
+### TestRefresh2dScene.test_no_crash_when_scene_missing
+_No description provided._
+
+
+### TestRefresh2dScene.test_no_crash_when_update_all_items_missing
+_No description provided._
+
+
 ## tests/unit/test_plugin_interface.py
 
 ### TestPluginInterface.test_plugin_context_init
@@ -4282,9 +4465,8 @@ _Test register_load_handler delegation._
 - mock_manager.register_load_handler.assert_called_once_with('TestPlugin', callback)
 
 ### TestPluginInterface.test_register_3d_context_menu
-_Test deprecated register_3d_context_menu._
+_Test deprecated register_3d_context_menu emits DeprecationWarning._
 
-- assert 'deprecated' in captured.out or 'deprecated' in captured.err
 
 ### TestPluginInterface.test_register_3d_style
 _Test register_3d_style delegation._
@@ -4430,6 +4612,31 @@ _No description provided._
 _No description provided._
 
 - mock_main_window.view_3d_manager.plotter.reset_camera.assert_called_once()
+
+### TestPluginInterface.test_enter_3d_viewer_mode
+_No description provided._
+
+- mock_main_window.ui_manager.enter_3d_viewer_mode.assert_called_once()
+
+### TestPluginInterface.test_enter_3d_mode
+_No description provided._
+
+- mock_main_window.ui_manager.enter_3d_viewer_mode.assert_called_once()
+
+### TestPluginInterface.test_load_from_smiles
+_No description provided._
+
+- mock_main_window.string_importer_manager.load_from_smiles.assert_called_once_with('C')
+
+### TestPluginInterface.test_to_xyz_block
+_No description provided._
+
+- assert xyz is not None
+- assert 'C' in xyz
+- assert '1.23' in xyz
+- assert '4.56' in xyz
+- assert '7.89' in xyz
+- assert ctx.to_xyz_block() is None
 
 ### TestPluginInterface.test_set_bond_color_by_atoms
 _No description provided._
@@ -4599,7 +4806,7 @@ _install_plugin accepts a .zip file; extracted package is discovered._
 ### test_compute_sha256
 _Test SHA-256 calculation for files and directories._
 
-- assert pm._compute_sha256('/non/existent/path') == 'N/A'
+- assert pm.compute_sha256('/non/existent/path') == 'N/A'
 - assert sha1 != 'N/A'
 - assert len(sha1) == 64
 - assert sha_dir != 'N/A'
@@ -4828,6 +5035,182 @@ _No description provided._
 
 - mock_plugin_manager.install_plugin.assert_called_with('/some/plugin_folder')
 
+## tests/unit/test_plugin_menu_manager.py
+
+### TestConstruction.test_holds_init_manager_reference
+_No description provided._
+
+- assert mgr._im is im
+
+### TestUpdatePluginMenu.test_does_nothing_when_no_plugin_manager
+_No description provided._
+
+- menu.clear.assert_not_called()
+
+### TestUpdatePluginMenu.test_clears_and_adds_manage_action
+_No description provided._
+
+- menu.clear.assert_called_once()
+- assert menu.addAction.called or menu.addSeparator.called
+
+### TestUpdatePluginMenu.test_discover_plugins_called
+_No description provided._
+
+- im.host.plugin_manager.discover_plugins.assert_called_once_with(im.host)
+
+### TestUpdatePluginMenu.test_all_integration_hooks_called
+_update_plugin_menu must call all 6 integration methods._
+
+- mocks[m].assert_called_once()
+
+### TestRebuildPluginMenus.test_calls_all_six_rebuild_steps
+_No description provided._
+
+
+### TestRebuildPluginMenus.test_resets_separator_flag
+_No description provided._
+
+- assert im.plugin_menubar_separator_added is False
+
+### TestRebuildPluginMenus.test_one_step_exception_does_not_stop_others
+_A failing step must not prevent subsequent steps from running._
+
+- assert 'boom' in call_order
+- assert 'toolbar' in call_order
+- assert 'export' in call_order
+- assert 'style' in call_order
+
+### TestRebuildPluginMenus.test_menu_cleanup_removes_tagged_actions
+_Tagged plugin actions are stripped before rebuild._
+
+- top_menu.removeAction.assert_called_with(tagged_action)
+
+### TestAddRegisteredPluginActions.test_no_menu_actions_does_nothing
+_No description provided._
+
+- im.host.menuBar.return_value.addMenu.assert_not_called()
+
+### TestAddRegisteredPluginActions.test_creates_new_top_level_menu_with_separator
+_No description provided._
+
+- im.host.menuBar.return_value.addSeparator.assert_called_once()
+- im.host.menuBar.return_value.addMenu.assert_called_once_with('MyPlugin')
+- new_menu.addAction.assert_called_once()
+
+### TestAddRegisteredPluginActions.test_reuses_existing_top_level_menu
+_No description provided._
+
+- im.host.menuBar.return_value.addMenu.assert_not_called()
+- existing_menu.addAction.assert_called_once()
+
+### TestAddRegisteredPluginActions.test_separator_added_only_once_for_multiple_plugins
+_The menubar separator is added exactly once even with multiple new menus._
+
+- assert im.host.menuBar.return_value.addSeparator.call_count == 1
+
+### TestAddRegisteredPluginActions.test_shortcut_applied_when_present
+_No description provided._
+
+- assert isinstance(added_action, QAction)
+
+### TestAddPluginToolbarActions.test_no_toolbar_attribute_does_nothing
+_No description provided._
+
+
+### TestAddPluginToolbarActions.test_hides_toolbar_when_no_actions
+_No description provided._
+
+- im.plugin_toolbar.hide.assert_called_once()
+- im.plugin_toolbar.clear.assert_called_once()
+
+### TestAddPluginToolbarActions.test_shows_toolbar_and_adds_actions
+_No description provided._
+
+- im.plugin_toolbar.show.assert_called_once()
+- im.plugin_toolbar.addAction.assert_called_once()
+
+### TestAddPluginToolbarActions.test_icon_set_when_file_exists
+_No description provided._
+
+- assert isinstance(added, QAction)
+
+### TestIntegratePluginExportActions.test_no_export_actions_does_nothing
+_No description provided._
+
+- im.export_button.menu.return_value.addSeparator.assert_not_called()
+
+### TestIntegratePluginExportActions.test_adds_actions_to_export_button_menu
+_No description provided._
+
+- export_menu.addSeparator.assert_called_once()
+- assert export_menu.addAction.called
+
+### TestIntegratePluginExportActions.test_adds_actions_to_both_export_button_and_file_menu
+_No description provided._
+
+- assert im.export_button.menu.return_value.addAction.called
+- assert export_submenu.addAction.called
+
+### TestIntegratePluginAnalysisTools.test_no_analysis_menu_does_nothing
+_No description provided._
+
+
+### TestIntegratePluginAnalysisTools.test_no_tools_skips_separator
+_No description provided._
+
+- analysis_menu.addSeparator.assert_not_called()
+
+### TestIntegratePluginAnalysisTools.test_adds_tools_to_analysis_menu
+_No description provided._
+
+- analysis_menu.addSeparator.assert_called_once()
+- analysis_menu.addAction.assert_called_once()
+
+### TestUpdateStyleMenuWithPlugins.test_no_style_button_does_nothing
+_No description provided._
+
+
+### TestUpdateStyleMenuWithPlugins.test_no_custom_styles_does_nothing
+_No description provided._
+
+- im.style_button.menu.return_value.addAction.assert_not_called()
+
+### TestUpdateStyleMenuWithPlugins.test_adds_custom_style_actions
+_No description provided._
+
+- assert style_menu.addAction.call_count == 2
+- assert style_menu.addSeparator.called
+
+### TestUpdateStyleMenuWithPlugins.test_does_not_duplicate_existing_style
+_No description provided._
+
+- style_menu.addAction.assert_not_called()
+
+### TestIntegratePluginFileOpeners.test_no_file_openers_does_nothing
+_No description provided._
+
+- im.import_menu.addSeparator.assert_not_called()
+
+### TestIntegratePluginFileOpeners.test_no_import_menu_does_nothing
+_No description provided._
+
+
+### TestIntegratePluginFileOpeners.test_adds_opener_actions
+_No description provided._
+
+- im.import_menu.addSeparator.assert_called_once()
+- im.import_menu.addAction.assert_called_once()
+
+### TestClearAllPluginActions.test_clears_plugin_menu
+_No description provided._
+
+- plugin_menu.clear.assert_called_once()
+
+### TestClearAllPluginActions.test_removes_tagged_actions_from_all_menus
+_No description provided._
+
+- sub_menu.removeAction.assert_called_with(tagged)
+
 ## tests/unit/test_project_io_extended.py
 
 ### test_save_project_no_data
@@ -4924,7 +5307,7 @@ _Verify that application state is updated correctly after a successful save._
 
 - assert io.host.state_manager.has_unsaved_changes is False
 - assert io.host.init_manager.current_file_path == save_path
-- assert io.host.state_manager.update_window_title.called
+- assert io.host.update_window_title.called
 - assert io.host.state_manager._saved_state is not None
 
 ## tests/unit/test_project_io_raw.py
@@ -5226,9 +5609,9 @@ _No description provided._
 ### test_double_click_select_component
 _No description provided._
 
-- assert scene.data.atoms[id1]['item'].setSelected.called
-- assert scene.data.atoms[id2]['item'].setSelected.called
-- assert scene.data.atoms[id3]['item'].setSelected.called
+- assert scene.atom_items[id1].setSelected.called
+- assert scene.atom_items[id2].setSelected.called
+- assert scene.atom_items[id3].setSelected.called
 - assert not atom_iso.setSelected.called
 
 ### test_scene_key_event_dispatch
@@ -6497,10 +6880,10 @@ _Test safe check when _sip_isdeleted is None (sip import failed)._
 ### test_view_3d_draw_standard_3d_style
 _Verify that draw_standard_3d_style clears the plotter and constructs the correct VTK meshes._
 
-- mock_parser_host.view_3d_manager.plotter.clear.assert_called()
-- mock_parser_host.view_3d_manager.plotter.set_background.assert_called_with('#ffffff')
-- assert mock_parser_host.view_3d_manager.plotter.add_mesh.call_count >= 1
-- mock_parser_host.view_3d_manager.plotter.render.assert_called()
+- view3d.plotter.clear.assert_called()
+- view3d.plotter.set_background.assert_called_with('#ffffff')
+- assert view3d.plotter.add_mesh.call_count >= 1
+- view3d.plotter.render.assert_called()
 - assert hasattr(view3d, 'atom_positions_3d')
 - assert isinstance(view3d.atom_positions_3d, np.ndarray)
 - assert len(view3d.atom_positions_3d) == 3
@@ -6508,9 +6891,9 @@ _Verify that draw_standard_3d_style clears the plotter and constructs the correc
 ### test_view_3d_draw_none
 _Verify that calling draw with None safely clears the renderer._
 
-- mock_parser_host.view_3d_manager.plotter.clear.assert_called()
-- mock_parser_host.view_3d_manager.plotter.render.assert_called()
-- assert mock_parser_host.view_3d_manager.current_mol is None
+- view3d.plotter.clear.assert_called()
+- view3d.plotter.render.assert_called()
+- assert view3d.current_mol is None
 
 ### test_original_id_mode_hides_rdkit_id_labels
 _Original-ID labels should not fall back to RDKit index labels._
@@ -6570,7 +6953,7 @@ _Verify plugin bond color overrides._
 _Verify aromatic torus generation._
 
 - assert mock_pv.Spline.call_count == 1
-- assert mock_parser_host.view_3d_manager.plotter.add_mesh.call_count == 1
+- assert view3d.plotter.add_mesh.call_count == 1
 
 ### test_calculate_double_bond_offset
 _Verify neighbor-based plane calculation for double bond offset._
@@ -7024,6 +7407,117 @@ _Test error message when plugin path is invalid._
 - assert 'Error: Plugin path not found' in captured.out
 - assert cm.value.code == 1
 
+## tests/integration/test_plugin_menu_rebuild.py
+
+### TestRebuildCompleteness.test_all_six_steps_run_when_all_registries_empty
+_Even with empty registries, all six rebuild methods execute._
+
+- assert called == ['menu_actions', 'toolbar_actions', 'export_actions', 'file_openers', 'analysis_tools', 'style_menu']
+
+### TestRebuildCompleteness.test_all_six_steps_run_when_all_registries_populated
+_With all registries populated, all six steps still run._
+
+- assert set(called) == {'menu_actions', 'toolbar_actions', 'export_actions', 'file_openers', 'analysis_tools', 'style_menu'}
+
+### TestRebuildCompleteness.test_separator_flag_reset_before_rebuild
+_No description provided._
+
+- assert im.plugin_menubar_separator_added is False
+
+### TestRebuildCompleteness.test_step_exception_does_not_abort_remaining_steps
+_If one step raises, all subsequent steps still execute._
+
+- assert 'toolbar' in survived
+- assert 'export' in survived
+- assert 'style' in survived
+
+### TestPluginMenuManagerRouting.test_main_window_proxy_returns_init_manager_pmm
+_MainWindow.plugin_menu_manager property reads from init_manager._
+
+- assert prop is not None and isinstance(prop, property)
+- assert result is pmm_mock
+
+### TestPluginMenuManagerRouting.test_plugin_manager_rebuild_calls_main_window_pmm
+_PluginManager.rebuild_plugin_menus() calls main_window.plugin_menu_manager._
+
+- pmm_mock.rebuild_plugin_menus.assert_called_once()
+
+### TestPluginMenuManagerRouting.test_plugin_manager_rebuild_no_main_window_does_nothing
+_PluginManager.rebuild_plugin_menus() with no main_window is a no-op._
+
+
+### TestPluginMenuManagerRouting.test_main_init_manager_has_no_wrapper_methods
+_MainInitManager no longer exposes the old wrapper methods directly._
+
+- assert not hasattr(MainInitManager, method)
+
+### TestUpdatePluginMenuIntegration.test_discover_plugins_called_with_host
+_No description provided._
+
+- pm.discover_plugins.assert_called_once_with(im.host)
+
+### TestUpdatePluginMenuIntegration.test_calls_seven_integration_methods
+_No description provided._
+
+
+### TestUpdatePluginMenuIntegration.test_does_nothing_when_plugin_manager_is_none
+_No description provided._
+
+- plugin_menu.clear.assert_not_called()
+
+### TestExportActionEndToEnd.test_export_action_appears_in_button_menu
+_No description provided._
+
+- export_menu.addSeparator.assert_called_once()
+- export_menu.addAction.assert_called_once()
+- assert added_action.text() == 'Export XYZ'
+
+### TestExportActionEndToEnd.test_multiple_export_actions_all_added
+_No description provided._
+
+- assert im.export_button.menu.return_value.addAction.call_count == 2
+
+### TestAnalysisToolEndToEnd.test_analysis_tools_appear_in_analysis_menu
+_No description provided._
+
+- analysis_menu.addSeparator.assert_called_once()
+- assert analysis_menu.addAction.call_count == 1
+- assert 'NMR Predict' in added.text()
+- assert 'NMRPro' in added.text()
+
+## tests/integration/test_trigger_conversion_plugin_wrap.py
+
+### TestTriggerConversionTempMode.test_temp_mode_stored_and_consumed
+__trigger_conversion_with_temp_mode sets _pending_conversion_mode_
+
+- assert mock_timer.called
+- assert compute.__dict__.get('_pending_conversion_mode') == 'rdkit'
+
+### TestTriggerConversionTempMode.test_pending_mode_consumed_after_trigger_conversion
+_After trigger_conversion runs, _pending_conversion_mode is None._
+
+- assert compute.__dict__.get('_pending_conversion_mode') is None
+
+### TestTriggerConversionTempMode.test_pending_mode_takes_priority_over_settings
+__pending_conversion_mode overrides 3d_conversion_mode setting._
+
+- assert options['conversion_mode'] == 'fallback'
+
+### TestTriggerConversionTempMode.test_settings_mode_used_when_no_pending_mode
+_When _pending_conversion_mode is absent, the settings value is used._
+
+- assert options['conversion_mode'] == 'obabel'
+
+### TestPluginWrappedTriggerConversion.test_no_typeerror_when_plugin_wraps_without_kwargs
+_Calling _trigger_conversion_with_temp_mode must not raise TypeError_
+
+
+### TestPluginWrappedTriggerConversion.test_mode_reaches_worker_through_plugin_wrapper
+_The conversion mode set via _trigger_conversion_with_temp_mode_
+
+- assert hasattr(compute, '_captured_options')
+- assert compute._captured_options['conversion_mode'] == 'fallback'
+
 ## tests/gui/test_additional_dialogs_launch.py
 
 ### test_planarize_dialog_launch
@@ -7124,7 +7618,7 @@ _MoleculeScene: Test for drawing an atom upon clicking._
 
 - assert len(window.state_manager.data.atoms) == 1
 - assert window.state_manager.data.atoms[atom_id]['symbol'] == 'N'
-- assert window.state_manager.data.atoms[atom_id]['item'].pos() == click_pos
+- assert window.init_manager.scene.atom_items[atom_id].pos() == click_pos
 
 ### test_draw_bond_on_drag
 _MoleculeScene: Test for drawing a bond upon dragging._
@@ -7394,8 +7888,8 @@ _Implicit Hydrogens: Test for automatic updates after drawing operations._
 - assert atom_item.implicit_h_count == 4
 - assert len(window.state_manager.data.atoms) == 2
 - assert len(window.state_manager.data.bonds) == 1
-- assert window.state_manager.data.atoms[0]['item'].implicit_h_count == 3
-- assert window.state_manager.data.atoms[1]['item'].implicit_h_count == 3
+- assert window.init_manager.scene.atom_items[0].implicit_h_count == 3
+- assert window.init_manager.scene.atom_items[1].implicit_h_count == 3
 
 ### test_drag_drop_mol_file_on_3d_view
 _D&D: Drag & Drop of .mol file onto 3D view area (Mock)._

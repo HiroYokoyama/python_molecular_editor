@@ -26,15 +26,9 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
-try:
-    from .base_picking_dialog import BasePickingDialog, SelectionList
-except ImportError:
-    from moleditpy_linux.ui.base_picking_dialog import BasePickingDialog, SelectionList
+from .base_picking_dialog import BasePickingDialog, SelectionList
 
-try:
-    from ..core.mol_geometry import rodrigues_rotate
-except ImportError:
-    from moleditpy_linux.core.mol_geometry import rodrigues_rotate
+from ..core.mol_geometry import rodrigues_rotate
 
 if TYPE_CHECKING:
     from .main_window import MainWindow

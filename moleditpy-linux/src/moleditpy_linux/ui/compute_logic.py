@@ -13,38 +13,32 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 import contextlib
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, TYPE_CHECKING
 
 from PyQt6.QtCore import QThread, QTimer, QPoint
 from PyQt6.QtGui import QAction, QColor
 from PyQt6.QtWidgets import QMenu, QMessageBox, QWidget
 from rdkit import Chem
 
-try:
-    from . import OBABEL_AVAILABLE
-except ImportError:
-    from moleditpy_linux.ui import OBABEL_AVAILABLE
+from . import OBABEL_AVAILABLE
 
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .calculation_worker import CalculationWorker
-    from .mol_geometry import (
-        identify_valence_problems,
-        inject_ez_stereo_to_mol_block,
-    )
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy_linux.ui.calculation_worker import CalculationWorker
-    from moleditpy_linux.core.mol_geometry import (
-        identify_valence_problems,
-        inject_ez_stereo_to_mol_block,
-    )
+from .calculation_worker import CalculationWorker
+from ..core.mol_geometry import (
+    identify_valence_problems,
+    inject_ez_stereo_to_mol_block,
+)
+
+
+if TYPE_CHECKING:
+    from .main_window import MainWindow
 
 
 class ComputeManager:
     """Independent manager for molecular computations, ported from MainWindowCompute mixin."""
 
-    def __init__(self, host: Any) -> None:
+    def __init__(self, host: MainWindow) -> None:
+        self._calculating_text_actor = None
+        self.original_atom_properties = {}
         self.host = host
         self.last_successful_optimization_method: Optional[str] = None
         self._active_calc_threads: List[QThread] = []
@@ -52,11 +46,16 @@ class ComputeManager:
         self.next_conversion_id: int = 1
         self.active_worker_ids: Set[int] = set()
 
+    def reset_active_threads(self) -> None:
+        """Reset active calculation threads list."""
+        self._active_calc_threads = []
+
     def _safe_disconnect(self, signal: Any) -> None:
         """Safely disconnect a signal, silently ignoring RuntimeError."""
         try:
             signal.disconnect()
         except RuntimeError:
+            # Safe defensive fallback catching RuntimeError
             pass
 
     def _remove_calculating_text(self) -> None:
@@ -64,7 +63,7 @@ class ComputeManager:
         actor = getattr(self, "_calculating_text_actor", None)
         if (
             actor
-            and hasattr(self.host.view_3d_manager.plotter, "renderer")
+            and self.host.view_3d_manager.plotter.renderer
             and self.host.view_3d_manager.plotter.renderer
         ):
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -80,61 +79,37 @@ class ComputeManager:
         self.host.init_manager.convert_button.clicked.connect(self.trigger_conversion)
         self.host.init_manager.convert_button.setEnabled(True)
 
-        if hasattr(self.host.init_manager, "optimize_3d_button"):
+        if self.host.init_manager.optimize_3d_button:
             self._safe_disconnect(self.host.init_manager.optimize_3d_button.clicked)
             self.host.init_manager.optimize_3d_button.setText("Optimize 3D")
             self.host.init_manager.optimize_3d_button.clicked.connect(
                 self.optimize_3d_structure
             )
             self.host.init_manager.optimize_3d_button.setEnabled(True)
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
-            )
 
     def _refresh_ui_state(self) -> None:
         """Consolidate UI state updates."""
         try:
             has_mol = self.host.view_3d_manager.current_mol is not None
 
-            if hasattr(self.host.init_manager, "cleanup_button"):
+            if self.host.init_manager.cleanup_button:
                 self.host.init_manager.cleanup_button.setEnabled(True)
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'cleanup_button' on object"
-                )
 
             self._restore_button_ui()
 
-            if hasattr(self.host.init_manager, "optimize_3d_button"):
+            if self.host.init_manager.optimize_3d_button:
                 self.host.init_manager.optimize_3d_button.setEnabled(has_mol)
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
-                )
-            if hasattr(self.host.init_manager, "export_button"):
+            if self.host.init_manager.export_button:
                 self.host.init_manager.export_button.setEnabled(has_mol)
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'export_button' on object"
-                )
 
             # ui_manager and its methods are guaranteed on the host
-            self.host.ui_manager._enable_3d_features(has_mol)
-            self.host.ui_manager._enable_3d_edit_actions(has_mol)
+            self.host.ui_manager.enable_3d_features(has_mol)
+            self.host.ui_manager.enable_3d_edit_actions(has_mol)
 
-            if hasattr(self.host.init_manager, "analysis_action"):
+            if self.host.init_manager.analysis_action:
                 self.host.init_manager.analysis_action.setEnabled(has_mol)
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'analysis_action' on object"
-                )
-            if hasattr(self.host.init_manager, "edit_3d_action"):
+            if self.host.init_manager.edit_3d_action:
                 self.host.init_manager.edit_3d_action.setEnabled(has_mol)
-            else:
-                logging.error(
-                    "REPORT ERROR: Missing attribute 'edit_3d_action' on object"
-                )
 
             # plotter and view_2d are fundamental host components
             if self.host.view_3d_manager.plotter:
@@ -149,14 +124,11 @@ class ComputeManager:
         if not method_name:
             return
         method = str(method_name).strip().upper()
-        self.host.init_manager.optimization_method = method
-        self.host.init_manager.settings["optimization_method"] = method
-        self.host.init_manager.settings_dirty = True
+        self.host.set_optimization_method(method)
+        self.host.get_settings()["optimization_method"] = method
+        self.host.set_settings_dirty(True)
 
-        if (
-            hasattr(self.host.init_manager, "opt3d_actions")
-            and self.host.init_manager.opt3d_actions
-        ):
+        if self.host.init_manager.opt3d_actions:
             for k, act in self.host.init_manager.opt3d_actions.items():
                 act.setChecked(k.upper() == method)
 
@@ -165,10 +137,8 @@ class ComputeManager:
 
     def toggle_intermolecular_interaction_rdkit(self, checked: bool) -> None:
         """Toggle intermolecular interactions for RDKit optimization."""
-        self.host.init_manager.settings["optimize_intermolecular_interaction_rdkit"] = (
-            checked
-        )
-        self.host.init_manager.settings_dirty = True
+        self.host.get_settings()["optimize_intermolecular_interaction_rdkit"] = checked
+        self.host.set_settings_dirty(True)
         state_str = "Enabled" if checked else "Disabled"
         self.host.statusBar().showMessage(
             f"Intermolecular interaction for RDKit: {state_str}"
@@ -197,7 +167,10 @@ class ComputeManager:
         menu.exec(self.host.init_manager.convert_button.mapToGlobal(pos))
 
     def _trigger_conversion_with_temp_mode(self, mode_key: str) -> None:
-        self.host._temp_conv_mode = mode_key
+        # Store mode as instance attribute so it reaches trigger_conversion
+        # without passing a kwarg — plugins may wrap trigger_conversion without
+        # forwarding **kwargs, which would cause a TypeError.
+        self._pending_conversion_mode = mode_key
         QTimer.singleShot(0, self.trigger_conversion)
 
     def show_optimize_menu(self, pos: QPoint) -> None:
@@ -218,10 +191,7 @@ class ComputeManager:
         ]
         for label, key in opt_list:
             a = QAction(label, self.host)
-            if (
-                hasattr(self.host.init_manager, "opt3d_actions")
-                and key in self.host.init_manager.opt3d_actions
-            ):
+            if key in self.host.init_manager.opt3d_actions:
                 a.setEnabled(self.host.init_manager.opt3d_actions[key].isEnabled())
             a.triggered.connect(
                 lambda checked=False, k=key: self._trigger_optimize_with_temp_method(k)
@@ -230,19 +200,24 @@ class ComputeManager:
         menu.exec(self.host.init_manager.optimize_3d_button.mapToGlobal(pos))
 
     def _trigger_optimize_with_temp_method(self, method_key: str) -> None:
-        self.host._temp_optimization_method = method_key
-        QTimer.singleShot(0, self.optimize_3d_structure)
+        QTimer.singleShot(0, lambda: self.optimize_3d_structure(method_key))
 
-    def trigger_conversion(self) -> None:
+    def trigger_conversion(
+        self,
+        conversion_mode: Optional[str] = None,
+        optimization_method: Optional[str] = None,
+    ) -> None:
         """Main entry point for 2D to 3D conversion."""
+        if conversion_mode is None:
+            conversion_mode = self.__dict__.get("_pending_conversion_mode")
+            self.__dict__.pop("_pending_conversion_mode", None)
         self.last_successful_optimization_method = None
-        self.host.edit_3d_manager.constraints_3d = []
+        self.host.set_constraints_3d([])
 
         if not self.host.state_manager.data.atoms:
-            self.host.view_3d_manager.plotter.clear()
-            self.host.view_3d_manager.current_mol = None
+            self.host.clear_3d_view()
             self.host.init_manager.analysis_action.setEnabled(False)
-            self.host.statusBar().showMessage("3D view cleared.")
+            self.host.update_status_message("3D view cleared.")
             self.host.init_manager.view_2d.setFocus()
             return
 
@@ -280,39 +255,30 @@ class ComputeManager:
         self._safe_disconnect(self.host.init_manager.convert_button.clicked)
         self.host.init_manager.convert_button.clicked.connect(self.halt_conversion)
         self.host.init_manager.cleanup_button.setEnabled(False)
-        self.host.ui_manager._enable_3d_features(False)
-        self.host.view_3d_manager.plotter.clear()
-        self.host.view_3d_manager.current_mol = None
+        self.host.ui_manager.enable_3d_features(False)
+        self.host.clear_3d_view()
 
         # Add 'Calculating...' overlay
-        bg_qcolor = QColor(
-            self.host.init_manager.settings.get("background_color", "#919191")
-        )
+        bg_qcolor = QColor(self.host.get_settings().get("background_color", "#919191"))
         text_color = (
             "black"
             if (bg_qcolor.isValid() and bg_qcolor.toHsl().lightness() > 128)
             else "white"
         )
-        self.host.compute_manager._calculating_text_actor = (
-            self.host.view_3d_manager.plotter.add_text(
-                "Calculating...",
-                position="lower_right",
-                font_size=15,
-                color=text_color,
-                name="calculating_text",
-            )
+        self._calculating_text_actor = self.host.view_3d_manager.plotter.add_text(
+            "Calculating...",
+            position="lower_right",
+            font_size=15,
+            color=text_color,
+            name="calculating_text",
         )
         self.host.view_3d_manager.plotter.render()
 
         options = {
-            "conversion_mode": self.host.__dict__.pop(
-                "_temp_conv_mode",
-                self.host.init_manager.settings.get("3d_conversion_mode", "fallback"),
-            ),
-            "optimization_method": self.host.__dict__.pop(
-                "_temp_optimization_method", None
-            )
-            or getattr(self.host.init_manager, "optimization_method", "MMFF_RDKIT"),
+            "conversion_mode": conversion_mode
+            or self.host.init_manager.settings.get("3d_conversion_mode", "fallback"),
+            "optimization_method": optimization_method
+            or self.host.init_manager.optimization_method,
             "optimize_intermolecular_interaction_rdkit": self.host.init_manager.settings.get(
                 "optimize_intermolecular_interaction_rdkit", True
             ),
@@ -335,7 +301,7 @@ class ComputeManager:
         self._remove_calculating_text()
         self.host.statusBar().showMessage("Halted")
 
-    def optimize_3d_structure(self) -> None:
+    def optimize_3d_structure(self, method_key: Optional[str] = None) -> None:
         """Optimize 3D structure."""
         if not self.host.view_3d_manager.current_mol:
             self.host.statusBar().showMessage("No 3D molecule to optimize.")
@@ -347,14 +313,11 @@ class ComputeManager:
             )
             return
 
-        method = self.host.__dict__.pop("_temp_optimization_method", None) or getattr(
-            self.host.init_manager, "optimization_method", "MMFF_RDKIT"
-        )
+        method = method_key or self.host.init_manager.optimization_method
         method = method.upper() if method else "MMFF_RDKIT"
 
         # Validate method against known labels (from init_manager) and registered plugins
-        _init_mgr = getattr(self.host, "init_manager", None)
-        _init_methods = set(getattr(_init_mgr, "opt3d_method_labels", None) or {})
+        _init_methods = set(self.host.init_manager.opt3d_method_labels or {})
         _plugin_mgr = getattr(self.host, "plugin_manager", None)
         _plugin_methods = set(getattr(_plugin_mgr, "optimization_methods", {}) or {})
         _all_known = _init_methods | _plugin_methods | {"OPTIMIZE_ONLY"}
@@ -383,25 +346,17 @@ class ComputeManager:
 
         self.active_worker_ids.add(run_id)
 
-        if hasattr(self.host.init_manager, "optimize_3d_button"):
+        if self.host.init_manager.optimize_3d_button:
             self.host.init_manager.optimize_3d_button.setText("Halt optimize")
             self._safe_disconnect(self.host.init_manager.optimize_3d_button.clicked)
             self.host.init_manager.optimize_3d_button.clicked.connect(
                 self.halt_conversion
             )
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
-            )
 
-        self.host.ui_manager._enable_3d_features(False)
+        self.host.ui_manager.enable_3d_features(False)
         # Re-enable the button so it can be clicked to Halt
-        if hasattr(self.host.init_manager, "optimize_3d_button"):
+        if self.host.init_manager.optimize_3d_button:
             self.host.init_manager.optimize_3d_button.setEnabled(True)
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'optimize_3d_button' on object"
-            )
 
         self._start_calculation_worker(mol_block, options, run_id)
 
@@ -425,7 +380,7 @@ class ComputeManager:
         self.host.init_manager.scene.clear_all_problem_flags()
         try:
             Chem.SanitizeMol(mol)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logging.error(f"Sanitization failed: {e}")
             self.host.statusBar().showMessage("Error: Invalid chemical structure.")
             return None
@@ -436,17 +391,18 @@ class ComputeManager:
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
         self.host.statusBar().showMessage(msg)
 
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(RuntimeError):
             QMessageBox.critical(self.host, "Chemistry Problem", msg)
 
         for prob in problems:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(AttributeError, KeyError, RuntimeError):
                 atom_idx = prob.GetAtomIdx()
                 rd_atom = mol.GetAtomWithIdx(atom_idx)
                 orig_id = rd_atom.GetIntProp("_original_atom_id")
-                item = self.host.state_manager.data.atoms[orig_id]["item"]
-                item.has_problem = True
-                item.update()
+                item = self.host.init_manager.scene.atom_items.get(orig_id)
+                if item:
+                    item.has_problem = True
+                    item.update()
         self.host.init_manager.view_2d.setFocus()
 
     def _setup_mol_block_for_worker(self, mol: Any) -> str:
@@ -498,18 +454,18 @@ class ComputeManager:
         if worker_id is not None:
             if worker_id not in self.active_worker_ids:
                 # Still show something if the user wants to see 'staled' result
-                self.host.statusBar().showMessage(
+                self.host.update_status_message(
                     f"Ignored halted worker result (ID = {worker_id})"
                 )
                 return  # stale worker, ignore
             self.active_worker_ids.discard(worker_id)
             self.halt_ids.discard(worker_id)
 
-        self.host.view_3d_manager.current_mol = mol
+        self.host.set_current_molecule(mol)
         self.host.is_xyz_derived = False
 
         # Restore properties
-        if hasattr(self, "original_atom_properties") and mol:
+        if mol:
             for i, orig_id in self.original_atom_properties.items():
                 if i < mol.GetNumAtoms():
                     mol.GetAtomWithIdx(i).SetIntProp("_original_atom_id", orig_id)
@@ -528,15 +484,14 @@ class ComputeManager:
             if mol and mol.HasProp("_pme_optimization_method"):
                 method_key = mol.GetProp("_pme_optimization_method")
             if not method_key:
-                method_key = getattr(self, "optimization_method", None) or getattr(
-                    self.host.init_manager, "optimization_method", None
-                )
+                method_key = self.host.init_manager.optimization_method
             if method_key:
-                labels = getattr(self.host.init_manager, "opt3d_method_labels", {})
+                labels = self.host.init_manager.opt3d_method_labels or {}
                 self.last_successful_optimization_method = labels.get(
                     method_key, method_key
                 )
         except (AttributeError, TypeError):
+            # Safe defensive fallback catching AttributeError, TypeError
             pass
 
         # Update 3D interactive features (hovers, menus)
@@ -585,10 +540,10 @@ class ComputeManager:
                     QMessageBox.StandardButton.No,
                 )
                 if reply == QMessageBox.StandardButton.Yes:
-                    self._temp_optimization_method = "UFF_RDKIT"
-                    self.optimize_3d_structure()
+                    self.optimize_3d_structure("UFF_RDKIT")
                     return
             except (TypeError, RuntimeError):
+                # Safe defensive fallback catching TypeError, RuntimeError
                 pass
 
         with contextlib.suppress(TypeError, RuntimeError):
@@ -617,7 +572,7 @@ class ComputeManager:
         )
         if problem_atom_ids:
             for aid in problem_atom_ids:
-                item = self.host.state_manager.data.atoms[aid].get("item")
+                item = self.host.init_manager.scene.atom_items.get(aid)
                 if item:
                     item.has_problem = True
                     item.update()
@@ -639,7 +594,7 @@ class ComputeManager:
                 if all(mol.GetAtomWithIdx(i).GetIsAromatic() for i in ring):
                     aromatic_rings.append(ring)
             self.host.init_manager.scene.set_aromatic_rings(aromatic_rings)
-        except Exception as e:
+        except (RuntimeError, AttributeError) as e:
             logging.debug(f"Aromatic ring update failed: {e}")
 
     def select_connected_atoms(self) -> None:
@@ -650,10 +605,9 @@ class ComputeManager:
 
         atom_ids = set()
         for item in selected_items:
-            if hasattr(item, "atom_id"):
-                atom_ids.add(item.atom_id)
-            else:
-                logging.error("REPORT ERROR: Missing attribute 'atom_id' on item")
+            atom_id = getattr(item, "atom_id", None)
+            if atom_id is not None:
+                atom_ids.add(atom_id)
 
         if not atom_ids:
             return
@@ -668,5 +622,6 @@ class ComputeManager:
                     stack.append(neighbor)
 
         for aid in connected:
-            item = self.host.state_manager.data.atoms[aid]["item"]
-            item.setSelected(True)
+            item = self.host.init_manager.scene.atom_items.get(aid)
+            if item:
+                item.setSelected(True)

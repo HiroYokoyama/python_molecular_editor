@@ -29,28 +29,17 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
 
-try:
-    from PyQt6 import sip as _sip  # type: ignore
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
-
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .custom_interactor_style import CustomInteractorStyle
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
+from .custom_interactor_style import CustomInteractorStyle
 
 
 # --- Classes ---
 class UIManager(QObject):
-    def __init__(self, host: Any = None) -> None:
+    def __init__(self, host: Any) -> None:
         super().__init__()
-        if host is not None:
-            self.host = host
+        self.is_2d_editable = False
+        self.host = host
 
     def update_status_bar(self, message: str) -> None:
         """Update status bar with worker messages."""
@@ -65,16 +54,11 @@ class UIManager(QObject):
             )
 
         prev_mode = getattr(self.host.init_manager.scene, "mode", None)
-        self.host.init_manager.scene.mode = mode_str
+        self.host.set_scene_mode(mode_str)
         self.host.init_manager.view_2d.setMouseTracking(True)
 
         # Trigger immediate scene refresh to show/update template previews
-        if hasattr(self.host.init_manager.scene, "refresh_mode_state"):
-            self.host.init_manager.scene.refresh_mode_state()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'refresh_mode_state' on object"
-            )
+        self.host.init_manager.scene.refresh_mode_state()
         # Clear ghost when leaving template mode
         if (
             prev_mode
@@ -96,26 +80,21 @@ class UIManager(QObject):
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
 
         if mode_str.startswith("atom"):
-            self.host.init_manager.scene.current_atom_symbol = mode_str.split("_")[1]
-            self.host.statusBar().showMessage(
-                f"Mode: Draw Atom ({self.host.init_manager.scene.current_atom_symbol})"
-            )
+            atom_symbol = mode_str.split("_")[1]
+            self.host.set_scene_atom_symbol(atom_symbol)
+            self.host.update_status_message(f"Mode: Draw Atom ({atom_symbol})")
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.host.init_manager.view_2d.setMouseTracking(True)
-            self.host.init_manager.scene.bond_order = 1
-            self.host.init_manager.scene.bond_stereo = 0
+            self.host.set_scene_bond_properties(1, 0)
         elif mode_str.startswith("bond"):
-            self.host.init_manager.scene.current_atom_symbol = "C"
+            self.host.set_scene_atom_symbol("C")
             parts = mode_str.split("_")
-            self.host.init_manager.scene.bond_order = int(parts[1])
-            self.host.init_manager.scene.bond_stereo = (
-                int(parts[2]) if len(parts) > 2 else 0
-            )
-            stereo_text = {0: "", 1: " (Wedge)", 2: " (Dash)"}.get(
-                self.host.init_manager.scene.bond_stereo, ""
-            )
-            self.host.statusBar().showMessage(
-                f"Mode: Draw Bond (Order: {self.host.init_manager.scene.bond_order}{stereo_text})"
+            order = int(parts[1])
+            stereo = int(parts[2]) if len(parts) > 2 else 0
+            self.host.set_scene_bond_properties(order, stereo)
+            stereo_text = {0: "", 1: " (Wedge)", 2: " (Dash)"}.get(stereo, "")
+            self.host.update_status_message(
+                f"Mode: Draw Bond (Order: {order}{stereo_text})"
             )
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.host.init_manager.view_2d.setMouseTracking(True)
@@ -139,16 +118,15 @@ class UIManager(QObject):
             self.host.statusBar().showMessage("Mode: Decrease Charge (Click on Atom)")
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
         elif mode_str == "radical":
-            self.host.statusBar().showMessage("Mode: Toggle Radical (Click on Atom)")
+            self.host.update_status_message("Mode: Toggle Radical (Click on Atom)")
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
 
         else:  # Select mode
-            self.host.statusBar().showMessage("Mode: Select")
+            self.host.update_status_message("Mode: Select")
             self.host.init_manager.view_2d.setDragMode(
                 QGraphicsView.DragMode.RubberBandDrag
             )
-            self.host.init_manager.scene.bond_order = 1
-            self.host.init_manager.scene.bond_stereo = 0
+            self.host.set_scene_bond_properties(1, 0)
 
     def set_mode_and_update_toolbar(self, mode_str: str) -> None:
         self.set_mode(mode_str)
@@ -201,7 +179,7 @@ class UIManager(QObject):
         if event is None:
             return False
         if (
-            hasattr(self.host.view_3d_manager, "plotter")
+            self.host.view_3d_manager.plotter
             and obj is self.host.view_3d_manager.plotter
             and event.type() == QEvent.Type.MouseButtonPress
         ):
@@ -233,17 +211,18 @@ class UIManager(QObject):
         """
         # 1. Persist settings
         try:
-            modified = getattr(self.host.init_manager, "settings_dirty", False) or (
+            modified = self.host.init_manager.settings_dirty or (
                 self.host.init_manager.settings != self.host.initial_settings
             )
             if modified:
                 self.host.init_manager.save_settings()
-                self.host.init_manager.settings_dirty = False
+                self.host.set_settings_dirty(False)
         except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, OSError
             pass
 
         # 2. Handle unsaved changes
-        if getattr(self.host.state_manager, "has_unsaved_changes", False):
+        if self.host.state_manager.has_unsaved_changes:
             reply = QMessageBox.question(
                 self.host,
                 "Unsaved Changes",
@@ -256,7 +235,7 @@ class UIManager(QObject):
 
             if reply == QMessageBox.StandardButton.Yes:
                 self.host.io_manager.save_project()
-                if getattr(self.host.state_manager, "has_unsaved_changes", False):
+                if self.host.state_manager.has_unsaved_changes:
                     return False
             elif reply == QMessageBox.StandardButton.Cancel:
                 return False
@@ -272,6 +251,7 @@ class UIManager(QObject):
                     try:
                         widget.close()
                     except (RuntimeError, TypeError):
+                        # Safe defensive fallback catching RuntimeError, TypeError
                         pass
 
             # Stop calculation threads
@@ -280,17 +260,13 @@ class UIManager(QObject):
             )
             for thr in active_threads:
                 try:
-                    if hasattr(thr, "quit"):
-                        thr.quit()
-                    else:
-                        logging.error("REPORT ERROR: Missing attribute 'quit' on thr")
-                    if hasattr(thr, "wait"):
-                        thr.wait(200)
-                    else:
-                        logging.error("REPORT ERROR: Missing attribute 'wait' on thr")
+                    thr.quit()
+                    thr.wait(200)
                 except (RuntimeError, TypeError):
+                    # Safe defensive fallback catching RuntimeError, TypeError
                     pass
         except (AttributeError, RuntimeError, TypeError, ValueError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
             pass
 
         return True
@@ -310,11 +286,11 @@ class UIManager(QObject):
                 self.host.init_manager.measurement_action.setChecked(False)
                 self.host.edit_3d_manager.toggle_measurement_mode(False)
 
-        self.host.edit_3d_manager.is_3d_edit_mode = checked
+        self.host.set_3d_edit_mode(checked)
         if checked:
-            self.host.statusBar().showMessage("3D Drag Mode: ON.")
+            self.host.update_status_message("3D Drag Mode: ON.")
         else:
-            self.host.statusBar().showMessage("3D Drag Mode: OFF.")
+            self.host.update_status_message("3D Drag Mode: OFF.")
             # Reset any stuck VTK interactor state when leaving 3D edit mode
             try:
                 interactor_style = (
@@ -323,11 +299,12 @@ class UIManager(QObject):
                 if hasattr(interactor_style, "reset_interactor_state"):
                     interactor_style.reset_interactor_state()
             except (AttributeError, RuntimeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
         self.host.init_manager.view_2d.setFocus()
 
     def _setup_3d_picker(self) -> None:
-        self.host.view_3d_manager.plotter.picker = vtk.vtkCellPicker()
+        self.host.set_plotter_picker(vtk.vtkCellPicker())
         self.host.view_3d_manager.plotter.picker.SetTolerance(0.025)
 
         # Create CustomInteractorStyle
@@ -381,9 +358,8 @@ class UIManager(QObject):
                 if handler_def["callback"](file_path):
                     event.acceptProposedAction()
                     return
-            except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                # Log but suppress plugin-specific drop handler errors to prevent app-wide crash
-                print(f"Error in plugin drop handler: {e}")
+            except Exception:  # plugins have full app access; catch everything to prevent app-wide crash
+                logging.exception("Error in plugin drop handler")
 
         # 2. Built-in Handlers
         file_lower = file_path.lower()
@@ -398,14 +374,12 @@ class UIManager(QObject):
 
             # Identify if the target widget is the plotter (or one of its children)
             is_on_3d = False
-            if hasattr(self.host.view_3d_manager, "plotter"):
+            if self.host.view_3d_manager.plotter:
                 plotter_widget = self.host.init_manager.splitter.widget(1)
                 if target_widget == plotter_widget or plotter_widget.isAncestorOf(
                     target_widget
                 ):
                     is_on_3d = True
-            else:
-                logging.error("REPORT ERROR: Missing attribute 'plotter' on object")
 
             if is_on_3d:
                 self.host.io_manager.load_mol_file_for_3d_viewing(file_path=file_path)
@@ -453,20 +427,10 @@ class UIManager(QObject):
         menus = ["align_menu"]
 
         for action_name in actions:
-            if hasattr(self.host, action_name):
-                getattr(self.host, action_name).setEnabled(enabled)
-            else:
-                logging.error(
-                    f"REPORT ERROR: Missing attribute {action_name} on self.host"
-                )
+            getattr(self.host, action_name).setEnabled(enabled)
 
         for menu_name in menus:
-            if hasattr(self.host, menu_name):
-                getattr(self.host, menu_name).setEnabled(enabled)
-            else:
-                logging.error(
-                    f"REPORT ERROR: Missing attribute {menu_name} on self.host"
-                )
+            getattr(self.host, menu_name).setEnabled(enabled)
 
     def _enable_3d_features(self, enabled: bool = True) -> None:
         """Enable/disable 3D features."""
@@ -496,6 +460,7 @@ class UIManager(QObject):
                     obj.setEnabled(enabled)
             except (AttributeError, RuntimeError, TypeError, ValueError):
                 # Suppress non-critical 3D feature state update errors if widgets are not fully initialized
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
                 pass
 
         # Always enable these core 3D interactors
@@ -506,44 +471,52 @@ class UIManager(QObject):
 
         self._enable_3d_edit_actions(enabled)
 
-    def _enter_3d_viewer_ui_mode(self) -> None:
+    def enter_3d_viewer_mode(self) -> None:
+        """Switch the application UI layout to 3D viewer mode (Public API)."""
+        self.enter_3d_viewer_ui_mode()
+
+    def enable_3d_features(self, enabled: bool) -> None:
+        """Enable or disable 3D UI features (Public API)."""
+        self._enable_3d_features(enabled)
+
+    def enable_3d_edit_actions(self, enabled: bool) -> None:
+        """Enable or disable 3D editing actions (Public API)."""
+        self._enable_3d_edit_actions(enabled)
+
+    def setup_3d_picker(self) -> None:
+        """Initialize the 3D interaction picker (Public API)."""
+        self._setup_3d_picker()
+
+    def enter_3d_viewer_ui_mode(self) -> None:
         """Set UI mode to 3D viewer."""
-        self.host.ui_manager.is_2d_editable = False
+        self.is_2d_editable = False
         self.host.init_manager.cleanup_button.setEnabled(False)
         self.host.init_manager.convert_button.setEnabled(False)
         for action in self.host.init_manager.tool_group.actions():
             action.setEnabled(False)
-        if hasattr(self.host.init_manager, "other_atom_action"):
+        if self.host.init_manager.other_atom_action:
             self.host.init_manager.other_atom_action.setEnabled(False)
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'other_atom_action' on object"
-            )
 
         self.host.ui_manager.minimize_2d_panel()
 
         # Collectively enable 3D-related features
-        self.host.ui_manager._enable_3d_features(True)
+        self.enable_3d_features(True)
 
     def restore_ui_for_editing(self) -> None:
         """Enables all 2D editing UI elements."""
-        self.host.ui_manager.is_2d_editable = True
-        self.host.ui_manager.restore_2d_panel()
+        self.is_2d_editable = True
+        self.restore_2d_panel()
         self.host.init_manager.cleanup_button.setEnabled(True)
         self.host.init_manager.convert_button.setEnabled(True)
 
         for action in self.host.init_manager.tool_group.actions():
             action.setEnabled(True)
 
-        if hasattr(self.host.init_manager, "other_atom_action"):
+        if self.host.init_manager.other_atom_action:
             self.host.init_manager.other_atom_action.setEnabled(True)
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'other_atom_action' on self.host.init_manager"
-            )
 
         # Collectively disable 3D edit functions when returning to 2D mode
-        self.host.ui_manager._enable_3d_edit_actions(False)
+        self._enable_3d_edit_actions(False)
 
     def minimize_2d_panel(self) -> None:
         """Minimize (hide) 2D panel."""
@@ -602,12 +575,8 @@ class UIManager(QObject):
         if not isinstance(splitter, QSplitter):
             return None
 
-        if _sip_isdeleted is not None:
-            try:
-                if _sip_isdeleted(splitter):
-                    return None
-            except (AttributeError, RuntimeError, TypeError):
-                return None
+        if sip_isdeleted_safe(splitter):
+            return None
 
         return splitter
 
@@ -629,20 +598,15 @@ class UIManager(QObject):
                 right_percent = round(sizes[1] * 100 / total)
 
                 # Show ratio in tooltip
-                if hasattr(splitter, "handle"):
+                try:
+                    handle = splitter.handle(1)
+                except (AttributeError, RuntimeError, TypeError):
+                    return
+                if handle:
                     try:
-                        handle = splitter.handle(1)
+                        handle.setToolTip(f"2D: {left_percent}% | 3D: {right_percent}%")
                     except (AttributeError, RuntimeError, TypeError):
                         return
-                    if handle:
-                        try:
-                            handle.setToolTip(
-                                f"2D: {left_percent}% | 3D: {right_percent}%"
-                            )
-                        except (AttributeError, RuntimeError, TypeError):
-                            return
-                else:
-                    logging.error("REPORT ERROR: Missing attribute 'handle' on object")
 
     def setup_splitter_tooltip(self) -> None:
         """Set initial splitter tooltip."""
@@ -664,7 +628,3 @@ class UIManager(QObject):
                 return
             # Show initial ratio
             self.on_splitter_moved(0, 0)
-
-
-# Backward-compat aliases
-MainWindowUiManager = UIManager

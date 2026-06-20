@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 from moleditpy.core.molecular_data import MolecularData
+from moleditpy.ui.molecule_scene import MoleculeScene
 
 
 def test_ring_priority_smaller_wins():
@@ -38,30 +39,36 @@ def test_ring_priority_smaller_wins():
     data.add_bond(7, 6)
     data.add_bond(6, 4)
 
-    # Mock items for bonds and atoms
+    # Build scene-side atom_items with mocks
+    atom_items = {}
     for atom_id in data.atoms:
         item = MagicMock()
-        item.atom_id = atom_id  # Set atom_id for the mapping logic
-        # Set up pos() to return a mock that responds to x() and y() with the actual coordinates
+        item.atom_id = atom_id
         pos_mock = MagicMock()
         pos_mock.x.return_value = float(data.atoms[atom_id]["pos"][0])
         pos_mock.y.return_value = float(data.atoms[atom_id]["pos"][1])
         item.pos.return_value = pos_mock
-        data.atoms[atom_id]["item"] = item
+        atom_items[atom_id] = item
 
+    bond_items = {}
     for bond_key in data.bonds:
         bond_item = MagicMock()
-        data.bonds[bond_key]["item"] = bond_item
+        bond_items[bond_key] = bond_item
 
-    # Run ring info update
-    data.update_ring_info_2d()
+    # Create a minimal mock scene and call update_ring_info_2d as an unbound call
+    scene = MagicMock()
+    scene.data = data
+    scene.atom_items = atom_items
+    scene.bond_items = bond_items
+
+    MoleculeScene.update_ring_info_2d(scene)
 
     # Check shared bond (3, 4)
     shared_bond_key = (3, 4)
-    if shared_bond_key not in data.bonds:
+    if shared_bond_key not in bond_items:
         shared_bond_key = (4, 3)
 
-    shared_bond_item = data.bonds[shared_bond_key]["item"]
+    shared_bond_item = bond_items[shared_bond_key]
     assert shared_bond_item.is_in_ring is True
 
     # Calculate ring centers manually

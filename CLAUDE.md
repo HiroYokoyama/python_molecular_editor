@@ -46,13 +46,18 @@ python tests/run_all_tests.py --unit
 python tests/run_all_tests.py --integration
 ```
 
+Speed up dev testing (fail fast / exit on first failure, run each suite at most once, no retries):
+```bash
+python tests/run_all_tests.py --unit --no-cov --no-report -x
+```
+
 ## Linting
 
 ```bash
 pylint moleditpy/src/moleditpy/
 ```
 
-Target score: > 9.0/10. PEP 8 compliance required. Type hints required in core logic modules.
+Target score: > 9.0/10. PEP 8 compliance required. Type hints required for all functions and methods.
 
 ## Scope
 
@@ -61,8 +66,8 @@ All code changes go inside `moleditpy/` only. Never edit `moleditpy-linux/` — 
 ## Code Quality Standards
 
 - Pylint > 9.0/10, PEP 8
-- Type hints in `core/` and any new logic modules
-- **Core Molecular Logic coverage ≥ 75%** (tracked in `tests/coverage_report.md`). This metric covers `core/`, `plugins/`, logic-heavy `ui/` modules, dialogs with unit tests, and `utils/` — excluding VTK interactors (`custom_interactor_style`, `custom_qt_interactor`) and UI-only modules with no unit tests (`mirror_dialog`, `translation_dialog`, `planarize_dialog`, `constrained_optimization_dialog`, `periodic_table_dialog`, `geometry_base_dialog`, `dialog_manager`, `view_loaders`, `edit_3d`, `edit_actions`, `view_3d`)
+- Type hints required for all functions and methods
+- **Full Application coverage around 80%** (tracked in `tests/coverage_report.md`)
 - All new public methods in `plugins/` must have tests
 - Error handling: use `logging.exception()` or `logging.error()` in `except` blocks — never `print`, never bare `pass`
 - No unnecessary comments — only add comments where logic is genuinely non-obvious
@@ -119,6 +124,7 @@ moleditpy --safe           # skip plugin loading
 
 - `docs/ARCHITECTURE.md` — detailed design decisions and manager patterns
 - `docs/CORE_DATA_STRUCTURES.md` — molecular data model internals
-- `docs/PLUGIN_DEVELOPMENT_MANUAL_V3.md` — plugin API for authors
+- `docs/PLUGIN_DEVELOPMENT_MANUAL_V3.md` — plugin API for authors (v3)
+- `docs/PLUGIN_DEVELOPMENT_MANUAL_V4.md` — plugin API for authors (v4)
 - `DESIGN_PRINCIPLES.md` — project philosophy
 - `CONTRIBUTING.md` — full contribution workflow and PR checklist

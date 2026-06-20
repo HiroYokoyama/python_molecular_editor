@@ -1,6 +1,11 @@
 """Run unit + integration + GUI tests with combined coverage and generate coverage_report.md."""
 
-import subprocess, json, sys, os, tempfile, argparse
+import subprocess
+import json
+import sys
+import os
+import tempfile
+import argparse
 
 # Adjusted for tests/utils/ location
 UTILS = os.path.dirname(os.path.abspath(__file__))
@@ -89,7 +94,6 @@ else:
 # Step 4: Generate reports
 print("Generating coverage reports...")
 
-# 4a: Core Logic Report
 cvrc = os.path.join(ROOT, ".coveragerc")
 subprocess.run(
     [
@@ -100,7 +104,7 @@ subprocess.run(
         "--rcfile",
         cvrc,
         "-o",
-        os.path.join(BASE, "cov_core.json"),
+        os.path.join(BASE, "cov_full.json"),
     ],
     env=env,
     cwd=ROOT,
@@ -109,34 +113,7 @@ subprocess.run(
     check=True,
 )
 
-# 4b: Full Application Report
-with tempfile.NamedTemporaryFile(mode="w", suffix=".rc", delete=False) as tf:
-    tf.write("[run]\nsource = moleditpy\n\n[report]\nomit =\nexclude_lines =\n")
-    tmp_rc = tf.name
-
-try:
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "coverage",
-            "json",
-            "--rcfile",
-            tmp_rc,
-            "-o",
-            os.path.join(BASE, "cov_full.json"),
-        ],
-        env=env,
-        cwd=ROOT,
-        stdout=devnull,
-        stderr=devnull,
-        check=True,
-    )
-finally:
-    if os.path.exists(tmp_rc):
-        os.remove(tmp_rc)
-
-# Generate HTML report for core
+# Generate HTML report for full application coverage
 subprocess.run(
     [
         sys.executable,
@@ -192,29 +169,17 @@ def build_table(files, totals, title):
     return lines
 
 
-core_totals, core_files = get_stats(os.path.join(BASE, "cov_core.json"))
 full_totals, full_files = get_stats(os.path.join(BASE, "cov_full.json"))
 
 markdown_lines = []
 markdown_lines.append("# MoleditPy Coverage Report")
 markdown_lines.append("")
 markdown_lines.append(
-    f"- **Overall Project Coverage (Full)**: **{full_totals['percent_covered']:.2f}%**"
-)
-markdown_lines.append(
-    f"- **Core Molecular Logic Coverage**: **{core_totals['percent_covered']:.2f}%**"
-)
-markdown_lines.append("")
-markdown_lines.append("> [!NOTE]")
-markdown_lines.append(
-    "> **Core Molecular Logic Coverage** excludes UI boilerplate (dialogs, view managers, and interactor styles) to focus on scientific algorithm reliability."
+    f"- **Overall Project Coverage**: **{full_totals['percent_covered']:.2f}%**"
 )
 markdown_lines.append("")
 
-markdown_lines.extend(build_table(core_files, core_totals, "Core Logic Breakdown"))
-markdown_lines.extend(
-    build_table(full_files, full_totals, "Full Application Breakdown")
-)
+markdown_lines.extend(build_table(full_files, full_totals, "Coverage Breakdown"))
 
 markdown_lines.append("## Test Suite Status")
 markdown_lines.append("- **Unit tests**: PASSED")

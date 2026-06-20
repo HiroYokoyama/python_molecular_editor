@@ -72,6 +72,11 @@ The `MainWindow` acts as a pure container for specialized Managers.
 - **Explicit Access**: Managers communicate with the host explicitly through `self.host`, avoiding the ambiguity of legacy method inheritance.
 - **Lifecycle Control**: Managers are initialized by the `MainInitManager`, ensuring a clear startup and shutdown sequence.
 
+### 4. Mediator Pattern (Decoupled Manager Interaction)
+Composed managers do not directly access or mutate each other's internal states.
+- **Explicit Mediator Methods**: All cross-manager operations and mutations are mediated through explicit methods on `MainWindow` (e.g., `set_current_molecule()`, `set_3d_atom_positions()`, `set_has_unsaved_changes()`).
+- **Benefit**: This prevents circular dependencies, isolates the managers' interfaces, and keeps them easily mockable in unit tests.
+
 ---
 
 ## Specialized Subsystems

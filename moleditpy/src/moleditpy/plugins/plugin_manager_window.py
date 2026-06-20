@@ -35,6 +35,8 @@ from PyQt6.QtWidgets import (
 class PluginManagerWindow(QDialog):
     def __init__(self, plugin_manager: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
+        self.btn_remove = None
+        self.table = None
         self.plugin_manager = plugin_manager
         self.setWindowTitle("Plugin Manager")
         self.resize(800, 500)
@@ -265,7 +267,7 @@ class PluginManagerWindow(QDialog):
                 is_folder = True
 
             if is_valid:
-                sha256_value = self.plugin_manager._compute_sha256(file_path)
+                sha256_value = self.plugin_manager.compute_sha256(file_path)
                 # Extract info and confirm
                 info = {
                     "name": os.path.basename(file_path),

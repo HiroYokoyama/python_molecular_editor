@@ -28,20 +28,12 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
-try:
-    from .geometry_base_dialog import GeometryBaseDialog
-    from ..core.mol_geometry import (
-        adjust_bond_angle,
-        calc_angle_deg,
-        get_connected_group,
-    )
-except ImportError:
-    from moleditpy.ui.geometry_base_dialog import GeometryBaseDialog
-    from moleditpy.core.mol_geometry import (
-        adjust_bond_angle,
-        calc_angle_deg,
-        get_connected_group,
-    )
+from .geometry_base_dialog import GeometryBaseDialog
+from ..core.mol_geometry import (
+    adjust_bond_angle,
+    calc_angle_deg,
+    get_connected_group,
+)
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -56,6 +48,18 @@ class AngleDialog(GeometryBaseDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
+        self._baseline_positions = None
+        self._snapshot_positions = None
+        self.angle_input = None
+        self.angle_label = None
+        self.angle_slider = None
+        self.apply_button = None
+        self.both_groups_radio = None
+        self.clear_button = None
+        self.picker_connection = None
+        self.rotate_atom_radio = None
+        self.rotate_group_radio = None
+        self.selection_label = None
         self.atom1_idx: Optional[int] = None
         self.atom2_idx: Optional[int] = None  # vertex atom
         self.atom3_idx: Optional[int] = None
@@ -241,6 +245,7 @@ class AngleDialog(GeometryBaseDialog):
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -262,6 +267,7 @@ class AngleDialog(GeometryBaseDialog):
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
         elif self.atom3_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -285,6 +291,7 @@ class AngleDialog(GeometryBaseDialog):
                 self.angle_slider.setEnabled(False)
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -322,6 +329,7 @@ class AngleDialog(GeometryBaseDialog):
                 else:
                     self.angle_slider.setEnabled(True)
             except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                 pass
 
             # Add labels

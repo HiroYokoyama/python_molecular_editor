@@ -28,20 +28,12 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
-try:
-    from .geometry_base_dialog import GeometryBaseDialog
-    from ..core.mol_geometry import (
-        adjust_dihedral,
-        calculate_dihedral,
-        get_connected_group,
-    )
-except ImportError:
-    from moleditpy_linux.ui.geometry_base_dialog import GeometryBaseDialog
-    from moleditpy_linux.core.mol_geometry import (
-        adjust_dihedral,
-        calculate_dihedral,
-        get_connected_group,
-    )
+from .geometry_base_dialog import GeometryBaseDialog
+from ..core.mol_geometry import (
+    adjust_dihedral,
+    calculate_dihedral,
+    get_connected_group,
+)
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -56,6 +48,18 @@ class DihedralDialog(GeometryBaseDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
+        self._baseline_positions = None
+        self._snapshot_positions = None
+        self.apply_button = None
+        self.both_groups_radio = None
+        self.clear_button = None
+        self.dihedral_input = None
+        self.dihedral_label = None
+        self.dihedral_slider = None
+        self.picker_connection = None
+        self.rotate_atom_radio = None
+        self.rotate_group_radio = None
+        self.selection_label = None
         self.atom1_idx: Optional[int] = None
         self.atom2_idx: Optional[int] = None
         self.atom3_idx: Optional[int] = None
@@ -258,6 +262,7 @@ class DihedralDialog(GeometryBaseDialog):
                 self.dihedral_slider.setEnabled(False)
                 self.dihedral_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -318,6 +323,7 @@ class DihedralDialog(GeometryBaseDialog):
                 else:
                     self.dihedral_slider.setEnabled(True)
             except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                 pass
 
             # Add labels

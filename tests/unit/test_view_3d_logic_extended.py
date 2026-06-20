@@ -13,6 +13,7 @@ def _make_view3d(mock_host):
     # Ensure standard defaults
     view3d._drawing_3d = False
     view3d.current_3d_style = "ball_and_stick"
+    view3d.plotter = MagicMock()
     return view3d
 
 
@@ -126,7 +127,7 @@ def test_add_3d_bond_cylinders_basic(app, mock_parser_host, mock_pv):
     mesh_props = {"smooth_shading": True}
 
     # Mock plotter.add_mesh
-    mock_parser_host.view_3d_manager.plotter.add_mesh = MagicMock()
+    view3d.plotter.add_mesh = MagicMock()
 
     view3d._add_3d_bond_cylinders(mol, conf, col, "ball_and_stick", mesh_props)
 
@@ -220,7 +221,7 @@ def test_add_3d_aromatic_rings(app, mock_parser_host, mock_pv):
     )
 
     mock_parser_host.init_manager.settings["display_aromatic_circles_3d"] = True
-    mock_parser_host.view_3d_manager.plotter.add_mesh = MagicMock()
+    view3d.plotter.add_mesh = MagicMock()
 
     mesh_props = {"smooth_shading": True}
     view3d._add_3d_aromatic_rings(mol, "ball_and_stick", mesh_props)
@@ -228,7 +229,7 @@ def test_add_3d_aromatic_rings(app, mock_parser_host, mock_pv):
     # Should call pv.Spline and then tube()
     assert mock_pv.Spline.call_count == 1
     # Check that add_mesh was called for the torus
-    assert mock_parser_host.view_3d_manager.plotter.add_mesh.call_count == 1
+    assert view3d.plotter.add_mesh.call_count == 1
 
 
 def test_calculate_double_bond_offset(app, mock_parser_host):
@@ -265,12 +266,12 @@ def test_show_ez_labels_3d(app, mock_parser_host):
     mol = Chem.MolFromSmiles("C/C=C/C")
     AllChem.EmbedMolecule(mol)
 
-    mock_parser_host.view_3d_manager.plotter.add_point_labels = MagicMock()
+    view3d.plotter.add_point_labels = MagicMock()
 
     view3d.show_ez_labels_3d(mol)
 
     # Check if add_point_labels was called with "E"
-    args, kwargs = mock_parser_host.view_3d_manager.plotter.add_point_labels.call_args
+    args, kwargs = view3d.plotter.add_point_labels.call_args
     assert "E" in args[1]
 
     # Test discrepancy
@@ -280,9 +281,9 @@ def test_show_ez_labels_3d(app, mock_parser_host):
     for i, atom in enumerate(mol.GetAtoms()):
         atom.SetIntProp("_original_atom_id", i)
 
-    mock_parser_host.view_3d_manager.plotter.add_point_labels.reset_mock()
+    view3d.plotter.add_point_labels.reset_mock()
     view3d.show_ez_labels_3d(mol)
-    args, kwargs = mock_parser_host.view_3d_manager.plotter.add_point_labels.call_args
+    args, kwargs = view3d.plotter.add_point_labels.call_args
     assert "?" in args[1]
 
 
@@ -291,7 +292,7 @@ def test_chiral_labels_logic(app, mock_parser_host, mock_pv):
     view3d = _make_view3d(mock_parser_host)
     # Ensure drawing logic is safe
     mock_parser_host.statusBar.return_value = MagicMock()
-    mock_parser_host.view_3d_manager.plotter = MagicMock()
+    view3d.plotter = MagicMock()
 
     # Chiral carbon
     mol = Chem.MolFromSmiles("C[C@H](F)Cl")
@@ -315,7 +316,8 @@ def test_chiral_labels_logic(app, mock_parser_host, mock_pv):
     atom_item = MagicMock()
     # RDKit idx 1 is the chiral center in C[C@H](F)Cl (atoms: C0, C1, F2, Cl3)
     # Its _original_atom_id is 1+1 = 2
-    mock_parser_host.state_manager.data.atoms = {2: {"item": atom_item, "symbol": "C"}}
+    mock_parser_host.state_manager.data.atoms = {2: {"symbol": "C"}}
+    mock_parser_host.init_manager.scene.atom_items[2] = atom_item
 
     with patch(
         "moleditpy.ui.view_3d_logic.Chem.FindMolChiralCenters", return_value=[(1, "S")]
@@ -328,7 +330,7 @@ def test_color_overrides(app, mock_parser_host, mock_pv):
     """Verify color override API functions."""
     view3d = _make_view3d(mock_parser_host)
     view3d.draw_molecule_3d = MagicMock()
-    mock_parser_host.view_3d_manager.current_mol = Chem.MolFromSmiles("C")
+    view3d.current_mol = Chem.MolFromSmiles("C")
 
     # Bond override
     view3d.update_bond_color_override(0, "#FF0000")

@@ -12,7 +12,6 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-import logging
 
 import json
 import os
@@ -23,52 +22,26 @@ from PyQt6.QtWidgets import QInputDialog, QMessageBox, QDialog
 from PyQt6.QtCore import Qt
 
 
-try:
-    # package relative imports (preferred when running as python -m moleditpy)
-    from .about_dialog import AboutDialog
-    from .align_plane_dialog import AlignPlaneDialog
-    from .alignment_dialog import AlignmentDialog
-    from .analysis_window import AnalysisWindow
-    from .angle_dialog import AngleDialog
-    from .bond_length_dialog import BondLengthDialog
-    from .constrained_optimization_dialog import ConstrainedOptimizationDialog
-    from .dihedral_dialog import DihedralDialog
-    from .mirror_dialog import MirrorDialog
-    from .move_group_dialog import MoveGroupDialog
-    from .move_selected_atoms_dialog import MoveSelectedAtomsDialog
-    from .periodic_table_dialog import PeriodicTableDialog
-    from .planarize_dialog import PlanarizeDialog
-    from .settings_dialog import SettingsDialog
-    from .color_settings_dialog import ColorSettingsDialog
-    from .translation_dialog import TranslationDialog
-    from .user_template_dialog import UserTemplateDialog
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy_linux.ui.about_dialog import AboutDialog
-    from moleditpy_linux.ui.align_plane_dialog import AlignPlaneDialog
-    from moleditpy_linux.ui.alignment_dialog import AlignmentDialog
-    from moleditpy_linux.ui.analysis_window import AnalysisWindow
-    from moleditpy_linux.ui.angle_dialog import AngleDialog
-    from moleditpy_linux.ui.bond_length_dialog import BondLengthDialog
-    from moleditpy_linux.ui.constrained_optimization_dialog import (
-        ConstrainedOptimizationDialog,
-    )
-    from moleditpy_linux.ui.dihedral_dialog import DihedralDialog
-    from moleditpy_linux.ui.mirror_dialog import MirrorDialog
-    from moleditpy_linux.ui.move_group_dialog import MoveGroupDialog
-    from moleditpy_linux.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
-    from moleditpy_linux.ui.periodic_table_dialog import PeriodicTableDialog
-    from moleditpy_linux.ui.planarize_dialog import PlanarizeDialog
-    from moleditpy_linux.ui.settings_dialog import SettingsDialog
-    from moleditpy_linux.ui.color_settings_dialog import ColorSettingsDialog
-    from moleditpy_linux.ui.translation_dialog import TranslationDialog
-    from moleditpy_linux.ui.user_template_dialog import UserTemplateDialog
+from .about_dialog import AboutDialog
+from .align_plane_dialog import AlignPlaneDialog
+from .alignment_dialog import AlignmentDialog
+from .analysis_window import AnalysisWindow
+from .angle_dialog import AngleDialog
+from .bond_length_dialog import BondLengthDialog
+from .constrained_optimization_dialog import ConstrainedOptimizationDialog
+from .dihedral_dialog import DihedralDialog
+from .mirror_dialog import MirrorDialog
+from .move_group_dialog import MoveGroupDialog
+from .move_selected_atoms_dialog import MoveSelectedAtomsDialog
+from .periodic_table_dialog import PeriodicTableDialog
+from .planarize_dialog import PlanarizeDialog
+from .settings_dialog import SettingsDialog
+from .color_settings_dialog import ColorSettingsDialog
+from .translation_dialog import TranslationDialog
+from .user_template_dialog import UserTemplateDialog
 
 # Import VERSION from constants
-try:
-    from .constants import VERSION
-except ImportError:
-    from moleditpy_linux.utils.constants import VERSION
+from ..utils.constants import VERSION
 
 
 class DialogManager:
@@ -86,15 +59,9 @@ class DialogManager:
         Specifically for 3D Select.
         """
         preselected_atoms = []
-        if hasattr(self.host, "edit_3d_manager"):
-            if self.host.edit_3d_manager.selected_atoms_for_measurement:
-                preselected_atoms = list(
-                    self.host.edit_3d_manager.selected_atoms_for_measurement
-                )
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'edit_3d_manager' on self.host"
-            )
+        mgr = getattr(self.host, "edit_3d_manager", None)
+        if mgr and mgr.selected_atoms_for_measurement:
+            preselected_atoms = list(mgr.selected_atoms_for_measurement)
         return preselected_atoms
 
     def show_about_dialog(self) -> None:
@@ -139,8 +106,7 @@ class DialogManager:
 
         Used in the main window.
         """
-        # Check for existing dialog
-        _template_dialog = getattr(self.host, "_template_dialog", None)
+        _template_dialog = getattr(self.host, "template_dialog", None)
         if _template_dialog and not _template_dialog.isHidden():
             # Bring existing dialog to front
             _template_dialog.raise_()
@@ -148,30 +114,27 @@ class DialogManager:
             return
 
         # Create new dialog
-        self.host._template_dialog = UserTemplateDialog(self.host, self.host)
-        self.host._template_dialog.show()
+        self.host.template_dialog = UserTemplateDialog(self.host, self.host)
+        self.host.template_dialog.show()
 
         # Activate if a template is selected after dialog is closed
         def on_dialog_finished() -> None:
-            if (
-                hasattr(self.host._template_dialog, "selected_template")
-                and self.host._template_dialog.selected_template
-            ):
-                template_name = self.host._template_dialog.selected_template.get(
+            if self.host.template_dialog.selected_template:
+                template_name = self.host.template_dialog.selected_template.get(
                     "name", "user_template"
                 )
                 mode_name = f"template_user_{template_name}"
 
                 # Store template data for the scene to use
-                self.host.init_manager.scene.user_template_data = (
-                    self.host._template_dialog.selected_template
+                self.host.set_scene_user_template_data(
+                    self.host.template_dialog.selected_template
                 )
                 self.host.ui_manager.set_mode(mode_name)
 
                 # Update status
-                self.host.statusBar().showMessage(f"Template mode: {template_name}")
+                self.host.update_status_message(f"Template mode: {template_name}")
 
-        self.host._template_dialog.finished.connect(on_dialog_finished)
+        self.host.template_dialog.finished.connect(on_dialog_finished)
 
     def save_2d_as_template(self) -> None:
         """Save current 2D structure as a template"""

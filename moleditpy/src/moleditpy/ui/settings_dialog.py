@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
 from typing import Any
 
 from PyQt6.QtGui import QColor
@@ -27,15 +26,20 @@ from .settings_tabs.settings_2d_tab import Settings2DTab
 from .settings_tabs.settings_3d_tabs import Settings3DSceneTab, SettingsModelTab
 from .settings_tabs.settings_other_tab import SettingsOtherTab
 
-try:
-    from ..utils.default_settings import DEFAULT_SETTINGS
-except ImportError:
-    from moleditpy.utils.default_settings import DEFAULT_SETTINGS
+from ..utils.default_settings import DEFAULT_SETTINGS
 
 
 class SettingsDialog(QDialog):
     def __init__(self, current_settings: Any, parent: Any = None) -> None:
         super().__init__(parent)
+        self.tab_2d = None
+        self.tab_bs = None
+        self.tab_cpk = None
+        self.tab_other = None
+        self.tab_scene = None
+        self.tab_stick = None
+        self.tab_wf = None
+        self.tab_widget = None
         self.setWindowTitle("Settings")
         self.setMinimumSize(650, 750)
         self.parent_window = parent
@@ -153,32 +157,14 @@ class SettingsDialog(QDialog):
         settings = self.get_settings()
         self.parent_window.init_manager.settings.update(settings)
 
-        if hasattr(self.parent_window.init_manager, "settings_dirty"):
-            self.parent_window.init_manager.settings_dirty = True
-        else:
-            logging.error("REPORT ERROR: Missing attribute 'settings_dirty' on object")
+        self.parent_window.init_manager.settings_dirty = True
 
         # Persist to disk immediately
-        if hasattr(self.parent_window, "init_manager"):
-            self.parent_window.init_manager.save_settings()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'init_manager' on self.parent_window"
-            )
+        self.parent_window.init_manager.save_settings()
 
-        if hasattr(self.parent_window.view_3d_manager, "apply_3d_settings"):
-            self.parent_window.view_3d_manager.apply_3d_settings()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'apply_3d_settings' on object"
-            )
+        self.parent_window.view_3d_manager.apply_3d_settings()
 
-        if hasattr(self.parent_window.init_manager, "update_cpk_colors_from_settings"):
-            self.parent_window.init_manager.update_cpk_colors_from_settings()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'update_cpk_colors_from_settings' on object"
-            )
+        self.parent_window.init_manager.update_cpk_colors_from_settings()
 
         # Redraw molecule
         current_mol = getattr(self.parent_window.view_3d_manager, "current_mol", None)
@@ -195,10 +181,8 @@ class SettingsDialog(QDialog):
             for item in scene.items():
                 if hasattr(item, "update_style"):
                     item.update_style()
-                elif hasattr(item, "update"):
-                    item.update()
                 else:
-                    logging.error("REPORT ERROR: Missing attribute 'update' on item")
+                    item.update()
 
         if hasattr(self.parent_window, "statusBar") and self.parent_window.statusBar():
             self.parent_window.statusBar().showMessage("Settings applied successfully")

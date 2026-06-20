@@ -15,6 +15,8 @@ class MockTemplateScene(TemplateMixin):
         self.items_returned = []
         self.data = MagicMock()
         self.data.atoms = {}
+        self.atom_items = {}
+        self.bond_items = {}
         self.template_context = {}
 
     def get_setting(self, key, default=None):
@@ -62,7 +64,7 @@ def test_update_template_preview_snaps_points_for_fusing(qapp):
     # Place an existing atom in the scene at (10.5, 0.5), which is close to point 1 (10.0, 0.0)
     mock_atom = MagicMock()
     mock_atom.pos.return_value = QPointF(10.5, 0.5)
-    scene.data.atoms = {101: {"item": mock_atom}}
+    scene.atom_items[101] = mock_atom
 
     # Call update_template_preview (simulating mouse move)
     with patch(

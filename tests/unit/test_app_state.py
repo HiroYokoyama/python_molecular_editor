@@ -4,7 +4,6 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.app_state import StateManager
 from PyQt6.QtCore import QPointF
-from unittest.mock import MagicMock
 
 
 def _make_state_manager(host):
@@ -19,8 +18,6 @@ def _add_atom(host, symbol, x, y, charge=0, radical=0):
     aid = host.state_manager.data.add_atom(
         symbol, QPointF(x, y), charge=charge, radical=radical
     )
-    # add a mock item so JSON serialization (which accesses item.pos()) works
-    host.state_manager.data.atoms[aid]["item"] = MagicMock(pos=lambda: QPointF(x, y))
     return aid
 
 

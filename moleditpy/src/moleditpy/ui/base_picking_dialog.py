@@ -10,7 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import logging
 from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
@@ -19,10 +18,7 @@ from PyQt6.QtGui import QCloseEvent, QKeyEvent
 from PyQt6.QtWidgets import QDialog, QWidget
 from rdkit import Chem, Geometry
 
-try:
-    from .dialog_3d_picking_mixin import Dialog3DPickingMixin
-except ImportError:
-    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -132,6 +128,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
                     cache[:] = positions[:]
         except (AttributeError, ValueError, TypeError, IndexError):
             # If for some reason the cache is incompatible, draw_molecule_3d below will rebuild it
+            # Safe defensive fallback catching AttributeError, ValueError, TypeError, IndexError
             pass
 
         # 3. Redraw molecule
@@ -153,22 +150,12 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
             QTimer.singleShot(200, self.main_window.view_3d_manager.plotter.render)
 
         # 5. Refresh chiral/cis-trans labels if applicable
-        if hasattr(self.main_window.view_3d_manager, "update_chiral_labels"):
-            self.main_window.view_3d_manager.update_chiral_labels()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'update_chiral_labels' on object"
-            )
+        self.main_window.view_3d_manager.update_chiral_labels()
 
     def _push_undo(self) -> None:
         """Centralized undo logic to push current state to the undo stack."""
-        if hasattr(self.main_window, "state_manager"):
-            self.main_window.edit_actions_manager.push_undo_state()
-            self._molecule_modified = False
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'state_manager' on self.main_window"
-            )
+        self.main_window.edit_actions_manager.push_undo_state()
+        self._molecule_modified = False
 
     def done(self, result: int) -> None:
         """Override done to push a final undo state if the molecule was modified."""

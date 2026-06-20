@@ -15,7 +15,6 @@ from __future__ import annotations
 # main_window_edit_3d.py
 # Mixin class separated from main_window.py
 
-import logging
 from typing import Any, List, Optional
 
 import numpy as np
@@ -24,46 +23,19 @@ from PyQt6.QtCore import QPointF
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import QGraphicsTextItem
 
-try:
-    from PyQt6 import sip as _sip  # type: ignore
 
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    _sip = None  # type: ignore[assignment]
-    _sip_isdeleted = None
-
-try:
-    from .mol_geometry import (
-        calc_angle_deg,
-        calc_distance,
-        calculate_dihedral as _calculate_dihedral,
-    )
-except ImportError:
-    from moleditpy_linux.core.mol_geometry import (
-        calc_angle_deg,
-        calc_distance,
-        calculate_dihedral as _calculate_dihedral,
-    )
-
-# RDKit imports (explicit to satisfy flake8 and used features)
-try:
-    from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-except ImportError:
-    from moleditpy_linux.utils.sip_isdeleted_safe import sip_isdeleted_safe
-
-try:
-    # package relative imports (preferred when running as `python -m moleditpy`)
-    from .constants import VDW_RADII
-except ImportError:
-    # Fallback to absolute imports for script-style execution
-    from moleditpy_linux.utils.constants import VDW_RADII
+from ..core.mol_geometry import (
+    calc_angle_deg,
+    calc_distance,
+    calculate_dihedral as _calculate_dihedral,
+)
+from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
+from ..utils.constants import VDW_RADII
 
 
 # --- Classes ---
 class Edit3DManager:
     """Independent manager for 3D editing logic, ported from MainWindowEdit3d mixin."""
-
-    _cls = None
 
     def __init__(self, host: Any) -> None:
         self.host = host
@@ -85,12 +57,7 @@ class Edit3DManager:
             # Disable 3D Drag mode when measurement mode is on
             if self.is_3d_edit_mode:
                 self.host.init_manager.edit_3d_action.setChecked(False)
-                if hasattr(self.host, "ui_manager"):
-                    self.host.ui_manager.toggle_3d_edit_mode(False)
-                else:
-                    logging.error(
-                        "REPORT ERROR: Missing attribute 'ui_manager' on self.host"
-                    )
+                self.host.ui_manager.toggle_3d_edit_mode(False)
 
             # Close active 3D edit dialogs
             self.close_all_3d_edit_dialogs()
@@ -107,6 +74,7 @@ class Edit3DManager:
                 if hasattr(interactor_style, "reset_interactor_state"):
                     interactor_style.reset_interactor_state()
             except (AttributeError, RuntimeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
 
         # Update status message
@@ -126,6 +94,7 @@ class Edit3DManager:
             except (AttributeError, RuntimeError):
                 # Suppress non-critical 3D edit/UI sync errors during bulk dialog teardown.
                 # If a dialog is already closed or its C++ object is gone, we ignore it.
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
 
         self.active_3d_dialogs.clear()
@@ -159,6 +128,7 @@ class Edit3DManager:
             self.host.view_3d_manager.plotter.remove_actor("measurement_labels")
         except (AttributeError, RuntimeError):
             # Suppress if the actor is already destroyed or not found.
+            # Safe defensive fallback catching AttributeError, RuntimeError
             pass
 
         if not self.measurement_labels or not self.host.view_3d_manager.current_mol:
@@ -205,6 +175,7 @@ class Edit3DManager:
             self.host.view_3d_manager.plotter.remove_actor("measurement_labels")
         except (AttributeError, RuntimeError):
             # Suppress if the actor is already destroyed or not found.
+            # Safe defensive fallback catching AttributeError, RuntimeError
             pass
 
         # Remove 2D labels
@@ -219,6 +190,7 @@ class Edit3DManager:
                 self.measurement_text_actor = None
             except (AttributeError, RuntimeError):
                 # Suppress if the actor is already destroyed or not found.
+                # Safe defensive fallback catching AttributeError, RuntimeError
                 pass
 
         self.host.view_3d_manager.plotter.render()
@@ -231,7 +203,6 @@ class Edit3DManager:
         # Create atom-to-AtomItem mapping
         if (
             not self.host.view_3d_manager.current_mol
-            or not hasattr(self.host.state_manager, "data")
             or not self.host.state_manager.data.atoms
         ):
             return
@@ -240,21 +211,18 @@ class Edit3DManager:
         atom_idx_to_item = {}
 
         # Get AtomItems from scene
-        if hasattr(self.host.init_manager, "scene"):
-            for item in self.host.init_manager.scene.items():
-                if hasattr(item, "atom_id") and hasattr(
-                    item, "symbol"
-                ):  # Check if AtomItem
-                    # Find RDKit index from atom ID
-                    rdkit_idx = self.find_rdkit_atom_index(item)
-                    if rdkit_idx is not None:
-                        atom_idx_to_item[rdkit_idx] = item
-        else:
-            logging.error("REPORT ERROR: Missing attribute 'scene' on object")
+        for item in self.host.init_manager.scene.items():
+            # Check if AtomItem
+            if (
+                getattr(item, "atom_id", None) is not None
+                and getattr(item, "symbol", None) is not None
+            ):
+                # Find RDKit index from atom ID
+                rdkit_idx = self.find_rdkit_atom_index(item)
+                if rdkit_idx is not None:
+                    atom_idx_to_item[rdkit_idx] = item
 
         # Add to 2D view
-        if not hasattr(self, "measurement_label_items_2d"):
-            self.measurement_label_items_2d = []
 
         for atom_idx, label_text in self.measurement_labels:
             if atom_idx in atom_idx_to_item:
@@ -286,31 +254,27 @@ class Edit3DManager:
 
     def clear_2d_measurement_labels(self) -> None:
         """Remove all 2D measurement labels."""
-        if hasattr(self, "measurement_label_items_2d"):
-            for label_item in self.measurement_label_items_2d:
+        for label_item in self.measurement_label_items_2d:
+            try:
+                # Avoid touching partially-deleted wrappers
+                if sip_isdeleted_safe(label_item):
+                    continue
                 try:
-                    # Avoid touching partially-deleted wrappers
-                    if sip_isdeleted_safe(label_item):
-                        continue
-                    try:
-                        if label_item.scene():
-                            self.host.init_manager.scene.removeItem(label_item)
-                    except (AttributeError, RuntimeError):
-                        # Scene access or removal failed; skip this item.
-                        pass
+                    if label_item.scene():
+                        self.host.init_manager.scene.removeItem(label_item)
                 except (AttributeError, RuntimeError):
-                    # If sip check itself fails, fall back to best-effort removal
-                    try:
-                        if label_item.scene():
-                            self.host.init_manager.scene.removeItem(label_item)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        # Best-effort removal failed after sip check failed; skip.
-                        continue
-            self.measurement_label_items_2d.clear()
-        else:
-            logging.error(
-                "REPORT ERROR: Missing attribute 'measurement_label_items_2d' on self"
-            )
+                    # Scene access or removal failed; skip this item.
+                    # Safe defensive fallback catching AttributeError, RuntimeError
+                    pass
+            except (AttributeError, RuntimeError):
+                # If sip check itself fails, fall back to best-effort removal
+                try:
+                    if label_item.scene():
+                        self.host.init_manager.scene.removeItem(label_item)
+                except (AttributeError, RuntimeError, ValueError, TypeError):
+                    # Best-effort removal failed after sip check failed; skip.
+                    continue
+        self.measurement_label_items_2d.clear()
 
     def find_rdkit_atom_index(self, atom_item: Any) -> Optional[int]:
         """Find RDKit index from AtomItem."""
@@ -319,7 +283,7 @@ class Edit3DManager:
 
         # Use mapping dictionary
         if (
-            hasattr(self.host, "atom_id_to_rdkit_idx_map")
+            self.host.atom_id_to_rdkit_idx_map
             and atom_item.atom_id in self.host.atom_id_to_rdkit_idx_map
         ):
             return int(self.host.atom_id_to_rdkit_idx_map[atom_item.atom_id])
@@ -407,6 +371,7 @@ class Edit3DManager:
                 )
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Suppress non-critical 3D edit/UI sync errors if the plotter or actor is already destroyed
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
 
         if not measurement_lines:
@@ -465,6 +430,7 @@ class Edit3DManager:
             self.host.view_3d_manager.plotter.remove_actor("selection_highlight")
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Suppress non-critical UI/rendering/measurement noise if the plotter or actor is already destroyed.
+            # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
             pass
 
         if not self.selected_atoms_3d or not self.host.view_3d_manager.current_mol:
@@ -512,6 +478,3 @@ class Edit3DManager:
         """Remove dialog from active list."""
         if dialog in self.active_3d_dialogs:
             self.active_3d_dialogs.remove(dialog)
-
-
-Edit3DManager._cls = Edit3DManager  # type: ignore[assignment]

@@ -85,7 +85,9 @@ def _run_once(name, cmd, env):
     return returncode, "".join(output_lines), duration
 
 
-def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
+def run_suite(
+    name, path, env_vars=None, extra_args=None, enable_cov=True, exitfirst=False
+):
     """Run a test suite in a separate process for isolation."""
     print(
         f"\n>>> Running {name} Tests{' with Coverage' if enable_cov else ''}...",
@@ -124,13 +126,14 @@ def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
         sys.path.insert(0, SRC_DIR)
 
     try:
-        for attempt in range(1, _MAX_RETRIES + 1):
+        max_retries = 1 if exitfirst else _MAX_RETRIES
+        for attempt in range(1, max_retries + 1):
             returncode, combined_output, duration = _run_once(name, cmd, env)
             if returncode == 0:
                 return 0
-            if returncode in _KNOWN_CRASH_CODES and attempt < _MAX_RETRIES:
+            if returncode in _KNOWN_CRASH_CODES and attempt < max_retries:
                 print(
-                    f"  [RETRY {attempt}/{_MAX_RETRIES - 1}] {name}: known crash exit code "
+                    f"  [RETRY {attempt}/{max_retries - 1}] {name}: known crash exit code "
                     f"{returncode} — retrying...",
                     flush=True,
                 )
@@ -140,6 +143,36 @@ def run_suite(name, path, env_vars=None, extra_args=None, enable_cov=True):
     except Exception as e:
         print(f"Error running {name} tests: {e}")
         return 1
+
+
+def print_coverage_summary(base_dir):
+    """Prints the coverage summary from the markdown report or JSON files."""
+    try:
+        report_path = os.path.join(base_dir, "tests", "coverage_report.md")
+        if os.path.exists(report_path):
+            print("\n" + "=" * 80)
+            print("                     COVERAGE REPORT")
+            print("=" * 80)
+            with open(report_path, "r", encoding="utf-8") as f:
+                print(f.read())
+            print("=" * 80)
+        else:
+            import json
+
+            cov_full_path = os.path.join(base_dir, "tests", "cov_full.json")
+            if os.path.exists(cov_full_path):
+                with open(cov_full_path, "r") as f:
+                    full_data = json.load(f)
+
+                full_cov = full_data["totals"]["percent_covered"]
+
+                print("\n" + "=" * 50)
+                print("             COVERAGE REPORT SUMMARY")
+                print("=" * 50)
+                print(f" Overall Project Coverage: {full_cov:.2f}%")
+                print("=" * 50)
+    except Exception as e:
+        print(f"Warning: Could not read or print coverage report: {e}")
 
 
 if __name__ == "__main__":
@@ -168,6 +201,12 @@ if __name__ == "__main__":
         help="Generate reports without running tests",
     )
     parser.add_argument(
+        "-x",
+        "--exitfirst",
+        action="store_true",
+        help="Exit instantly on first error or failure, and run each suite at most once (no retries)",
+    )
+    parser.add_argument(
         "--catalog-only", action="store_true", help="Update ONLY the assertion catalog"
     )
     parser.add_argument(
@@ -180,6 +219,9 @@ if __name__ == "__main__":
     args, extra_pytest_args = parser.parse_known_args()
     if extra_pytest_args and extra_pytest_args[0] == "--":
         extra_pytest_args = extra_pytest_args[1:]
+
+    if args.exitfirst:
+        extra_pytest_args.append("-x")
 
     # Handle --catalog-only early
     if args.catalog_only:
@@ -215,6 +257,7 @@ if __name__ == "__main__":
             ],
             cwd=BASE_DIR,
         )
+        print_coverage_summary(BASE_DIR)
         if not args.skip_catalog:
             subprocess.run(
                 [
@@ -262,6 +305,7 @@ if __name__ == "__main__":
                 env_vars=env_vars,
                 extra_args=extra_pytest_args,
                 enable_cov=enable_cov,
+                exitfirst=args.exitfirst,
             )
             results[name] = "PASSED" if ret_code == 0 else "FAILED"
         except KeyboardInterrupt:
@@ -306,6 +350,7 @@ if __name__ == "__main__":
                 ],
                 cwd=BASE_DIR,
             )
+            print_coverage_summary(BASE_DIR)
             if not args.skip_catalog:
                 subprocess.run(
                     [

@@ -117,7 +117,7 @@ def test_scene_keypress_special_symbols(mock_parser_host):
 def test_scene_keypress_delete(mock_parser_host):
     scene = setup_scene_with_view(mock_parser_host)
     aid = scene.create_atom("C", QPointF(0, 0))
-    atom_item = mock_parser_host.data.atoms[aid]["item"]
+    atom_item = scene.atom_items[aid]
     atom_item.setSelected(True)
 
     with (
@@ -136,8 +136,7 @@ def test_scene_keypress_delete(mock_parser_host):
 def test_scene_maintenance_methods(mock_parser_host):
     scene = setup_scene_with_view(mock_parser_host)
     aid = scene.create_atom("C", QPointF(0, 0))
-    # mock_parser_host's create_atom should populate data.atoms
-    atom_item = mock_parser_host.data.atoms[aid]["item"]
+    atom_item = scene.atom_items[aid]
 
     atom_item.has_problem = True
     scene.clear_all_problem_flags()
@@ -183,7 +182,7 @@ def test_scene_update_bond_stereo(mock_parser_host):
     bond.stereo = 0
     bond.atom1.atom_id = 10
     bond.atom2.atom_id = 20
-    scene.data.bonds[(10, 20)] = {"stereo": 0, "item": bond}
+    scene.data.bonds[(10, 20)] = {"stereo": 0, "order": 2}
 
     scene.update_bond_stereo(bond, 1)
     assert scene.data.bonds[(10, 20)]["stereo"] == 1
@@ -197,8 +196,8 @@ def test_scene_mouse_drag_create_bond_existing_atoms(mock_parser_host):
 
     aid1 = scene.create_atom("C", QPointF(0, 0))
     aid2 = scene.create_atom("C", QPointF(50, 0))
-    a1 = mock_parser_host.data.atoms[aid1]["item"]
-    a2 = mock_parser_host.data.atoms[aid2]["item"]
+    a1 = scene.atom_items[aid1]
+    a2 = scene.atom_items[aid2]
 
     # 1. Press on A1
     press_event = create_mock_mouse_event(QPointF(0, 0))
@@ -244,10 +243,10 @@ def test_scene_right_click_bond_delete(qtbot, mock_parser_host):
     scene.mode = "select"
     aid1 = scene.create_atom("C", QPointF(0, 0))
     aid2 = scene.create_atom("C", QPointF(50, 0))
-    a1 = mock_parser_host.data.atoms[aid1]["item"]
-    a2 = mock_parser_host.data.atoms[aid2]["item"]
+    a1 = scene.atom_items[aid1]
+    a2 = scene.atom_items[aid2]
     scene.create_bond(a1, a2)
-    bond_item = list(mock_parser_host.data.bonds.values())[0]["item"]
+    bond_item = list(scene.bond_items.values())[0]
 
     event = create_mock_mouse_event(QPointF(25, 0), button=Qt.MouseButton.RightButton)
     with (
@@ -279,7 +278,7 @@ def test_scene_drag_and_drop_atom(mock_parser_host):
     scene = setup_scene_with_view(mock_parser_host)
     start_pos = QPointF(0, 0)
     aid = scene.create_atom("C", start_pos)
-    atom_item = mock_parser_host.data.atoms[aid]["item"]
+    atom_item = scene.atom_items[aid]
 
     scene.mode = "select"
     new_pos = QPointF(50, 50)
@@ -311,10 +310,10 @@ def test_scene_delete_mixed_selection(mock_parser_host):
     scene = setup_scene_with_view(mock_parser_host)
     aid1 = scene.create_atom("C", QPointF(0, 0))
     aid2 = scene.create_atom("C", QPointF(50, 0))
-    a1 = mock_parser_host.data.atoms[aid1]["item"]
-    a2 = mock_parser_host.data.atoms[aid2]["item"]
+    a1 = scene.atom_items[aid1]
+    a2 = scene.atom_items[aid2]
     scene.create_bond(a1, a2)
-    bond_item = list(mock_parser_host.data.bonds.values())[0]["item"]
+    bond_item = list(scene.bond_items.values())[0]
 
     a1.setSelected(True)
     bond_item.setSelected(True)

@@ -52,7 +52,7 @@ class DummyHost:
         self.settings = {}
         self.is_xyz_derived = False
         self.initialization_complete = True
-        self._is_restoring_state = False
+        self.is_restoring_state = False
 
         # Child managers
         self.init_manager = MagicMock()
@@ -77,6 +77,24 @@ class DummyHost:
 
     def push_undo_state(self):
         pass
+
+    def set_current_molecule(self, mol):
+        self.view_3d_manager.current_mol = mol
+
+    def set_current_file_path(self, path):
+        self.init_manager.current_file_path = path
+
+    def set_has_unsaved_changes(self, value):
+        self.state_manager.has_unsaved_changes = value
+
+    def set_atom_id_to_rdkit_idx_map(self, mapping):
+        self.view_3d_manager.atom_id_to_rdkit_idx_map = mapping
+
+    def update_status_message(self, message, timeout=0):
+        if timeout == 0:
+            self.statusBar_mock.showMessage(message)
+        else:
+            self.statusBar_mock.showMessage(message, timeout)
 
 
 # ===========================================================================
@@ -375,8 +393,8 @@ class TestLoadXYZFor3DViewing:
         with patch("moleditpy.ui.io_logic.QTimer"):
             io.load_xyz_for_3d_viewing(file_path=str(xyz))
 
-        host.ui_manager._enter_3d_viewer_ui_mode.assert_called_once()
-        host.ui_manager._enable_3d_features.assert_called_once_with(True)
+        host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+        host.ui_manager.enable_3d_features.assert_called_once_with(True)
 
     def test_is_xyz_derived_with_skip_prop(self, qapp, tmp_path):
         """is_xyz_derived=True when _xyz_skip_checks property is set on mol."""

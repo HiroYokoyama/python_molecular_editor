@@ -29,12 +29,8 @@ from PyQt6.QtWidgets import (
 )
 from rdkit import Chem
 
-try:
-    from .geometry_base_dialog import GeometryBaseDialog
-    from ..core.mol_geometry import calc_distance, get_connected_group
-except ImportError:
-    from moleditpy_linux.ui.geometry_base_dialog import GeometryBaseDialog
-    from moleditpy_linux.core.mol_geometry import calc_distance, get_connected_group
+from .geometry_base_dialog import GeometryBaseDialog
+from ..core.mol_geometry import calc_distance, get_connected_group
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -49,6 +45,18 @@ class BondLengthDialog(GeometryBaseDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
+        self._baseline_positions = None
+        self._snapshot_positions = None
+        self.apply_button = None
+        self.atom1_fix_group_radio = None
+        self.atom1_fix_radio = None
+        self.both_groups_radio = None
+        self.clear_button = None
+        self.distance_input = None
+        self.distance_label = None
+        self.distance_slider = None
+        self.picker_connection = None
+        self.selection_label = None
         self.atom1_idx: Optional[int] = None
         self.atom2_idx: Optional[int] = None
 
@@ -222,6 +230,7 @@ class BondLengthDialog(GeometryBaseDialog):
                 self.distance_slider.setEnabled(False)
                 self.distance_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
 
         elif self.atom2_idx is None:
@@ -244,6 +253,7 @@ class BondLengthDialog(GeometryBaseDialog):
                 self.distance_slider.setEnabled(False)
                 self.distance_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 pass
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
@@ -275,6 +285,7 @@ class BondLengthDialog(GeometryBaseDialog):
                 else:
                     self.distance_slider.setEnabled(True)
             except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                 pass
 
             # Add labels

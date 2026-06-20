@@ -132,7 +132,7 @@ class DummyParser(IOManager):
     def fit_to_view(self):
         pass
 
-    def _apply_chem_check_and_set_flags(self, mol, source_desc=None, force_skip=False):
+    def apply_chem_check_and_set_flags(self, mol, source_desc=None, force_skip=False):
         pass
 
     def prompt_for_charge(self):

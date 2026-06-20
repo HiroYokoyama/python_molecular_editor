@@ -164,6 +164,24 @@ class PluginContext:
         """
         self._manager.show_status_message(message, timeout)
 
+    def rebuild_menus(self) -> None:
+        """Rebuild plugin-managed menus and toolbars to apply changes immediately (Public API)."""
+        if hasattr(self._manager, "rebuild_plugin_menus"):
+            self._manager.rebuild_plugin_menus()
+
+    def enter_3d_viewer_mode(self) -> None:
+        """Switch the application UI layout to 3D viewer mode (Public API)."""
+        mw = self.get_main_window()
+        if mw is not None and hasattr(mw, "ui_manager"):
+            if hasattr(mw.ui_manager, "enter_3d_viewer_mode"):
+                mw.ui_manager.enter_3d_viewer_mode()
+            elif hasattr(mw.ui_manager, "enter_3d_viewer_ui_mode"):
+                mw.ui_manager.enter_3d_viewer_ui_mode()
+
+    def enter_3d_mode(self) -> None:
+        """Switch UI layout to 3D viewer mode. Alias for enter_3d_viewer_mode."""
+        self.enter_3d_viewer_mode()
+
     @property
     def current_mol(self) -> Any:
         """
@@ -310,8 +328,12 @@ class PluginContext:
 
     def register_3d_context_menu(self, callback: Callable, label: str) -> None:
         """Deprecated: This method does nothing. Kept for backward compatibility."""
-        print(
-            f"Warning: Plugin '{self._plugin_name}' uses deprecated 'register_3d_context_menu'. This API has been removed."
+        import warnings
+
+        warnings.warn(
+            f"Plugin '{self._plugin_name}' uses deprecated 'register_3d_context_menu'. This API has been removed.",
+            category=DeprecationWarning,
+            stacklevel=2,
         )
 
     def register_3d_style(
@@ -370,6 +392,133 @@ class PluginContext:
             mw.init_manager.settings[namespaced] = value
             if hasattr(mw.init_manager, "settings_dirty"):
                 mw.init_manager.settings_dirty = True
+
+    def mark_project_modified(self) -> None:
+        """Mark the current project as having unsaved changes and update the window title."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "state_manager"):
+            try:
+                mw.state_manager.has_unsaved_changes = True
+                if hasattr(mw.state_manager, "update_window_title"):
+                    mw.state_manager.update_window_title()
+            except Exception:
+                pass
+
+    def refresh_ui(self) -> None:
+        """Refresh all UI state after modifying the molecule.
+
+        Calls update_realtime_info, update_undo_redo_actions, and update_window_title
+        in one shot. Call this at the end of any edit that changes atom/bond data.
+        """
+        mw = self.get_main_window()
+        if mw is None:
+            return
+        if hasattr(mw, "state_manager"):
+            if hasattr(mw.state_manager, "update_realtime_info"):
+                mw.state_manager.update_realtime_info()
+            if hasattr(mw.state_manager, "update_window_title"):
+                mw.state_manager.update_window_title()
+        if hasattr(mw, "edit_actions_manager") and hasattr(
+            mw.edit_actions_manager, "update_undo_redo_actions"
+        ):
+            mw.edit_actions_manager.update_undo_redo_actions()
+
+    def fit_3d_view(self) -> None:
+        """Zoom and re-center the 3D viewport to fit the current molecule."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "view_3d_manager"):
+            fit = getattr(mw.view_3d_manager, "fit_to_view", None)
+            if fit is not None:
+                fit()
+
+    def clear_canvas(self, push_to_undo: bool = True) -> None:
+        """Clear the 2D editor canvas.
+
+        Args:
+            push_to_undo: Whether to push the cleared state onto the undo stack
+                          before clearing (default True).
+        """
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "edit_actions_manager"):
+            clear = getattr(mw.edit_actions_manager, "clear_2d_editor", None)
+            if clear is not None:
+                clear(push_to_undo=push_to_undo)
+
+    def set_3d_features_enabled(self, enabled: bool) -> None:
+        """Enable or disable the 3D visualization panel and related UI actions.
+
+        Args:
+            enabled: True to enable 3D features, False to disable.
+        """
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "ui_manager"):
+            enable = getattr(mw.ui_manager, "enable_3d_features", None)
+            if enable is not None:
+                enable(enabled)
+
+    def set_analysis_enabled(self, enabled: bool) -> None:
+        """Enable or disable the Analysis action in the main menu.
+
+        Args:
+            enabled: True to enable, False to disable.
+        """
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "init_manager"):
+            action = getattr(mw.init_manager, "analysis_action", None)
+            if action is not None:
+                action.setEnabled(enabled)
+
+    def check_chemistry_problems(self) -> None:
+        """Trigger a chemistry validation pass and update problem flags on atoms."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "compute_manager"):
+            check = getattr(
+                mw.compute_manager, "check_chemistry_problems_fallback", None
+            )
+            if check is not None:
+                check()
+
+    def refresh_2d_scene(self) -> None:
+        """Force a full redraw of the 2D canvas.
+
+        Recalculates ring geometry, then repaints every atom and bond item.
+        Use this after directly manipulating scene items (e.g. via scene.create_atom)
+        without going through context.current_molecule.
+        For a lightweight Qt repaint only, use context.scene.update() instead.
+        """
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "init_manager"):
+            scene = getattr(mw.init_manager, "scene", None)
+            if scene is not None and hasattr(scene, "update_all_items"):
+                scene.update_all_items()
+
+    def load_from_smiles(self, smiles: str) -> None:
+        """Add a molecule from a SMILES string to the 2D editor."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "string_importer_manager"):
+            mw.string_importer_manager.load_from_smiles(smiles)
+
+    def to_xyz_block(self) -> Optional[str]:
+        """Return the current 3D structure as an XYZ block (only element x y z lines)."""
+        mol = self.current_mol
+        if not mol:
+            return None
+
+        try:
+            conf = mol.GetConformer()
+            num_atoms = mol.GetNumAtoms()
+            xyz_lines = []
+
+            for i in range(num_atoms):
+                pos = conf.GetAtomPosition(i)
+                symbol = mol.GetAtomWithIdx(i).GetSymbol()
+                xyz_lines.append(
+                    f"  {symbol:<5}{pos.x:>15.8f}{pos.y:>15.8f}{pos.z:>15.8f}"
+                )
+
+            return "\n".join(xyz_lines)
+        except Exception:
+            return None
 
 
 class Plugin3DController:

@@ -26,10 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-try:
-    from .base_picking_dialog import BasePickingDialog
-except ImportError:
-    from moleditpy.ui.base_picking_dialog import BasePickingDialog
+from .base_picking_dialog import BasePickingDialog
 
 _TAB_ABSOLUTE = 0
 _TAB_DELTA = 1
