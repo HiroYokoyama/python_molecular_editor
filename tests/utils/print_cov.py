@@ -4,7 +4,6 @@ import subprocess
 import json
 import sys
 import os
-import tempfile
 import argparse
 
 # Adjusted for tests/utils/ location

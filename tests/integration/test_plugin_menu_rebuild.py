@@ -7,7 +7,7 @@ six integration points: menus, toolbar, export, file-openers, analysis, and
 
 import pytest
 from typing import Optional
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 
 from moleditpy.ui.plugin_menu_manager import PluginMenuManager
 

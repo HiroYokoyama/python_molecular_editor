@@ -2,7 +2,7 @@
 
 import pytest
 from typing import Optional
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu
 

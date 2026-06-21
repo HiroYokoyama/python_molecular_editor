@@ -144,7 +144,6 @@ class TestTriggerConversionTempMode:
     def test_pending_mode_consumed_after_trigger_conversion(self, host, app):
         """After trigger_conversion runs, _pending_conversion_mode is None."""
         from moleditpy.ui.compute_logic import ComputeManager
-        from moleditpy.core.molecular_data import MolecularData
 
         compute = object.__new__(ComputeManager)
         compute._host = host
