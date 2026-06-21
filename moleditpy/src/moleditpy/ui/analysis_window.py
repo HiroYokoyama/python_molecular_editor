@@ -33,6 +33,8 @@ from rdkit.Chem import inchi as rd_inchi
 
 
 class AnalysisWindow(QDialog):
+    """Dialog displaying molecular formula, weight, and other computed properties."""
+
     def __init__(
         self,
         mol: Chem.Mol,
@@ -47,6 +49,7 @@ class AnalysisWindow(QDialog):
         self.init_ui()
 
     def init_ui(self) -> None:
+        """Build the analysis layout with computed molecular properties."""
         main_layout = QVBoxLayout(self)
         grid_layout = QGridLayout()
 
@@ -230,6 +233,7 @@ class AnalysisWindow(QDialog):
         self.setLayout(main_layout)
 
     def copy_to_clipboard(self, text: str) -> None:
+        """Copy text to the system clipboard and show a status bar message."""
         clipboard = QApplication.clipboard()
         clipboard.setText(text)
         if self.parent() and hasattr(self.parent(), "statusBar"):

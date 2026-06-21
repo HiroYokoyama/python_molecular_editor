@@ -36,6 +36,8 @@ from .custom_interactor_style import CustomInteractorStyle
 
 # --- Classes ---
 class UIManager(QObject):
+    """Manages 2D editing mode, toolbar state, and host window event filtering."""
+
     def __init__(self, host: Any) -> None:
         super().__init__()
         self.is_2d_editable = False
@@ -46,6 +48,7 @@ class UIManager(QObject):
         self.host.statusBar().showMessage(message)
 
     def set_mode(self, mode_str: str) -> None:
+        """Switch the scene to the given editing mode and update cursor and status bar."""
         if isinstance(mode_str, tuple):
             mode_str = (
                 f"bond_{mode_str[0]}_{mode_str[1]}"
@@ -129,6 +132,7 @@ class UIManager(QObject):
             self.host.set_scene_bond_properties(1, 0)
 
     def set_mode_and_update_toolbar(self, mode_str: str) -> None:
+        """Switch mode and synchronize the active toolbar button highlight."""
         self.set_mode(mode_str)
         # Map QAction to QToolButton
         toolbar = getattr(self.host.init_manager, "toolbar", None)
@@ -167,6 +171,7 @@ class UIManager(QObject):
                     btn.setStyleSheet("")
 
     def activate_select_mode(self) -> None:
+        """Switch to selection mode and check the select toolbar button."""
         self.set_mode("select")
         if "select" in self.host.init_manager.mode_actions:
             self.host.init_manager.mode_actions["select"].setChecked(True)
@@ -176,6 +181,7 @@ class UIManager(QObject):
         self.set_mode(f"atom_{symbol}")
 
     def eventFilter(self, obj: Optional[QObject], event: Optional[QEvent]) -> bool:
+        """Forward focus and drag-and-drop events from the host window."""
         if event is None:
             return False
         if (

@@ -71,6 +71,8 @@ def _deserialize_constraints(raw: list) -> list:
 
 
 class StateManager:
+    """Manages serialized undo/redo state and document save state for MainWindow."""
+
     def __init__(self, host: MainWindow) -> None:
         self.host = host
         self.data: MolecularData  # Dynamically assigned in main_window_init.py
@@ -80,6 +82,7 @@ class StateManager:
         self.saved_state: Optional[Dict[str, Any]] = None
 
     def get_current_state(self) -> Dict[str, Any]:
+        """Snapshot the current document into a serializable state dict."""
         atoms = {
             atom_id: {
                 "symbol": data["symbol"],
@@ -126,6 +129,7 @@ class StateManager:
         return state
 
     def set_state_from_data(self, state_data: Dict[str, Any]) -> None:
+        """Restore the document from a previously captured state dict."""
         self.dragged_atom_info = None
         self.host.edit_actions_manager.clear_2d_editor(push_to_undo=False)
 
@@ -256,6 +260,7 @@ class StateManager:
         self.host.edit_3d_manager.update_2d_measurement_labels()
 
     def push_undo_state(self) -> None:
+        """Push the current state onto the undo stack."""
         self.host.edit_actions_manager.push_undo_state()
 
     def update_window_title(self) -> None:
@@ -307,6 +312,7 @@ class StateManager:
             return False  # Cancel
 
     def reset_undo_stack(self) -> None:
+        """Clear the undo and redo stacks."""
         self.host.reset_undo_redo_stacks()
 
     def update_realtime_info(self) -> None:

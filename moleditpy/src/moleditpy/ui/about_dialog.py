@@ -30,6 +30,8 @@ from ..utils.constants import VERSION
 
 
 class AboutDialog(QDialog):
+    """Dialog showing application version, icon, and project links."""
+
     def __init__(self, main_window: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.image_label = None
@@ -39,6 +41,7 @@ class AboutDialog(QDialog):
         self.init_ui()
 
     def init_ui(self) -> None:
+        """Build the about dialog layout with icon, version text, and links."""
         layout = QVBoxLayout(self)
 
         # Create a clickable image label

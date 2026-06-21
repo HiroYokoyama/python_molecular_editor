@@ -40,6 +40,8 @@ if TYPE_CHECKING:
 
 
 class DihedralDialog(GeometryBaseDialog):
+    """Dialog for interactively viewing and adjusting a dihedral angle."""
+
     def __init__(
         self,
         mol: Chem.Mol,
@@ -75,6 +77,7 @@ class DihedralDialog(GeometryBaseDialog):
         self.init_ui()
 
     def init_ui(self) -> None:
+        """Build the dihedral adjustment UI with four-atom picker, slider, and input."""
         self.setWindowTitle("Adjust Dihedral Angle")
         self.setModal(False)
         layout = QVBoxLayout(self)

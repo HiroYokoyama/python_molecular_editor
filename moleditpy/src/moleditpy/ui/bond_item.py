@@ -159,6 +159,7 @@ class BondItem(QGraphicsItem):
         self.ring_center: Optional[Union[QPointF, Tuple[float, float]]] = None
 
     def get_line_in_local_coords(self) -> QLineF:
+        """Return the visible bond line trimmed back to avoid overlapping atom symbol backgrounds."""
         if self.atom1 is None or self.atom2 is None:
             return QLineF(0, 0, 0, 0)
         try:
@@ -214,6 +215,7 @@ class BondItem(QGraphicsItem):
             return QLineF(0, 0, 0, 0)
 
     def boundingRect(self) -> QRectF:
+        """Return the bounding rect encompassing all visual bond representations."""
         try:
             line = self.get_line_in_local_coords()
         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -315,6 +317,7 @@ class BondItem(QGraphicsItem):
         option: Any,
         widget: Optional[QWidget] = None,
     ) -> None:
+        """Render the bond as single, double, triple, wedge, or dashed line."""
         if painter is None or self.atom1 is None or self.atom2 is None:
             return
         line = self.get_line_in_local_coords()
@@ -584,6 +587,7 @@ class BondItem(QGraphicsItem):
         painter.restore()
 
     def update_position(self, notify: bool = True) -> None:
+        """Reposition the bond item relative to its first atom's scene position."""
         try:
             if notify:
                 self.prepareGeometryChange()
@@ -595,6 +599,7 @@ class BondItem(QGraphicsItem):
             # Continue without crashing
 
     def hoverEnterEvent(self, event: Any) -> None:
+        """Highlight the bond on mouse hover."""
         self.hovered = True
         self.update()
         if self.scene():
@@ -602,6 +607,7 @@ class BondItem(QGraphicsItem):
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event: Any) -> None:
+        """Remove hover highlight when the mouse leaves."""
         if self.hovered:
             self.hovered = False
             self.update()

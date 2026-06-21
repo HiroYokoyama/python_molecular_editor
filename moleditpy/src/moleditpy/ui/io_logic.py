@@ -70,12 +70,14 @@ class IOManager:
         return basename
 
     def fix_mol_counts_line(self, line: str) -> str:
+        """Ensure the MOL file counts line ends with a valid V2000 tag."""
         if "V3000" in line or "V2000" in line:
             return line
         prefix = line.rstrip().ljust(33)[0:33]
         return prefix + " V2000"
 
     def fix_mol_block(self, mol_block: str) -> str:
+        """Patch the counts line of an MDL MOL block to comply with V2000 format."""
         lines = mol_block.splitlines()
         if len(lines) < 4:
             return mol_block

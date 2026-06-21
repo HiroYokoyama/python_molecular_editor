@@ -83,6 +83,7 @@ class MoveGroupDialog(BasePickingDialog):
         self.init_ui()
 
     def init_ui(self) -> None:
+        """Build the move-group dialog with atom picker, translate/rotate inputs, and controls."""
         self.setWindowTitle("Move Group")
         self.setModal(False)
         self.resize(300, 400)
@@ -445,6 +446,7 @@ class MoveGroupDialog(BasePickingDialog):
         self.update_display()
 
     def update_display(self) -> None:
+        """Refresh the selection label with the current group atom count and symbols."""
         if not self.group_atoms:
             self.selection_label.setText("No group selected")
         else:
@@ -543,6 +545,7 @@ class MoveGroupDialog(BasePickingDialog):
                 pass
 
     def reset_translation_inputs(self) -> None:
+        """Reset all translation input fields to zero."""
         self.x_trans_input.setText("0.0")
         self.y_trans_input.setText("0.0")
         self.z_trans_input.setText("0.0")
@@ -576,6 +579,7 @@ class MoveGroupDialog(BasePickingDialog):
         self.show_atom_labels()
 
     def reset_rotation_inputs(self) -> None:
+        """Reset all rotation input fields to zero."""
         self.x_rot_input.setText("0.0")
         self.y_rot_input.setText("0.0")
         self.z_rot_input.setText("0.0")

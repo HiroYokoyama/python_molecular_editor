@@ -40,6 +40,8 @@ from .custom_qt_interactor import CustomQtInteractor
 
 
 class MainWindow(QMainWindow):
+    """Top-level application window that composes all manager objects."""
+
     # start_calculation carries the MOL block and an options object (second arg)
     start_calculation = pyqtSignal(str, object)
 

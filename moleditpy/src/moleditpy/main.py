@@ -27,6 +27,7 @@ from .ui.main_window import MainWindow
 
 
 def setup_logging() -> None:
+    """Configure root logger and install a global unhandled-exception handler."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s (%(pathname)s:%(lineno)d): %(message)s",
@@ -49,6 +50,7 @@ def setup_logging() -> None:
 
 
 def main() -> None:
+    """Parse CLI arguments, configure logging, and launch the GUI."""
     # Setup logging as early as possible
     setup_logging()
 

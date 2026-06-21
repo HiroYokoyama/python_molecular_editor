@@ -33,6 +33,8 @@ from PyQt6.QtWidgets import (
 
 
 class PluginManagerWindow(QDialog):
+    """Dialog for browsing, installing, and removing plugins."""
+
     def __init__(self, plugin_manager: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.btn_remove = None
@@ -46,6 +48,7 @@ class PluginManagerWindow(QDialog):
         self.refresh_plugin_list()
 
     def init_ui(self) -> None:
+        """Build the plugin manager UI with table, buttons, and drag-and-drop support."""
         layout = QVBoxLayout(self)
 
         lbl_info = QLabel("Drag & Drop .py or .zip files here to install plugins.")
@@ -106,6 +109,7 @@ class PluginManagerWindow(QDialog):
         layout.addLayout(btn_layout)
 
     def refresh_plugin_list(self) -> None:
+        """Repopulate the plugin table from the current plugin registry."""
         self.table.setRowCount(0)
         plugins = self.plugin_manager.plugins
 
@@ -146,11 +150,13 @@ class PluginManagerWindow(QDialog):
                 self.table.item(row, 0).setForeground(color)
 
     def update_button_state(self) -> None:
+        """Enable or disable the Remove button based on table selection."""
         has_selection = self.table.currentRow() >= 0
         if hasattr(self, "btn_remove"):
             self.btn_remove.setEnabled(has_selection)
 
     def on_reload(self, silent: bool = False) -> None:
+        """Reload all plugins from disk and refresh the table."""
         # Trigger reload in main manager
         if self.plugin_manager.main_window:
             self.plugin_manager.discover_plugins(self.plugin_manager.main_window)
@@ -164,6 +170,7 @@ class PluginManagerWindow(QDialog):
             self.refresh_plugin_list()
 
     def on_remove_plugin(self) -> None:
+        """Delete the selected plugin file or folder and reload."""
         row = self.table.currentRow()
         if row < 0:
             QMessageBox.warning(self, "Warning", "Please select a plugin to remove.")
@@ -216,6 +223,7 @@ class PluginManagerWindow(QDialog):
                 )
 
     def show_plugin_details(self, item: QTableWidgetItem) -> None:
+        """Show a message box with full metadata for the double-clicked plugin."""
         row = item.row()
         if row < len(self.plugin_manager.plugins):
             p = self.plugin_manager.plugins[row]
@@ -231,6 +239,7 @@ class PluginManagerWindow(QDialog):
 
     # --- Drag & Drop Support ---
     def dragEnterEvent(self, event: Optional[QDragEnterEvent]) -> None:
+        """Accept drag events carrying file URLs."""
         if event is None:
             return
         if event.mimeData().hasUrls():
@@ -239,6 +248,7 @@ class PluginManagerWindow(QDialog):
             event.ignore()
 
     def dropEvent(self, event: Optional[QDropEvent]) -> None:
+        """Install dropped plugin .py files, folders, or zip archives."""
         if event is None:
             return
         files_installed = []

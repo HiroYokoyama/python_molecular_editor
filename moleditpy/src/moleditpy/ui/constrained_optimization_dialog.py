@@ -34,6 +34,8 @@ from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 
 
 class ConstrainedOptimizationThread(QThread):
+    """QThread that runs a force-field minimization with atom constraints."""
+
     optimization_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
@@ -43,6 +45,7 @@ class ConstrainedOptimizationThread(QThread):
         self.max_iters = max_iters
 
     def run(self) -> None:
+        """Execute force-field minimization and emit finished or error signal."""
         try:
             self.ff.Minimize(maxIts=self.max_iters)
             self.optimization_finished.emit()
@@ -156,6 +159,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             logging.exception("Could not set default force field")
 
     def init_ui(self) -> None:
+        """Build the constrained optimization dialog with constraint table and controls."""
         self.setWindowTitle("Constrained Optimization")
         self.setModal(False)
         self.resize(450, 500)
@@ -256,6 +260,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.update_selection_display()
 
     def update_selection_display(self) -> None:
+        """Update the selection label and Add Constraint button state."""
         self.show_selection_labels()
         n = len(self.selected_atoms)
 
@@ -292,6 +297,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.add_button.setEnabled(can_add)
 
     def add_constraint(self) -> None:
+        """Read the current atom selection, compute its geometry value, and add a row to the table."""
         n = len(self.selected_atoms)
         conf = self.mol.GetConformer()
 
@@ -368,6 +374,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.update_selection_display()
 
     def remove_constraint(self) -> None:
+        """Delete the selected constraint rows from the table."""
         selected_rows = sorted(
             list(set(index.row() for index in self.constraint_table.selectedIndexes())),
             reverse=True,
@@ -405,6 +412,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.remove_button.setEnabled(False)
 
     def show_constraint_labels(self) -> None:
+        """Display 3D atom labels for the selected constraint rows."""
         self.clear_constraint_labels()
         selected_items = self.constraint_table.selectedItems()
         if not selected_items:
@@ -474,6 +482,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                         logging.debug(f"Could not restore camera position: {e}")
 
     def clear_constraint_labels(self) -> None:
+        """Remove all constraint label actors from the 3D plotter."""
         for label_actor in self.constraint_labels:
             try:
                 plotter = self.main_window.view_3d_manager.plotter
@@ -487,6 +496,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.constraint_labels = []
 
     def apply_optimization(self) -> None:
+        """Run force-field minimization with the configured constraints."""
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(self, "Error", "No valid 3D molecule found.")
             return
@@ -666,10 +676,12 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             QMessageBox.critical(self, "Error", f"Optimization failed: {e}")
 
     def closeEvent(self, event: Any) -> None:
+        """Delegate window close to reject."""
         self.reject()
         event.accept()
 
     def reject(self) -> None:
+        """Clear labels, disable picking, and save constraints before closing."""
         self.clear_constraint_labels()
         self.clear_selection_labels()
         self.disable_picking()

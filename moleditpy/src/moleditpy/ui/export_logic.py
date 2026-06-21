@@ -63,6 +63,7 @@ class ExportManager:
         return basename
 
     def export_stl(self) -> None:
+        """Export the current 3D model to an STL file chosen by the user."""
         default_path = self._get_default_path()
 
         file_path, _ = QFileDialog.getSaveFileName(
@@ -682,6 +683,7 @@ class ExportManager:
             return []
 
     def export_2d_png(self) -> None:
+        """Export the current 2D structure as a PNG image."""
         if not self.host.state_manager.data.atoms:
             self.host.statusBar().showMessage("Nothing to export.")
             return

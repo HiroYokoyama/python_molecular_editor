@@ -36,6 +36,8 @@ from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 
 class AtomItem(QGraphicsItem):
+    """2D scene item representing a single atom in the molecule editor."""
+
     def __init__(
         self, atom_id: int, symbol: str, pos: QPointF, charge: int = 0, radical: int = 0
     ) -> None:
@@ -62,6 +64,7 @@ class AtomItem(QGraphicsItem):
         self.font: QFont = QFont(FONT_FAMILY, 20, FONT_WEIGHT_BOLD)
 
     def update_style(self) -> None:
+        """Refresh font, color, and visibility based on current scene settings."""
         if sip_isdeleted_safe(self):
             return
         # Allow updating font preference dynamically
@@ -197,6 +200,7 @@ class AtomItem(QGraphicsItem):
         return full_visual_rect.adjusted(-3, -3, 3, 3)
 
     def get_bg_ellipse_path(self) -> QPainterPath:
+        """Return the elliptical background path used for bond endpoint clipping."""
         path = QPainterPath()
         if not self.is_visible:
             return path
@@ -468,6 +472,7 @@ class AtomItem(QGraphicsItem):
             painter.drawRect(self.boundingRect())
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
+        """Propagate position and scene changes to connected bond items."""
         res = super().itemChange(change, value)
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             if self.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable:
@@ -480,12 +485,14 @@ class AtomItem(QGraphicsItem):
         return res
 
     def hoverEnterEvent(self, event: Any) -> None:
+        """Highlight the atom on mouse hover."""
         # Enable highlight on hover regardless of scene mode
         self.hovered = True
         self.update()
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event: Any) -> None:
+        """Remove hover highlight when the mouse leaves."""
         if self.hovered:
             self.hovered = False
             self.update()

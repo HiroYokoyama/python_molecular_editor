@@ -17,6 +17,8 @@ from pyvistaqt import QtInteractor
 
 
 class CustomQtInteractor(QtInteractor):
+    """PyVista QtInteractor subclass that exposes the main window for event handling."""
+
     def __init__(
         self,
         parent: Optional[Any] = None,

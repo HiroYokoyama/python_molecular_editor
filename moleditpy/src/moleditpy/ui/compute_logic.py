@@ -450,6 +450,7 @@ class ComputeManager:
     def on_calculation_finished(
         self, result: Union[Chem.Mol, Tuple[int, Chem.Mol]]
     ) -> None:
+        """Handle a completed 3D optimization result from the background worker."""
         worker_id, mol = result if isinstance(result, tuple) else (None, result)
         if worker_id is not None:
             if worker_id not in self.active_worker_ids:
@@ -500,6 +501,7 @@ class ComputeManager:
         self.host.view_3d_manager.update_atom_id_menu_state()
 
     def on_calculation_error(self, message: Union[str, Tuple[int, str]]) -> None:
+        """Handle an error or halt signal from the background optimization worker."""
         # Accept either a string or (worker_id, message) tuple from the worker signal
         if isinstance(message, tuple) and len(message) == 2:
             worker_id, msg = message
@@ -567,6 +569,7 @@ class ComputeManager:
                 continue
 
     def check_chemistry_problems_fallback(self) -> None:
+        """Mark valence-problem atoms in the 2D scene when RDKit validation is unavailable."""
         problem_atom_ids = identify_valence_problems(
             self.host.state_manager.data.atoms, self.host.state_manager.data.bonds
         )

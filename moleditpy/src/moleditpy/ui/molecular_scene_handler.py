@@ -353,6 +353,7 @@ class TemplateMixin:
     def update_template_preview(
         self, pos: QPointF, alt_pressed: Optional[bool] = None
     ) -> None:
+        """Update the ghost template overlay at the given scene position."""
         mode_parts = self.mode.split("_")
 
         # Check if this is a user template
@@ -804,6 +805,7 @@ class KeyboardMixin:
         return new_pos_offset
 
     def keyPressEvent(self, event: Any) -> None:
+        """Handle keyboard events, delegating to the active view."""
         if not self.views():
             try:
                 from PyQt6.QtWidgets import QGraphicsScene
@@ -1348,6 +1350,7 @@ class SceneQueryMixin:
     def create_atom(
         self, symbol: Any, pos: Any, charge: int = 0, radical: int = 0
     ) -> Any:
+        """Add an atom to the data model and create its scene item."""
         atom_id = self.data.add_atom(symbol, pos, charge=charge, radical=radical)
         atom_item = AtomItem(atom_id, symbol, pos, charge=charge, radical=radical)
         self.atom_items[atom_id] = atom_item
@@ -1361,6 +1364,7 @@ class SceneQueryMixin:
         bond_order: Optional[Any] = None,
         bond_stereo: Optional[Any] = None,
     ) -> Any:
+        """Add a bond between two atom items in both data model and scene."""
         if start_atom is None or end_atom is None:
             logging.error("Error: Cannot create bond with None atoms")
             return
@@ -1528,6 +1532,7 @@ class SceneQueryMixin:
             return False
 
     def find_atom_near(self, pos: Any, tol: float = 14.0) -> Any:
+        """Return the AtomItem within tolerance distance of pos, or None."""
         if pos is None:
             return None
         # Create a small search rectangle around the position
@@ -1542,6 +1547,7 @@ class SceneQueryMixin:
         return None
 
     def find_bond_between(self, atom1: Any, atom2: Any) -> Any:
+        """Return the BondItem connecting two atoms, or None if none exists."""
         for b in atom1.bonds:
             if (b.atom1 is atom1 and b.atom2 is atom2) or (
                 b.atom1 is atom2 and b.atom2 is atom1

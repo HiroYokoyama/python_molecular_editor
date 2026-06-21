@@ -52,6 +52,7 @@ class UserTemplateDialog(QDialog):
         self.load_user_templates()
 
     def init_ui(self) -> None:
+        """Build the user templates browser with thumbnail list and action buttons."""
         self.setWindowTitle("User Templates")
         self.setModal(False)
         self.resize(800, 600)

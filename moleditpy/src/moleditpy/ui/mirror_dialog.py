@@ -43,6 +43,7 @@ class MirrorDialog(QDialog):
         self.init_ui()
 
     def init_ui(self) -> None:
+        """Build the mirror plane selection UI with radio buttons and action buttons."""
         self.setWindowTitle("Mirror Molecule")
         self.setMinimumSize(300, 200)
 

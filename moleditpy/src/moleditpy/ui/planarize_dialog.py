@@ -58,6 +58,7 @@ class PlanarizeDialog(BasePickingDialog):
             self.update_display()
 
     def init_ui(self) -> None:
+        """Build the planarize dialog with atom picker, controls, and action buttons."""
         self.setWindowTitle("Planarize")
         self.setModal(False)
         layout = QVBoxLayout(self)
@@ -109,11 +110,13 @@ class PlanarizeDialog(BasePickingDialog):
         self.update_display()
 
     def clear_selection(self) -> None:
+        """Clear all selected atoms and update the display."""
         self.selected_atoms.clear()
         self.clear_atom_labels()
         self.update_display()
 
     def update_display(self) -> None:
+        """Refresh the selection label and enable/disable the apply button."""
         count = len(self.selected_atoms)
         if count == 0:
             self.selection_label.setText(
@@ -145,6 +148,7 @@ class PlanarizeDialog(BasePickingDialog):
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def show_atom_labels(self) -> None:
+        """Display numbered 3D labels for selected atoms."""
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
             pairs = [(idx, f"#{i + 1}") for i, idx in enumerate(sorted_atoms)]
@@ -153,6 +157,7 @@ class PlanarizeDialog(BasePickingDialog):
             self.clear_atom_labels()
 
     def apply_planarize(self) -> None:
+        """Compute the best-fit plane and project selected atoms onto it."""
         if not self.selected_atoms or len(self.selected_atoms) < 3:
             QMessageBox.warning(
                 self, "Warning", "Please select at least 3 atoms for planarize."

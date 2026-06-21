@@ -27,6 +27,8 @@ from rdkit import Geometry
 
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
+    """VTK interactor style extending trackball-camera with 3D atom drag and measurement."""
+
     def __init__(self, main_window: Any = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.main_window = main_window

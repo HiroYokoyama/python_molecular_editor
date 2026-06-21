@@ -37,6 +37,8 @@ if TYPE_CHECKING:
 
 
 class BondLengthDialog(GeometryBaseDialog):
+    """Dialog for interactively viewing and adjusting a bond length."""
+
     def __init__(
         self,
         mol: Chem.Mol,
@@ -68,6 +70,7 @@ class BondLengthDialog(GeometryBaseDialog):
         self.init_ui()
 
     def init_ui(self) -> None:
+        """Build the bond length adjustment UI with atom picker, slider, and input field."""
         self.setWindowTitle("Adjust Bond Length")
         self.setModal(False)
 

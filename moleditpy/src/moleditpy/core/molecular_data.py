@@ -22,13 +22,17 @@ class PointTuple(tuple):
     """Backward-compatible tuple that allows .x() and .y() access like QPointF."""
 
     def x(self) -> float:
+        """Return the x coordinate as a float."""
         return float(self[0])
 
     def y(self) -> float:
+        """Return the y coordinate as a float."""
         return float(self[1])
 
 
 class MolecularData:
+    """In-memory graph of atoms and bonds, independent of any UI framework."""
+
     atoms: Dict[int, Dict[str, Any]]
     bonds: Dict[Tuple[int, int], Dict[str, Any]]
     adjacency_list: Dict[int, List[int]]
@@ -47,6 +51,7 @@ class MolecularData:
         charge: int = 0,
         radical: int = 0,
     ) -> int:
+        """Add a new atom and return its auto-assigned integer ID."""
         atom_id = self.next_atom_id
         # Internalize position as raw floats to decouple from UI types (QPointF)
         if hasattr(pos, "x") and hasattr(pos, "y"):
@@ -77,6 +82,7 @@ class MolecularData:
     def add_bond(
         self, id1: int, id2: int, order: Union[int, float] = 1, stereo: int = 0
     ) -> Tuple[Tuple[int, int], str]:
+        """Add or update a bond between two atoms; return its canonical key and 'created'/'updated'."""
         # For stereo bonds, do not sort because ID order determines direction.
         # For non-stereo bonds, sort to normalize the key.
         if stereo == 0:
@@ -100,6 +106,7 @@ class MolecularData:
             return (id1, id2), "created"
 
     def remove_atom(self, atom_id: int) -> None:
+        """Remove an atom and all bonds involving it from the data model."""
         if atom_id in self.atoms:
             # Safely get neighbors before deleting the atom's own entry
             neighbors = self.adjacency_list.get(atom_id, [])
@@ -123,6 +130,7 @@ class MolecularData:
                 self.bonds.pop(key, None)
 
     def remove_bond(self, id1: int, id2: int) -> None:
+        """Remove the bond between two atoms, handling stereo and non-stereo key variants."""
         # Look for directional stereo bonds (forward/reverse) and normalized non-stereo bond keys.
         key_to_remove = None
         if (id1, id2) in self.bonds:
@@ -318,6 +326,7 @@ class MolecularData:
         return final_mol
 
     def to_mol_block(self) -> Optional[str]:
+        """Serialize the molecule to an MDL MOL block string, or None on failure."""
         mol = self.to_rdkit_mol()
         if mol:
             try:
