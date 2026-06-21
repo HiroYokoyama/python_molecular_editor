@@ -1,4 +1,5 @@
-﻿"""Unit tests for benzene ring placement via keyboard shortcut."""
+"""Unit tests for benzene ring placement via keyboard shortcut."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPointF

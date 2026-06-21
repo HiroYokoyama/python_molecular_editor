@@ -1,4 +1,5 @@
-﻿"""Unit tests for Settings2DTab."""
+"""Unit tests for Settings2DTab."""
+
 from unittest.mock import patch, MagicMock
 from moleditpy.ui.settings_tabs.settings_2d_tab import Settings2DTab
 from moleditpy.utils.default_settings import DEFAULT_SETTINGS

@@ -1,4 +1,5 @@
-﻿"""Unit tests for 3D atom picking from screen coordinates."""
+"""Unit tests for 3D atom picking from screen coordinates."""
+
 from types import SimpleNamespace
 import numpy as np
 from moleditpy.ui.atom_picking import (

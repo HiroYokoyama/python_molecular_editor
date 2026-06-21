@@ -21,7 +21,11 @@ _src = os.path.abspath(
 if os.path.isdir(_src) and _src not in sys.path:
     sys.path.insert(0, _src)
 
-from _picking_dialog_contract import PickingDialogContractTests, make_ethane, make_mock_mw
+from _picking_dialog_contract import (
+    PickingDialogContractTests,
+    make_ethane,
+    make_mock_mw,
+)
 
 
 @pytest.fixture(scope="session")
@@ -60,7 +64,9 @@ class TestAlignPlaneDialogContract(PickingDialogContractTests):
                 patch.object(AlignPlaneDialog, "enable_picking"),
                 patch.object(AlignPlaneDialog, "disable_picking"),
             ):
-                dlg = AlignPlaneDialog(_mol, mw, plane=plane, preselected_atoms=preselected_atoms)
+                dlg = AlignPlaneDialog(
+                    _mol, mw, plane=plane, preselected_atoms=preselected_atoms
+                )
             created.append(dlg)
             return dlg, _mol, mw
 

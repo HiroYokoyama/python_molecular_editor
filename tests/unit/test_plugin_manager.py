@@ -697,6 +697,7 @@ PLUGIN_VERSION = (1, ("x",))
 """)
 
         with patch("ast.parse") as mock_parse:
+
             class FakeNode:
                 def __init__(self):
                     self.targets = []

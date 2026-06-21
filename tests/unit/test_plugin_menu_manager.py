@@ -131,7 +131,12 @@ class TestUpdatePluginMenu:
         pmm = PluginMenuManager(im)
         im.host.plugin_manager.discover_plugins.return_value = []
         im.host.plugin_manager.menu_actions = [
-            {"path": "MyPlugin/DoThing", "callback": MagicMock(), "text": "Do Thing", "shortcut": None}
+            {
+                "path": "MyPlugin/DoThing",
+                "callback": MagicMock(),
+                "text": "Do Thing",
+                "shortcut": None,
+            }
         ]
         im.host.menuBar.return_value.actions.return_value = []
         added_menu = MagicMock(**{"actions.return_value": []})

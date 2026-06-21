@@ -1,4 +1,5 @@
-﻿"""Unit tests for AboutDialog."""
+"""Unit tests for AboutDialog."""
+
 from PyQt6.QtCore import Qt
 from unittest.mock import MagicMock
 from moleditpy.ui.about_dialog import AboutDialog

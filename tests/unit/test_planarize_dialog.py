@@ -21,7 +21,11 @@ _src = os.path.abspath(
 if os.path.isdir(_src) and _src not in sys.path:
     sys.path.insert(0, _src)
 
-from _picking_dialog_contract import PickingDialogContractTests, make_ethane, make_mock_mw
+from _picking_dialog_contract import (
+    PickingDialogContractTests,
+    make_ethane,
+    make_mock_mw,
+)
 
 
 @pytest.fixture(scope="session")
@@ -34,7 +38,9 @@ def _planar_mol():
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=1)
     conf = mol.GetConformer()
-    for i, (x, y, z) in enumerate([(1, 0, 0.1), (0, 1, -0.1), (-1, 0, 0.1), (0, -1, -0.1)]):
+    for i, (x, y, z) in enumerate(
+        [(1, 0, 0.1), (0, 1, -0.1), (-1, 0, 0.1), (0, -1, -0.1)]
+    ):
         conf.SetAtomPosition(i, Geometry.Point3D(x, y, z))
     return mol
 
@@ -136,12 +142,16 @@ class TestApplyPlanarizeGeometry:
         mol = _planar_mol()
         dlg, _ = self._make_dlg(mol, qapp)
         dlg.selected_atoms = {0, 1, 2, 3}
-        before_z_var = np.var([mol.GetConformer().GetAtomPosition(i).z for i in range(4)])
+        before_z_var = np.var(
+            [mol.GetConformer().GetAtomPosition(i).z for i in range(4)]
+        )
 
         with patch("moleditpy.ui.planarize_dialog.QMessageBox"):
             dlg.apply_planarize()
 
-        after_z_var = np.var([mol.GetConformer().GetAtomPosition(i).z for i in range(4)])
+        after_z_var = np.var(
+            [mol.GetConformer().GetAtomPosition(i).z for i in range(4)]
+        )
         assert after_z_var <= before_z_var + 1e-6
 
     def test_planarize_pushes_undo(self, qapp):

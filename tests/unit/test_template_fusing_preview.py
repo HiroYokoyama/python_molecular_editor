@@ -1,4 +1,5 @@
-﻿"""Unit tests for template fusing preview via TemplateMixin."""
+"""Unit tests for template fusing preview via TemplateMixin."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPointF

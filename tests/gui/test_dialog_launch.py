@@ -1,4 +1,5 @@
-﻿"""GUI tests for BondLengthDialog, AngleDialog, and geometry dialog launch."""
+"""GUI tests for BondLengthDialog, AngleDialog, and geometry dialog launch."""
+
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem

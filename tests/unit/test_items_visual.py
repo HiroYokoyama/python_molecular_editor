@@ -1,4 +1,5 @@
-﻿"""Unit tests for atom and bond item visual rendering."""
+"""Unit tests for atom and bond item visual rendering."""
+
 import pytest
 from PyQt6.QtCore import QPointF, QRectF
 from PyQt6.QtGui import QPainter, QPainterPath

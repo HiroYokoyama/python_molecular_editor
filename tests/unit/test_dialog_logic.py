@@ -1,4 +1,5 @@
-﻿"""Unit tests for dialog helper logic and DialogManager."""
+"""Unit tests for dialog helper logic and DialogManager."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 import numpy as np

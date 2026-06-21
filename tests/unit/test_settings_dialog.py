@@ -1,4 +1,5 @@
-﻿"""Unit tests for SettingsDialog multi-tab layout and settings flow."""
+"""Unit tests for SettingsDialog multi-tab layout and settings flow."""
+
 from unittest.mock import patch, MagicMock
 from moleditpy.ui.settings_dialog import SettingsDialog
 from moleditpy.utils.default_settings import DEFAULT_SETTINGS
@@ -142,7 +143,9 @@ def test_apply_settings_fires_all_side_effects(app):
     p.init_manager.save_settings.assert_called()
     p.view_3d_manager.apply_3d_settings.assert_called()
     p.init_manager.update_cpk_colors_from_settings.assert_called()
-    p.statusBar.return_value.showMessage.assert_called_with("Settings applied successfully")
+    p.statusBar.return_value.showMessage.assert_called_with(
+        "Settings applied successfully"
+    )
 
 
 def test_apply_settings_redraws_molecule_when_present(app):

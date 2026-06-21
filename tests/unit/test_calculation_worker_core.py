@@ -1,4 +1,5 @@
-﻿"""Unit tests for CalculationWorker optimization and intermolecular modes."""
+"""Unit tests for CalculationWorker optimization and intermolecular modes."""
+
 import pytest
 import numpy as np
 from rdkit import Chem
@@ -294,8 +295,12 @@ def test_intermolecular_interaction_toggle():
 
     mol_on = Chem.Mol(combined)
     _iterative_optimize(
-        mol_on, "MMFF94s", check_halted, safe_status,
-        options={"optimize_intermolecular_interaction_rdkit": True}, max_iters=500,
+        mol_on,
+        "MMFF94s",
+        check_halted,
+        safe_status,
+        options={"optimize_intermolecular_interaction_rdkit": True},
+        max_iters=500,
     )
     dist_on = np.linalg.norm(
         np.array(mol_on.GetConformer().GetAtomPosition(0))
@@ -304,8 +309,12 @@ def test_intermolecular_interaction_toggle():
 
     mol_off = Chem.Mol(combined)
     _iterative_optimize(
-        mol_off, "MMFF94s", check_halted, safe_status,
-        options={"optimize_intermolecular_interaction_rdkit": False}, max_iters=500,
+        mol_off,
+        "MMFF94s",
+        check_halted,
+        safe_status,
+        options={"optimize_intermolecular_interaction_rdkit": False},
+        max_iters=500,
     )
     dist_off = np.linalg.norm(
         np.array(mol_off.GetConformer().GetAtomPosition(0))
@@ -343,8 +352,12 @@ def test_intermolecular_interaction_uff():
 
     mol_off = Chem.Mol(combined)
     _iterative_optimize(
-        mol_off, "UFF", check_halted, safe_status,
-        options={"optimize_intermolecular_interaction_rdkit": False}, max_iters=500,
+        mol_off,
+        "UFF",
+        check_halted,
+        safe_status,
+        options={"optimize_intermolecular_interaction_rdkit": False},
+        max_iters=500,
     )
     dist_off = np.linalg.norm(
         np.array(mol_off.GetConformer().GetAtomPosition(0))

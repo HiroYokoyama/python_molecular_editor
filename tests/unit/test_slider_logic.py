@@ -1,4 +1,5 @@
-﻿"""Unit tests for geometry dialog slider and spinbox synchronization."""
+"""Unit tests for geometry dialog slider and spinbox synchronization."""
+
 from moleditpy.ui.angle_dialog import AngleDialog
 from moleditpy.ui.dihedral_dialog import DihedralDialog
 from rdkit import Chem

@@ -1,4 +1,5 @@
-﻿"""Unit tests for MOL, SDF, SMILES, and XYZ file parsers."""
+"""Unit tests for MOL, SDF, SMILES, and XYZ file parsers."""
+
 import os
 import sys
 import pytest
@@ -381,7 +382,9 @@ def test_load_xyz_recovery_loop_retries(mock_parser_host, tmp_path):
         RuntimeError("prompt fail"),
         None,
     ]
-    parser.prompt_for_charge = MagicMock(side_effect=[(0, True, False), (1, True, False)])
+    parser.prompt_for_charge = MagicMock(
+        side_effect=[(0, True, False), (1, True, False)]
+    )
     mol = parser.load_xyz_file(str(path))
     assert mol is not None
     assert mol.GetIntProp("_xyz_charge") == 1

@@ -1,4 +1,5 @@
-﻿"""Unit tests for implicit hydrogen management."""
+"""Unit tests for implicit hydrogen management."""
+
 from moleditpy.ui.edit_actions_logic import EditActionsManager
 from PyQt6.QtCore import QPointF
 from unittest.mock import patch

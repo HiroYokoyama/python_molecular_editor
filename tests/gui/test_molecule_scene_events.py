@@ -1,5 +1,6 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """GUI tests for MoleculeScene mouse and keyboard events."""
+
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QKeyEvent
 

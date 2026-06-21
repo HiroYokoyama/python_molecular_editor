@@ -1,5 +1,6 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """GUI tests for settings persistence through MainWindow."""
+
 import os
 from unittest.mock import MagicMock
 from PyQt6.QtGui import QColor

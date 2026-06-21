@@ -1,4 +1,5 @@
-﻿"""Unit tests for PluginContext and Plugin3DController delegation API."""
+"""Unit tests for PluginContext and Plugin3DController delegation API."""
+
 import pytest
 from unittest.mock import MagicMock
 from moleditpy.plugins.plugin_interface import PluginContext, Plugin3DController
@@ -21,91 +22,127 @@ class TestPluginInterface:
         assert ctx._manager == mock_manager
         assert ctx._plugin_name == "TestPlugin"
 
-    @pytest.mark.parametrize("invoke,check", [
-        (
-            lambda ctx, cb: ctx.add_menu_action("File/Test", cb, "Test Action", "icon.png", "Ctrl+T"),
-            lambda mgr, cb: mgr.register_menu_action.assert_called_once_with(
-                "TestPlugin", "File/Test", cb, "Test Action", "icon.png", "Ctrl+T"),
-        ),
-        (
-            lambda ctx, cb: ctx.add_toolbar_action(cb, "Toolbar Action", "icon.png", "Tooltip"),
-            lambda mgr, cb: mgr.register_toolbar_action.assert_called_once_with(
-                "TestPlugin", cb, "Toolbar Action", "icon.png", "Tooltip"),
-        ),
-        (
-            lambda ctx, cb: ctx.register_drop_handler(cb, 5),
-            lambda mgr, cb: mgr.register_drop_handler.assert_called_once_with(
-                "TestPlugin", cb, 5),
-        ),
-        (
-            lambda ctx, cb: ctx.add_export_action("Export Plugin", cb),
-            lambda mgr, cb: mgr.register_export_action.assert_called_once_with(
-                "TestPlugin", "Export Plugin", cb),
-        ),
-        (
-            lambda ctx, cb: ctx.register_optimization_method("My Opt", cb),
-            lambda mgr, cb: mgr.register_optimization_method.assert_called_once_with(
-                "TestPlugin", "My Opt", cb),
-        ),
-        (
-            lambda ctx, cb: ctx.register_file_opener(".ext", cb, 10),
-            lambda mgr, cb: mgr.register_file_opener.assert_called_once_with(
-                "TestPlugin", ".ext", cb, 10),
-        ),
-        (
-            lambda ctx, cb: ctx.add_analysis_tool("Analyze This", cb),
-            lambda mgr, cb: mgr.register_analysis_tool.assert_called_once_with(
-                "TestPlugin", "Analyze This", cb),
-        ),
-        (
-            lambda ctx, cb: ctx.register_save_handler(cb),
-            lambda mgr, cb: mgr.register_save_handler.assert_called_once_with(
-                "TestPlugin", cb),
-        ),
-        (
-            lambda ctx, cb: ctx.register_load_handler(cb),
-            lambda mgr, cb: mgr.register_load_handler.assert_called_once_with(
-                "TestPlugin", cb),
-        ),
-        (
-            lambda ctx, cb: ctx.register_3d_style("My Style", cb),
-            lambda mgr, cb: mgr.register_3d_style.assert_called_once_with(
-                "TestPlugin", "My Style", cb),
-        ),
-        (
-            lambda ctx, cb: ctx.register_document_reset_handler(cb),
-            lambda mgr, cb: mgr.register_document_reset_handler.assert_called_once_with(
-                "TestPlugin", cb),
-        ),
-        (
-            lambda ctx, _: ctx.push_undo_checkpoint(),
-            lambda mgr, _: mgr.push_undo_checkpoint.assert_called_once(),
-        ),
-        (
-            lambda ctx, _: ctx.get_selected_atom_indices(),
-            lambda mgr, _: mgr.get_selected_atom_indices.assert_called_once(),
-        ),
-        (
-            lambda ctx, cb: ctx.register_window("win1", cb),
-            lambda mgr, cb: mgr.register_window.assert_called_once_with(
-                "TestPlugin", "win1", cb),
-        ),
-        (
-            lambda ctx, _: ctx.get_window("win1"),
-            lambda mgr, _: mgr.get_window.assert_called_once_with("TestPlugin", "win1"),
-        ),
-        (
-            lambda ctx, _: ctx.show_status_message("hello", 1000),
-            lambda mgr, _: mgr.show_status_message.assert_called_once_with("hello", 1000),
-        ),
-    ], ids=[
-        "add_menu_action", "add_toolbar_action", "register_drop_handler",
-        "add_export_action", "register_optimization_method", "register_file_opener",
-        "add_analysis_tool", "register_save_handler", "register_load_handler",
-        "register_3d_style", "register_document_reset_handler",
-        "push_undo_checkpoint", "get_selected_atom_indices",
-        "register_window", "get_window", "show_status_message",
-    ])
+    @pytest.mark.parametrize(
+        "invoke,check",
+        [
+            (
+                lambda ctx, cb: ctx.add_menu_action(
+                    "File/Test", cb, "Test Action", "icon.png", "Ctrl+T"
+                ),
+                lambda mgr, cb: mgr.register_menu_action.assert_called_once_with(
+                    "TestPlugin", "File/Test", cb, "Test Action", "icon.png", "Ctrl+T"
+                ),
+            ),
+            (
+                lambda ctx, cb: ctx.add_toolbar_action(
+                    cb, "Toolbar Action", "icon.png", "Tooltip"
+                ),
+                lambda mgr, cb: mgr.register_toolbar_action.assert_called_once_with(
+                    "TestPlugin", cb, "Toolbar Action", "icon.png", "Tooltip"
+                ),
+            ),
+            (
+                lambda ctx, cb: ctx.register_drop_handler(cb, 5),
+                lambda mgr, cb: mgr.register_drop_handler.assert_called_once_with(
+                    "TestPlugin", cb, 5
+                ),
+            ),
+            (
+                lambda ctx, cb: ctx.add_export_action("Export Plugin", cb),
+                lambda mgr, cb: mgr.register_export_action.assert_called_once_with(
+                    "TestPlugin", "Export Plugin", cb
+                ),
+            ),
+            (
+                lambda ctx, cb: ctx.register_optimization_method("My Opt", cb),
+                lambda mgr,
+                cb: mgr.register_optimization_method.assert_called_once_with(
+                    "TestPlugin", "My Opt", cb
+                ),
+            ),
+            (
+                lambda ctx, cb: ctx.register_file_opener(".ext", cb, 10),
+                lambda mgr, cb: mgr.register_file_opener.assert_called_once_with(
+                    "TestPlugin", ".ext", cb, 10
+                ),
+            ),
+            (
+                lambda ctx, cb: ctx.add_analysis_tool("Analyze This", cb),
+                lambda mgr, cb: mgr.register_analysis_tool.assert_called_once_with(
+                    "TestPlugin", "Analyze This", cb
+                ),
+            ),
+            (
+                lambda ctx, cb: ctx.register_save_handler(cb),
+                lambda mgr, cb: mgr.register_save_handler.assert_called_once_with(
+                    "TestPlugin", cb
+                ),
+            ),
+            (
+                lambda ctx, cb: ctx.register_load_handler(cb),
+                lambda mgr, cb: mgr.register_load_handler.assert_called_once_with(
+                    "TestPlugin", cb
+                ),
+            ),
+            (
+                lambda ctx, cb: ctx.register_3d_style("My Style", cb),
+                lambda mgr, cb: mgr.register_3d_style.assert_called_once_with(
+                    "TestPlugin", "My Style", cb
+                ),
+            ),
+            (
+                lambda ctx, cb: ctx.register_document_reset_handler(cb),
+                lambda mgr,
+                cb: mgr.register_document_reset_handler.assert_called_once_with(
+                    "TestPlugin", cb
+                ),
+            ),
+            (
+                lambda ctx, _: ctx.push_undo_checkpoint(),
+                lambda mgr, _: mgr.push_undo_checkpoint.assert_called_once(),
+            ),
+            (
+                lambda ctx, _: ctx.get_selected_atom_indices(),
+                lambda mgr, _: mgr.get_selected_atom_indices.assert_called_once(),
+            ),
+            (
+                lambda ctx, cb: ctx.register_window("win1", cb),
+                lambda mgr, cb: mgr.register_window.assert_called_once_with(
+                    "TestPlugin", "win1", cb
+                ),
+            ),
+            (
+                lambda ctx, _: ctx.get_window("win1"),
+                lambda mgr, _: mgr.get_window.assert_called_once_with(
+                    "TestPlugin", "win1"
+                ),
+            ),
+            (
+                lambda ctx, _: ctx.show_status_message("hello", 1000),
+                lambda mgr, _: mgr.show_status_message.assert_called_once_with(
+                    "hello", 1000
+                ),
+            ),
+        ],
+        ids=[
+            "add_menu_action",
+            "add_toolbar_action",
+            "register_drop_handler",
+            "add_export_action",
+            "register_optimization_method",
+            "register_file_opener",
+            "add_analysis_tool",
+            "register_save_handler",
+            "register_load_handler",
+            "register_3d_style",
+            "register_document_reset_handler",
+            "push_undo_checkpoint",
+            "get_selected_atom_indices",
+            "register_window",
+            "get_window",
+            "show_status_message",
+        ],
+    )
     def test_delegates_to_manager(self, mock_manager, invoke, check):
         cb = MagicMock()
         ctx = PluginContext(mock_manager, "TestPlugin")

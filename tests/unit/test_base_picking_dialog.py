@@ -123,11 +123,15 @@ def test_key_other_key_passes_to_super(app):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("invoke", [
-    lambda dlg: dlg.closeEvent(QCloseEvent()),
-    lambda dlg: dlg.reject(),
-    lambda dlg: dlg.accept(),
-], ids=["closeEvent", "reject", "accept"])
+@pytest.mark.parametrize(
+    "invoke",
+    [
+        lambda dlg: dlg.closeEvent(QCloseEvent()),
+        lambda dlg: dlg.reject(),
+        lambda dlg: dlg.accept(),
+    ],
+    ids=["closeEvent", "reject", "accept"],
+)
 def test_cleanup_clears_labels_and_disables_picking(app, invoke):
     dlg, _, _ = _make_dlg(app)
     with (

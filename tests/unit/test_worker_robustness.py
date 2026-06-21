@@ -1,4 +1,5 @@
-﻿"""Unit tests for CalculationWorker robustness and error handling."""
+"""Unit tests for CalculationWorker robustness and error handling."""
+
 import pytest
 from unittest.mock import MagicMock
 from rdkit import Chem

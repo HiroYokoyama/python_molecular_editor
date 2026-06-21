@@ -142,12 +142,15 @@ class TestPromptForCharge:
     def _make_io(self):
         return IOManager(DummyHost())
 
-    @pytest.mark.parametrize("text,expected_charge", [
-        ("0", 0),
-        ("2", 2),
-        ("-1", -1),
-        ("abc", 0),  # non-numeric falls back to 0
-    ])
+    @pytest.mark.parametrize(
+        "text,expected_charge",
+        [
+            ("0", 0),
+            ("2", 2),
+            ("-1", -1),
+            ("abc", 0),  # non-numeric falls back to 0
+        ],
+    )
     def test_accept_returns_charge(self, qapp, text, expected_charge):
         io = self._make_io()
         with _make_charge_dialog(line_edit_text=text, accepted=True):
@@ -177,6 +180,7 @@ class TestPromptForCharge:
                 class _Sig:
                     def connect(self_, cb):
                         captured_cb.append(cb)
+
                 return _Sig()
 
         with _make_charge_dialog(skip_btn_class=FakeSkipBtn) as (MockDlg, _):

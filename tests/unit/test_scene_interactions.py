@@ -1,4 +1,5 @@
-﻿"""Unit tests for MoleculeScene mouse event handling."""
+"""Unit tests for MoleculeScene mouse event handling."""
+
 import math
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QTransform

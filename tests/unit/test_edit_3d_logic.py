@@ -1,4 +1,5 @@
-﻿"""Unit tests for Edit3DManager 3D structure editing operations."""
+"""Unit tests for Edit3DManager 3D structure editing operations."""
+
 import pytest
 import numpy as np
 from moleditpy.ui.edit_3d_logic import Edit3DManager

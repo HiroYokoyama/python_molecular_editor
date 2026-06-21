@@ -1,4 +1,5 @@
-﻿"""Unit tests for SettingsTabBase slider helpers."""
+"""Unit tests for SettingsTabBase slider helpers."""
+
 from unittest.mock import MagicMock
 from PyQt6.QtWidgets import QFrame, QSlider, QHBoxLayout
 from moleditpy.ui.settings_tabs.settings_tab_base import SettingsTabBase

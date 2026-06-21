@@ -1,4 +1,5 @@
-﻿"""Unit tests for mol_geometry coordinate math and 3D calculations."""
+"""Unit tests for mol_geometry coordinate math and 3D calculations."""
+
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdMolTransforms

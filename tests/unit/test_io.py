@@ -1,4 +1,5 @@
-﻿"""Unit tests for IOManager file I/O operations."""
+"""Unit tests for IOManager file I/O operations."""
+
 import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
