@@ -133,34 +133,15 @@ def test_apply_settings_updates_parent_settings(app):
     )
 
 
-def test_apply_settings_calls_save_settings(app):
+def test_apply_settings_fires_all_side_effects(app):
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.parent_window = _make_parent()
     dialog.apply_settings()
-    dialog.parent_window.init_manager.save_settings.assert_called()
-
-
-def test_apply_settings_calls_apply_3d_settings(app):
-    dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
-    dialog.parent_window = _make_parent()
-    dialog.apply_settings()
-    dialog.parent_window.view_3d_manager.apply_3d_settings.assert_called()
-
-
-def test_apply_settings_calls_update_cpk_colors(app):
-    dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
-    dialog.parent_window = _make_parent()
-    dialog.apply_settings()
-    dialog.parent_window.init_manager.update_cpk_colors_from_settings.assert_called()
-
-
-def test_apply_settings_shows_status_message(app):
-    dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
-    dialog.parent_window = _make_parent()
-    dialog.apply_settings()
-    dialog.parent_window.statusBar.return_value.showMessage.assert_called_with(
-        "Settings applied successfully"
-    )
+    p = dialog.parent_window
+    p.init_manager.save_settings.assert_called()
+    p.view_3d_manager.apply_3d_settings.assert_called()
+    p.init_manager.update_cpk_colors_from_settings.assert_called()
+    p.statusBar.return_value.showMessage.assert_called_with("Settings applied successfully")
 
 
 def test_apply_settings_redraws_molecule_when_present(app):
