@@ -392,7 +392,7 @@ Direct access to the `pyvista.Plotter` instance. Use for adding custom actors, t
 
 ### 2.6 Window & State Management (Namespaced)
 
-In V2, plugins often attached windows directly to `mw`. In V3, use the **Namespaced Registry**. This keeps your windows alive in memory and prevents ID collisions with other plugins.
+Use the **Namespaced Registry** to keep your windows alive in memory and prevent ID collisions with other plugins.
 
 | Method | Description |
 | :--- | :--- |
@@ -559,7 +559,7 @@ def highlight_selection(context):
 
 ---
 
-## 5. Migration Guide (V2 to V3)
+## 5. Legacy vs. Modern API Quick Reference
 
 | Legacy Pattern (Direct Access) | Modern Pattern (Best Practice) |
 | :--- | :--- |
@@ -588,10 +588,10 @@ def highlight_selection(context):
 
 ## 6. Advanced: MainWindow Internals (Low-Level)
 
-While V3 encourages using `context`, sometimes you need direct access to the `MainWindow` (`mw`) for specialized Qt or PyVista operations. Obtain it via `mw = context.get_main_window()`.
+While the `PluginContext` API covers most use cases, sometimes you need direct access to the `MainWindow` (`mw`) for specialized Qt or PyVista operations. Obtain it via `mw = context.get_main_window()`.
 
 ### 6.1 Core Proxy Properties (Convenience)
-V4 maintains several proxy properties on `mw` for backward compatibility and convenience.
+Several proxy properties on `mw` are available for convenience.
 
 | Attribute / Method | Description |
 | :--- | :--- |
@@ -601,7 +601,7 @@ V4 maintains several proxy properties on `mw` for backward compatibility and con
 | `mw.draw_molecule_3d(mol)` | Proxy method to trigger a full 3D redraw of the scene. |
 
 ### 6.2 The Managed Architecture
-In Version 3.0, most core logic is separated into specialized **Managers**. If a feature is not available as a proxy on `mw`, you should look in the corresponding manager.
+Most core logic is separated into specialized **Managers**. If a feature is not available as a proxy on `mw`, look in the corresponding manager.
 
 | Attribute Path | Type | Description |
 | :--- | :--- | :--- |
@@ -616,14 +616,12 @@ In Version 3.0, most core logic is separated into specialized **Managers**. If a
 #### Example: Setting the Editor Mode
 ```python
 mw = context.get_main_window()
-# Correct V3 way to switch to Carbon draw mode
 mw.ui_manager.set_mode("atom_C")
 ```
 
 #### Example: Triggering Coordinate Conversion (2D to 3D)
 ```python
 mw = context.get_main_window()
-# Correct V3 way to trigger the internal conversion logic (if molecule is already loaded)
 mw.compute_manager.trigger_conversion()
 ```
 
@@ -646,7 +644,7 @@ For operations not yet wrapped by `PluginContext`, access `mw` directly:
 
 ## 7. Legacy Support (Compatibility Mode)
 
-MoleditPy 3.0 remains compatible with older plugin patterns, though they are considered deprecated.
+MoleditPy remains compatible with older plugin patterns, though they are considered deprecated.
 
 ### 7.1 The `run(mw)` Function
 
@@ -667,7 +665,7 @@ def run(main_window):
     main_window.statusBar().showMessage(f"Atom count: {n}", 4000)
 ```
 
-This is the fastest way to ship a one-action tool. The trade-off is that you get `main_window` directly (V2 style) instead of the stable `PluginContext` proxy. For new plugins, prefer `initialize(context)` so you benefit from the V3 API.
+This is the fastest way to ship a one-action tool. The trade-off is that you get `main_window` directly instead of the stable `PluginContext` proxy. For new plugins, prefer `initialize(context)`.
 
 > [!TIP]
 > You can mix both: define `run(mw)` for the quick Plugins-menu entry **and** `initialize(context)` for additional menu actions or file handlers in the same file.
@@ -684,7 +682,7 @@ def run(main_window):
         main_window.statusBar().showMessage(f"Bonds: {mol.GetNumBonds()}", 3000)
 
 def initialize(context):
-    """Register extra menu entries via the V3 API."""
+    """Register extra menu entries."""
     context.add_analysis_tool("Bond Inspector", lambda: _show_bonds(context))
 
 def _show_bonds(context):
@@ -706,7 +704,7 @@ def autorun(main_window):
     logging.info("MoleditPy started — Startup Logger active.")
 ```
 
-Prefer `initialize(context)` for all modern plugins. `autorun` has no equivalent in the V3 API on purpose; startup side-effects belong inside `initialize`.
+Prefer `initialize(context)` for all modern plugins. `autorun` has no equivalent in the modern API on purpose; startup side-effects belong inside `initialize`.
 
 ---
 
@@ -735,7 +733,7 @@ Use `context.register_window()` for all persistent UI elements (dialogs, panels)
 MoleditPy uses **0-based RDKit indices**. These may differ from atom numbers in some chemical file formats. Always verify your mappings.
 
 ### 8.5 Hot Reloading
-Use **Plugins > Reload All Plugins** to pick up code changes without restarting. V3 plugins survive reloads correctly as long as all persistent windows are registered via `context.register_window()`.
+Use **Plugins > Reload All Plugins** to pick up code changes without restarting. Plugins survive reloads correctly as long as all persistent windows are registered via `context.register_window()`.
 
 ---
 
@@ -855,7 +853,7 @@ def add_sphere(context):
 ```
 
 ### 10.3 Persistent Dock Panel (Singleton)
-V3 uses `register_window` to keep panels alive and manage their unique identity across the entire session.
+Use `register_window` to keep panels alive and manage their unique identity across the entire session.
 
 ```python
 from PyQt6.QtWidgets import QDockWidget, QLabel, QVBoxLayout, QWidget
@@ -923,7 +921,7 @@ def load_smiles(path, context):
 ```
 
 ### 10.5 Custom 3D Style (Dynamic Overrides)
-Custom styles in V3 should combine standard drawing with custom elements.
+Custom styles should combine standard drawing with custom elements.
 
 ```python
 PLUGIN_NAME = "High-Contrast Style"
