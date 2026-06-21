@@ -145,6 +145,35 @@ def run_suite(
         return 1
 
 
+def run_pylint_and_update_score(base_dir):
+    """Run pylint on the main package and update tests/pylint-score.txt."""
+    import re
+
+    score_path = os.path.join(base_dir, "tests", "pylint-score.txt")
+    src_path = os.path.join(base_dir, "moleditpy", "src", "moleditpy")
+
+    print("\n>>> Running Pylint...", flush=True)
+    result = subprocess.run(
+        [sys.executable, "-m", "pylint", src_path],
+        capture_output=True,
+        text=True,
+        cwd=base_dir,
+    )
+
+    output = result.stdout + result.stderr
+    # Print full pylint output so it's visible
+    print(output, flush=True)
+
+    match = re.search(r"Your code has been rated at ([\d.]+/10)", output)
+    if match:
+        score_line = f"Your code has been rated at {match.group(1)}"
+        with open(score_path, "w", encoding="utf-8") as f:
+            f.write(score_line)
+        print(f"  Pylint score updated: {match.group(1)}", flush=True)
+    else:
+        print("  Warning: could not parse pylint score from output.", flush=True)
+
+
 def print_coverage_summary(base_dir):
     """Prints the coverage summary from the markdown report or JSON files."""
     try:
@@ -213,6 +242,11 @@ if __name__ == "__main__":
         "--skip-catalog",
         action="store_true",
         help="Skip updating catalog during reporting",
+    )
+    parser.add_argument(
+        "--pylint",
+        action="store_true",
+        help="Run pylint on moleditpy/ after tests pass and update tests/pylint-score.txt",
     )
 
     # Capture all remaining arguments to pass to pytest
@@ -361,6 +395,9 @@ if __name__ == "__main__":
                     ],
                     cwd=BASE_DIR,
                 )
+
+        if args.pylint:
+            run_pylint_and_update_score(BASE_DIR)
 
         sys.exit(0)
     else:

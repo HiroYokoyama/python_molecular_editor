@@ -51,6 +51,11 @@ Speed up dev testing (fail fast / exit on first failure, run each suite at most 
 python tests/run_all_tests.py --unit --no-cov --no-report -x
 ```
 
+Run full suite + pylint in one pass (updates `tests/pylint-score.txt` automatically):
+```bash
+MOLEDITPY_HEADLESS=1 QT_QPA_PLATFORM=offscreen python tests/run_all_tests.py --pylint
+```
+
 ## Linting
 
 ```bash
@@ -58,6 +63,8 @@ pylint moleditpy/src/moleditpy/
 ```
 
 Target score: > 9.0/10. PEP 8 compliance required. Type hints required for all functions and methods.
+
+The `--pylint` flag on `run_all_tests.py` runs pylint automatically after all tests pass and writes the score to `tests/pylint-score.txt`.
 
 ## Scope
 
