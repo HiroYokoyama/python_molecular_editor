@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeyEvent
+from PyQt6.QtGui import QKeyEvent, QCloseEvent
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
@@ -123,39 +123,20 @@ def test_key_other_key_passes_to_super(app):
 # ---------------------------------------------------------------------------
 
 
-def test_close_event_clears_labels_and_disables_picking(app):
-    from PyQt6.QtGui import QCloseEvent
-
-    dlg, _, _ = _make_dlg(app)
-    with (
-        patch.object(dlg, "clear_atom_labels") as mock_clear,
-        patch.object(dlg, "disable_picking") as mock_disable,
-    ):
-        dlg.closeEvent(QCloseEvent())
-    mock_clear.assert_called_once()
-    mock_disable.assert_called_once()
-
-
-def test_reject_clears_labels_and_disables_picking(app):
+@pytest.mark.parametrize("invoke", [
+    lambda dlg: dlg.closeEvent(QCloseEvent()),
+    lambda dlg: dlg.reject(),
+    lambda dlg: dlg.accept(),
+], ids=["closeEvent", "reject", "accept"])
+def test_cleanup_clears_labels_and_disables_picking(app, invoke):
     dlg, _, _ = _make_dlg(app)
     with (
         patch.object(dlg, "clear_atom_labels") as mock_clear,
         patch.object(dlg, "disable_picking") as mock_disable,
         patch("moleditpy.ui.base_picking_dialog.QDialog.reject"),
-    ):
-        dlg.reject()
-    mock_clear.assert_called_once()
-    mock_disable.assert_called_once()
-
-
-def test_accept_clears_labels_and_disables_picking(app):
-    dlg, _, _ = _make_dlg(app)
-    with (
-        patch.object(dlg, "clear_atom_labels") as mock_clear,
-        patch.object(dlg, "disable_picking") as mock_disable,
         patch("moleditpy.ui.base_picking_dialog.QDialog.accept"),
     ):
-        dlg.accept()
+        invoke(dlg)
     mock_clear.assert_called_once()
     mock_disable.assert_called_once()
 

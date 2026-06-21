@@ -80,19 +80,11 @@ class TestMarkProjectModified(unittest.TestCase):
 
 
 class TestRefreshUi(unittest.TestCase):
-    def test_calls_update_realtime_info(self):
+    def test_calls_all_required_managers(self):
         mw = MagicMock()
         _make_context(mw).refresh_ui()
         mw.state_manager.update_realtime_info.assert_called_once()
-
-    def test_calls_update_undo_redo_actions(self):
-        mw = MagicMock()
-        _make_context(mw).refresh_ui()
         mw.edit_actions_manager.update_undo_redo_actions.assert_called_once()
-
-    def test_calls_update_window_title(self):
-        mw = MagicMock()
-        _make_context(mw).refresh_ui()
         mw.state_manager.update_window_title.assert_called_once()
 
     def test_no_crash_when_managers_missing(self):

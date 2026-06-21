@@ -22,39 +22,22 @@ from unittest.mock import patch, MagicMock
 
 def _make_window():
     """Instantiate MainWindow with all heavy managers patched."""
-    patches = [
-        "moleditpy.ui.main_window.ExportManager",
-        "moleditpy.ui.main_window.View3DManager",
-        "moleditpy.ui.main_window.Edit3DManager",
-        "moleditpy.ui.main_window.EditActionsManager",
-        "moleditpy.ui.main_window.ComputeManager",
-        "moleditpy.ui.main_window.DialogManager",
-        "moleditpy.ui.main_window.IOManager",
-        "moleditpy.ui.main_window.StateManager",
-        "moleditpy.ui.main_window.StringImporterManager",
-        "moleditpy.ui.main_window.UIManager",
-        "moleditpy.ui.main_window.MainInitManager",
-    ]
-    with patch.multiple(
-        "moleditpy.ui.main_window", **{p.split(".")[-1]: MagicMock() for p in patches}
-    ):
-        from moleditpy.ui.main_window import MainWindow
+    from moleditpy.ui.main_window import MainWindow
 
-        # Patch all at module level
-        with (
-            patch("moleditpy.ui.main_window.ExportManager"),
-            patch("moleditpy.ui.main_window.View3DManager"),
-            patch("moleditpy.ui.main_window.Edit3DManager"),
-            patch("moleditpy.ui.main_window.EditActionsManager"),
-            patch("moleditpy.ui.main_window.ComputeManager"),
-            patch("moleditpy.ui.main_window.DialogManager"),
-            patch("moleditpy.ui.main_window.IOManager"),
-            patch("moleditpy.ui.main_window.StateManager"),
-            patch("moleditpy.ui.main_window.StringImporterManager"),
-            patch("moleditpy.ui.main_window.UIManager"),
-            patch("moleditpy.ui.main_window.MainInitManager"),
-        ):
-            mw = MainWindow()
+    with (
+        patch("moleditpy.ui.main_window.ExportManager"),
+        patch("moleditpy.ui.main_window.View3DManager"),
+        patch("moleditpy.ui.main_window.Edit3DManager"),
+        patch("moleditpy.ui.main_window.EditActionsManager"),
+        patch("moleditpy.ui.main_window.ComputeManager"),
+        patch("moleditpy.ui.main_window.DialogManager"),
+        patch("moleditpy.ui.main_window.IOManager"),
+        patch("moleditpy.ui.main_window.StateManager"),
+        patch("moleditpy.ui.main_window.StringImporterManager"),
+        patch("moleditpy.ui.main_window.UIManager"),
+        patch("moleditpy.ui.main_window.MainInitManager"),
+    ):
+        mw = MainWindow()
     return mw
 
 
