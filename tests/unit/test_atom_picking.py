@@ -94,22 +94,27 @@ def _view():
 
 
 def test_pick_atom_index_from_screen_hits_projected_atom_edge():
+    """Click on a projected atom edge returns that atom's index."""
     assert pick_atom_index_from_screen(_view(), (111, 100), _Mol()) == 0
 
 
 def test_pick_atom_index_from_screen_returns_none_for_background():
+    """Click on empty background returns None."""
     assert pick_atom_index_from_screen(_view(), (200, 200), _Mol()) is None
 
 
 def test_pick_atom_index_from_screen_vectorized_success():
+    """Vectorized implementation returns the correct atom index on a hit."""
     assert pick_atom_index_from_screen_vectorized(_view(), (111, 100), _Mol()) == 0
 
 
 def test_pick_atom_index_from_screen_sequential_success():
+    """Sequential implementation returns the correct atom index on a hit."""
     assert pick_atom_index_from_screen_sequential(_view(), (111, 100), _Mol()) == 0
 
 
 def test_pick_atom_index_from_screen_fallback():
+    """Falls back to sequential picking when the camera is unavailable."""
     view_obj = _view()
     # Deliberately mock GetActiveCamera as None to force fallback to sequential
     view_obj.plotter.renderer.GetActiveCamera = None

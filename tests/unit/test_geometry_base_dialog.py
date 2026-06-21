@@ -110,17 +110,20 @@ def _input():
 
 class TestSyncInputToSlider:
     def test_valid_float_sets_slider(self, dlg):
+        """A valid float string sets the slider to the scaled integer value."""
         s = _slider()
         dlg._sync_input_to_slider("2.50", s, scale=100.0)
         assert s.value() == 250
 
     def test_invalid_text_is_ignored(self, dlg):
+        """Non-numeric input leaves the slider value unchanged."""
         s = _slider()
         s.setValue(123)
         dlg._sync_input_to_slider("not_a_number", s, scale=1.0)
         assert s.value() == 123  # unchanged
 
     def test_wrap_true_normalises_into_range(self, dlg):
+        """wrap=True normalises angles outside (-180, 180] into that range."""
         s = _slider()
         s.setMinimum(-180)
         s.setMaximum(180)
@@ -129,6 +132,7 @@ class TestSyncInputToSlider:
         assert s.value() == -90
 
     def test_wrap_false_uses_raw_value(self, dlg):
+        """wrap=False sets the slider to the raw float value without normalising."""
         s = _slider()
         s.setMinimum(-180)
         s.setMaximum(180)
@@ -143,12 +147,14 @@ class TestSyncInputToSlider:
 
 class TestOnSliderPressed:
     def test_incomplete_selection_is_noop(self, dlg):
+        """on_slider_pressed is a no-op when selection is incomplete."""
         dlg._complete = False
         dlg.on_slider_pressed()
         assert not dlg._slider_dragging
         assert dlg._snapshot_positions is None
 
     def test_complete_selection_sets_dragging_and_snapshot(self, dlg):
+        """on_slider_pressed with complete selection sets _slider_dragging and snapshots positions."""
         dlg._complete = True
         dlg.on_slider_pressed()
         assert dlg._slider_dragging is True
@@ -163,11 +169,13 @@ class TestOnSliderPressed:
 
 class TestOnSliderReleased:
     def test_clears_dragging_flag(self, dlg):
+        """on_slider_released sets _slider_dragging to False."""
         dlg._slider_dragging = True
         dlg.on_slider_released()
         assert dlg._slider_dragging is False
 
     def test_calls_draw_molecule_3d(self, dlg):
+        """on_slider_released triggers a 3D redraw of the molecule."""
         dlg.on_slider_released()
         dlg.main_window.view_3d_manager.draw_molecule_3d.assert_called_once_with(
             dlg.mol
@@ -181,6 +189,7 @@ class TestOnSliderReleased:
 
 class TestOnSliderValueChangedClick:
     def test_skips_when_dragging(self, dlg):
+        """on_slider_value_changed_click returns early while the slider is being dragged."""
         dlg._slider_dragging = True
         dlg._complete = True
         inp = _input()
@@ -188,6 +197,7 @@ class TestOnSliderValueChangedClick:
         assert dlg.applied_values == []
 
     def test_skips_when_selection_incomplete(self, dlg):
+        """on_slider_value_changed_click returns early when selection is incomplete."""
         dlg._slider_dragging = False
         dlg._complete = False
         inp = _input()
@@ -195,6 +205,7 @@ class TestOnSliderValueChangedClick:
         assert dlg.applied_values == []
 
     def test_updates_input_and_calls_apply(self, dlg):
+        """on_slider_value_changed_click updates the text box and calls apply_geometry_update."""
         dlg._slider_dragging = False
         dlg._complete = True
         dlg._snapshot_positions = dlg.mol.GetConformer().GetPositions().copy()
@@ -211,12 +222,14 @@ class TestOnSliderValueChangedClick:
 
 class TestOnSliderMovedRealtime:
     def test_skips_when_incomplete(self, dlg):
+        """on_slider_moved_realtime is a no-op when selection is incomplete."""
         dlg._complete = False
         inp = _input()
         dlg.on_slider_moved_realtime(100, inp, scale=100.0)
         assert dlg.applied_values == []
 
     def test_updates_input_and_calls_apply(self, dlg):
+        """on_slider_moved_realtime updates the text box and calls apply_geometry_update."""
         dlg._complete = True
         inp = _input()
         dlg.on_slider_moved_realtime(200, inp, scale=100.0)
@@ -226,12 +239,14 @@ class TestOnSliderMovedRealtime:
 
 class TestLoggingErrorFallback:
     def test_missing_chiral_labels_on_released(self, dlg):
+        """on_slider_released does not raise when update_chiral_labels is absent."""
         if hasattr(dlg.main_window.view_3d_manager, "update_chiral_labels"):
             del dlg.main_window.view_3d_manager.update_chiral_labels
         # Should not raise even when update_chiral_labels is absent
         dlg.on_slider_released()
 
     def test_missing_chiral_labels_on_click(self, dlg):
+        """on_slider_value_changed_click does not raise when update_chiral_labels is absent."""
         dlg._slider_dragging = False
         dlg._complete = True
         dlg._snapshot_positions = dlg.mol.GetConformer().GetPositions().copy()

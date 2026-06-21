@@ -173,6 +173,7 @@ class TestOnAtomPicked:
         assert dlg.group_atoms.isdisjoint(frag_b)
 
     def test_selected_atoms_records_clicked_atom(self, make_dialog):
+        """on_atom_picked records the clicked atom index in selected_atoms."""
         dlg, _, _ = make_dialog()
         with (
             patch.object(type(dlg), "show_atom_labels"),
@@ -198,12 +199,14 @@ class TestOnAtomPicked:
 
 class TestUpdateDisplay:
     def test_no_group_shows_placeholder(self, make_dialog):
+        """update_display shows 'No group' when no atoms are selected."""
         dlg, _, _ = make_dialog()
         dlg.group_atoms.clear()
         dlg.update_display()
         assert "No group" in dlg.selection_label.text()
 
     def test_group_shows_count_and_symbols(self, make_dialog):
+        """update_display shows atom count and symbols when a group is selected."""
         dlg, mol, _ = make_dialog()
         with (
             patch.object(type(dlg), "show_atom_labels"),
@@ -242,12 +245,14 @@ class TestApplyTranslation:
             dlg.on_atom_picked(0)
 
     def test_no_group_shows_warning(self, make_dialog):
+        """apply_translation shows a warning when no group is selected."""
         dlg, _, _ = make_dialog()
         with patch("moleditpy.ui.move_group_dialog.QMessageBox") as mb:
             dlg.apply_translation()
         mb.warning.assert_called_once()
 
     def test_invalid_input_shows_warning(self, make_dialog):
+        """apply_translation shows a warning when a translation input is non-numeric."""
         dlg, _, _ = make_dialog()
         self._pick_all(dlg)
         dlg.x_trans_input.setText("bad")
@@ -256,6 +261,7 @@ class TestApplyTranslation:
         mb.warning.assert_called_once()
 
     def test_translation_updates_conformer_positions(self, make_dialog):
+        """apply_translation shifts all group atoms by the given XYZ vector."""
         dlg, mol, _ = make_dialog()
         self._pick_all(dlg)
 
@@ -276,6 +282,7 @@ class TestApplyTranslation:
             assert after[idx] == pytest.approx(before[idx] + [1.0, 2.0, 3.0], abs=1e-4)
 
     def test_translation_pushes_undo(self, make_dialog):
+        """apply_translation pushes an undo state after moving the group."""
         dlg, _, mw = make_dialog()
         self._pick_all(dlg)
         with (
@@ -300,12 +307,14 @@ class TestApplyRotation:
             dlg.on_atom_picked(0)
 
     def test_no_group_shows_warning(self, make_dialog):
+        """apply_rotation shows a warning when no group is selected."""
         dlg, _, _ = make_dialog()
         with patch("moleditpy.ui.move_group_dialog.QMessageBox") as mb:
             dlg.apply_rotation()
         mb.warning.assert_called_once()
 
     def test_invalid_input_shows_warning(self, make_dialog):
+        """apply_rotation shows a warning when a rotation input is non-numeric."""
         dlg, _, _ = make_dialog()
         self._pick_all(dlg)
         dlg.x_rot_input.setText("not_a_number")
@@ -314,6 +323,7 @@ class TestApplyRotation:
         mb.warning.assert_called_once()
 
     def test_zero_rotation_leaves_positions_unchanged(self, make_dialog):
+        """apply_rotation with all-zero angles does not move any atom."""
         dlg, mol, _ = make_dialog()
         self._pick_all(dlg)
         before = mol.GetConformer().GetPositions().copy()
@@ -363,6 +373,7 @@ class TestApplyRotation:
         assert after[1] == pytest.approx([0.0, -1.0, 0.0], abs=1e-5)
 
     def test_rotation_pushes_undo(self, make_dialog):
+        """apply_rotation pushes an undo state after rotating the group."""
         dlg, _, mw = make_dialog()
         self._pick_all(dlg)
         with (
@@ -380,6 +391,7 @@ class TestApplyRotation:
 
 class TestResetInputs:
     def test_reset_translation_inputs(self, make_dialog):
+        """reset_translation_inputs sets all three translation fields to '0.0'."""
         dlg, _, _ = make_dialog()
         dlg.x_trans_input.setText("5.5")
         dlg.y_trans_input.setText("-3.0")
@@ -390,6 +402,7 @@ class TestResetInputs:
         assert dlg.z_trans_input.text() == "0.0"
 
     def test_reset_rotation_inputs(self, make_dialog):
+        """reset_rotation_inputs sets all three rotation fields to '0.0'."""
         dlg, _, _ = make_dialog()
         dlg.x_rot_input.setText("45.0")
         dlg.y_rot_input.setText("90.0")
@@ -407,6 +420,7 @@ class TestResetInputs:
 
 class TestClearSelection:
     def test_clear_removes_group_and_selected_atoms(self, make_dialog):
+        """clear_selection empties group_atoms and selected_atoms."""
         dlg, _, _ = make_dialog()
         with (
             patch.object(type(dlg), "show_atom_labels"),
@@ -421,6 +435,7 @@ class TestClearSelection:
         assert len(dlg.selected_atoms) == 0
 
     def test_clear_resets_drag_state(self, make_dialog):
+        """clear_selection resets is_dragging_group and drag_start_pos to their default values."""
         dlg, _, _ = make_dialog()
         dlg.is_dragging_group = True
         dlg.drag_start_pos = (10, 20)
@@ -430,6 +445,7 @@ class TestClearSelection:
         assert dlg.drag_start_pos is None
 
     def test_clear_updates_display(self, make_dialog):
+        """clear_selection updates the display label back to 'No group'."""
         dlg, _, _ = make_dialog()
         with (
             patch.object(type(dlg), "show_atom_labels"),
@@ -442,6 +458,7 @@ class TestClearSelection:
 
 
 def test_show_atom_labels_camera_restore(qapp):
+    """show_atom_labels restores the camera position after adding highlight meshes."""
     from moleditpy.ui.move_group_dialog import MoveGroupDialog
 
     mol = _ethane()
@@ -484,6 +501,7 @@ def test_show_atom_labels_camera_restore(qapp):
 
 class TestInit:
     def test_preselected_atoms_triggers_on_atom_picked(self, make_dialog, qapp):
+        """Passing preselected_atoms to __init__ pre-selects the connected group via BFS."""
         from moleditpy.ui.move_group_dialog import MoveGroupDialog
 
         mol = _ethane()
@@ -499,34 +517,40 @@ class TestInit:
         dlg.close()
 
     def test_no_preselected_atoms_leaves_group_empty(self, make_dialog):
+        """Without preselected_atoms the group_atoms set is empty on init."""
         dlg, _, _ = make_dialog()
         assert len(dlg.group_atoms) == 0
 
     def test_initial_drag_state(self, make_dialog):
+        """MoveGroupDialog initialises with dragging flags all False/None."""
         dlg, _, _ = make_dialog()
         assert dlg.is_dragging_group is False
         assert dlg.drag_start_pos is None
         assert dlg.potential_drag is False
 
     def test_window_title(self, make_dialog):
+        """MoveGroupDialog window title is 'Move Group'."""
         dlg, _, _ = make_dialog()
         assert dlg.windowTitle() == "Move Group"
 
 
 class TestInitUI:
     def test_translation_inputs_default_zero(self, make_dialog):
+        """Translation input fields default to '0.0' on dialog creation."""
         dlg, _, _ = make_dialog()
         assert dlg.x_trans_input.text() == "0.0"
         assert dlg.y_trans_input.text() == "0.0"
         assert dlg.z_trans_input.text() == "0.0"
 
     def test_rotation_inputs_default_zero(self, make_dialog):
+        """Rotation input fields default to '0.0' on dialog creation."""
         dlg, _, _ = make_dialog()
         assert dlg.x_rot_input.text() == "0.0"
         assert dlg.y_rot_input.text() == "0.0"
         assert dlg.z_rot_input.text() == "0.0"
 
     def test_selection_label_initial_text(self, make_dialog):
+        """The selection label shows 'No group' before any atom is picked."""
         dlg, _, _ = make_dialog()
         assert "No group" in dlg.selection_label.text()
 
@@ -626,6 +650,7 @@ class TestApplyRotationAxes:
         assert after[1] == pytest.approx([0.0, 0.0, 1.0], abs=1e-5)
 
     def test_combined_rotation_pushes_undo(self, make_dialog):
+        """apply_rotation with combined XYZ angles pushes an undo state."""
         dlg, _, mw = make_dialog()
         self._pick_all(dlg)
         dlg.x_rot_input.setText("30.0")
@@ -648,6 +673,7 @@ class TestAtomLabels:
             dlg.on_atom_picked(0)
 
     def test_show_atom_labels_calls_plotter_add_mesh(self, make_dialog):
+        """show_atom_labels adds highlight spheres to the plotter and calls render."""
         dlg, mol, mw = make_dialog()
         self._pick_all(dlg)
         mw.view_3d_manager.atom_positions_3d = np.array(
@@ -661,6 +687,7 @@ class TestAtomLabels:
         mock_plotter.render.assert_called()
 
     def test_show_atom_labels_no_group_does_nothing(self, make_dialog):
+        """show_atom_labels does not call add_mesh when group_atoms is empty."""
         dlg, _, mw = make_dialog()
         dlg.group_atoms.clear()
         mw.view_3d_manager.plotter = MagicMock()
@@ -668,6 +695,7 @@ class TestAtomLabels:
         mw.view_3d_manager.plotter.add_mesh.assert_not_called()
 
     def test_clear_atom_labels_removes_highlight_actor(self, make_dialog):
+        """clear_atom_labels removes the highlight actor from the plotter and sets it to None."""
         dlg, _, mw = make_dialog()
         mock_actor = MagicMock()
         dlg.highlight_actor = mock_actor
@@ -681,6 +709,7 @@ class TestAtomLabels:
         assert dlg.highlight_actor is None
 
     def test_clear_atom_labels_none_plotter_does_not_raise(self, make_dialog):
+        """clear_atom_labels does not raise when the plotter is None."""
         dlg, _, mw = make_dialog()
         mw.view_3d_manager.plotter = None
         with patch(
@@ -696,6 +725,7 @@ class TestEventFilter:
         return ev
 
     def test_returns_false_when_plotter_is_none(self, make_dialog):
+        """eventFilter returns False immediately when the plotter is None."""
         dlg, _, mw = make_dialog()
         mw.view_3d_manager.plotter = None
         ev = self._make_event(QEvent.Type.MouseButtonPress)
@@ -703,6 +733,7 @@ class TestEventFilter:
         assert result is False
 
     def test_returns_false_when_mol_is_none(self, make_dialog):
+        """eventFilter returns False immediately when the molecule is None."""
         dlg, _, mw = make_dialog()
         dlg.mol = None
         ev = self._make_event(QEvent.Type.MouseButtonPress)
@@ -710,6 +741,7 @@ class TestEventFilter:
         assert result is False
 
     def test_double_click_resets_state_and_returns_false(self, make_dialog):
+        """A double-click resets dragging flags and returns False."""
         dlg, _, mw = make_dialog()
         dlg.is_dragging_group = True
         dlg.potential_drag = True
@@ -735,6 +767,7 @@ class TestEventFilter:
 
 class TestMoveGroupDeselectToggle:
     def test_on_atom_picked_deselects_connected_group(self, make_dialog):
+        """Re-picking the same atom deselects the entire connected group."""
         dlg, mol, _ = make_dialog()
         with (
             patch.object(type(dlg), "show_atom_labels"),

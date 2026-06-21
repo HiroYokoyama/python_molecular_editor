@@ -101,6 +101,7 @@ def make_dialog(qapp):
 
 class TestOnAtomPicked:
     def test_first_pick_adds_atom(self, make_dialog):
+        """Picking an atom for the first time adds it to selected_atoms."""
         dlg, _, _ = make_dialog()
         with (
             patch.object(type(dlg), "add_selection_label"),
@@ -110,6 +111,7 @@ class TestOnAtomPicked:
         assert 0 in dlg.selected_atoms
 
     def test_second_pick_adds_atom(self, make_dialog):
+        """Picking a second distinct atom accumulates both atoms in selected_atoms."""
         dlg, _, _ = make_dialog()
         with (
             patch.object(type(dlg), "add_selection_label"),
@@ -120,6 +122,7 @@ class TestOnAtomPicked:
         assert dlg.selected_atoms == {0, 1}
 
     def test_third_pick_capped_at_two(self, make_dialog):
+        """A third pick is ignored; AlignmentDialog accepts at most two atoms."""
         dlg, _, _ = make_dialog()
         with (
             patch.object(type(dlg), "add_selection_label"),
@@ -132,6 +135,7 @@ class TestOnAtomPicked:
         assert 2 not in dlg.selected_atoms
 
     def test_repick_deselects(self, make_dialog):
+        """Picking the same atom twice removes it from selected_atoms."""
         dlg, _, _ = make_dialog()
         with (
             patch.object(type(dlg), "add_selection_label"),
@@ -142,6 +146,7 @@ class TestOnAtomPicked:
         assert 0 not in dlg.selected_atoms
 
     def test_enables_apply_when_two_atoms(self, make_dialog):
+        """Selecting two atoms enables the apply button."""
         dlg, _, _ = make_dialog()
         with (
             patch.object(type(dlg), "add_selection_label"),
@@ -159,10 +164,12 @@ class TestOnAtomPicked:
 
 class TestPreselectedAtoms:
     def test_preselected_loaded(self, make_dialog):
+        """Preselected atoms are loaded into selected_atoms on construction."""
         dlg, _, _ = make_dialog(preselected_atoms=[0, 1])
         assert dlg.selected_atoms == {0, 1}
 
     def test_preselected_capped_at_two(self, make_dialog):
+        """More than two preselected atoms are silently capped to two."""
         dlg, _, _ = make_dialog(preselected_atoms=[0, 1, 2])
         assert len(dlg.selected_atoms) == 2
 
@@ -174,6 +181,7 @@ class TestPreselectedAtoms:
 
 class TestClearSelection:
     def test_clears_atoms_and_disables_apply(self, make_dialog):
+        """clear_selection empties selected_atoms and disables the apply button."""
         dlg, _, _ = make_dialog()
         with (
             patch.object(type(dlg), "add_selection_label"),
@@ -194,12 +202,14 @@ class TestClearSelection:
 
 class TestUpdateDisplay:
     def test_zero_atoms_label(self, make_dialog):
+        """update_display with no selection disables the apply button."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms.clear()
         dlg.update_display()
         assert not dlg.apply_button.isEnabled()
 
     def test_one_atom_label_contains_symbol(self, make_dialog):
+        """update_display with one atom shows the element symbol and disables apply."""
         dlg, mol, _ = make_dialog()
         dlg.selected_atoms = {0}
         dlg.update_display()
@@ -208,6 +218,7 @@ class TestUpdateDisplay:
         assert not dlg.apply_button.isEnabled()
 
     def test_two_atoms_enables_apply(self, make_dialog):
+        """update_display with two atoms enables apply and shows count in label."""
         dlg, mol, _ = make_dialog()
         dlg.selected_atoms = {0, 1}
         dlg.update_display()
@@ -222,6 +233,7 @@ class TestUpdateDisplay:
 
 class TestApplyAlignmentGuard:
     def test_fewer_than_two_atoms_shows_warning(self, make_dialog):
+        """apply_alignment shows a warning when fewer than two atoms are selected."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms = {0}
         with patch("moleditpy.ui.alignment_dialog.QMessageBox") as mb:
@@ -229,6 +241,7 @@ class TestApplyAlignmentGuard:
         mb.warning.assert_called_once()
 
     def test_zero_atoms_shows_warning(self, make_dialog):
+        """apply_alignment with empty selection shows a warning."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms.clear()
         with patch("moleditpy.ui.alignment_dialog.QMessageBox") as mb:
@@ -299,6 +312,7 @@ class TestApplyAlignmentMath:
         assert pos[1][2] > 0
 
     def test_apply_pushes_undo(self, make_dialog):
+        """apply_alignment calls push_undo_state to record the geometry change."""
         mol = self._two_atom_mol([0.0, 0.0, 0.0], [0.0, 1.0, 0.0])
         dlg, _, mw = self._make_dlg(make_dialog, mol, "x")
         with patch("moleditpy.ui.alignment_dialog.QMessageBox"):

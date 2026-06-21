@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 
 def test_angle_dialog_wrapping(qtbot):
+    """Angle input > 180 wraps back into the valid signed range."""
     mol = Chem.MolFromSmiles("CCO")
     main_window = MagicMock()
     from rdkit.Chem import AllChem
@@ -31,6 +32,7 @@ def test_angle_dialog_wrapping(qtbot):
 
 
 def test_dihedral_dialog_wrapping(qtbot):
+    """Dihedral input outside [-180, 180] wraps back into the valid signed range."""
     mol = Chem.MolFromSmiles("CCCC")
     main_window = MagicMock()
     from rdkit.Chem import AllChem

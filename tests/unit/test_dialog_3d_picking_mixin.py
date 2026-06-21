@@ -96,6 +96,7 @@ def _release_event():
 
 
 def test_init_defaults(app):
+    """Dialog3DPickingMixin initialises with picking disabled and empty state."""
     dlg, _ = _make_dlg(app)
     assert dlg.picking_enabled is False
     assert dlg._mouse_press_pos is None
@@ -109,23 +110,27 @@ def test_init_defaults(app):
 
 
 def test_eventfilter_none_event_returns_false(app):
+    """eventFilter returns False immediately when the event is None."""
     dlg, _ = _make_dlg(app)
     assert dlg.eventFilter(MagicMock(), None) is False
 
 
 def test_eventfilter_plotter_none_returns_false(app):
+    """eventFilter returns False when the plotter is None."""
     dlg, mw = _make_dlg(app)
     mw.view_3d_manager.plotter = None
     assert dlg.eventFilter(MagicMock(), _left_press_event()) is False
 
 
 def test_eventfilter_mol_none_returns_false(app):
+    """eventFilter returns False when the molecule is None."""
     dlg, _ = _make_dlg(app)
     dlg.mol = None
     assert dlg.eventFilter(MagicMock(), _left_press_event()) is False
 
 
 def test_eventfilter_non_interactor_returns_false(app):
+    """eventFilter returns False when the watched object is not the VTK interactor."""
     dlg, mw = _make_dlg(app)
     other_obj = MagicMock()
     assert dlg.eventFilter(other_obj, _left_press_event()) is False
@@ -137,6 +142,7 @@ def test_eventfilter_non_interactor_returns_false(app):
 
 
 def test_eventfilter_atom_click_calls_on_atom_picked(app):
+    """A left-click on an atom calls on_atom_picked and returns True."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
 
@@ -162,6 +168,7 @@ def test_eventfilter_atom_click_calls_on_atom_picked(app):
 
 
 def test_eventfilter_atom_click_consumes_matching_release(app):
+    """The MouseButtonRelease following an atom pick is consumed (returns True)."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
 
@@ -182,6 +189,7 @@ def test_eventfilter_atom_click_consumes_matching_release(app):
 
 
 def test_eventfilter_atom_click_miss_returns_false(app):
+    """A left-click that does not hit an atom actor returns False."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
 
@@ -204,6 +212,7 @@ def test_eventfilter_atom_click_miss_returns_false(app):
 
 
 def test_eventfilter_mouse_move_sets_moved_flag(app):
+    """A mouse-move event beyond the drag threshold sets _mouse_moved to True."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     dlg._mouse_press_pos = QPoint(0, 0)
@@ -216,6 +225,7 @@ def test_eventfilter_mouse_move_sets_moved_flag(app):
 
 
 def test_eventfilter_mouse_move_small_does_not_set_flag(app):
+    """A mouse-move below the drag threshold does not set _mouse_moved."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     dlg._mouse_press_pos = QPoint(0, 0)
@@ -232,6 +242,7 @@ def test_eventfilter_mouse_move_small_does_not_set_flag(app):
 
 
 def test_eventfilter_release_pure_click_calls_clear_selection(app):
+    """A mouse-release with no drag calls clear_selection and resets press state."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     dlg._mouse_press_pos = QPoint(0, 0)
@@ -245,6 +256,7 @@ def test_eventfilter_release_pure_click_calls_clear_selection(app):
 
 
 def test_eventfilter_release_after_drag_no_clear_selection(app):
+    """A mouse-release after dragging does not call clear_selection."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     dlg._mouse_press_pos = QPoint(0, 0)
@@ -262,6 +274,7 @@ def test_eventfilter_release_after_drag_no_clear_selection(app):
 
 
 def test_enable_picking_installs_event_filter(app):
+    """enable_picking installs the dialog as an event filter on the VTK interactor."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     dlg.enable_picking()
@@ -270,6 +283,7 @@ def test_enable_picking_installs_event_filter(app):
 
 
 def test_enable_picking_none_plotter_no_crash(app):
+    """enable_picking does not raise and leaves picking_enabled False when plotter is None."""
     dlg, mw = _make_dlg(app)
     mw.view_3d_manager.plotter = None
     dlg.enable_picking()  # should not raise
@@ -277,6 +291,7 @@ def test_enable_picking_none_plotter_no_crash(app):
 
 
 def test_disable_picking_removes_event_filter(app):
+    """disable_picking removes the event filter from the VTK interactor."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     dlg.picking_enabled = True
@@ -286,6 +301,7 @@ def test_disable_picking_removes_event_filter(app):
 
 
 def test_disable_picking_when_not_enabled_is_noop(app):
+    """disable_picking does nothing when picking was not already enabled."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     dlg.picking_enabled = False
@@ -299,6 +315,7 @@ def test_disable_picking_when_not_enabled_is_noop(app):
 
 
 def test_clear_atom_labels_removes_actors(app):
+    """clear_atom_labels removes all label actors from the plotter and empties the list."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     actor1, actor2 = MagicMock(), MagicMock()
@@ -312,6 +329,7 @@ def test_clear_atom_labels_removes_actors(app):
 
 
 def test_clear_atom_labels_none_plotter_empties_list(app):
+    """clear_atom_labels empties selection_labels even when plotter is None."""
     dlg, mw = _make_dlg(app)
     mw.view_3d_manager.plotter = None
     dlg.selection_labels = [MagicMock()]
@@ -325,6 +343,7 @@ def test_clear_atom_labels_none_plotter_empties_list(app):
 
 
 def test_add_selection_label_calls_add_point_labels(app):
+    """add_selection_label calls plotter.add_point_labels and appends the actor."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     plotter.add_point_labels.return_value = MagicMock()
@@ -336,6 +355,7 @@ def test_add_selection_label_calls_add_point_labels(app):
 
 
 def test_add_selection_label_none_plotter_no_crash(app):
+    """add_selection_label does not raise when plotter is None."""
     dlg, mw = _make_dlg(app)
     mw.view_3d_manager.plotter = None
     dlg.add_selection_label(0, "A1")  # should not raise
@@ -343,6 +363,7 @@ def test_add_selection_label_none_plotter_no_crash(app):
 
 
 def test_add_selection_label_none_positions_no_crash(app):
+    """add_selection_label does not raise when atom_positions_3d is None."""
     dlg, mw = _make_dlg(app)
     mw.view_3d_manager.atom_positions_3d = None
     dlg.add_selection_label(0, "A1")
@@ -355,6 +376,7 @@ def test_add_selection_label_none_positions_no_crash(app):
 
 
 def test_show_atom_labels_for_clears_then_adds(app):
+    """show_atom_labels_for clears existing labels then adds one per atom."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     plotter.add_point_labels.return_value = MagicMock()
@@ -370,6 +392,7 @@ def test_show_atom_labels_for_clears_then_adds(app):
 
 
 def test_show_atom_labels_for_empty_list_clears_all(app):
+    """show_atom_labels_for with an empty list removes all existing labels."""
     dlg, mw = _make_dlg(app)
     plotter = mw.view_3d_manager.plotter
     dlg.selection_labels = [MagicMock()]

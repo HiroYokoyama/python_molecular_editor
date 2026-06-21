@@ -104,12 +104,14 @@ class TestApplyPlaneAlignGuard:
             pass
 
     def test_fewer_than_three_atoms_shows_warning(self, dlg):
+        """Warning shown when fewer than 3 atoms are selected for plane alignment."""
         dlg.selected_atoms = {0, 1}
         with patch("moleditpy.ui.align_plane_dialog.QMessageBox") as mb:
             dlg.apply_PlaneAlign()
         mb.warning.assert_called_once()
 
     def test_zero_atoms_shows_warning(self, dlg):
+        """Warning shown when no atoms are selected for plane alignment."""
         dlg.selected_atoms.clear()
         with patch("moleditpy.ui.align_plane_dialog.QMessageBox") as mb:
             dlg.apply_PlaneAlign()
@@ -123,6 +125,7 @@ class TestApplyPlaneAlignGuard:
 
 class TestApplyPlaneAlignMath:
     def test_xy_align_reduces_z_variance(self, qapp):
+        """XY alignment brings all selected atom Z-coordinates close to zero."""
         mol = _flat_mol_in_xy()
         mw = make_mock_mw(mol)
         mw.view_3d_manager.atom_positions_3d = mol.GetConformer().GetPositions().copy()
@@ -145,6 +148,7 @@ class TestApplyPlaneAlignMath:
             assert abs(after[i][2]) < 0.5
 
     def test_apply_calls_draw_molecule_3d(self, qapp):
+        """Plane alignment triggers a 3D redraw after modifying geometry."""
         from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
 
         mol = make_ethane()
@@ -161,6 +165,7 @@ class TestApplyPlaneAlignMath:
         mw.view_3d_manager.draw_molecule_3d.assert_called()
 
     def test_align_plane_with_move_to_zero_plane_true(self, qapp):
+        """move_to_zero_plane=True translates selected atoms to Z=0 after alignment."""
         mol = _flat_mol_in_xy()
         conf = mol.GetConformer()
         for i in range(mol.GetNumAtoms()):
@@ -185,6 +190,7 @@ class TestApplyPlaneAlignMath:
             assert pos[i][2] == pytest.approx(0.0, abs=1e-5)
 
     def test_align_plane_with_move_to_zero_plane_false(self, qapp):
+        """move_to_zero_plane=False keeps the centroid Z offset after alignment."""
         mol = _flat_mol_in_xy()
         conf = mol.GetConformer()
         for i in range(mol.GetNumAtoms()):
@@ -209,6 +215,7 @@ class TestApplyPlaneAlignMath:
             assert abs(pos[i][2]) > 1.0
 
     def test_align_plane_already_aligned_with_move_to_zero_plane_true(self, qapp):
+        """Already-aligned plane with move_to_zero still zeroes the Z offset."""
         mol = _flat_mol_in_xy()
         conf = mol.GetConformer()
         for i in range(mol.GetNumAtoms()):

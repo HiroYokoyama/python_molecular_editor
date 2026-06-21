@@ -51,6 +51,7 @@ def qapp():
 
 
 def test_update_template_preview_snaps_points_for_fusing(qapp):
+    """Preview geometry snaps nearby polygon vertices to existing scene atoms."""
     scene = MockTemplateScene()
     scene.settings["template_snapping_distance_2d"] = 15.0
     scene.settings["template_fusing_enabled_2d"] = True

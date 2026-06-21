@@ -47,6 +47,7 @@ def _make_window():
 
 
 def test_mainwindow_all_managers_assigned(app):
+    """All manager attributes are assigned after MainWindow.__init__."""
     mw = _make_window()
     assert hasattr(mw, "export_manager")
     assert hasattr(mw, "view_3d_manager")
@@ -62,11 +63,13 @@ def test_mainwindow_all_managers_assigned(app):
 
 
 def test_mainwindow_is_restoring_state_default(app):
+    """is_restoring_state starts False after __init__."""
     mw = _make_window()
     assert mw.is_restoring_state is False
 
 
 def test_mainwindow_start_calculation_signal_exists(app):
+    """MainWindow exposes a start_calculation signal."""
     from moleditpy.ui.main_window import MainWindow
 
     assert hasattr(MainWindow, "start_calculation")
@@ -78,6 +81,7 @@ def test_mainwindow_start_calculation_signal_exists(app):
 
 
 def test_current_mol_getter_delegates_to_view_3d_manager(app):
+    """current_mol getter returns view_3d_manager.current_mol."""
     mw = _make_window()
     mock_mol = MagicMock()
     mw.view_3d_manager.current_mol = mock_mol
@@ -85,6 +89,7 @@ def test_current_mol_getter_delegates_to_view_3d_manager(app):
 
 
 def test_current_mol_setter_delegates_to_view_3d_manager(app):
+    """current_mol setter stores the value on view_3d_manager."""
     mw = _make_window()
     mock_mol = MagicMock()
     mw.current_mol = mock_mol
@@ -92,6 +97,7 @@ def test_current_mol_setter_delegates_to_view_3d_manager(app):
 
 
 def test_plotter_property_delegates_to_view_3d_manager(app):
+    """plotter property proxies to view_3d_manager.plotter."""
     mw = _make_window()
     mock_plotter = MagicMock()
     mw.view_3d_manager.plotter = mock_plotter
@@ -99,6 +105,7 @@ def test_plotter_property_delegates_to_view_3d_manager(app):
 
 
 def test_data_property_delegates_to_state_manager(app):
+    """data property proxies to state_manager.data."""
     mw = _make_window()
     mock_data = MagicMock()
     mw.state_manager.data = mock_data
@@ -106,6 +113,7 @@ def test_data_property_delegates_to_state_manager(app):
 
 
 def test_scene_property_delegates_to_init_manager(app):
+    """scene property proxies to init_manager.scene."""
     mw = _make_window()
     mock_scene = MagicMock()
     mw.init_manager.scene = mock_scene
@@ -118,6 +126,7 @@ def test_scene_property_delegates_to_init_manager(app):
 
 
 def test_draw_molecule_3d_proxy(app):
+    """draw_molecule_3d sets current_mol and delegates to view_3d_manager."""
     mw = _make_window()
     mock_mol = MagicMock()
     mw.draw_molecule_3d(mock_mol)
@@ -126,6 +135,7 @@ def test_draw_molecule_3d_proxy(app):
 
 
 def test_draw_molecule_3d_none_mol(app):
+    """draw_molecule_3d with None sets current_mol to None and delegates."""
     mw = _make_window()
     mw.draw_molecule_3d(None)
     assert mw.view_3d_manager.current_mol is None

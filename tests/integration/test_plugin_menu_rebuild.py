@@ -145,6 +145,7 @@ class TestRebuildCompleteness:
         }
 
     def test_separator_flag_reset_before_rebuild(self):
+        """rebuild_plugin_menus resets the separator flag to False before running."""
         im = _make_im()
         im.plugin_menubar_separator_added = True
         pmm = PluginMenuManager(im)
@@ -251,6 +252,7 @@ class TestPluginMenuManagerRouting:
 
 class TestUpdatePluginMenuIntegration:
     def test_discover_plugins_called_with_host(self):
+        """update_plugin_menu calls discover_plugins with the init_manager host."""
         pm = _make_plugin_manager()
         pm.discover_plugins.return_value = []
         im = _make_im(pm)
@@ -262,6 +264,7 @@ class TestUpdatePluginMenuIntegration:
         pm.discover_plugins.assert_called_once_with(im.host)
 
     def test_calls_seven_integration_methods(self):
+        """update_plugin_menu invokes all seven integration methods exactly once."""
         pm = _make_plugin_manager()
         pm.discover_plugins.return_value = []
         im = _make_im(pm)
@@ -286,6 +289,7 @@ class TestUpdatePluginMenuIntegration:
             mock.assert_called_once(), f"Expected {m} to be called once"
 
     def test_does_nothing_when_plugin_manager_is_none(self):
+        """update_plugin_menu is a no-op when plugin_manager is None."""
         im = _make_im()
         im.host.plugin_manager = None
         pmm = PluginMenuManager(im)
@@ -305,6 +309,7 @@ class TestExportActionEndToEnd:
     """Export actions from the plugin manager appear in the export button menu."""
 
     def test_export_action_appears_in_button_menu(self):
+        """A registered export action is added to the export button menu."""
         callback = MagicMock()
         pm = _make_plugin_manager(
             export_actions=[{"label": "Export XYZ", "callback": callback}]
@@ -323,6 +328,7 @@ class TestExportActionEndToEnd:
         assert added_action.text() == "Export XYZ"
 
     def test_multiple_export_actions_all_added(self):
+        """All registered export actions are each added to the export menu."""
         pm = _make_plugin_manager(
             export_actions=[
                 {"label": "Export XYZ", "callback": MagicMock()},

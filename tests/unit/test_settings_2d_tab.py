@@ -13,6 +13,7 @@ def test_init_uses_default_colors(app):
 
 
 def test_update_ui_sets_colors(app):
+    """update_ui() reflects background and bond color changes in internal state."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
     settings["background_color_2d"] = "#112233"
@@ -23,6 +24,7 @@ def test_update_ui_sets_colors(app):
 
 
 def test_update_ui_sets_sliders(app):
+    """update_ui() updates all bond and font slider values correctly."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
     settings["bond_width_2d"] = 3.0
@@ -56,6 +58,7 @@ def test_update_ui_sets_cap_style(app):
 
 
 def test_update_ui_sets_use_bond_color_checkbox(app):
+    """update_ui() reflects atom_use_bond_color_2d in the checkbox state."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
     settings["atom_use_bond_color_2d"] = True
@@ -64,6 +67,7 @@ def test_update_ui_sets_use_bond_color_checkbox(app):
 
 
 def test_get_settings_roundtrip(app):
+    """get_settings() returns values matching what was loaded via update_ui()."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     tab.update_ui(DEFAULT_SETTINGS)
     result = tab.get_settings()
@@ -104,6 +108,7 @@ def test_get_settings_roundtrip(app):
 
 
 def test_get_settings_returns_all_keys(app):
+    """get_settings() returns a dict containing all expected 2D settings keys."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     result = tab.get_settings()
     expected_keys = {
@@ -128,6 +133,7 @@ def test_get_settings_returns_all_keys(app):
 
 @patch("moleditpy.ui.settings_tabs.settings_2d_tab.QColorDialog.getColor")
 def test_pick_bg_color_updates_on_valid(mock_get_color, app):
+    """Selecting a valid color from the dialog updates current_bg_color_2d."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     mock_color = MagicMock()
     mock_color.isValid.return_value = True
@@ -139,6 +145,7 @@ def test_pick_bg_color_updates_on_valid(mock_get_color, app):
 
 @patch("moleditpy.ui.settings_tabs.settings_2d_tab.QColorDialog.getColor")
 def test_pick_bg_color_no_change_on_invalid(mock_get_color, app):
+    """Cancelling the color dialog leaves current_bg_color_2d unchanged."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     original = tab.current_bg_color_2d
     mock_color = MagicMock()
@@ -150,6 +157,7 @@ def test_pick_bg_color_no_change_on_invalid(mock_get_color, app):
 
 @patch("moleditpy.ui.settings_tabs.settings_2d_tab.QColorDialog.getColor")
 def test_pick_bond_color_updates_on_valid(mock_get_color, app):
+    """Selecting a valid color from the dialog updates current_bond_color_2d."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     mock_color = MagicMock()
     mock_color.isValid.return_value = True
@@ -160,6 +168,7 @@ def test_pick_bond_color_updates_on_valid(mock_get_color, app):
 
 
 def test_reset_to_defaults(app):
+    """reset_to_defaults() restores all settings to DEFAULT_SETTINGS values."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     custom = dict(DEFAULT_SETTINGS)
     custom["background_color_2d"] = "#123456"
@@ -194,6 +203,7 @@ def test_reset_to_defaults(app):
 
 
 def test_template_fusing_checkbox_disables_slider(app):
+    """Template fusing checkbox enables/disables the distance slider and label."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
 
     # Enable fusing -> slider and label should be enabled

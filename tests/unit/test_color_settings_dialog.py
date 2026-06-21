@@ -96,6 +96,7 @@ def _make_parent():
 
 @patch("moleditpy.ui.color_settings_dialog.QColorDialog.getColor")
 def test_pick_bs_bond_color_valid_updates_changed_bs(mock_get, app):
+    """A valid colour from QColorDialog is stored in changed_bs_color."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     mock_color = MagicMock()
     mock_color.isValid.return_value = True
@@ -109,6 +110,7 @@ def test_pick_bs_bond_color_valid_updates_changed_bs(mock_get, app):
 
 @patch("moleditpy.ui.color_settings_dialog.QColorDialog.getColor")
 def test_pick_bs_bond_color_invalid_no_change(mock_get, app):
+    """An invalid colour from QColorDialog leaves changed_bs_color as None."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     mock_color = MagicMock()
     mock_color.isValid.return_value = False
@@ -119,6 +121,7 @@ def test_pick_bs_bond_color_invalid_no_change(mock_get, app):
 
 
 def test_reset_all_with_parent_uses_default_bond_color(app):
+    """reset_all uses the parent's default_settings bond colour when available."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     parent = MagicMock()
     parent.default_settings = {"ball_stick_bond_color": "#123456"}
@@ -131,6 +134,7 @@ def test_reset_all_with_parent_uses_default_bond_color(app):
 
 
 def test_reset_all_without_parent_defaults_to_gray(app):
+    """reset_all falls back to #7F7F7F when no parent window is set."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     dialog.parent_window = None
 
@@ -141,6 +145,7 @@ def test_reset_all_without_parent_defaults_to_gray(app):
 
 
 def test_reset_all_restores_element_buttons(app):
+    """reset_all clears changed_cpk and sets the reset flag."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     dialog.parent_window = None
     dialog.changed_cpk["C"] = "#ff0000"
@@ -152,12 +157,14 @@ def test_reset_all_restores_element_buttons(app):
 
 
 def test_apply_changes_no_parent_returns_early(app):
+    """apply_changes is a no-op when parent_window is None."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     dialog.parent_window = None
     dialog.apply_changes()  # should not raise
 
 
 def test_apply_changes_reset_flag_deletes_cpk_colors(app):
+    """apply_changes with _reset_all_flag removes cpk_colors from settings."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     parent = _make_parent()
     parent.init_manager.settings["cpk_colors"] = {"C": "#ff0000"}
@@ -170,6 +177,7 @@ def test_apply_changes_reset_flag_deletes_cpk_colors(app):
 
 
 def test_apply_changes_with_mol_calls_draw_molecule_3d(app):
+    """apply_changes triggers a 3D redraw when a molecule is loaded."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     parent = _make_parent()
     mol = MagicMock()
@@ -183,6 +191,7 @@ def test_apply_changes_with_mol_calls_draw_molecule_3d(app):
 
 
 def test_apply_changes_reset_flag_resets_bond_color(app):
+    """apply_changes with _reset_all_flag resets ball-stick bond colour to default."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     parent = _make_parent()
     dialog.parent_window = parent
@@ -195,6 +204,7 @@ def test_apply_changes_reset_flag_resets_bond_color(app):
 
 
 def test_apply_changes_updates_2d_scene_items(app):
+    """apply_changes calls update_style on 2D scene items that support it."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     parent = _make_parent()
     dialog.parent_window = parent
@@ -215,6 +225,7 @@ def test_apply_changes_updates_2d_scene_items(app):
 
 
 def test_apply_changes_calls_update_cpk_colors(app):
+    """apply_changes always calls update_cpk_colors_from_settings on the parent."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     parent = _make_parent()
     dialog.parent_window = parent
@@ -225,6 +236,7 @@ def test_apply_changes_calls_update_cpk_colors(app):
 
 
 def test_apply_changes_calls_save_settings_when_cpk_changed(app):
+    """apply_changes calls save_settings when CPK colours have changed."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     parent = _make_parent()
     dialog.parent_window = parent
@@ -236,6 +248,7 @@ def test_apply_changes_calls_save_settings_when_cpk_changed(app):
 
 
 def test_accept_calls_apply_then_super(app):
+    """accept() calls apply_changes before delegating to QDialog.accept."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     dialog.parent_window = None
 
@@ -251,6 +264,7 @@ def test_accept_calls_apply_then_super(app):
 
 @patch("moleditpy.ui.color_settings_dialog.QColorDialog.getColor")
 def test_on_element_clicked_invalid_color_no_change(mock_get, app):
+    """on_element_clicked does not update changed_cpk when the colour dialog is cancelled."""
     dialog = ColorSettingsDialog(current_settings={}, parent=None)
     mock_color = MagicMock()
     mock_color.isValid.return_value = False
@@ -264,6 +278,7 @@ def test_on_element_clicked_invalid_color_no_change(mock_get, app):
 
 
 def test_init_cpk_override_applied_to_button(app):
+    """CPK colour overrides in current_settings are reflected in button styles on init."""
     settings = {"cpk_colors": {"C": "#112233"}}
     dialog = ColorSettingsDialog(current_settings=settings, parent=None)
     style = dialog.element_buttons["C"].styleSheet()

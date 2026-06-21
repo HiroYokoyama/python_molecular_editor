@@ -16,11 +16,13 @@ def _make_parent():
 
 
 def test_init_creates_seven_tabs(app):
+    """SettingsDialog initialises with exactly seven tabs."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     assert dialog.tab_widget.count() == 7
 
 
 def test_init_tab_labels(app):
+    """Tab titles include the expected section names."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     tab_titles = [
         dialog.tab_widget.tabText(i) for i in range(dialog.tab_widget.count())
@@ -32,11 +34,13 @@ def test_init_tab_labels(app):
 
 
 def test_init_window_title(app):
+    """SettingsDialog window title is 'Settings'."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     assert dialog.windowTitle() == "Settings"
 
 
 def test_update_ui_from_settings_sets_all_tabs(app):
+    """update_ui_from_settings propagates settings values to each tab widget."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     custom = dict(DEFAULT_SETTINGS)
     custom["background_color_2d"] = "#aabbcc"
@@ -45,6 +49,7 @@ def test_update_ui_from_settings_sets_all_tabs(app):
 
 
 def test_get_settings_aggregates_all_tabs(app):
+    """get_settings aggregates keys from every settings tab."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     result = dialog.get_settings()
     # Should contain keys from every tab
@@ -58,6 +63,7 @@ def test_get_settings_aggregates_all_tabs(app):
 
 
 def test_reset_current_tab_calls_reset_on_active_tab(app):
+    """reset_current_tab calls reset_to_defaults on the currently visible tab."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.tab_widget.setCurrentIndex(0)
 
@@ -70,6 +76,7 @@ def test_reset_current_tab_calls_reset_on_active_tab(app):
 
 
 def test_reset_current_tab_shows_info_message(app):
+    """reset_current_tab shows an information message naming the reset tab."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.tab_widget.setCurrentIndex(0)
 
@@ -84,6 +91,7 @@ def test_reset_current_tab_shows_info_message(app):
 
 
 def test_reset_all_settings_yes_resets_and_applies(app):
+    """reset_all_settings resets UI and applies when user confirms Yes."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.parent_window = _make_parent()
 
@@ -104,6 +112,7 @@ def test_reset_all_settings_yes_resets_and_applies(app):
 
 
 def test_reset_all_settings_no_does_nothing(app):
+    """reset_all_settings is a no-op when user answers No."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.parent_window = _make_parent()
 
@@ -119,6 +128,7 @@ def test_reset_all_settings_no_does_nothing(app):
 
 
 def test_apply_settings_no_parent_returns_early(app):
+    """apply_settings is a no-op when parent_window is None."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.parent_window = None
     # Should not raise
@@ -126,6 +136,7 @@ def test_apply_settings_no_parent_returns_early(app):
 
 
 def test_apply_settings_updates_parent_settings(app):
+    """apply_settings pushes current tab values into the parent's settings dict."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.parent_window = _make_parent()
     dialog.tab_2d.current_bg_color_2d = "#123456"
@@ -136,6 +147,7 @@ def test_apply_settings_updates_parent_settings(app):
 
 
 def test_apply_settings_fires_all_side_effects(app):
+    """apply_settings calls save_settings, apply_3d_settings, update_cpk_colors, and status bar."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.parent_window = _make_parent()
     dialog.apply_settings()
@@ -149,6 +161,7 @@ def test_apply_settings_fires_all_side_effects(app):
 
 
 def test_apply_settings_redraws_molecule_when_present(app):
+    """apply_settings calls draw_molecule_3d when a molecule is currently loaded."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     parent = _make_parent()
     mol = MagicMock()
@@ -159,6 +172,7 @@ def test_apply_settings_redraws_molecule_when_present(app):
 
 
 def test_apply_settings_skips_redraw_when_no_molecule(app):
+    """apply_settings skips draw_molecule_3d when no molecule is loaded."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     parent = _make_parent()
     parent.view_3d_manager.current_mol = None
@@ -168,6 +182,7 @@ def test_apply_settings_skips_redraw_when_no_molecule(app):
 
 
 def test_apply_settings_updates_2d_scene_background(app):
+    """apply_settings calls setBackgroundBrush on the 2D scene."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     parent = _make_parent()
     scene = MagicMock()
@@ -179,6 +194,7 @@ def test_apply_settings_updates_2d_scene_background(app):
 
 
 def test_accept_applies_then_closes(app):
+    """accept() calls apply_settings before delegating to QDialog.accept."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.parent_window = _make_parent()
 
@@ -192,6 +208,7 @@ def test_accept_applies_then_closes(app):
 
 
 def test_get_settings_roundtrip_defaults(app):
+    """get_settings after loading DEFAULT_SETTINGS round-trips the default values."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
     dialog.update_ui_from_settings(DEFAULT_SETTINGS)
     result = dialog.get_settings()

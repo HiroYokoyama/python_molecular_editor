@@ -97,6 +97,7 @@ def pmm(im) -> PluginMenuManager:
 
 class TestConstruction:
     def test_holds_init_manager_reference(self, im):
+        """PluginMenuManager stores a reference to the init manager it received."""
         mgr = PluginMenuManager(im)
         assert mgr._im is im
 
@@ -108,12 +109,14 @@ class TestConstruction:
 
 class TestUpdatePluginMenu:
     def test_does_nothing_when_no_plugin_manager(self, im, pmm):
+        """update_plugin_menu does nothing when plugin_manager is None."""
         im.host.plugin_manager = None
         menu = MagicMock(spec=QMenu)
         pmm.update_plugin_menu(menu)
         menu.clear.assert_not_called()
 
     def test_clears_and_adds_manage_action(self, im, pmm):
+        """update_plugin_menu clears the menu and adds at least the manage action."""
         menu = MagicMock(spec=QMenu)
         pmm.update_plugin_menu(menu)
         menu.clear.assert_called_once()
@@ -121,6 +124,7 @@ class TestUpdatePluginMenu:
         assert menu.addAction.called or menu.addSeparator.called
 
     def test_discover_plugins_called(self, im, pmm):
+        """update_plugin_menu calls discover_plugins on the plugin_manager."""
         menu = MagicMock(spec=QMenu)
         im.host.plugin_manager.discover_plugins.return_value = []
         pmm.update_plugin_menu(menu)
@@ -171,6 +175,7 @@ class TestRebuildPluginMenus:
         im.export_button.menu.return_value.addAction.assert_called_once()
 
     def test_resets_separator_flag(self, im, pmm):
+        """rebuild_plugin_menus resets the plugin_menubar_separator_added flag."""
         im.plugin_menubar_separator_added = True
         im.host.menuBar.return_value.actions.return_value = []
         pmm.rebuild_plugin_menus()
@@ -233,11 +238,13 @@ class TestRebuildPluginMenus:
 
 class TestAddRegisteredPluginActions:
     def test_no_menu_actions_does_nothing(self, im, pmm):
+        """add_registered_plugin_actions does nothing when no menu actions are registered."""
         im.host.plugin_manager.menu_actions = []
         pmm.add_registered_plugin_actions()
         im.host.menuBar.return_value.addMenu.assert_not_called()
 
     def test_creates_new_top_level_menu_with_separator(self, im, pmm):
+        """add_registered_plugin_actions creates a new top-level menu and adds a separator."""
         callback = MagicMock()
         im.host.plugin_manager.menu_actions = [
             {
@@ -260,6 +267,7 @@ class TestAddRegisteredPluginActions:
         new_menu.addAction.assert_called_once()
 
     def test_reuses_existing_top_level_menu(self, im, pmm):
+        """add_registered_plugin_actions reuses an existing top-level menu rather than creating a new one."""
         callback = MagicMock()
         im.host.plugin_manager.menu_actions = [
             {
@@ -310,6 +318,7 @@ class TestAddRegisteredPluginActions:
         assert im.host.menuBar.return_value.addSeparator.call_count == 1
 
     def test_shortcut_applied_when_present(self, im, pmm):
+        """add_registered_plugin_actions applies a keyboard shortcut when one is specified."""
         callback = MagicMock()
         im.host.plugin_manager.menu_actions = [
             {
@@ -337,17 +346,20 @@ class TestAddRegisteredPluginActions:
 
 class TestAddPluginToolbarActions:
     def test_no_toolbar_attribute_does_nothing(self):
+        """add_plugin_toolbar_actions does not raise when plugin_toolbar is missing."""
         im = make_init_manager(has_toolbar=False)
         pmm = PluginMenuManager(im)
         pmm.add_plugin_toolbar_actions()  # must not raise
 
     def test_hides_toolbar_when_no_actions(self, im, pmm):
+        """add_plugin_toolbar_actions hides and clears the toolbar when no actions are registered."""
         im.host.plugin_manager.toolbar_actions = []
         pmm.add_plugin_toolbar_actions()
         im.plugin_toolbar.hide.assert_called_once()
         im.plugin_toolbar.clear.assert_called_once()
 
     def test_shows_toolbar_and_adds_actions(self, im, pmm):
+        """add_plugin_toolbar_actions shows the toolbar and adds an action for each registered entry."""
         im.host.plugin_manager.toolbar_actions = [
             {"text": "Run", "callback": MagicMock(), "icon": "", "tooltip": "Run it"},
         ]
@@ -356,6 +368,7 @@ class TestAddPluginToolbarActions:
         im.plugin_toolbar.addAction.assert_called_once()
 
     def test_icon_set_when_file_exists(self, im, pmm, tmp_path):
+        """add_plugin_toolbar_actions creates a QAction with an icon when the icon file exists."""
         icon_file = tmp_path / "icon.png"
         icon_file.write_bytes(b"")  # create the file
         im.host.plugin_manager.toolbar_actions = [
@@ -378,11 +391,13 @@ class TestAddPluginToolbarActions:
 
 class TestIntegratePluginExportActions:
     def test_no_export_actions_does_nothing(self, im, pmm):
+        """integrate_plugin_export_actions does nothing when no export actions are registered."""
         im.host.plugin_manager.export_actions = []
         pmm.integrate_plugin_export_actions()
         im.export_button.menu.return_value.addSeparator.assert_not_called()
 
     def test_adds_actions_to_export_button_menu(self, im, pmm):
+        """integrate_plugin_export_actions adds a separator and action to the export button menu."""
         im.host.plugin_manager.export_actions = [
             {"label": "Export CSV", "callback": MagicMock()}
         ]
@@ -395,6 +410,7 @@ class TestIntegratePluginExportActions:
         assert export_menu.addAction.called
 
     def test_adds_actions_to_both_export_button_and_file_menu(self, im, pmm):
+        """integrate_plugin_export_actions adds actions to both the export button and the File/Export submenu."""
         im.host.plugin_manager.export_actions = [
             {"label": "Export PDF", "callback": MagicMock()}
         ]
@@ -427,6 +443,7 @@ class TestIntegratePluginExportActions:
 
 class TestIntegratePluginAnalysisTools:
     def test_no_analysis_menu_does_nothing(self, im, pmm):
+        """integrate_plugin_analysis_tools does not raise when no Analysis menu exists."""
         im.host.menuBar.return_value.actions.return_value = []
         im.host.plugin_manager.analysis_tools = [
             {"label": "NMR", "callback": MagicMock(), "plugin": "NMRPlugin"}
@@ -434,6 +451,7 @@ class TestIntegratePluginAnalysisTools:
         pmm.integrate_plugin_analysis_tools()  # must not raise
 
     def test_no_tools_skips_separator(self, im, pmm):
+        """integrate_plugin_analysis_tools skips the separator when no tools are registered."""
         analysis_menu = MagicMock()
         analysis_action = MagicMock()
         analysis_action.text.return_value = "Analysis"
@@ -446,6 +464,7 @@ class TestIntegratePluginAnalysisTools:
         analysis_menu.addSeparator.assert_not_called()
 
     def test_adds_tools_to_analysis_menu(self, im, pmm):
+        """integrate_plugin_analysis_tools adds a separator and action to the Analysis menu."""
         analysis_menu = MagicMock()
         analysis_action = MagicMock()
         analysis_action.text.return_value = "Analysis"
@@ -468,16 +487,19 @@ class TestIntegratePluginAnalysisTools:
 
 class TestUpdateStyleMenuWithPlugins:
     def test_no_style_button_does_nothing(self):
+        """update_style_menu_with_plugins does not raise when style_button is None."""
         im = make_init_manager(has_style_button=False)
         pmm = PluginMenuManager(im)
         pmm.update_style_menu_with_plugins()  # must not raise
 
     def test_no_custom_styles_does_nothing(self, im, pmm):
+        """update_style_menu_with_plugins does nothing when no custom styles are registered."""
         im.host.plugin_manager.custom_3d_styles = []
         pmm.update_style_menu_with_plugins()
         im.style_button.menu.return_value.addAction.assert_not_called()
 
     def test_adds_custom_style_actions(self, im, pmm):
+        """update_style_menu_with_plugins adds a separator and one action per custom style."""
         im.host.plugin_manager.custom_3d_styles = ["Ball", "Licorice"]
 
         style_menu = MagicMock()
@@ -495,6 +517,7 @@ class TestUpdateStyleMenuWithPlugins:
         assert style_menu.addSeparator.called  # separator before new styles
 
     def test_does_not_duplicate_existing_style(self, im, pmm):
+        """update_style_menu_with_plugins skips a style already present in the menu."""
         im.host.plugin_manager.custom_3d_styles = ["Ball"]
 
         style_menu = MagicMock()
@@ -522,11 +545,13 @@ class TestUpdateStyleMenuWithPlugins:
 
 class TestIntegratePluginFileOpeners:
     def test_no_file_openers_does_nothing(self, im, pmm):
+        """integrate_plugin_file_openers does nothing when no file openers are registered."""
         im.host.plugin_manager.file_openers = {}
         pmm.integrate_plugin_file_openers()
         im.import_menu.addSeparator.assert_not_called()
 
     def test_no_import_menu_does_nothing(self):
+        """integrate_plugin_file_openers does not raise when import_menu is None."""
         im = make_init_manager(has_import_menu=False)
         pm = MagicMock()
         pm.file_openers = {".xyz": [{"callback": MagicMock(), "plugin": "XYZPlugin"}]}
@@ -535,6 +560,7 @@ class TestIntegratePluginFileOpeners:
         pmm.integrate_plugin_file_openers()  # must not raise
 
     def test_adds_opener_actions(self, im, pmm):
+        """integrate_plugin_file_openers adds a separator and action for each file opener."""
         cb = MagicMock()
         im.host.plugin_manager.file_openers = {
             ".xyz": [{"callback": cb, "plugin": "XYZPlugin"}]
@@ -553,6 +579,7 @@ class TestIntegratePluginFileOpeners:
 
 class TestClearAllPluginActions:
     def test_clears_plugin_menu(self, im, pmm):
+        """_clear_all_plugin_actions clears the plugin menu."""
         plugin_menu = MagicMock(spec=QMenu)
         plugin_menu.actions.return_value = []
         im.host.menuBar.return_value.actions.return_value = []
@@ -560,6 +587,7 @@ class TestClearAllPluginActions:
         plugin_menu.clear.assert_called_once()
 
     def test_removes_tagged_actions_from_all_menus(self, im, pmm):
+        """_clear_all_plugin_actions removes all plugin_managed tagged actions from all menus."""
         tagged = MagicMock()
         tagged.data.return_value = "plugin_managed"
         tagged.menu.return_value = None

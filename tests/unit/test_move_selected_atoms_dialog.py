@@ -130,12 +130,14 @@ class TestOnAtomPicked:
 
 class TestApplyTranslation:
     def test_no_atoms_shows_warning(self, make_dialog):
+        """apply_translation shows a warning when no atoms are selected."""
         dlg, _, _ = make_dialog()
         with patch("moleditpy.ui.move_selected_atoms_dialog.QMessageBox") as mb:
             dlg.apply_translation()
         mb.warning.assert_called_once()
 
     def test_invalid_input_shows_warning(self, make_dialog):
+        """apply_translation shows a warning when a translation input is non-numeric."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms.add(0)
         dlg.x_trans_input.setText("bad")
@@ -144,6 +146,7 @@ class TestApplyTranslation:
         mb.warning.assert_called_once()
 
     def test_translation_updates_only_selected_atoms(self, make_dialog):
+        """apply_translation moves only selected atoms and leaves others unchanged."""
         dlg, mol, _ = make_dialog()
         dlg.selected_atoms.add(0)  # select carbon 0 only
 
@@ -172,12 +175,14 @@ class TestApplyTranslation:
 
 class TestApplyRotation:
     def test_no_atoms_shows_warning(self, make_dialog):
+        """apply_rotation shows a warning when no atoms are selected."""
         dlg, _, _ = make_dialog()
         with patch("moleditpy.ui.move_selected_atoms_dialog.QMessageBox") as mb:
             dlg.apply_rotation()
         mb.warning.assert_called_once()
 
     def test_invalid_input_shows_warning(self, make_dialog):
+        """apply_rotation shows a warning when a rotation input is non-numeric."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms.add(0)
         dlg.x_rot_input.setText("not_a_number")
@@ -186,6 +191,7 @@ class TestApplyRotation:
         mb.warning.assert_called_once()
 
     def test_rotation_updates_only_selected_atoms_around_centroid(self, make_dialog):
+        """apply_rotation rotates only selected atoms around their centroid."""
         from rdkit import Chem
         from rdkit.Chem import AllChem
         from rdkit import Geometry
@@ -227,6 +233,7 @@ class TestApplyRotation:
 
 class TestResetInputs:
     def test_reset_translation_inputs(self, make_dialog):
+        """reset_translation_inputs sets all three translation fields to '0.0'."""
         dlg, _, _ = make_dialog()
         dlg.x_trans_input.setText("5.5")
         dlg.y_trans_input.setText("-3.0")
@@ -237,6 +244,7 @@ class TestResetInputs:
         assert dlg.z_trans_input.text() == "0.0"
 
     def test_reset_rotation_inputs(self, make_dialog):
+        """reset_rotation_inputs sets all three rotation fields to '0.0'."""
         dlg, _, _ = make_dialog()
         dlg.x_rot_input.setText("45.0")
         dlg.y_rot_input.setText("90.0")
@@ -254,6 +262,7 @@ class TestResetInputs:
 
 class TestClearSelection:
     def test_clear_removes_selected_atoms(self, make_dialog):
+        """clear_selection empties the selected_atoms set."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms.update([0, 1])
         with patch.object(type(dlg), "clear_atom_labels"):
@@ -267,6 +276,7 @@ class TestClearSelection:
 
 
 def test_group_atoms_property(make_dialog):
+    """group_atoms property aliases selected_atoms for compatibility with the mixin."""
     dlg, _, _ = make_dialog()
     dlg.group_atoms = {0, 2}
     assert dlg.selected_atoms == {0, 2}
@@ -274,6 +284,7 @@ def test_group_atoms_property(make_dialog):
 
 
 def test_preselected_atoms_init(qapp):
+    """MoveSelectedAtomsDialog pre-populates selected_atoms from preselected_atoms."""
     from moleditpy.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
 
     mol = _ethane()
@@ -288,6 +299,7 @@ def test_preselected_atoms_init(qapp):
 
 
 def test_show_atom_labels_none_positions(make_dialog):
+    """show_atom_labels logs an error and does nothing when atom_positions_3d is None."""
     dlg, mol, mw = make_dialog()
     mw.view_3d_manager.atom_positions_3d = None
     with patch("moleditpy.ui.move_selected_atoms_dialog.logging.error") as mock_log:
@@ -299,6 +311,7 @@ def test_show_atom_labels_none_positions(make_dialog):
 
 
 def test_show_and_clear_atom_labels(make_dialog):
+    """show_atom_labels calls add_mesh; clear_atom_labels removes the actor."""
     dlg, mol, mw = make_dialog()
     plotter = MagicMock()
     mw.view_3d_manager.plotter = plotter
@@ -319,6 +332,7 @@ def test_show_and_clear_atom_labels(make_dialog):
 
 
 def test_event_filter_unrelated_obj(make_dialog):
+    """eventFilter returns False for events on objects other than the VTK interactor."""
     from PyQt6.QtWidgets import QWidget
 
     dlg, _, mw = make_dialog()
@@ -329,6 +343,7 @@ def test_event_filter_unrelated_obj(make_dialog):
 
 
 def test_event_filter_double_click(make_dialog):
+    """A double-click event resets potential_drag and returns False."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -349,6 +364,7 @@ def test_event_filter_double_click(make_dialog):
 
 
 def test_event_filter_mouse_press_with_selection(make_dialog):
+    """A left-press with atoms already selected delegates to VTK (returns False)."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -369,6 +385,7 @@ def test_event_filter_mouse_press_with_selection(make_dialog):
 
 
 def test_event_filter_mouse_press_selects_atom(make_dialog):
+    """A left-press that hits an atom picks it and returns True."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -398,6 +415,7 @@ def test_event_filter_mouse_press_selects_atom(make_dialog):
 
 
 def test_event_filter_mouse_press_empty_space(make_dialog):
+    """A left-press that misses all atoms returns False."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -422,6 +440,7 @@ def test_event_filter_mouse_press_empty_space(make_dialog):
 
 
 def test_event_filter_mouse_move_hover_cursor(make_dialog):
+    """Mouse-move over a selected atom changes the cursor to OpenHand; otherwise to Arrow."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -458,6 +477,7 @@ def test_event_filter_mouse_move_hover_cursor(make_dialog):
 
 
 def test_event_filter_mouse_release_consume(make_dialog):
+    """A mouse-release is consumed and clears _consume_next_left_release when the flag is set."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -479,6 +499,7 @@ def test_event_filter_mouse_release_consume(make_dialog):
 
 
 def test_mouse_move_potential_drag_to_actual_drag(make_dialog):
+    """A mouse-move beyond the threshold converts a potential drag to an actual drag."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -506,6 +527,7 @@ def test_mouse_move_potential_drag_to_actual_drag(make_dialog):
 
 
 def test_mouse_move_during_actual_drag(make_dialog):
+    """Mouse-move while is_dragging_group is True sets mouse_moved_during_drag."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -531,6 +553,7 @@ def test_mouse_move_during_actual_drag(make_dialog):
 
 
 def test_mouse_release_no_movement_toggles_atom(make_dialog):
+    """A release with no movement calls on_atom_picked to toggle the atom selection."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -557,6 +580,7 @@ def test_mouse_release_no_movement_toggles_atom(make_dialog):
 
 
 def test_mouse_release_with_movement_resets_drag_state(make_dialog):
+    """A release after dragging resets drag state without calling on_atom_picked."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -584,6 +608,7 @@ def test_mouse_release_with_movement_resets_drag_state(make_dialog):
 
 
 def test_handle_mouse_press_exceptions(make_dialog):
+    """eventFilter returns False and does not raise when GetEventPosition throws."""
     from PyQt6.QtCore import QEvent, Qt, QPointF
     from PyQt6.QtGui import QMouseEvent
 
@@ -604,6 +629,7 @@ def test_handle_mouse_press_exceptions(make_dialog):
 
 
 def test_on_atom_picked_during_drag_ignored(make_dialog):
+    """on_atom_picked is a no-op while is_dragging_group is True."""
     dlg, _, _ = make_dialog()
     dlg.is_dragging_group = True
     dlg.selected_atoms.clear()
@@ -612,6 +638,7 @@ def test_on_atom_picked_during_drag_ignored(make_dialog):
 
 
 def test_update_display_many_atoms(make_dialog):
+    """update_display shows '...' and total count when more than 5 atoms are selected."""
     dlg, _, _ = make_dialog()
     dlg.selected_atoms.update([0, 1, 2, 3, 4, 5, 6])
     dlg.update_display()
@@ -627,6 +654,7 @@ def test_update_display_many_atoms(make_dialog):
 
 class TestClickToDeselect:
     def test_eventfilter_delegates_to_vtk_when_atoms_selected(self, make_dialog):
+        """eventFilter returns False to let VTK handle the press when atoms are selected."""
         dlg, mol, mw = make_dialog()
         dlg.selected_atoms.add(0)
 
@@ -643,6 +671,7 @@ class TestClickToDeselect:
         assert result is False
 
     def test_eventfilter_handles_press_when_no_atoms_selected(self, make_dialog):
+        """A left-press with no prior selection picks the clicked atom and returns True."""
         dlg, mol, mw = make_dialog()
         dlg.selected_atoms.clear()
 
@@ -677,6 +706,7 @@ class TestClickToDeselect:
             assert 0 in dlg.selected_atoms
 
     def test_eventfilter_release_click_only_deselects_atom(self, make_dialog):
+        """A release after a pure click (no drag) calls on_atom_picked to toggle the atom."""
         dlg, mol, mw = make_dialog()
         dlg.selected_atoms.add(0)
         dlg.clicked_atom_for_toggle = 0
@@ -700,6 +730,7 @@ class TestClickToDeselect:
 
 
 def test_show_atom_labels_camera_restore(qapp):
+    """show_atom_labels restores the camera position after adding highlight meshes."""
     from moleditpy.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
 
     mol = _ethane()

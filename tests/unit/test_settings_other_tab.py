@@ -5,6 +5,7 @@ from moleditpy.utils.default_settings import DEFAULT_SETTINGS
 
 
 def test_init_creates_all_controls(app):
+    """SettingsOtherTab creates all expected control widgets on init."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     assert hasattr(tab, "skip_chem_checks_checkbox")
     assert hasattr(tab, "always_ask_charge_checkbox")
@@ -14,6 +15,7 @@ def test_init_creates_all_controls(app):
 
 
 def test_update_ui_sets_checkboxes(app):
+    """update_ui sets checkbox states from provided settings dict."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
     settings["skip_chemistry_checks"] = True
@@ -28,6 +30,7 @@ def test_update_ui_sets_checkboxes(app):
 
 
 def test_update_ui_sets_torus_thickness(app):
+    """update_ui maps aromatic_torus_thickness_factor to slider integer value."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
     settings["aromatic_torus_thickness_factor"] = 1.2
@@ -36,6 +39,7 @@ def test_update_ui_sets_torus_thickness(app):
 
 
 def test_get_settings_returns_correct_keys(app):
+    """get_settings returns a dict with exactly the expected setting keys."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     result = tab.get_settings()
     expected_keys = {
@@ -49,6 +53,7 @@ def test_get_settings_returns_correct_keys(app):
 
 
 def test_get_settings_roundtrip_defaults(app):
+    """get_settings after update_ui(DEFAULT_SETTINGS) round-trips the default values."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     tab.update_ui(DEFAULT_SETTINGS)
     result = tab.get_settings()
@@ -68,12 +73,14 @@ def test_get_settings_roundtrip_defaults(app):
 
 
 def test_kekule_toggled_disables_aromatic_circle(app):
+    """Checking Kekulé disables the aromatic circle checkbox."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     tab.kekule_3d_checkbox.setChecked(True)
     assert tab.aromatic_circle_checkbox.isEnabled() is False
 
 
 def test_kekule_untoggled_enables_aromatic_circle(app):
+    """Unchecking Kekulé re-enables the aromatic circle checkbox."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     tab.kekule_3d_checkbox.setChecked(True)
     tab.kekule_3d_checkbox.setChecked(False)
@@ -81,12 +88,14 @@ def test_kekule_untoggled_enables_aromatic_circle(app):
 
 
 def test_aromatic_toggled_disables_kekule(app):
+    """Checking aromatic circles disables the Kekulé checkbox."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     tab.aromatic_circle_checkbox.setChecked(True)
     assert tab.kekule_3d_checkbox.isEnabled() is False
 
 
 def test_aromatic_untoggled_enables_kekule(app):
+    """Unchecking aromatic circles re-enables the Kekulé checkbox."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     tab.aromatic_circle_checkbox.setChecked(True)
     tab.aromatic_circle_checkbox.setChecked(False)
@@ -94,6 +103,7 @@ def test_aromatic_untoggled_enables_kekule(app):
 
 
 def test_update_ui_kekule_true_disables_aromatic(app):
+    """update_ui with display_kekule_3d=True disables the aromatic circle checkbox."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
     settings["display_kekule_3d"] = True
@@ -104,6 +114,7 @@ def test_update_ui_kekule_true_disables_aromatic(app):
 
 
 def test_update_ui_aromatic_true_disables_kekule(app):
+    """update_ui with display_aromatic_circles_3d=True disables the Kekulé checkbox."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
     settings["display_kekule_3d"] = False
@@ -114,6 +125,7 @@ def test_update_ui_aromatic_true_disables_kekule(app):
 
 
 def test_reset_to_defaults(app):
+    """reset_to_defaults restores settings to default values."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     custom = dict(DEFAULT_SETTINGS)
     custom["skip_chemistry_checks"] = True
@@ -132,6 +144,7 @@ def test_reset_to_defaults(app):
 
 
 def test_sync_slider_from_spinbox(app):
+    """Setting the spinbox value syncs the torus thickness slider accordingly."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     tab.aromatic_torus_thickness_label.setValue(1.50)
     assert tab.aromatic_torus_thickness_slider.value() == 150

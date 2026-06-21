@@ -44,6 +44,7 @@ def mock_plugin_manager():
 
 
 def test_init_and_refresh(mock_plugin_manager, qtbot):
+    """PluginManagerWindow initialises with correct title, row count, and status colours."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
@@ -63,6 +64,7 @@ def test_init_and_refresh(mock_plugin_manager, qtbot):
 
 
 def test_refresh_relative_path_error(mock_plugin_manager, qtbot):
+    """When os.path.relpath raises ValueError, the filepath column falls back to basename."""
     # If relpath throws exception it shows basename
     mock_plugin_manager.plugins = [{"filepath": "plugin3.py"}]
     with patch("os.path.relpath", side_effect=ValueError):
@@ -72,6 +74,7 @@ def test_refresh_relative_path_error(mock_plugin_manager, qtbot):
 
 
 def test_update_button_state(mock_plugin_manager, qtbot):
+    """Remove button is disabled initially and enabled after a row is selected."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
@@ -83,6 +86,7 @@ def test_update_button_state(mock_plugin_manager, qtbot):
 
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.information")
 def test_on_reload_main_window_present(mock_info, mock_plugin_manager, qtbot):
+    """on_reload discovers plugins with the main window and shows an info message."""
     mock_plugin_manager.main_window = MagicMock()
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
@@ -100,6 +104,7 @@ def test_on_reload_main_window_present(mock_info, mock_plugin_manager, qtbot):
 
 
 def test_on_reload_no_main_window(mock_plugin_manager, qtbot):
+    """on_reload calls discover_plugins without arguments when main_window is None."""
     mock_plugin_manager.main_window = None
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
@@ -111,6 +116,7 @@ def test_on_reload_no_main_window(mock_plugin_manager, qtbot):
 
 @patch("moleditpy.plugins.plugin_manager_window.QDesktopServices.openUrl")
 def test_explore_plugins_online(mock_open_url, mock_plugin_manager, qtbot):
+    """The Explore button opens the plugin explorer URL in the system browser."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
@@ -126,6 +132,7 @@ def test_explore_plugins_online(mock_open_url, mock_plugin_manager, qtbot):
 
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.warning")
 def test_on_remove_plugin_no_selection(mock_warn, mock_plugin_manager, qtbot):
+    """on_remove_plugin shows a warning when no plugin row is selected."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
@@ -140,6 +147,7 @@ def test_on_remove_plugin_no_selection(mock_warn, mock_plugin_manager, qtbot):
 def test_on_remove_plugin_single_file(
     mock_remove, mock_exists, mock_info, mock_question, mock_plugin_manager, qtbot
 ):
+    """on_remove_plugin removes a single-file plugin by calling os.remove."""
     mock_question.return_value = QMessageBox.StandardButton.Yes
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
@@ -158,6 +166,7 @@ def test_on_remove_plugin_single_file(
 def test_on_remove_plugin_package(
     mock_rmtree, mock_exists, mock_info, mock_question, mock_plugin_manager, qtbot
 ):
+    """on_remove_plugin removes a package plugin by calling shutil.rmtree on its directory."""
     mock_question.return_value = QMessageBox.StandardButton.Yes
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
@@ -176,6 +185,7 @@ def test_on_remove_plugin_package(
 def test_on_remove_plugin_error(
     mock_remove, mock_exists, mock_critical, mock_question, mock_plugin_manager, qtbot
 ):
+    """on_remove_plugin shows a critical error dialog when os.remove raises."""
     mock_question.return_value = QMessageBox.StandardButton.Yes
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
@@ -193,6 +203,7 @@ def test_on_remove_plugin_error(
 def test_on_remove_plugin_not_exists(
     mock_exists, mock_warn, mock_plugin_manager, qtbot
 ):
+    """on_remove_plugin shows a warning when the plugin file does not exist."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
@@ -205,6 +216,7 @@ def test_on_remove_plugin_not_exists(
 
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.information")
 def test_show_plugin_details(mock_info, mock_plugin_manager, qtbot):
+    """show_plugin_details displays an information dialog containing the plugin name."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
@@ -215,6 +227,7 @@ def test_show_plugin_details(mock_info, mock_plugin_manager, qtbot):
 
 
 def test_drag_enter_event(mock_plugin_manager, qtbot):
+    """dragEnterEvent accepts URLs and ignores non-URL mime data."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
@@ -246,6 +259,7 @@ def test_drop_event_valid_files(
     mock_plugin_manager,
     qtbot,
 ):
+    """Dropping a .py file installs it and shows a success info message."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
     mock_plugin_manager.compute_sha256 = MagicMock(return_value="abc")
@@ -292,6 +306,7 @@ def test_drop_event_init_py_package(
     mock_plugin_manager,
     qtbot,
 ):
+    """Dropping an __init__.py file installs its parent folder as a package."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
     mock_plugin_manager.compute_sha256 = MagicMock(return_value="abc")
@@ -340,6 +355,7 @@ def test_drop_event_init_py_package(
 def test_drop_event_zip_file(
     mock_info, mock_question, mock_isdir, mock_isfile, mock_plugin_manager, qtbot
 ):
+    """Dropping a .zip file installs it via install_plugin."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
     mock_plugin_manager.compute_sha256 = MagicMock(return_value="abc")
@@ -365,6 +381,7 @@ def test_drop_event_zip_file(
 def test_drop_event_pure_folder(
     mock_info, mock_question, mock_isfile, mock_isdir, mock_plugin_manager, qtbot
 ):
+    """Dropping a directory installs it directly via install_plugin."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
     mock_plugin_manager.compute_sha256 = MagicMock(return_value="abc")

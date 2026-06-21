@@ -20,6 +20,7 @@ def mol():
 
 
 def test_bond_length_dialog_launch(window, qtbot, mol):
+    """BondLengthDialog opens with the correct window title."""
     dialog = BondLengthDialog(mol, window)
     qtbot.add_widget(dialog)
     dialog.show()
@@ -29,6 +30,7 @@ def test_bond_length_dialog_launch(window, qtbot, mol):
 
 
 def test_angle_dialog_launch(window, qtbot, mol):
+    """AngleDialog opens with the correct window title."""
     dialog = AngleDialog(mol, window)
     qtbot.add_widget(dialog)
     dialog.show()
@@ -37,6 +39,7 @@ def test_angle_dialog_launch(window, qtbot, mol):
 
 
 def test_dihedral_dialog_launch(window, qtbot, mol):
+    """DihedralDialog opens with the correct window title."""
     dialog = DihedralDialog(mol, window)
     qtbot.add_widget(dialog)
     dialog.show()
@@ -45,6 +48,7 @@ def test_dihedral_dialog_launch(window, qtbot, mol):
 
 
 def test_alignment_dialog_launch(window, qtbot, mol):
+    """AlignmentDialog opens with axis-specific window title."""
     dialog = AlignmentDialog(mol, window, axis="x")
     qtbot.add_widget(dialog)
     dialog.show()
@@ -53,6 +57,7 @@ def test_alignment_dialog_launch(window, qtbot, mol):
 
 
 def test_translation_dialog_launch(window, qtbot, mol):
+    """TranslationDialog opens with the correct window title."""
     dialog = TranslationDialog(mol, window)
     qtbot.add_widget(dialog)
     dialog.show()
@@ -61,6 +66,7 @@ def test_translation_dialog_launch(window, qtbot, mol):
 
 
 def test_move_group_dialog_launch(window, qtbot, mol):
+    """MoveGroupDialog opens with the correct window title."""
     dialog = MoveGroupDialog(mol, window)
     qtbot.add_widget(dialog)
     dialog.show()

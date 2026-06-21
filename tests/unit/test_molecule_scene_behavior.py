@@ -65,15 +65,18 @@ def _event(pos=QPointF(100, 100), button=Qt.MouseButton.LeftButton):
 
 class TestGetSetting:
     def test_returns_value_from_settings(self, mock_parser_host):
+        """get_setting returns the value stored in init_manager.settings."""
         mock_parser_host.init_manager.settings["my_key"] = "my_value"
         scene = _scene(mock_parser_host)
         assert scene.get_setting("my_key") == "my_value"
 
     def test_returns_default_when_key_missing(self, mock_parser_host):
+        """get_setting returns the default value when the key is absent."""
         scene = _scene(mock_parser_host)
         assert scene.get_setting("no_such_key", "fallback") == "fallback"
 
     def test_returns_default_when_window_is_none(self, mock_parser_host):
+        """get_setting returns the default value when scene.window is None."""
         scene = _scene(mock_parser_host)
         scene.window = None
         assert scene.get_setting("any_key", 99) == 99
@@ -86,6 +89,7 @@ class TestGetSetting:
 
 class TestUpdateConnectedBonds:
     def test_calls_update_position_on_bond(self, mock_parser_host):
+        """update_connected_bonds calls update_position on each live bond."""
         scene = _scene(mock_parser_host)
         bond = MagicMock(spec=BondItem)
         bond.update_position = MagicMock()
@@ -100,6 +104,7 @@ class TestUpdateConnectedBonds:
         bond.update_position.assert_called_once()
 
     def test_skips_sip_deleted_bonds(self, mock_parser_host):
+        """update_connected_bonds skips bonds that have been sip-deleted."""
         scene = _scene(mock_parser_host)
         bond = MagicMock(spec=BondItem)
         bond.update_position = MagicMock()
@@ -129,6 +134,7 @@ class TestUpdateConnectedBonds:
         bond.update_position.assert_called_once()
 
     def test_handles_atom_without_bonds_attribute(self, mock_parser_host):
+        """update_connected_bonds does not raise when an atom has no bonds attribute."""
         scene = _scene(mock_parser_host)
         atom = object()  # no 'bonds' attribute
         scene.update_connected_bonds([atom])  # must not raise
@@ -141,6 +147,7 @@ class TestUpdateConnectedBonds:
 
 class TestClearAllProblemFlags:
     def test_returns_true_when_flags_were_set(self, mock_parser_host):
+        """clear_all_problem_flags returns True when at least one atom had has_problem set."""
         scene = _scene(mock_parser_host)
         aid = scene.create_atom("C", QPointF(0, 0))
         item = scene.atom_items[aid]
@@ -150,6 +157,7 @@ class TestClearAllProblemFlags:
         assert scene.clear_all_problem_flags() is True
 
     def test_returns_false_when_no_flags_set(self, mock_parser_host):
+        """clear_all_problem_flags returns False when no atom has has_problem set."""
         scene = _scene(mock_parser_host)
         aid = scene.create_atom("C", QPointF(0, 0))
         item = scene.atom_items[aid]
@@ -158,6 +166,7 @@ class TestClearAllProblemFlags:
         assert scene.clear_all_problem_flags() is False
 
     def test_flag_is_reset_to_false(self, mock_parser_host):
+        """clear_all_problem_flags resets has_problem to False on each atom."""
         scene = _scene(mock_parser_host)
         aid = scene.create_atom("C", QPointF(0, 0))
         item = scene.atom_items[aid]
@@ -175,11 +184,13 @@ class TestClearAllProblemFlags:
 
 class TestPurgeDeletedItems:
     def test_noop_on_empty_list(self, mock_parser_host):
+        """purge_deleted_items is a no-op when the deleted items list is empty."""
         scene = _scene(mock_parser_host)
         scene._deleted_items = []
         scene.purge_deleted_items()  # must not raise
 
     def test_clears_the_list(self, mock_parser_host):
+        """purge_deleted_items empties the _deleted_items list."""
         scene = _scene(mock_parser_host)
         obj = MagicMock()
         obj.hide = MagicMock()
@@ -194,6 +205,7 @@ class TestPurgeDeletedItems:
         assert scene._deleted_items == []
 
     def test_calls_hide_on_valid_objects(self, mock_parser_host):
+        """purge_deleted_items calls hide() on each live item."""
         scene = _scene(mock_parser_host)
         obj = MagicMock()
         obj.hide = MagicMock()
@@ -208,6 +220,7 @@ class TestPurgeDeletedItems:
         obj.hide.assert_called_once()
 
     def test_skips_already_sip_deleted(self, mock_parser_host):
+        """purge_deleted_items skips items that have already been sip-deleted."""
         scene = _scene(mock_parser_host)
         obj = MagicMock()
         obj.hide = MagicMock()
@@ -226,12 +239,14 @@ class TestPurgeDeletedItems:
 
 class TestSetHoveredItem:
     def test_stores_item(self, mock_parser_host):
+        """set_hovered_item stores the provided item reference."""
         scene = _scene(mock_parser_host)
         item = MagicMock()
         scene.set_hovered_item(item)
         assert scene.hovered_item is item
 
     def test_accepts_none(self, mock_parser_host):
+        """set_hovered_item accepts None to clear the hovered item."""
         scene = _scene(mock_parser_host)
         scene.set_hovered_item(None)
         assert scene.hovered_item is None
@@ -262,6 +277,7 @@ class TestEZStereoCycling:
         return scene, bond_item
 
     def test_none_to_z_on_first_click(self, mock_parser_host):
+        """Clicking a double bond with no stereo sets it to Z (stereo=3)."""
         scene, bond_item = self._setup(mock_parser_host)
 
         with (
@@ -281,6 +297,7 @@ class TestEZStereoCycling:
         mock_stereo.assert_called_once_with(bond_item, 3)
 
     def test_z_to_e_on_click(self, mock_parser_host):
+        """Clicking a Z double bond advances it to E (stereo=4)."""
         scene, bond_item = self._setup(mock_parser_host)
         bond_item.stereo = 3  # already Z
 
@@ -301,6 +318,7 @@ class TestEZStereoCycling:
         mock_stereo.assert_called_once_with(bond_item, 4)
 
     def test_e_to_none_on_click(self, mock_parser_host):
+        """Clicking an E double bond cycles it back to no stereo (stereo=0)."""
         scene, bond_item = self._setup(mock_parser_host)
         bond_item.stereo = 4  # already E
 
@@ -328,6 +346,7 @@ class TestEZStereoCycling:
 
 class TestBondDirectionInversion:
     def test_stereo_bond_click_inverts_atom_order(self, mock_parser_host):
+        """Clicking a stereo bond with matching stereo type inverts the atom order."""
         scene = _scene(mock_parser_host)
         scene.mode = "bond_1"
         scene.bond_order = 1
@@ -372,6 +391,7 @@ class TestBondDirectionInversion:
 
 class TestDoubleClickSelectMode:
     def test_selects_connected_atom(self, mock_parser_host):
+        """Double-click in select mode selects the connected component via BFS."""
         scene = _scene(mock_parser_host)
         scene.mode = "select"
 
@@ -393,6 +413,7 @@ class TestDoubleClickSelectMode:
         atom_item.setSelected.assert_called_with(True)
 
     def test_bond_2_5_mode_accepts_event(self, mock_parser_host):
+        """Double-click in bond_2_5 mode accepts the event and does not raise."""
         scene = _scene(mock_parser_host)
         scene.mode = "bond_2_5"
         ev = _event()
@@ -409,6 +430,7 @@ class TestDoubleClickSelectMode:
 
 class TestDoubleClickChargeRadical:
     def test_radical_increments_on_double_click(self, mock_parser_host):
+        """Double-clicking an atom in radical mode increments its radical count."""
         scene = _scene(mock_parser_host)
         scene.mode = "radical"
 
@@ -427,6 +449,7 @@ class TestDoubleClickChargeRadical:
         assert item.radical == 1
 
     def test_charge_plus_increments_on_double_click(self, mock_parser_host):
+        """Double-clicking an atom in charge_plus mode increments its charge."""
         scene = _scene(mock_parser_host)
         scene.mode = "charge_plus"
 
@@ -445,6 +468,7 @@ class TestDoubleClickChargeRadical:
         assert item.charge == 1
 
     def test_charge_minus_decrements_on_double_click(self, mock_parser_host):
+        """Double-clicking an atom in charge_minus mode decrements its charge."""
         scene = _scene(mock_parser_host)
         scene.mode = "charge_minus"
 

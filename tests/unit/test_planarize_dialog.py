@@ -105,12 +105,14 @@ class TestApplyPlanarizeGuard:
             pass
 
     def test_fewer_than_three_atoms_shows_warning(self, dlg):
+        """Warning shown when fewer than 3 atoms are selected for planarize."""
         dlg.selected_atoms = {0, 1}
         with patch("moleditpy.ui.planarize_dialog.QMessageBox") as mb:
             dlg.apply_planarize()
         mb.warning.assert_called_once()
 
     def test_zero_atoms_shows_warning(self, dlg):
+        """Warning shown when no atoms are selected for planarize."""
         dlg.selected_atoms.clear()
         with patch("moleditpy.ui.planarize_dialog.QMessageBox") as mb:
             dlg.apply_planarize()
@@ -139,6 +141,7 @@ class TestApplyPlanarizeGeometry:
             return PlanarizeDialog(mol, mw), mw
 
     def test_planarize_reduces_z_spread(self, qapp):
+        """Planarize reduces the Z-coordinate variance of selected atoms."""
         mol = _planar_mol()
         dlg, _ = self._make_dlg(mol, qapp)
         dlg.selected_atoms = {0, 1, 2, 3}
@@ -155,6 +158,7 @@ class TestApplyPlanarizeGeometry:
         assert after_z_var <= before_z_var + 1e-6
 
     def test_planarize_pushes_undo(self, qapp):
+        """Planarize pushes an undo state after geometry update."""
         mol = _planar_mol()
         dlg, mw = self._make_dlg(mol, qapp)
         dlg.selected_atoms = {0, 1, 2, 3}
@@ -163,6 +167,7 @@ class TestApplyPlanarizeGeometry:
         mw.edit_actions_manager.push_undo_state.assert_called()
 
     def test_apply_calls_draw_molecule_3d(self, qapp):
+        """Planarize triggers a 3D redraw after modifying geometry."""
         mol = _planar_mol()
         dlg, mw = self._make_dlg(mol, qapp)
         dlg.selected_atoms = {0, 1, 2, 3}

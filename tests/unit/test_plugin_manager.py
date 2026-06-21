@@ -131,12 +131,14 @@ def test_register_menu_action():
 
 
 def test_register_toolbar_action():
+    """register_toolbar_action stores the action in toolbar_actions."""
     pm = PluginManager()
     pm.register_toolbar_action("TestPlugin", lambda: None, "Test", None, "Tooltip")
     assert len(pm.toolbar_actions) == 1
 
 
 def test_register_export_action():
+    """register_export_action stores the action with its label in export_actions."""
     pm = PluginManager()
     pm.register_export_action("TestPlugin", "Export as PDF", lambda: None)
     assert len(pm.export_actions) == 1
@@ -144,12 +146,14 @@ def test_register_export_action():
 
 
 def test_register_optimization_method():
+    """register_optimization_method stores the callback under its method name."""
     pm = PluginManager()
     pm.register_optimization_method("TestPlugin", "MMFF94", lambda: None)
     assert "MMFF94" in pm.optimization_methods
 
 
 def test_register_file_opener():
+    """register_file_opener stores a callback under the given extension key."""
     pm = PluginManager()
     pm.register_file_opener("TestPlugin", ".cif", lambda: None, priority=10)
     assert ".cif" in pm.file_openers
@@ -167,30 +171,35 @@ def test_register_file_opener_priority():
 
 
 def test_register_analysis_tool():
+    """register_analysis_tool appends a tool entry to analysis_tools."""
     pm = PluginManager()
     pm.register_analysis_tool("TestPlugin", "NMR Analysis", lambda: None)
     assert len(pm.analysis_tools) == 1
 
 
 def test_register_save_handler():
+    """register_save_handler stores the callback under the plugin name."""
     pm = PluginManager()
     pm.register_save_handler("TestPlugin", lambda: None)
     assert "TestPlugin" in pm.save_handlers
 
 
 def test_register_load_handler():
+    """register_load_handler stores the callback under the plugin name."""
     pm = PluginManager()
     pm.register_load_handler("TestPlugin", lambda: None)
     assert "TestPlugin" in pm.load_handlers
 
 
 def test_register_3d_style():
+    """register_3d_style stores the callback under the style name."""
     pm = PluginManager()
     pm.register_3d_style("TestPlugin", "Wireframe", lambda: None)
     assert "Wireframe" in pm.custom_3d_styles
 
 
 def test_register_document_reset_handler():
+    """register_document_reset_handler appends to document_reset_handlers."""
     pm = PluginManager()
     pm.register_document_reset_handler("TestPlugin", lambda: None)
     assert len(pm.document_reset_handlers) == 1
@@ -427,6 +436,7 @@ def test_compute_sha256(tmp_path):
 
 class TestPluginManagerExtended:
     def test_imports_fallback(self):
+        """PluginManager import does not crash when plugin_interface module is unavailable."""
         code = """
 import sys
 sys.modules['moleditpy.plugins.plugin_interface'] = None
@@ -438,6 +448,7 @@ except BaseException:
         exec(code)
 
     def test_get_set_main_window(self):
+        """get_main_window returns the value set by set_main_window."""
         pm = PluginManager()
         pm.set_main_window("mw")
         assert pm.get_main_window() == "mw"
@@ -446,12 +457,14 @@ except BaseException:
     @patch("os.path.exists", return_value=False)
     @patch("logging.error")
     def test_ensure_plugin_dir_error(self, mock_log, mock_exists, mock_makedirs):
+        """ensure_plugin_dir logs an error when os.makedirs raises OSError."""
         pm = PluginManager()
         pm.ensure_plugin_dir()
         mock_log.assert_called_with("Error creating plugin directory: test mkdir err")
 
     @patch("moleditpy.plugins.plugin_manager.QDesktopServices.openUrl")
     def test_open_plugin_folder(self, mock_open_url):
+        """open_plugin_folder calls QDesktopServices.openUrl with the plugin folder URL."""
         pm = PluginManager()
         pm.ensure_plugin_dir = MagicMock()
         pm.open_plugin_folder()
@@ -465,6 +478,7 @@ except BaseException:
     def test_install_plugin_folder(
         self, mock_isdir, mock_exists, mock_remove, mock_copytree, mock_rmtree
     ):
+        """install_plugin handles a folder source, removing stale target when present."""
         pm = PluginManager()
         pm.ensure_plugin_dir = MagicMock()
 
@@ -486,6 +500,7 @@ except BaseException:
     def test_install_plugin_file_existing_dir(
         self, mock_rmtree, mock_copy2, mock_exists, mock_isdir
     ):
+        """install_plugin removes an existing directory before copying a file with the same name."""
         pm = PluginManager()
         pm.ensure_plugin_dir = MagicMock()
         pm.install_plugin("plugin.py")
@@ -493,6 +508,7 @@ except BaseException:
 
     @patch("os.path.basename", side_effect=RuntimeError("Install err"))
     def test_install_plugin_exception(self, mock_basename):
+        """install_plugin returns (False, message) when an unexpected exception is raised."""
         pm = PluginManager()
         pm.ensure_plugin_dir = MagicMock()
         success, msg = pm.install_plugin("any")
@@ -500,6 +516,7 @@ except BaseException:
         assert "Install err" in msg
 
     def test_zip_extraction(self, tmpdir):
+        """install_plugin correctly extracts nested, flat, and edge-case ZIP structures."""
         pm = PluginManager()
         pm.plugin_dir = str(tmpdir.mkdir("plugins"))
         pm.main_window = MagicMock()
@@ -546,6 +563,7 @@ except BaseException:
         assert success
 
     def test_discover_plugins_not_exists(self):
+        """discover_plugins returns an empty list when the plugin directory does not exist."""
         pm = PluginManager()
         pm.plugin_dir = "/non/existent/dir"
         with patch("os.path.exists", side_effect=[True, False]):
@@ -553,6 +571,7 @@ except BaseException:
 
     @patch("importlib.util.spec_from_file_location")
     def test_load_single_plugin_exceptions_and_stub(self, mock_spec):
+        """_load_single_plugin logs errors on RuntimeError and handles a None spec."""
         pm = PluginManager()
         mock_spec.side_effect = RuntimeError("Load err")
         with patch("logging.error") as mock_log:
@@ -568,6 +587,7 @@ except BaseException:
         sys.modules.pop("Cat.SubCat", None)
 
     def test_plugin_init_exceptions(self, tmpdir):
+        """Plugins raising in initialize or autorun are recorded with an error status."""
         pm = PluginManager()
         pm.plugin_dir = str(tmpdir.mkdir("plugins"))
 
@@ -587,6 +607,7 @@ except BaseException:
     @patch("importlib.util.spec_from_file_location")
     @patch("importlib.util.module_from_spec")
     def test_load_plugin_version_tuple(self, mock_mod, mock_spec):
+        """_load_single_plugin converts a PLUGIN_VERSION tuple to a dotted string."""
         pm = PluginManager()
         module = MagicMock()
         module.PLUGIN_NAME = "VPlugin"
@@ -604,6 +625,7 @@ except BaseException:
 
     @patch("moleditpy.plugins.plugin_manager.QMessageBox.critical")
     def test_run_plugin_exceptions(self, mock_crit):
+        """run_plugin shows a critical dialog when the plugin run() raises."""
         pm = PluginManager()
         module = MagicMock()
         module.run.side_effect = RuntimeError("Run Err")
@@ -611,12 +633,14 @@ except BaseException:
         mock_crit.assert_called_once()
 
     def test_register_drop_handler(self):
+        """register_drop_handler inserts handlers sorted by priority descending."""
         pm = PluginManager()
         pm.register_drop_handler("A", "c1", 1)
         pm.register_drop_handler("B", "c2", 5)
         assert pm.drop_handlers[0]["plugin"] == "B"
 
     def test_manager_api_helpers(self):
+        """Status, undo, 3D-render, and camera-reset helpers delegate to main_window objects."""
         pm = PluginManager()
 
         pm.register_file_opener("P1", "txt", lambda x: None)
@@ -636,6 +660,7 @@ except BaseException:
         mw.plotter.render.assert_called()
 
     def test_get_selected_atom_indices_complex(self):
+        """get_selected_atom_indices handles None main_window, missing atom_id, and type errors."""
         pm = PluginManager()
 
         pm.main_window = None
@@ -670,12 +695,14 @@ except BaseException:
         assert pm.get_selected_atom_indices() == []
 
     def test_register_get_window(self):
+        """register_window stores and get_window retrieves a plugin's named window."""
         pm = PluginManager()
         pm.register_window("P1", "w1", "WIN")
         assert pm.plugin_windows["P1"]["w1"] == "WIN"
         assert pm.get_window("P1", "w1") == "WIN"
 
     def test_invoke_document_reset_handlers_logs_error(self):
+        """invoke_document_reset_handlers logs an error when a handler raises."""
         pm = PluginManager()
 
         def bad_cb():
@@ -687,6 +714,7 @@ except BaseException:
             mock_log.assert_called()
 
     def test_get_plugin_info_safe_exceptions_and_ast(self, tmpdir):
+        """get_plugin_info_safe returns Unknown version for non-constant AST nodes and OSError."""
         pm = PluginManager()
 
         f = tmpdir.join("a.py")

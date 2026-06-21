@@ -20,6 +20,7 @@ def mol():
 
 
 def test_planarize_dialog_launch(window, qtbot, mol):
+    """PlanarizeDialog opens with the correct window title."""
     dialog = PlanarizeDialog(mol, window)
     qtbot.add_widget(dialog)
     dialog.show()
@@ -28,6 +29,7 @@ def test_planarize_dialog_launch(window, qtbot, mol):
 
 
 def test_mirror_dialog_launch(window, qtbot, mol):
+    """MirrorDialog opens with the correct window title."""
     dialog = MirrorDialog(mol, window)
     qtbot.add_widget(dialog)
     dialog.show()
@@ -37,6 +39,7 @@ def test_mirror_dialog_launch(window, qtbot, mol):
 
 @pytest.mark.parametrize("plane", ["xy", "xz", "yz"])
 def test_align_plane_dialog_launch(window, qtbot, mol, plane):
+    """AlignPlaneDialog opens with a plane-specific window title."""
     plane_names = {"xy": "XY", "xz": "XZ", "yz": "YZ"}
     dialog = AlignPlaneDialog(mol, window, plane)
     qtbot.add_widget(dialog)
@@ -46,6 +49,7 @@ def test_align_plane_dialog_launch(window, qtbot, mol, plane):
 
 
 def test_constrained_optimization_dialog_launch(window, qtbot, mol):
+    """ConstrainedOptimizationDialog opens with the correct window title."""
     dialog = ConstrainedOptimizationDialog(mol, window)
     qtbot.add_widget(dialog)
     dialog.show()
@@ -54,6 +58,7 @@ def test_constrained_optimization_dialog_launch(window, qtbot, mol):
 
 
 def test_periodic_table_dialog_launch(window, qtbot):
+    """PeriodicTableDialog opens with the correct window title."""
     dialog = PeriodicTableDialog(window)
     qtbot.add_widget(dialog)
     dialog.show()

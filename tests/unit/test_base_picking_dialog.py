@@ -73,6 +73,7 @@ def _key_event(key):
 
 
 def test_key_enter_clicks_apply_button_if_enabled(app):
+    """Pressing Enter clicks the apply button when it is enabled."""
     dlg, _, _ = _make_dlg(app)
     apply_btn = MagicMock()
     apply_btn.isEnabled.return_value = True
@@ -85,6 +86,7 @@ def test_key_enter_clicks_apply_button_if_enabled(app):
 
 
 def test_key_enter_does_not_click_disabled_apply_button(app):
+    """Pressing Enter does not click the apply button when it is disabled."""
     dlg, _, _ = _make_dlg(app)
     apply_btn = MagicMock()
     apply_btn.isEnabled.return_value = False
@@ -96,17 +98,20 @@ def test_key_enter_does_not_click_disabled_apply_button(app):
 
 
 def test_key_enter_no_apply_button_does_not_raise(app):
+    """Pressing Enter when apply_button is absent does not raise."""
     dlg, _, _ = _make_dlg(app)
     ev = _key_event(Qt.Key.Key_Return)
     dlg.keyPressEvent(ev)  # should not raise
 
 
 def test_key_none_event_returns_early(app):
+    """None event passed to keyPressEvent returns early without raising."""
     dlg, _, _ = _make_dlg(app)
     dlg.keyPressEvent(None)  # should not raise
 
 
 def test_key_other_key_passes_to_super(app):
+    """Non-Enter key events are forwarded to QDialog.keyPressEvent without error."""
     from PyQt6.QtGui import QKeyEvent
     from PyQt6.QtCore import QEvent
 
@@ -133,6 +138,7 @@ def test_key_other_key_passes_to_super(app):
     ids=["closeEvent", "reject", "accept"],
 )
 def test_cleanup_clears_labels_and_disables_picking(app, invoke):
+    """closeEvent, reject, and accept all clear atom labels and disable picking."""
     dlg, _, _ = _make_dlg(app)
     with (
         patch.object(dlg, "clear_atom_labels") as mock_clear,
@@ -151,6 +157,7 @@ def test_cleanup_clears_labels_and_disables_picking(app, invoke):
 
 
 def test_update_molecule_geometry_array_updates_conformer(app):
+    """_update_molecule_geometry with an ndarray updates the conformer positions."""
     dlg, mol, mw = _make_dlg(app)
     positions = mol.GetConformer().GetPositions().copy()
     positions[0] = [10.0, 20.0, 30.0]
@@ -163,6 +170,7 @@ def test_update_molecule_geometry_array_updates_conformer(app):
 
 
 def test_update_molecule_geometry_dict_form(app):
+    """_update_molecule_geometry accepts a dict mapping atom index to position."""
     dlg, mol, mw = _make_dlg(app)
     dlg._update_molecule_geometry({0: np.array([5.0, 6.0, 7.0])})
 
@@ -171,6 +179,7 @@ def test_update_molecule_geometry_dict_form(app):
 
 
 def test_update_molecule_geometry_calls_draw_molecule_3d(app):
+    """_update_molecule_geometry triggers a 3D redraw after updating positions."""
     dlg, mol, mw = _make_dlg(app)
     positions = mol.GetConformer().GetPositions().copy()
     dlg._update_molecule_geometry(positions)
@@ -178,6 +187,7 @@ def test_update_molecule_geometry_calls_draw_molecule_3d(app):
 
 
 def test_update_molecule_geometry_updates_cache(app):
+    """_update_molecule_geometry also updates the atom_positions_3d cache."""
     dlg, mol, mw = _make_dlg(app)
     positions = mol.GetConformer().GetPositions().copy()
     positions[1] = [99.0, 0.0, 0.0]
@@ -193,6 +203,7 @@ def test_update_molecule_geometry_updates_cache(app):
 
 
 def test_push_undo_calls_push_undo_state(app):
+    """_push_undo calls push_undo_state and clears the _molecule_modified flag."""
     dlg, _, mw = _make_dlg(app)
     dlg._molecule_modified = True
     dlg._push_undo()
@@ -201,6 +212,7 @@ def test_push_undo_calls_push_undo_state(app):
 
 
 def test_push_undo_no_state_manager_no_crash(app):
+    """_push_undo does not raise when state_manager is absent."""
     dlg, _, mw = _make_dlg(app)
     del mw.state_manager  # simulate missing attribute
     dlg._push_undo()  # should not raise
@@ -212,6 +224,7 @@ def test_push_undo_no_state_manager_no_crash(app):
 
 
 def test_done_pushes_undo_if_molecule_modified(app):
+    """done() calls _push_undo when _molecule_modified is True."""
     dlg, _, mw = _make_dlg(app)
     dlg._molecule_modified = True
     with (
@@ -223,6 +236,7 @@ def test_done_pushes_undo_if_molecule_modified(app):
 
 
 def test_done_skips_undo_if_not_modified(app):
+    """done() skips _push_undo when _molecule_modified is False."""
     dlg, _, mw = _make_dlg(app)
     dlg._molecule_modified = False
     with (

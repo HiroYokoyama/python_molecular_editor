@@ -105,17 +105,20 @@ def make_dialog(qapp):
 
 class TestAtomSelection:
     def test_pick_adds_atom(self, make_dialog):
+        """Clicking an atom appends its index to selected_atoms."""
         dlg = make_dialog()
         dlg.on_atom_picked(3)
         assert dlg.selected_atoms == [3]
 
     def test_pick_same_atom_toggles_off(self, make_dialog):
+        """Clicking the same atom twice removes it from the selection."""
         dlg = make_dialog()
         dlg.on_atom_picked(3)
         dlg.on_atom_picked(3)
         assert dlg.selected_atoms == []
 
     def test_pick_four_atoms(self, make_dialog):
+        """Picking four distinct atoms fills selected_atoms to capacity."""
         dlg = make_dialog()
         for i in range(4):
             dlg.on_atom_picked(i)
@@ -130,16 +133,19 @@ class TestAtomSelection:
         assert dlg.selected_atoms == [1, 2, 3, 4]
 
     def test_display_zero_atoms(self, make_dialog):
+        """With no atoms selected the Add button is disabled and label shows 'None'."""
         dlg = make_dialog()
         assert not dlg.add_button.isEnabled()
         assert "None" in dlg.selection_label.text()
 
     def test_display_one_atom(self, make_dialog):
+        """With one atom selected the Add button remains disabled."""
         dlg = make_dialog()
         dlg.on_atom_picked(0)
         assert not dlg.add_button.isEnabled()
 
     def test_display_two_atoms_enables_add(self, make_dialog):
+        """With two atoms selected the Add button is enabled and label shows 'Distance'."""
         dlg = make_dialog()
         dlg.on_atom_picked(0)
         dlg.on_atom_picked(1)
@@ -147,6 +153,7 @@ class TestAtomSelection:
         assert "Distance" in dlg.selection_label.text()
 
     def test_display_three_atoms(self, make_dialog):
+        """With three atoms selected the label shows 'Angle'."""
         dlg = make_dialog()
         for i in range(3):
             dlg.on_atom_picked(i)
@@ -154,6 +161,7 @@ class TestAtomSelection:
         assert "Angle" in dlg.selection_label.text()
 
     def test_display_four_atoms(self, make_dialog):
+        """With four atoms selected the label shows 'Dihedral'."""
         dlg = make_dialog()
         for i in range(4):
             dlg.on_atom_picked(i)
@@ -168,6 +176,7 @@ class TestAtomSelection:
 
 class TestAddConstraint:
     def test_distance_constraint_added(self, make_dialog):
+        """Adding two atoms creates a Distance constraint with a positive value and default force."""
         dlg = make_dialog()
         # atoms 0 and 1 are the bonded carbons in ethane
         dlg.on_atom_picked(0)
@@ -182,6 +191,7 @@ class TestAddConstraint:
         assert cforce == pytest.approx(1.0e5)
 
     def test_distance_constraint_clears_selection(self, make_dialog):
+        """add_constraint resets selected_atoms to an empty list after adding."""
         dlg = make_dialog()
         dlg.on_atom_picked(0)
         dlg.on_atom_picked(1)
@@ -189,6 +199,7 @@ class TestAddConstraint:
         assert dlg.selected_atoms == []
 
     def test_angle_constraint_added(self, make_dialog):
+        """Adding three atoms creates an Angle constraint with value near tetrahedral angle."""
         dlg = make_dialog()
         # H2–C0–C1: a valid valence angle in ethane
         dlg.on_atom_picked(2)
@@ -203,6 +214,7 @@ class TestAddConstraint:
         assert 90.0 <= cval <= 130.0  # tetrahedral angle ~109.5°
 
     def test_dihedral_constraint_added(self, make_dialog):
+        """Adding four atoms creates a Dihedral constraint with correct atom indices."""
         dlg = make_dialog()
         # H2–C0–C1–H5: dihedral in ethane
         dlg.on_atom_picked(2)
@@ -236,6 +248,7 @@ class TestAddConstraint:
         assert len(dlg.constraints) == 1
 
     def test_table_row_added_on_constraint(self, make_dialog):
+        """add_constraint inserts a row into constraint_table."""
         dlg = make_dialog()
         dlg.on_atom_picked(0)
         dlg.on_atom_picked(1)
@@ -243,6 +256,7 @@ class TestAddConstraint:
         assert dlg.constraint_table.rowCount() == 1
 
     def test_custom_force_constant_used(self, make_dialog):
+        """Force constant entered by the user is stored in the constraint tuple."""
         dlg = make_dialog()
         dlg.force_const_input.setText("500.0")
         dlg.on_atom_picked(0)
@@ -275,6 +289,7 @@ class TestRemoveConstraint:
         dlg.add_constraint()
 
     def test_remove_selected_row(self, make_dialog):
+        """remove_constraint deletes the selected row and its corresponding constraint."""
         dlg = make_dialog()
         self._add_distance(dlg, 0, 1)
         self._add_distance(dlg, 0, 2)
@@ -288,6 +303,7 @@ class TestRemoveConstraint:
         assert dlg.constraints[0][1] == (0, 2)
 
     def test_remove_all(self, make_dialog):
+        """remove_all_constraints clears both the constraints list and the table."""
         dlg = make_dialog()
         self._add_distance(dlg, 0, 1)
         self._add_distance(dlg, 0, 2)
@@ -297,11 +313,13 @@ class TestRemoveConstraint:
         assert dlg.constraint_table.rowCount() == 0
 
     def test_remove_all_on_empty_is_noop(self, make_dialog):
+        """remove_all_constraints does not raise when called with no constraints."""
         dlg = make_dialog()
         dlg.remove_all_constraints()  # should not raise
         assert dlg.constraints == []
 
     def test_remove_button_disabled_after_remove_all(self, make_dialog):
+        """Remove button is disabled after all constraints are cleared."""
         dlg = make_dialog()
         self._add_distance(dlg, 0, 1)
         dlg.remove_all_constraints()
@@ -328,6 +346,7 @@ class TestCellChanged:
         dlg.constraint_table.blockSignals(False)
 
     def test_edit_value_column_updates_constraint(self, make_dialog):
+        """Editing the value cell updates the constraint's stored value."""
         dlg = self._setup_one_constraint(make_dialog)
         original_type = dlg.constraints[0][0]
 
@@ -338,6 +357,7 @@ class TestCellChanged:
         assert dlg.constraints[0][0] == original_type  # type unchanged
 
     def test_edit_force_column_updates_constraint(self, make_dialog):
+        """Editing the force-constant cell updates the constraint's stored force value."""
         dlg = self._setup_one_constraint(make_dialog)
         self._set_cell_text(dlg, 0, 3, "2.5e4")
         dlg.on_cell_changed(0, 3)
@@ -357,6 +377,7 @@ class TestCellChanged:
         assert dlg.constraints[0][2] == pytest.approx(original_val)
 
     def test_non_value_column_ignored(self, make_dialog):
+        """on_cell_changed does nothing when a non-editable column is touched."""
         dlg = self._setup_one_constraint(make_dialog)
         original = dlg.constraints[0]
         dlg.on_cell_changed(0, 0)  # Type column — must be ignored
@@ -388,6 +409,7 @@ class TestCellChanged:
 
 class TestConstraintLoading:
     def test_loads_4element_constraints(self, make_dialog):
+        """__init__ converts 4-element list constraints to tuples correctly."""
         existing = [["Distance", [0, 1], 1.54, 2.5e4]]
         dlg = make_dialog(constraints=existing)
 
@@ -410,6 +432,7 @@ class TestConstraintLoading:
         assert cforce == pytest.approx(1.0e5)
 
     def test_loads_multiple_constraint_types(self, make_dialog):
+        """__init__ loads Distance, Angle, and Dihedral constraints simultaneously."""
         existing = [
             ["Distance", [0, 1], 1.54, 1.0e5],
             ["Angle", [2, 0, 1], 109.5, 5.0e4],
@@ -420,6 +443,7 @@ class TestConstraintLoading:
         assert dlg.constraint_table.rowCount() == 3
 
     def test_table_populated_on_load(self, make_dialog):
+        """Preloaded constraints are shown in the table on dialog open."""
         existing = [["Distance", [0, 1], 1.54, 1.0e5]]
         dlg = make_dialog(constraints=existing)
         assert dlg.constraint_table.rowCount() == 1
@@ -441,10 +465,12 @@ class TestForceFieldMapping:
         ],
     )
     def test_ff_combo_set_from_opt_method(self, make_dialog, opt_method, expected_text):
+        """Force-field combo is pre-selected based on the current optimization method."""
         dlg = make_dialog(opt_method=opt_method)
         assert dlg.ff_combo.currentText() == expected_text
 
     def test_unknown_method_defaults_to_mmff94s(self, make_dialog):
+        """An unrecognised optimization method defaults the force-field combo to MMFF94s."""
         dlg = make_dialog(opt_method="UNKNOWN_FORCE_FIELD")
         assert dlg.ff_combo.currentText() == "MMFF94s"
 
@@ -456,6 +482,7 @@ class TestForceFieldMapping:
 
 class TestReject:
     def test_reject_converts_tuples_to_lists(self, make_dialog):
+        """reject serialises constraints as JSON-safe lists, not tuples."""
         dlg = make_dialog()
         dlg.on_atom_picked(0)
         dlg.on_atom_picked(1)
@@ -521,6 +548,7 @@ class TestReject:
 class TestOptimizationExecution:
     @patch("moleditpy.ui.constrained_optimization_dialog.ConstrainedOptimizationThread")
     def test_apply_optimization_starts_thread(self, mock_thread_class, make_dialog):
+        """apply_optimization disables the button and starts the worker thread."""
         dlg = make_dialog()
         mock_thread = MagicMock()
         mock_thread_class.return_value = mock_thread
@@ -535,6 +563,7 @@ class TestOptimizationExecution:
         mock_thread.start.assert_called_once()
 
     def test_on_optimization_finished(self, make_dialog):
+        """_on_optimization_finished re-enables the button and redraws the molecule."""
         dlg = make_dialog()
         dlg.optimize_button.setEnabled(False)
 
@@ -563,6 +592,7 @@ class TestOptimizationExecution:
         assert dlg.main_window.view_3d_manager.atom_positions_3d[0] == [1.0, 2.0, 3.0]
 
     def test_on_optimization_error(self, make_dialog):
+        """_on_optimization_error re-enables the button and shows a critical dialog."""
         dlg = make_dialog()
         dlg.optimize_button.setEnabled(False)
 

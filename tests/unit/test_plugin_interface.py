@@ -144,6 +144,7 @@ class TestPluginInterface:
         ],
     )
     def test_delegates_to_manager(self, mock_manager, invoke, check):
+        """Each PluginContext API call delegates to the corresponding manager method."""
         cb = MagicMock()
         ctx = PluginContext(mock_manager, "TestPlugin")
         invoke(ctx, cb)
@@ -357,6 +358,7 @@ class TestPluginInterface:
         assert ctx.get_setting("count", 0) == 7
 
     def test_plotter(self, mock_manager, mock_main_window):
+        """ctx.plotter proxies to view_3d_manager.plotter, or None if no window."""
         mock_manager.get_main_window.return_value = mock_main_window
         mock_main_window.view_3d_manager.plotter = "mock_plotter"
         ctx = PluginContext(mock_manager, "TestPlugin")
@@ -367,6 +369,7 @@ class TestPluginInterface:
         assert ctx.plotter is None
 
     def test_scene(self, mock_manager, mock_main_window):
+        """ctx.scene proxies to init_manager.scene, or None if no window."""
         mock_manager.get_main_window.return_value = mock_main_window
         mock_main_window.init_manager = MagicMock()
         mock_main_window.init_manager.scene = "mock_scene"
@@ -378,6 +381,7 @@ class TestPluginInterface:
         assert ctx.scene is None
 
     def test_draw_molecule_3d(self, mock_manager, mock_main_window):
+        """draw_molecule_3d delegates to view_3d_manager and is safe with no window."""
         mock_manager.get_main_window.return_value = mock_main_window
         ctx = PluginContext(mock_manager, "TestPlugin")
         ctx.draw_molecule_3d("mol")
@@ -387,6 +391,7 @@ class TestPluginInterface:
         ctx.draw_molecule_3d("mol")  # should not raise
 
     def test_refresh_3d_view(self, mock_manager, mock_main_window):
+        """refresh_3d_view redraws the molecule, or just renders if no mol."""
         mock_manager.get_main_window.return_value = mock_main_window
         mock_main_window.view_3d_manager.current_mol = "mol"
         ctx = PluginContext(mock_manager, "TestPlugin")
@@ -404,6 +409,7 @@ class TestPluginInterface:
         ctx.refresh_3d_view()
 
     def test_reset_3d_camera(self, mock_manager, mock_main_window):
+        """reset_3d_camera calls plotter.reset_camera."""
         mock_manager.get_main_window.return_value = mock_main_window
         mock_main_window.view_3d_manager.plotter = MagicMock()
         ctx = PluginContext(mock_manager, "TestPlugin")
@@ -411,6 +417,7 @@ class TestPluginInterface:
         mock_main_window.view_3d_manager.plotter.reset_camera.assert_called_once()
 
     def test_enter_3d_viewer_mode(self, mock_manager, mock_main_window):
+        """enter_3d_viewer_mode delegates to ui_manager.enter_3d_viewer_mode."""
         mock_manager.get_main_window.return_value = mock_main_window
         mock_main_window.ui_manager = MagicMock()
         ctx = PluginContext(mock_manager, "TestPlugin")
@@ -418,6 +425,7 @@ class TestPluginInterface:
         mock_main_window.ui_manager.enter_3d_viewer_mode.assert_called_once()
 
     def test_enter_3d_mode(self, mock_manager, mock_main_window):
+        """enter_3d_mode is an alias for enter_3d_viewer_mode."""
         mock_manager.get_main_window.return_value = mock_main_window
         mock_main_window.ui_manager = MagicMock()
         ctx = PluginContext(mock_manager, "TestPlugin")
@@ -425,6 +433,7 @@ class TestPluginInterface:
         mock_main_window.ui_manager.enter_3d_viewer_mode.assert_called_once()
 
     def test_load_from_smiles(self, mock_manager, mock_main_window):
+        """load_from_smiles delegates to string_importer_manager and is safe when absent."""
         mock_manager.get_main_window.return_value = mock_main_window
         mock_main_window.string_importer_manager = MagicMock()
         ctx = PluginContext(mock_manager, "TestPlugin")
@@ -438,6 +447,7 @@ class TestPluginInterface:
         ctx.load_from_smiles("C")  # Should not raise
 
     def test_to_xyz_block(self, mock_manager, mock_main_window):
+        """to_xyz_block returns an XYZ string from current_mol, or None if no mol."""
         from rdkit import Chem
         from rdkit.Chem import rdGeometry
 
@@ -464,6 +474,7 @@ class TestPluginInterface:
         assert ctx.to_xyz_block() is None
 
     def test_set_bond_color_by_atoms(self, mock_main_window):
+        """set_bond_color_by_atoms looks up the bond and applies the color override."""
         controller = Plugin3DController(mock_main_window)
         mock_mol = MagicMock()
         mock_bond = MagicMock()

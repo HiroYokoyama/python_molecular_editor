@@ -42,6 +42,7 @@ def create_mock_mouse_event(pos, button=Qt.MouseButton.LeftButton):
 
 
 def test_scene_keypress_modes(mock_parser_host):
+    """Letter key presses switch the scene to the corresponding atom placement mode."""
     scene = setup_scene_with_view(mock_parser_host)
 
     def mock_set_mode(mode):
@@ -86,6 +87,7 @@ def test_scene_keypress_modes(mock_parser_host):
 
 
 def test_scene_keypress_special_symbols(mock_parser_host):
+    """Shift+letter shortcuts set two-letter atom modes like Cl, Br, Si."""
     scene = setup_scene_with_view(mock_parser_host)
 
     def mock_set_mode(mode):
@@ -117,6 +119,7 @@ def test_scene_keypress_special_symbols(mock_parser_host):
 
 
 def test_scene_keypress_delete(mock_parser_host):
+    """Delete key calls delete_items on the current selection."""
     scene = setup_scene_with_view(mock_parser_host)
     aid = scene.create_atom("C", QPointF(0, 0))
     atom_item = scene.atom_items[aid]
@@ -136,6 +139,7 @@ def test_scene_keypress_delete(mock_parser_host):
 
 
 def test_scene_maintenance_methods(mock_parser_host):
+    """Scene maintenance methods run without error and clear expected state."""
     scene = setup_scene_with_view(mock_parser_host)
     aid = scene.create_atom("C", QPointF(0, 0))
     atom_item = scene.atom_items[aid]
@@ -149,6 +153,7 @@ def test_scene_maintenance_methods(mock_parser_host):
 
 
 def test_scene_queries(mock_parser_host):
+    """find_atom_near returns the atom closest to the query point."""
     scene = setup_scene_with_view(mock_parser_host)
     a1 = MagicMock(spec=AtomItem)
     a2 = MagicMock(spec=AtomItem)
@@ -164,6 +169,7 @@ def test_scene_queries(mock_parser_host):
 
 
 def test_scene_update_connected_bonds(mock_parser_host):
+    """update_connected_bonds calls update_position on each connected bond."""
     scene = setup_scene_with_view(mock_parser_host)
     a = MagicMock(spec=AtomItem)
     a.bonds = [MagicMock()]
@@ -172,12 +178,14 @@ def test_scene_update_connected_bonds(mock_parser_host):
 
 
 def test_scene_leave_event(mock_parser_host):
+    """Leaving the scene hides the template preview."""
     scene = setup_scene_with_view(mock_parser_host)
     scene.leaveEvent(None)
     assert scene.template_preview.hide.called
 
 
 def test_scene_update_bond_stereo(mock_parser_host):
+    """update_bond_stereo updates both the data dict and the bond item."""
     scene = setup_scene_with_view(mock_parser_host)
     bond = MagicMock()
     bond.order = 2
@@ -192,6 +200,7 @@ def test_scene_update_bond_stereo(mock_parser_host):
 
 
 def test_scene_mouse_drag_create_bond_existing_atoms(mock_parser_host):
+    """Drag from one existing atom to another creates a bond between them."""
     scene = setup_scene_with_view(mock_parser_host)
     scene.mode = "atom_C"
     scene.current_atom_symbol = "C"
@@ -219,6 +228,7 @@ def test_scene_mouse_drag_create_bond_existing_atoms(mock_parser_host):
 
 
 def test_scene_mouse_click_create_single_atom(mock_parser_host):
+    """Click on blank space in atom mode creates a new atom and pushes undo."""
     scene = setup_scene_with_view(mock_parser_host)
     scene.mode = "atom_O"
     scene.current_atom_symbol = "O"

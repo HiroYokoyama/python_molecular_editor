@@ -370,6 +370,7 @@ def _positions_4():
 
 
 def test_toggle_on_when_edit_mode_active_disables_edit_mode(app):
+    """Enabling measurement mode while 3D edit mode is active disables edit mode."""
     mgr, host = _make_mgr()
     mgr.is_3d_edit_mode = True
     host.init_manager.edit_3d_action = MagicMock()
@@ -381,6 +382,7 @@ def test_toggle_on_when_edit_mode_active_disables_edit_mode(app):
 
 
 def test_toggle_on_closes_active_dialogs(app):
+    """Enabling measurement mode closes any open 3D edit dialogs."""
     mgr, host = _make_mgr()
     mgr.is_3d_edit_mode = True
     host.init_manager.edit_3d_action = MagicMock()
@@ -395,6 +397,7 @@ def test_toggle_on_closes_active_dialogs(app):
 
 
 def test_close_all_closes_each_dialog(app):
+    """close_all_3d_edit_dialogs closes every dialog and empties the list."""
     mgr, _ = _make_mgr()
     d1, d2 = MagicMock(), MagicMock()
     mgr.active_3d_dialogs = [d1, d2]
@@ -407,6 +410,7 @@ def test_close_all_closes_each_dialog(app):
 
 
 def test_close_all_handles_close_error(app):
+    """close_all_3d_edit_dialogs swallows exceptions from dialog.close()."""
     mgr, _ = _make_mgr()
     dlg = MagicMock()
     dlg.close.side_effect = RuntimeError("already closed")
@@ -417,11 +421,13 @@ def test_close_all_handles_close_error(app):
 
 
 def test_close_all_empty_list_is_noop(app):
+    """close_all_3d_edit_dialogs with an empty list does not raise."""
     mgr, _ = _make_mgr()
     mgr.close_all_3d_edit_dialogs()  # should not raise
 
 
 def test_update_labels_display_adds_point_labels(app):
+    """update_measurement_labels_display calls add_point_labels when labels exist."""
     mgr, host = _make_mgr()
     mol = MagicMock()
     mol.GetNumAtoms.return_value = 2
@@ -435,6 +441,7 @@ def test_update_labels_display_adds_point_labels(app):
 
 
 def test_update_labels_display_no_labels_returns_early(app):
+    """update_measurement_labels_display skips add_point_labels when list is empty."""
     mgr, host = _make_mgr()
     host.view_3d_manager.current_mol = MagicMock()
     mgr.measurement_labels = []
@@ -443,6 +450,7 @@ def test_update_labels_display_no_labels_returns_early(app):
 
 
 def test_update_labels_display_no_mol_returns_early(app):
+    """update_measurement_labels_display skips rendering when no molecule is loaded."""
     mgr, host = _make_mgr()
     host.view_3d_manager.current_mol = None
     mgr.measurement_labels = [(0, "1")]
@@ -451,6 +459,7 @@ def test_update_labels_display_no_mol_returns_early(app):
 
 
 def test_clear_measurement_selection_clears_state(app):
+    """clear_measurement_selection empties selected atoms and measurement labels."""
     mgr, host = _make_mgr()
     mgr.selected_atoms_for_measurement = [0, 1]
     mgr.measurement_labels = [(0, "1")]
@@ -464,6 +473,7 @@ def test_clear_measurement_selection_clears_state(app):
 
 
 def test_clear_measurement_selection_removes_text_actor(app):
+    """clear_measurement_selection removes the measurement text actor from the plotter."""
     mgr, host = _make_mgr()
     actor = MagicMock()
     mgr.measurement_text_actor = actor
@@ -475,6 +485,7 @@ def test_clear_measurement_selection_removes_text_actor(app):
 
 
 def test_update_2d_labels_no_mol_returns_early(app):
+    """update_2d_measurement_labels is a no-op when no molecule is loaded."""
     mgr, host = _make_mgr()
     host.view_3d_manager.current_mol = None
     mgr.measurement_labels = [(0, "1")]
@@ -485,6 +496,7 @@ def test_update_2d_labels_no_mol_returns_early(app):
 
 
 def test_update_2d_labels_no_atoms_data_returns_early(app):
+    """update_2d_measurement_labels skips rendering when atoms data dict is empty."""
     mgr, host = _make_mgr()
     host.view_3d_manager.current_mol = MagicMock()
     host.state_manager.data.atoms = {}  # empty
@@ -496,6 +508,7 @@ def test_update_2d_labels_no_atoms_data_returns_early(app):
 
 
 def test_update_2d_labels_maps_atom_and_adds_label(app):
+    """update_2d_measurement_labels resolves atom items and calls add_2d_measurement_label."""
     mgr, host = _make_mgr()
     host.view_3d_manager.current_mol = MagicMock()
     host.state_manager.data.atoms = {1: {}}  # non-empty
@@ -521,6 +534,7 @@ def test_update_2d_labels_maps_atom_and_adds_label(app):
 
 
 def test_update_3d_selection_empty_renders(app):
+    """update_3d_selection_display renders even with an empty selection set."""
     mgr, host = _make_mgr()
     mgr.selected_atoms_3d = set()
     mgr.update_3d_selection_display()
@@ -528,6 +542,7 @@ def test_update_3d_selection_empty_renders(app):
 
 
 def test_update_3d_selection_no_mol_renders(app):
+    """update_3d_selection_display still calls render when no molecule is loaded."""
     mgr, host = _make_mgr()
     mgr.selected_atoms_3d = {0}
     host.view_3d_manager.current_mol = None
@@ -536,6 +551,7 @@ def test_update_3d_selection_no_mol_renders(app):
 
 
 def test_remove_dialog_present(app):
+    """remove_dialog_from_list removes the dialog when it is in active_3d_dialogs."""
     mgr, _ = _make_mgr()
     dlg = MagicMock()
     mgr.active_3d_dialogs = [dlg]
@@ -544,12 +560,14 @@ def test_remove_dialog_present(app):
 
 
 def test_remove_dialog_absent_is_noop(app):
+    """remove_dialog_from_list is a no-op when the dialog is not in the list."""
     mgr, _ = _make_mgr()
     mgr.active_3d_dialogs = []
     mgr.remove_dialog_from_list(MagicMock())  # should not raise
 
 
 def test_calculate_and_display_3_atoms_includes_angle(app):
+    """Three selected atoms produces both a distance and an angle measurement."""
     mgr, host = _make_mgr()
     positions = np.array(
         [
@@ -570,6 +588,7 @@ def test_calculate_and_display_3_atoms_includes_angle(app):
 
 
 def test_calculate_and_display_4_atoms_includes_dihedral(app):
+    """Four selected atoms produces distance, angle, and dihedral measurements."""
     mgr, host = _make_mgr()
     positions = np.array(
         [
@@ -592,6 +611,7 @@ def test_calculate_and_display_4_atoms_includes_dihedral(app):
 
 
 def test_calculate_and_display_1_atom_does_nothing(app):
+    """One selected atom does not trigger any measurement display."""
     mgr, host = _make_mgr()
     host.view_3d_manager.atom_positions_3d = _positions_4()
     mgr.selected_atoms_for_measurement = [0]

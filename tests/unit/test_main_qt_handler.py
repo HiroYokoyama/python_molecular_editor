@@ -20,6 +20,7 @@ from moleditpy.main import _DOWNGRADED_QT_PATTERNS, _qt_message_handler
 
 @pytest.mark.parametrize("pattern", _DOWNGRADED_QT_PATTERNS)
 def test_downgraded_pattern_routes_to_debug(pattern):
+    """Messages matching a downgraded pattern are logged at DEBUG, not WARNING."""
     msg = f"Qt: {pattern} details"
     with patch("logging.debug") as mock_debug, patch("logging.log") as mock_log:
         _qt_message_handler(QtMsgType.QtWarningMsg, MagicMock(), msg)
@@ -38,6 +39,7 @@ def test_downgraded_pattern_routes_to_debug(pattern):
     ],
 )
 def test_known_mode_maps_to_correct_level(mode, expected_level):
+    """Each Qt message type is routed to the corresponding Python logging level."""
     msg = "some Qt message"
     with patch("logging.log") as mock_log, patch("logging.debug") as mock_debug:
         _qt_message_handler(mode, MagicMock(), msg)
@@ -46,6 +48,7 @@ def test_known_mode_maps_to_correct_level(mode, expected_level):
 
 
 def test_unknown_mode_falls_back_to_warning():
+    """Unknown Qt message type defaults to logging.WARNING."""
     msg = "unknown mode message"
     with patch("logging.log") as mock_log:
         _qt_message_handler(999, MagicMock(), msg)

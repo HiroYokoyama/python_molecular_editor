@@ -30,6 +30,7 @@ def create_mock_event(pos=QPointF(100, 100), button=Qt.MouseButton.LeftButton):
 @patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_scene_toggle_radical(mock_drag, mock_release, mock_press, mock_parser_host):
+    """Radical mode cycles atom radical count through 0→1→2→0 on successive clicks."""
     scene = setup_scene_with_view(mock_parser_host)
     scene.mode = "radical"
     aid = scene.create_atom("C", QPointF(100, 100))
@@ -58,6 +59,7 @@ def test_scene_toggle_radical(mock_drag, mock_release, mock_press, mock_parser_h
 @patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_scene_toggle_charge(mock_drag, mock_release, mock_press, mock_parser_host):
+    """Charge plus/minus modes increment and decrement atom charge correctly."""
     scene = setup_scene_with_view(mock_parser_host)
     scene.mode = "charge_plus"
     aid = scene.create_atom("C", QPointF(100, 100))
@@ -81,6 +83,7 @@ def test_scene_toggle_charge(mock_drag, mock_release, mock_press, mock_parser_ho
 
 
 def test_add_benzene_fragment(mock_parser_host):
+    """add_molecule_fragment creates 6 atoms and 6 bonds with correct alternating order."""
     scene = setup_scene_with_view(mock_parser_host)
     points = [
         QPointF(
@@ -96,6 +99,7 @@ def test_add_benzene_fragment(mock_parser_host):
 
 
 def test_benzene_fusion_rotation(mock_parser_host):
+    """Benzene fusion reuses existing edge atoms and preserves bond order."""
     scene = setup_scene_with_view(mock_parser_host)
     id1 = scene.create_atom("C", QPointF(-10, 0))
     id2 = scene.create_atom("C", QPointF(10, 0))
@@ -118,6 +122,7 @@ def test_benzene_fusion_rotation(mock_parser_host):
 
 
 def test_delete_selected_items(mock_parser_host):
+    """Right-click on a selected atom triggers delete_items."""
     scene = setup_scene_with_view(mock_parser_host)
     scene.mode = "select"
     aid = scene.create_atom("C", QPointF(0, 0))
@@ -135,6 +140,7 @@ def test_delete_selected_items(mock_parser_host):
 
 @patch("PyQt6.QtWidgets.QGraphicsScene.mouseDoubleClickEvent")
 def test_double_click_select_component(mock_dbl, mock_parser_host):
+    """Double-click selects all atoms in the connected component, not isolated ones."""
     scene = setup_scene_with_view(mock_parser_host)
     scene.mode = "select"
     id1 = scene.create_atom("C", QPointF(0, 0))

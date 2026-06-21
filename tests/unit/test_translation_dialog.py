@@ -99,6 +99,7 @@ def make_dialog(qapp):
 
 class TestTabSwitching:
     def test_tab_change_clears_selection(self, make_dialog):
+        """Switching tabs clears the selected atoms set."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms = {0, 1}
         with patch.object(type(dlg), "clear_atom_labels"):
@@ -106,6 +107,7 @@ class TestTabSwitching:
         assert len(dlg.selected_atoms) == 0
 
     def test_tab_change_during_init_is_noop(self, make_dialog):
+        """_on_tab_changed is a no-op while _is_initializing is True."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms = {0}
         dlg._is_initializing = True
@@ -120,6 +122,7 @@ class TestTabSwitching:
 
 class TestAbsolutePicking:
     def test_abs_pick_supports_multiple_selection(self, make_dialog):
+        """_abs_on_atom_picked accumulates atoms rather than replacing the selection."""
         dlg, mol, mw = make_dialog()
         dlg.tabs.setCurrentIndex(0)
         mw.view_3d_manager.current_mol = mol
@@ -129,6 +132,7 @@ class TestAbsolutePicking:
         assert dlg.selected_atoms == {0, 1}
 
     def test_abs_pick_populates_inputs(self, make_dialog):
+        """_abs_on_atom_picked fills the absolute coordinate inputs with the atom's position."""
         dlg, mol, mw = make_dialog()
         mw.view_3d_manager.current_mol = mol
         pos = mol.GetConformer().GetPositions()
@@ -146,6 +150,7 @@ class TestAbsolutePicking:
 
 class TestAbsoluteHelpers:
     def test_abs_clear_resets_inputs(self, make_dialog):
+        """_abs_clear_selection resets coordinate inputs to 0.000 and empties selected_atoms."""
         dlg, _, _ = make_dialog()
         dlg.abs_x_input.setText("1.5")
         dlg.abs_y_input.setText("-2.0")
@@ -159,6 +164,7 @@ class TestAbsoluteHelpers:
         assert len(dlg.selected_atoms) == 0
 
     def test_set_origin_fills_zeros(self, make_dialog):
+        """_set_origin fills all absolute coordinate inputs with '0.0000'."""
         dlg, _, _ = make_dialog()
         dlg.abs_x_input.setText("5.0")
         dlg._set_origin()
@@ -167,6 +173,7 @@ class TestAbsoluteHelpers:
         assert dlg.abs_z_input.text() == "0.0000"
 
     def test_move_mol_toggled_changes_button_label(self, make_dialog):
+        """_on_move_mol_toggled updates the apply button label based on the checkbox state."""
         dlg, _, _ = make_dialog()
         dlg.move_mol_checkbox.setChecked(False)
         dlg._on_move_mol_toggled(0)
@@ -183,6 +190,7 @@ class TestAbsoluteHelpers:
 
 class TestApplyAbsolute:
     def test_no_atom_shows_warning(self, make_dialog):
+        """apply_absolute shows a warning when no atom is selected."""
         dlg, _, mw = make_dialog()
         dlg.selected_atoms.clear()
         mw.view_3d_manager.current_mol = dlg.mol
@@ -191,6 +199,7 @@ class TestApplyAbsolute:
         mb.warning.assert_called_once()
 
     def test_bad_input_shows_warning(self, make_dialog):
+        """apply_absolute shows a warning when a coordinate input is not a valid number."""
         dlg, mol, mw = make_dialog()
         dlg.selected_atoms = {0}
         mw.view_3d_manager.current_mol = mol
@@ -200,6 +209,7 @@ class TestApplyAbsolute:
         mb.warning.assert_called_once()
 
     def test_move_molecule_shifts_all_atoms(self, make_dialog):
+        """apply_absolute with move_mol=True shifts all atoms by the vector to the target."""
         dlg, mol, mw = make_dialog()
         mw.view_3d_manager.current_mol = mol
         dlg.selected_atoms = {0}
@@ -217,6 +227,7 @@ class TestApplyAbsolute:
             assert after[i] == pytest.approx(before[i] + delta, abs=1e-4)
 
     def test_move_selected_only_shifts_selected_atoms(self, make_dialog):
+        """apply_absolute with move_mol=False shifts only the selected atoms to the target."""
         dlg, mol, mw = make_dialog()
         mw.view_3d_manager.current_mol = mol
         dlg.selected_atoms = {0, 1}
@@ -237,6 +248,7 @@ class TestApplyAbsolute:
             assert after[i] == pytest.approx(before[i], abs=1e-4)
 
     def test_apply_absolute_pushes_undo(self, make_dialog):
+        """apply_absolute calls push_undo_state on the edit_actions_manager."""
         dlg, mol, mw = make_dialog()
         mw.view_3d_manager.current_mol = mol
         dlg.selected_atoms = {0}
@@ -256,6 +268,7 @@ class TestApplyAbsolute:
 
 class TestDeltaPicking:
     def test_delta_pick_adds_atom(self, make_dialog):
+        """_delta_on_atom_picked adds an atom to selected_atoms."""
         dlg, _, _ = make_dialog()
         dlg.tabs.setCurrentIndex(1)
         with patch.object(type(dlg), "show_atom_labels"):
@@ -263,6 +276,7 @@ class TestDeltaPicking:
         assert 0 in dlg.selected_atoms
 
     def test_delta_repick_removes_atom(self, make_dialog):
+        """_delta_on_atom_picked removes an atom that was already selected."""
         dlg, _, _ = make_dialog()
         dlg.tabs.setCurrentIndex(1)
         with patch.object(type(dlg), "show_atom_labels"):
@@ -271,6 +285,7 @@ class TestDeltaPicking:
         assert 0 not in dlg.selected_atoms
 
     def test_delta_picks_accumulate(self, make_dialog):
+        """Successive _delta_on_atom_picked calls accumulate distinct atoms."""
         dlg, _, _ = make_dialog()
         dlg.tabs.setCurrentIndex(1)
         with patch.object(type(dlg), "show_atom_labels"):
@@ -286,6 +301,7 @@ class TestDeltaPicking:
 
 class TestSelectAllAtoms:
     def test_select_all_selects_every_atom(self, make_dialog):
+        """select_all_atoms selects every atom in the molecule."""
         dlg, mol, _ = make_dialog()
         with patch.object(type(dlg), "show_atom_labels"):
             dlg.select_all_atoms()
@@ -299,6 +315,7 @@ class TestSelectAllAtoms:
 
 class TestApplyTranslation:
     def test_no_atoms_shows_warning(self, make_dialog):
+        """apply_translation shows a warning when selected_atoms is empty."""
         dlg, mol, mw = make_dialog()
         mw.view_3d_manager.current_mol = mol
         dlg.selected_atoms.clear()
@@ -307,6 +324,7 @@ class TestApplyTranslation:
         mb.warning.assert_called_once()
 
     def test_bad_input_shows_warning(self, make_dialog):
+        """apply_translation shows a warning when a delta input is not a valid number."""
         dlg, mol, mw = make_dialog()
         mw.view_3d_manager.current_mol = mol
         dlg.selected_atoms = {0}
@@ -316,6 +334,7 @@ class TestApplyTranslation:
         mb.warning.assert_called_once()
 
     def test_zero_vector_is_noop(self, make_dialog):
+        """apply_translation with a (0,0,0) delta leaves all atom positions unchanged."""
         dlg, mol, mw = make_dialog()
         mw.view_3d_manager.current_mol = mol
         before = mol.GetConformer().GetPositions().copy()
@@ -328,6 +347,7 @@ class TestApplyTranslation:
         assert after == pytest.approx(before, abs=1e-6)
 
     def test_delta_shifts_selected_atoms(self, make_dialog):
+        """apply_translation shifts selected atoms by the given delta, leaving others unchanged."""
         dlg, mol, mw = make_dialog()
         mw.view_3d_manager.current_mol = mol
         before = mol.GetConformer().GetPositions().copy()
@@ -345,6 +365,7 @@ class TestApplyTranslation:
             assert after[idx] == pytest.approx(before[idx], abs=1e-4)
 
     def test_apply_translation_pushes_undo(self, make_dialog):
+        """apply_translation calls push_undo_state on the edit_actions_manager."""
         dlg, mol, mw = make_dialog()
         mw.view_3d_manager.current_mol = mol
         dlg.selected_atoms = {0}
@@ -363,6 +384,7 @@ class TestApplyTranslation:
 
 class TestUpdateDisplay:
     def test_abs_tab_no_atom_disables_button(self, make_dialog):
+        """update_display disables the absolute apply button when no atom is selected."""
         dlg, _, _ = make_dialog()
         dlg.tabs.setCurrentIndex(0)
         dlg.selected_atoms.clear()
@@ -370,6 +392,7 @@ class TestUpdateDisplay:
         assert not dlg.abs_apply_btn.isEnabled()
 
     def test_abs_tab_one_atom_enables_button(self, make_dialog):
+        """update_display enables the absolute apply button when one atom is selected."""
         dlg, mol, _ = make_dialog()
         dlg.tabs.setCurrentIndex(0)
         dlg.selected_atoms = {0}
@@ -377,6 +400,7 @@ class TestUpdateDisplay:
         assert dlg.abs_apply_btn.isEnabled()
 
     def test_delta_tab_no_atom_disables_button(self, make_dialog):
+        """update_display disables the delta apply button when no atom is selected."""
         dlg, _, _ = make_dialog()
         dlg.tabs.setCurrentIndex(1)
         dlg.selected_atoms.clear()
@@ -384,6 +408,7 @@ class TestUpdateDisplay:
         assert not dlg.apply_button.isEnabled()
 
     def test_delta_tab_one_atom_enables_button(self, make_dialog):
+        """update_display enables the delta apply button when one atom is selected."""
         dlg, _, _ = make_dialog()
         dlg.tabs.setCurrentIndex(1)
         dlg.selected_atoms = {0}
@@ -398,11 +423,13 @@ class TestUpdateDisplay:
 
 class TestPreselectedAtoms:
     def test_single_preselected_goes_to_abs_tab(self, make_dialog):
+        """A single preselected atom switches the dialog to the absolute tab."""
         dlg, _, _ = make_dialog(preselected_atoms=[0])
         assert dlg.tabs.currentIndex() == 0
         assert dlg.selected_atoms == {0}
 
     def test_multiple_preselected_goes_to_delta_tab(self, make_dialog):
+        """Multiple preselected atoms switch the dialog to the delta tab."""
         dlg, _, _ = make_dialog(preselected_atoms=[0, 1, 2])
         assert dlg.tabs.currentIndex() == 1
         assert {0, 1, 2}.issubset(dlg.selected_atoms)

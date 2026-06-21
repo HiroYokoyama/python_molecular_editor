@@ -283,12 +283,14 @@ class TestEditActionsExtended:
         return mgr
 
     def test_apply_chem_check_force_skip(self, manager):
+        """force_skip=True bypasses the chemistry check without setting any flags."""
         mol = Chem.MolFromSmiles("C")
         manager.apply_chem_check_and_set_flags(mol, force_skip=True)
         assert manager.host.chem_check_tried is False
         assert manager.host.chem_check_failed is False
 
     def test_apply_chem_check_settings_skip(self, manager):
+        """skip_chemistry_checks=True in settings prevents the check from running."""
         manager.host.init_manager.settings["skip_chemistry_checks"] = True
         mol = Chem.MolFromSmiles("C")
         manager.apply_chem_check_and_set_flags(mol)
@@ -296,6 +298,7 @@ class TestEditActionsExtended:
         assert manager.host.chem_check_failed is False
 
     def test_apply_chem_check_success(self, manager):
+        """A valid molecule sets chem_check_tried=True and chem_check_failed=False."""
         manager.host.init_manager.settings["skip_chemistry_checks"] = False
         mol = Chem.MolFromSmiles("C")
         manager.apply_chem_check_and_set_flags(mol)
@@ -303,6 +306,7 @@ class TestEditActionsExtended:
         assert manager.host.chem_check_failed is False
 
     def test_apply_chem_check_failure(self, manager):
+        """A sanitization error sets chem_check_failed=True and disables the 3D optimize button."""
         manager.host.init_manager.settings["skip_chemistry_checks"] = False
         mol = Chem.MolFromSmiles("C")
         with patch(
@@ -318,6 +322,7 @@ class TestEditActionsExtended:
         )
 
     def test_clear_xyz_flags_with_mol_arg(self, manager):
+        """_clear_xyz_flags removes XYZ-specific props and clears is_xyz_derived."""
         mol = Chem.MolFromSmiles("C")
         mol.SetProp("_xyz_skip_checks", "1")
         mol._xyz_skip_checks = True
@@ -334,6 +339,7 @@ class TestEditActionsExtended:
         manager.host.init_manager.optimize_3d_button.setEnabled.assert_called_with(True)
 
     def test_update_edit_menu_actions(self, manager):
+        """update_edit_menu_actions enables cut/copy/paste when items are selected."""
         manager.host.init_manager.scene.selectedItems.return_value = [MagicMock()]
 
         mock_clipboard = MagicMock()
@@ -351,6 +357,7 @@ class TestEditActionsExtended:
         manager.host.init_manager.paste_action.setEnabled.assert_called_with(True)
 
     def test_open_rotate_2d_dialog(self, manager):
+        """open_rotate_2d_dialog calls rotate_molecule_2d with the user's chosen angle."""
         manager.rotate_molecule_2d = MagicMock()
         mock_dialog = MagicMock()
         mock_dialog.exec.return_value = QDialog.DialogCode.Accepted
@@ -365,6 +372,7 @@ class TestEditActionsExtended:
         assert manager.last_rotation_angle == 45.0
 
     def test_rotate_molecule_2d_full(self, manager):
+        """rotate_molecule_2d updates atom positions and stores them in molecule data."""
         manager.host.init_manager.scene.selectedItems.return_value = []
         atom1 = MagicMock(spec=AtomItem)
         atom1.atom_id = 1
@@ -386,6 +394,7 @@ class TestEditActionsExtended:
         manager.host.state_manager.data.set_atom_pos.assert_called()
 
     def test_select_all(self, manager):
+        """select_all selects every AtomItem and BondItem in the scene."""
         atom = MagicMock(spec=AtomItem)
         bond = MagicMock(spec=BondItem)
         manager.host.init_manager.scene.items.return_value = [atom, bond, MagicMock()]
@@ -396,6 +405,7 @@ class TestEditActionsExtended:
         bond.setSelected.assert_called_with(True)
 
     def test_clear_all(self, manager):
+        """clear_all(skip_check=True) returns True and shows the cleared status message."""
         manager.host.edit_3d_manager.measurement_mode = True
         manager.host.edit_3d_manager.is_3d_edit_mode = True
 
@@ -405,6 +415,7 @@ class TestEditActionsExtended:
         manager.host.statusBar().showMessage.assert_called_with("Cleared all data.")
 
     def test_cut_selection(self, manager):
+        """cut_selection copies then deletes the selected items."""
         manager.copy_selection = MagicMock()
         item = MagicMock()
         manager.host.init_manager.scene.selectedItems.return_value = [item]
@@ -417,6 +428,7 @@ class TestEditActionsExtended:
         manager.host.statusBar().showMessage.assert_called_with("Cut selection.", 2000)
 
     def test_cut_selection_no_selection(self, manager):
+        """cut_selection is a no-op when nothing is selected."""
         manager.copy_selection = MagicMock()
         manager.host.init_manager.scene.selectedItems.return_value = []
 
@@ -425,6 +437,7 @@ class TestEditActionsExtended:
         manager.copy_selection.assert_not_called()
 
     def test_adjust_molecule_positions_no_collision(self, manager):
+        """Fragments already far apart are not moved by collision avoidance."""
         mol = Chem.MolFromSmiles("C.C")
         from rdkit.Chem import AllChem
 
@@ -444,6 +457,7 @@ class TestEditActionsExtended:
         assert list(conf.GetAtomPosition(1)) == pos1_before
 
     def test_adjust_molecule_positions_with_collision(self, manager):
+        """Colliding fragments are separated by collision avoidance."""
         mol = Chem.MolFromSmiles("C.C")
         from rdkit.Chem import AllChem
 
@@ -469,6 +483,7 @@ class TestEditActionsExtended:
         )
 
     def test_adjust_molecule_positions_single_fragment(self, manager):
+        """A single fragment is not moved by collision avoidance."""
         mol = Chem.MolFromSmiles("C")
         from rdkit.Chem import AllChem
 
@@ -483,6 +498,7 @@ class TestEditActionsExtended:
         assert list(conf.GetAtomPosition(0)) == pos_before
 
     def test_apply_chem_check_missing_button(self, manager):
+        """apply_chem_check_and_set_flags does not raise when optimize_3d_button is absent."""
         del manager.host.init_manager.optimize_3d_button
         manager.host.init_manager.settings["skip_chemistry_checks"] = False
         mol = Chem.MolFromSmiles("C")
@@ -491,6 +507,7 @@ class TestEditActionsExtended:
             manager.apply_chem_check_and_set_flags(mol)
 
     def test_clear_xyz_flags_current_mol(self, manager):
+        """_clear_xyz_flags(mol=None) uses the current_mol from the view manager."""
         mol = Chem.MolFromSmiles("C")
         mol.SetProp("_xyz_skip_checks", "1")
         manager.host.view_3d_manager.current_mol = mol
@@ -502,6 +519,7 @@ class TestEditActionsExtended:
         assert manager.host.is_xyz_derived is False
 
     def test_clear_xyz_flags_missing_zoom(self, manager):
+        """_clear_xyz_flags does not raise when reset_zoom is absent."""
         del manager.host.view_3d_manager.reset_zoom
 
         mol = Chem.MolFromSmiles("C")

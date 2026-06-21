@@ -30,6 +30,7 @@ def worker():
 
 
 def test_calculation_worker_init(worker):
+    """CalculationWorker initialises as a QObject with halt attributes unset."""
     from PyQt6.QtCore import QObject
 
     assert isinstance(worker, QObject)
@@ -38,6 +39,7 @@ def test_calculation_worker_init(worker):
 
 
 def test_calculation_worker_explicit_stereo_m_cfg(worker):
+    """M CFG stereo block in V2000 molfile is preserved through direct conversion."""
     mol_block = """
   2-Butene
   MoleditPy
@@ -69,6 +71,7 @@ M  END
 
 
 def test_calculation_worker_error_empty_input(worker):
+    """Empty mol block emits an error signal indicating no atoms to convert."""
     error_captor = SignalCaptor()
     worker.error.connect(error_captor.capture)
 
@@ -77,6 +80,7 @@ def test_calculation_worker_error_empty_input(worker):
 
 
 def test_calculation_worker_none_conversion_mode_defaults_to_fallback(worker):
+    """conversion_mode=None falls through to the RDKit workflow path."""
     mol_block = Chem.MolToMolBlock(Chem.MolFromSmiles("C"))
 
     with patch.object(worker, "_run_rdkit_workflow", return_value=True) as mock_rdkit:
@@ -86,6 +90,7 @@ def test_calculation_worker_none_conversion_mode_defaults_to_fallback(worker):
 
 
 def test_calculation_worker_safe_helpers_halted(worker):
+    """halt_all=True prevents the finished signal from being emitted."""
     setattr(worker, "halt_all", True)
 
     status_captor = SignalCaptor()
@@ -101,6 +106,7 @@ def test_calculation_worker_safe_helpers_halted(worker):
 
 
 def test_calculation_worker_rdkit_embedding_fail_fallback(worker):
+    """Embedding failure is reported via status/error signal and does not raise."""
     status_captor = SignalCaptor()
     worker.status_update.connect(status_captor.capture)
     error_captor = SignalCaptor()
@@ -134,6 +140,7 @@ def test_calculation_worker_rdkit_embedding_fail_fallback(worker):
 
 
 def test_optimize_only_mmff94s(worker):
+    """optimize_only with MMFF94s sets the _pme_optimization_method property."""
     mol = Chem.MolFromSmiles("CC")
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol)
@@ -159,6 +166,7 @@ def test_optimize_only_mmff94s(worker):
 
 
 def test_optimize_only_uff(worker):
+    """optimize_only with UFF_RDKIT sets the _pme_optimization_method property."""
     mol = Chem.MolFromSmiles("CC")
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol)
@@ -183,6 +191,7 @@ def test_optimize_only_uff(worker):
 
 
 def test_collision_avoidance_trigger(worker):
+    """Overlapping atoms in direct mode trigger collision avoidance separation."""
     mol = Chem.MolFromSmiles("C.C")
     mol = Chem.AddHs(mol)
     conf = Chem.Conformer(mol.GetNumAtoms())
@@ -214,6 +223,7 @@ def test_collision_avoidance_trigger(worker):
 
 
 def test_iterative_optimize_halt(worker):
+    """_iterative_optimize raises WorkerHaltError when halt_ids contains the worker id."""
     mol = Chem.MolFromSmiles("CCCC")
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol)
@@ -233,6 +243,7 @@ def test_iterative_optimize_halt(worker):
 
 
 def test_obabel_optimization_flow(worker):
+    """optimize_only with UFF_OBABEL calls the obabel optimization helper."""
     mol = Chem.MolFromSmiles("C")
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol)
@@ -269,6 +280,7 @@ def test_obabel_optimization_flow(worker):
 
 
 def test_intermolecular_interaction_toggle():
+    """Enabling intermolecular interaction optimization draws separate molecules together."""
     mol1 = Chem.MolFromSmiles("C")
     mol1 = Chem.AddHs(mol1)
     AllChem.EmbedMolecule(mol1, randomSeed=42)
@@ -326,6 +338,7 @@ def test_intermolecular_interaction_toggle():
 
 
 def test_intermolecular_interaction_uff():
+    """UFF with intermolecular interaction disabled keeps molecules at their initial separation."""
     mol1 = Chem.MolFromSmiles("C")
     mol1 = Chem.AddHs(mol1)
     AllChem.EmbedMolecule(mol1, randomSeed=42)

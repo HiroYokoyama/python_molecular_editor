@@ -62,6 +62,7 @@ class MockKeyboardScene(KeyboardMixin):
 
 
 def test_update_template_preview_uses_template_snapping_distance(app):
+    """update_template_preview calls find_atom_near with template_snapping_distance_2d."""
     scene = MockTemplateScene()
     scene.settings["template_snapping_distance_2d"] = 25.0
     scene.settings["template_fusing_distance_2d"] = 5.0
@@ -75,6 +76,7 @@ def test_update_template_preview_uses_template_snapping_distance(app):
 
 
 def test_update_user_template_preview_uses_template_snapping_distance(app):
+    """update_user_template_preview calls find_atom_near with template_snapping_distance_2d."""
     scene = MockTemplateScene()
     scene.settings["template_snapping_distance_2d"] = 30.0
     scene.settings["template_fusing_distance_2d"] = 5.0
@@ -89,6 +91,7 @@ def test_update_user_template_preview_uses_template_snapping_distance(app):
 
 
 def test_keyboard_key_4_uses_template_snapping_distance(app):
+    """Key 4 (template ring) uses template_snapping_distance_2d for atom snap."""
     scene = MockKeyboardScene()
     scene.settings["template_snapping_distance_2d"] = 22.0
     scene.settings["template_fusing_distance_2d"] = 5.0
@@ -108,6 +111,7 @@ def test_keyboard_key_4_uses_template_snapping_distance(app):
 
 
 def test_keyboard_key_4_uses_template_snapping_when_fusing_disabled(app):
+    """Key 4 still uses template_snapping_distance_2d even when fusing is disabled."""
     scene = MockKeyboardScene()
     scene.settings["template_fusing_enabled_2d"] = False
     scene.settings["template_snapping_distance_2d"] = 22.0
@@ -127,6 +131,7 @@ def test_keyboard_key_4_uses_template_snapping_when_fusing_disabled(app):
 
 
 def test_keyboard_other_keys_use_bond_snapping_distance(app):
+    """Non-template key presses use bond_snapping_distance_2d for atom snap."""
     scene = MockKeyboardScene()
     scene.settings["template_snapping_distance_2d"] = 22.0
     scene.settings["bond_snapping_distance_2d"] = 8.0

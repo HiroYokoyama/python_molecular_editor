@@ -29,27 +29,32 @@ def make_mock_mw(mol):
 
 class PickingDialogContractTests:
     def test_pick_adds_atom(self, make_dialog):
+        """on_atom_picked adds the atom index to selected_atoms."""
         dlg, _, _ = make_dialog()
         dlg.on_atom_picked(0)
         assert 0 in dlg.selected_atoms
 
     def test_repick_removes_atom(self, make_dialog):
+        """Picking the same atom twice toggles it back out of selected_atoms."""
         dlg, _, _ = make_dialog()
         dlg.on_atom_picked(0)
         dlg.on_atom_picked(0)
         assert 0 not in dlg.selected_atoms
 
     def test_multiple_picks_accumulate(self, make_dialog):
+        """Picking distinct atoms accumulates them all in selected_atoms."""
         dlg, _, _ = make_dialog()
         for i in range(4):
             dlg.on_atom_picked(i)
         assert dlg.selected_atoms == {0, 1, 2, 3}
 
     def test_preselected_atoms_loaded(self, make_dialog):
+        """Preselected atoms are present in selected_atoms after construction."""
         dlg, _, _ = make_dialog(preselected_atoms=[0, 1, 2])
         assert dlg.selected_atoms == {0, 1, 2}
 
     def test_clear_empties_selection(self, make_dialog):
+        """clear_selection empties selected_atoms and disables the apply button."""
         dlg, _, _ = make_dialog()
         for i in range(4):
             dlg.on_atom_picked(i)
@@ -59,36 +64,42 @@ class PickingDialogContractTests:
         assert not dlg.apply_button.isEnabled()
 
     def test_select_all_selects_every_atom(self, make_dialog):
+        """select_all_atoms adds every atom in the molecule to selected_atoms."""
         dlg, mol, _ = make_dialog()
         with patch.object(type(dlg), "show_atom_labels"):
             dlg.select_all_atoms()
         assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
 
     def test_select_all_enables_apply(self, make_dialog):
+        """select_all_atoms enables the apply button."""
         dlg, mol, _ = make_dialog()
         with patch.object(type(dlg), "show_atom_labels"):
             dlg.select_all_atoms()
         assert dlg.apply_button.isEnabled()
 
     def test_zero_atoms_disables_apply(self, make_dialog):
+        """update_display disables apply button when selection is empty."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms.clear()
         dlg.update_display()
         assert not dlg.apply_button.isEnabled()
 
     def test_two_atoms_disables_apply(self, make_dialog):
+        """update_display disables apply button when only 2 atoms are selected."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms = {0, 1}
         dlg.update_display()
         assert not dlg.apply_button.isEnabled()
 
     def test_three_atoms_enables_apply(self, make_dialog):
+        """update_display enables apply button when 3 or more atoms are selected."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms = {0, 1, 2}
         dlg.update_display()
         assert dlg.apply_button.isEnabled()
 
     def test_count_shown_in_label(self, make_dialog):
+        """update_display shows the selected atom count in the selection label."""
         dlg, _, _ = make_dialog()
         dlg.selected_atoms = {0, 1, 2, 3}
         dlg.update_display()

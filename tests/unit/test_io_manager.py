@@ -152,6 +152,7 @@ class TestPromptForCharge:
         ],
     )
     def test_accept_returns_charge(self, qapp, text, expected_charge):
+        """Accepted dialog returns the entered charge, ok=True, skip=False."""
         io = self._make_io()
         with _make_charge_dialog(line_edit_text=text, accepted=True):
             charge, ok, skip = io.prompt_for_charge()
@@ -160,6 +161,7 @@ class TestPromptForCharge:
         assert skip is False
 
     def test_cancel_returns_none_false_false(self, qapp):
+        """Cancelled dialog returns charge=None, ok=False, skip=False."""
         io = self._make_io()
         with _make_charge_dialog(accepted=False):
             charge, ok, skip = io.prompt_for_charge()
@@ -168,6 +170,7 @@ class TestPromptForCharge:
         assert skip is False
 
     def test_skip_chemistry_returns_zero_true_true(self, qapp):
+        """Skip button returns charge=0, ok=True, skip=True."""
         io = self._make_io()
         captured_cb = []
 

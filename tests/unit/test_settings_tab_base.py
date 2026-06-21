@@ -17,11 +17,13 @@ class ConcreteTab(SettingsTabBase):
 
 
 def test_init_stores_default_settings(app):
+    """__init__ stores the provided default_settings dict for later use."""
     tab = ConcreteTab(DEFAULT_SETTINGS)
     assert tab.default_settings is DEFAULT_SETTINGS
 
 
 def test_create_separator_returns_hline(app):
+    """_create_separator returns an HLine QFrame with Sunken shadow."""
     tab = ConcreteTab(DEFAULT_SETTINGS)
     sep = tab._create_separator()
     assert isinstance(sep, QFrame)
@@ -30,6 +32,7 @@ def test_create_separator_returns_hline(app):
 
 
 def test_create_slider_range(app):
+    """_create_slider returns a QSlider with the specified min/max range."""
     tab = ConcreteTab(DEFAULT_SETTINGS)
     slider, spin = tab._create_slider(10, 200, 10.0)
     assert isinstance(slider, QSlider)
@@ -38,6 +41,7 @@ def test_create_slider_range(app):
 
 
 def test_create_slider_float_spin_updates(app):
+    """Slider and float spinbox stay in sync bidirectionally."""
     tab = ConcreteTab(DEFAULT_SETTINGS)
     slider, spin = tab._create_slider(0, 100, 10.0)
     slider.setValue(50)
@@ -48,6 +52,7 @@ def test_create_slider_float_spin_updates(app):
 
 
 def test_create_slider_int_spin_updates(app):
+    """Slider and integer spinbox stay in sync bidirectionally."""
     tab = ConcreteTab(DEFAULT_SETTINGS)
     slider, spin = tab._create_slider(3, 20, 1.0, is_int=True)
     slider.setValue(10)
@@ -58,6 +63,7 @@ def test_create_slider_int_spin_updates(app):
 
 
 def test_wrap_layout_returns_layout_with_children(app):
+    """_wrap_layout returns an HBoxLayout containing the provided widgets."""
     tab = ConcreteTab(DEFAULT_SETTINGS)
     slider, label = tab._create_slider(0, 100, 1.0)
     layout = tab._wrap_layout(slider, label)
@@ -67,6 +73,7 @@ def test_wrap_layout_returns_layout_with_children(app):
 
 
 def test_reset_to_defaults_calls_update_ui(app):
+    """reset_to_defaults calls update_ui with the stored default_settings."""
     tab = ConcreteTab(DEFAULT_SETTINGS)
     tab.update_ui = MagicMock()
     tab.reset_to_defaults()
@@ -74,6 +81,7 @@ def test_reset_to_defaults_calls_update_ui(app):
 
 
 def test_update_ui_not_implemented(app):
+    """SettingsTabBase.update_ui raises NotImplementedError on unsubclassed base."""
     import pytest
 
     # The base class raises NotImplementedError; ConcreteTab overrides it
@@ -86,6 +94,7 @@ def test_update_ui_not_implemented(app):
 
 
 def test_get_settings_not_implemented(app):
+    """SettingsTabBase.get_settings raises NotImplementedError on unsubclassed base."""
     import pytest
 
     class RawBase(SettingsTabBase):

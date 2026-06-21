@@ -48,6 +48,7 @@ def _fake_winreg(val):
 
 class TestWindowsTheme:
     def test_windows_dark_when_val_zero(self):
+        """AppsUseLightTheme=0 maps to dark theme on Windows."""
         fake_reg = _fake_winreg(0)
         with (
             patch("platform.system", return_value="Windows"),
@@ -56,6 +57,7 @@ class TestWindowsTheme:
             assert detect_system_theme() == "dark"
 
     def test_windows_light_when_val_one(self):
+        """AppsUseLightTheme=1 maps to light theme on Windows."""
         fake_reg = _fake_winreg(1)
         with (
             patch("platform.system", return_value="Windows"),
@@ -90,6 +92,7 @@ class TestWindowsTheme:
 
 class TestMacOSTheme:
     def test_macos_always_light(self):
+        """macOS always returns light theme."""
         with patch("platform.system", return_value="Darwin"):
             assert detect_system_theme() == "light"
 
@@ -108,6 +111,7 @@ def _proc(returncode, stdout):
 
 class TestLinuxTheme:
     def test_linux_gnome_color_scheme_dark(self):
+        """GNOME color-scheme prefer-dark maps to dark theme on Linux."""
         responses = [_proc(0, "'prefer-dark'\n"), _proc(1, "")]
         with (
             patch("platform.system", return_value="Linux"),
@@ -116,6 +120,7 @@ class TestLinuxTheme:
             assert detect_system_theme() == "dark"
 
     def test_linux_gnome_color_scheme_light(self):
+        """GNOME color-scheme prefer-light maps to light theme on Linux."""
         responses = [_proc(0, "'prefer-light'\n"), _proc(1, "")]
         with (
             patch("platform.system", return_value="Linux"),
@@ -150,6 +155,7 @@ class TestLinuxTheme:
             assert detect_system_theme() is None
 
     def test_linux_gsettings_both_fail_returns_none(self):
+        """Both gsettings queries failing returns None on Linux."""
         responses = [_proc(1, ""), _proc(1, "")]
         with (
             patch("platform.system", return_value="Linux"),
@@ -165,6 +171,7 @@ class TestLinuxTheme:
 
 class TestUnknownPlatform:
     def test_unknown_os_returns_none(self):
+        """Unrecognised OS returns None."""
         with patch("platform.system", return_value="FreeBSD"):
             assert detect_system_theme() is None
 
@@ -176,24 +183,28 @@ class TestUnknownPlatform:
 
 class TestDetectSystemDarkMode:
     def test_dark_theme_returns_true(self):
+        """detect_system_dark_mode returns True when theme is dark."""
         with patch(
             "moleditpy.utils.system_utils.detect_system_theme", return_value="dark"
         ):
             assert detect_system_dark_mode() is True
 
     def test_light_theme_returns_false(self):
+        """detect_system_dark_mode returns False when theme is light."""
         with patch(
             "moleditpy.utils.system_utils.detect_system_theme", return_value="light"
         ):
             assert detect_system_dark_mode() is False
 
     def test_none_theme_returns_none(self):
+        """detect_system_dark_mode returns None when theme is unknown."""
         with patch(
             "moleditpy.utils.system_utils.detect_system_theme", return_value=None
         ):
             assert detect_system_dark_mode() is None
 
     def test_winreg_import_error_fallback(self):
+        """winreg=None is set when the module is unavailable at import time."""
         import sys
         import importlib
         from unittest.mock import patch

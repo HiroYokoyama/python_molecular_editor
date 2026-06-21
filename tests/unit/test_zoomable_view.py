@@ -67,6 +67,7 @@ def _mouse_event(
 
 
 def test_init_panning_state(app):
+    """ZoomableView initialises with _is_panning=False and zero scroll offsets."""
     view, _ = _make_view(app)
     assert view._is_panning is False
     assert view._pan_start_scroll_h == 0
@@ -74,11 +75,13 @@ def test_init_panning_state(app):
 
 
 def test_init_drag_mode(app):
+    """ZoomableView initialises with NoDrag drag mode."""
     view, _ = _make_view(app)
     assert view.dragMode() == ZoomableView.DragMode.NoDrag
 
 
 def test_init_scroll_bars_always_on(app):
+    """ZoomableView initialises with both scroll bars always visible."""
     view, _ = _make_view(app)
     assert view.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
     assert view.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
@@ -90,6 +93,7 @@ def test_init_scroll_bars_always_on(app):
 
 
 def test_wheel_ctrl_zoom_in_scales_up(app):
+    """Ctrl+scroll-up increases the view scale."""
     view, _ = _make_view(app)
     before = view.transform().m11()
     ev = _wheel_event(delta_y=120, ctrl=True)
@@ -99,6 +103,7 @@ def test_wheel_ctrl_zoom_in_scales_up(app):
 
 
 def test_wheel_ctrl_zoom_out_scales_down(app):
+    """Ctrl+scroll-down decreases the view scale."""
     view, _ = _make_view(app)
     ev_in = _wheel_event(delta_y=120, ctrl=True)
     view.wheelEvent(ev_in)
@@ -110,6 +115,7 @@ def test_wheel_ctrl_zoom_out_scales_down(app):
 
 
 def test_wheel_no_ctrl_passes_to_super(app):
+    """Scroll without Ctrl passes the event to the parent class and leaves scale unchanged."""
     view, _ = _make_view(app)
     before = view.transform().m11()
     ev = _wheel_event(delta_y=120, ctrl=False)
@@ -120,6 +126,7 @@ def test_wheel_no_ctrl_passes_to_super(app):
 
 
 def test_wheel_ctrl_does_not_exceed_max_scale(app):
+    """Repeated Ctrl+scroll-up clamps the scale near the maximum limit."""
     view, _ = _make_view(app)
     # Zoom in many times; the guard allows one overshoot step (max * 1.1)
     for _ in range(200):
@@ -130,6 +137,7 @@ def test_wheel_ctrl_does_not_exceed_max_scale(app):
 
 
 def test_wheel_ctrl_does_not_go_below_min_scale(app):
+    """Repeated Ctrl+scroll-down clamps the scale near the minimum limit."""
     view, _ = _make_view(app)
     # Zoom out many times; the guard allows one undershoot step (min / 1.1)
     for _ in range(200):
@@ -144,6 +152,7 @@ def test_wheel_ctrl_does_not_go_below_min_scale(app):
 
 
 def test_mouse_press_middle_button_starts_pan(app):
+    """Middle-button press starts panning and accepts the event."""
     view, _ = _make_view(app)
     ev = _mouse_event(Qt.MouseButton.MiddleButton)
     view.mousePressEvent(ev)
@@ -152,6 +161,7 @@ def test_mouse_press_middle_button_starts_pan(app):
 
 
 def test_mouse_press_shift_left_starts_pan(app):
+    """Shift+left-button press starts panning and accepts the event."""
     view, _ = _make_view(app)
     ev = _mouse_event(
         Qt.MouseButton.LeftButton, modifiers=Qt.KeyboardModifier.ShiftModifier
@@ -162,6 +172,7 @@ def test_mouse_press_shift_left_starts_pan(app):
 
 
 def test_mouse_press_pan_sets_cursor_closed_hand(app):
+    """Starting a pan changes the cursor to ClosedHandCursor."""
     view, _ = _make_view(app)
     ev = _mouse_event(Qt.MouseButton.MiddleButton)
     view.mousePressEvent(ev)
@@ -169,6 +180,7 @@ def test_mouse_press_pan_sets_cursor_closed_hand(app):
 
 
 def test_mouse_press_left_no_shift_passes_to_super(app):
+    """Left-button press without Shift does not start panning."""
     view, _ = _make_view(app)
     from PyQt6.QtCore import QEvent, QPointF
 
@@ -184,6 +196,7 @@ def test_mouse_press_left_no_shift_passes_to_super(app):
 
 
 def test_mouse_press_none_event_returns_early(app):
+    """mousePressEvent with None does not raise and does not start panning."""
     view, _ = _make_view(app)
     view.mousePressEvent(None)  # should not raise
     assert view._is_panning is False
@@ -195,6 +208,7 @@ def test_mouse_press_none_event_returns_early(app):
 
 
 def test_mouse_move_while_panning_updates_scrollbars(app):
+    """Mouse move during panning accepts the event and updates scroll positions."""
     view, _ = _make_view(app)
     # Start panning at (100, 100)
     press_ev = _mouse_event(Qt.MouseButton.MiddleButton, pos=QPoint(100, 100))
@@ -208,6 +222,7 @@ def test_mouse_move_while_panning_updates_scrollbars(app):
 
 
 def test_mouse_move_not_panning_passes_to_super(app):
+    """Mouse move without active pan passes the event to the parent class."""
     view, _ = _make_view(app)
     assert view._is_panning is False
     from PyQt6.QtCore import QEvent, QPointF
@@ -224,6 +239,7 @@ def test_mouse_move_not_panning_passes_to_super(app):
 
 
 def test_mouse_move_none_event_returns_early(app):
+    """mouseMoveEvent with None does not raise."""
     view, _ = _make_view(app)
     view.mouseMoveEvent(None)  # should not raise
 
@@ -234,6 +250,7 @@ def test_mouse_move_none_event_returns_early(app):
 
 
 def test_mouse_release_ends_pan(app):
+    """Mouse release while panning ends the pan and accepts the event."""
     view, _ = _make_view(app)
     press_ev = _mouse_event(Qt.MouseButton.MiddleButton)
     view.mousePressEvent(press_ev)
@@ -246,6 +263,7 @@ def test_mouse_release_ends_pan(app):
 
 
 def test_mouse_release_restores_arrow_cursor_in_select_mode(app):
+    """Ending a pan in select mode restores the ArrowCursor."""
     view, scene = _make_view(app, mode="select")
     press_ev = _mouse_event(Qt.MouseButton.MiddleButton)
     view.mousePressEvent(press_ev)
@@ -255,6 +273,7 @@ def test_mouse_release_restores_arrow_cursor_in_select_mode(app):
 
 
 def test_mouse_release_restores_cross_cursor_in_atom_mode(app):
+    """Ending a pan in atom mode restores the CrossCursor."""
     view, scene = _make_view(app, mode="atom_C")
     view._is_panning = True
     rel_ev = _mouse_event(Qt.MouseButton.LeftButton)
@@ -263,6 +282,7 @@ def test_mouse_release_restores_cross_cursor_in_atom_mode(app):
 
 
 def test_mouse_release_restores_cross_cursor_in_bond_mode(app):
+    """Ending a pan in bond mode restores the CrossCursor."""
     view, scene = _make_view(app, mode="bond_single")
     view._is_panning = True
     rel_ev = _mouse_event(Qt.MouseButton.LeftButton)
@@ -271,6 +291,7 @@ def test_mouse_release_restores_cross_cursor_in_bond_mode(app):
 
 
 def test_mouse_release_restores_cross_cursor_in_charge_mode(app):
+    """Ending a pan in charge mode restores the CrossCursor."""
     view, scene = _make_view(app, mode="charge_plus")
     view._is_panning = True
     rel_ev = _mouse_event(Qt.MouseButton.LeftButton)
@@ -279,6 +300,7 @@ def test_mouse_release_restores_cross_cursor_in_charge_mode(app):
 
 
 def test_mouse_release_restores_arrow_for_unknown_mode(app):
+    """Ending a pan in an unknown scene mode restores the ArrowCursor."""
     view, scene = _make_view(app, mode="unknown_mode")
     view._is_panning = True
     rel_ev = _mouse_event(Qt.MouseButton.LeftButton)
@@ -287,6 +309,7 @@ def test_mouse_release_restores_arrow_for_unknown_mode(app):
 
 
 def test_mouse_release_not_panning_passes_to_super(app):
+    """Mouse release when not panning passes the event to the parent class."""
     view, _ = _make_view(app)
     assert view._is_panning is False
     from PyQt6.QtCore import QEvent, QPointF
@@ -309,6 +332,7 @@ def test_mouse_release_not_panning_passes_to_super(app):
 
 
 def test_viewport_event_non_native_gesture_passes_to_super(app):
+    """viewportEvent with a non-NativeGesture event passes to the parent class."""
     view, _ = _make_view(app)
     # Use a benign event type that super().viewportEvent will not try to
     # dispatch as a mouse event (avoids C++ type-cast errors on plain QEvent).
@@ -318,6 +342,7 @@ def test_viewport_event_non_native_gesture_passes_to_super(app):
 
 
 def test_viewport_event_zoom_native_gesture_scales(app):
+    """viewportEvent with ZoomNativeGesture scales the view and returns True."""
     view, _ = _make_view(app)
     before = view.transform().m11()
     ev = MagicMock()

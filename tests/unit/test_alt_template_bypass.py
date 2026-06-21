@@ -44,6 +44,7 @@ def qapp():
 def test_update_template_preview_allows_snapping_but_bypasses_fusing_when_alt_pressed(
     qapp,
 ):
+    """Alt key allows cursor snapping but suppresses template fusing in preview."""
     scene = MockTemplateScene()
     scene.settings["template_snapping_distance_2d"] = 25.0
     scene.settings["template_fusing_enabled_2d"] = True
@@ -80,6 +81,7 @@ def test_update_template_preview_allows_snapping_but_bypasses_fusing_when_alt_pr
 
 
 def test_add_molecule_fragment_bypasses_fusing_when_alt_pressed(qapp):
+    """Alt key bypasses fusing so all template fragment atoms are created fresh."""
     scene = MockTemplateScene()
     scene.settings["template_fusing_enabled_2d"] = True
     scene.settings["template_fusing_distance_2d"] = 15.0
