@@ -1,9 +1,17 @@
+"""Tests for project I/O (merged from test_project_io_extended.py and test_project_io_raw.py)."""
+
 import os
 import json
 import pickle
+import pytest
 from moleditpy.ui.io_logic import IOManager
 from PyQt6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
+
+
+# ---------------------------------------------------------------------------
+# DummyProjectIo — uses an external host from conftest (mock_parser_host)
+# ---------------------------------------------------------------------------
 
 
 class DummyProjectIo(IOManager):
@@ -199,16 +207,12 @@ def test_save_as_json_trigger(mock_parser_host, tmp_path):
 def test_load_raw_data_error_paths(mock_parser_host):
     """Verify error handling during raw data loading (file not found, corrupt)."""
     io = DummyProjectIo(mock_parser_host)
-    # File not found
     io.load_raw_data("non_existent.pmeraw")
     io.statusBar().showMessage.assert_called_with("File not found: non_existent.pmeraw")
 
-    # Unpickling error
     with patch("builtins.open", MagicMock()):
         with patch("pickle.load", side_effect=pickle.UnpicklingError("Corrupt")):
-            # Should handle exception and log/show error
             io.load_raw_data("dummy_data")
-            # Verify error message
             io.statusBar().showMessage.assert_called_with(
                 "Invalid project file format: Corrupt"
             )
@@ -217,12 +221,10 @@ def test_load_raw_data_error_paths(mock_parser_host):
 def test_open_project_file_unsaved_check(mock_parser_host):
     """Verify that 'open project' checks for unsaved changes before proceeding."""
     io = DummyProjectIo(mock_parser_host)
-    # Mock check_unsaved_changes to return False (cancel)
     with patch.object(
         io.host.state_manager, "check_unsaved_changes", return_value=False
     ):
         io.open_project_file()
-        # Should return early, not opening dialog
         with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName") as mock_open:
             assert not mock_open.called
 
@@ -254,7 +256,6 @@ def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
 
     with patch("PyQt6.QtWidgets.QMessageBox.information") as mock_info:
         io.load_json_data(str(json_path))
-        # Should verify warning was shown
         assert mock_info.called
         assert "version 2.0" in mock_info.call_args[0][2]
 
@@ -262,12 +263,10 @@ def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
 def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
     """Verify a complete save-load cycle for a project."""
     io = DummyProjectIo(mock_parser_host)
-    # Populate some data
     io.host.state_manager.data.add_atom("C", QPointF(10, 20), charge=1)
 
     project_file = str(tmp_path / "full_cycle.pmeprj")
 
-    # Save
     with patch(
         "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(project_file, "*.pmeprj"),
@@ -275,12 +274,10 @@ def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
         io.save_as_json()
     assert os.path.exists(project_file)
 
-    # Load
     io.host.state_manager.data.atoms.clear()
     with patch.object(io.host.state_manager, "load_from_json_data") as mock_load_json:
         io.load_json_data(project_file)
         assert mock_load_json.called
-        # Verify the data passed to load_from_json_data contains our atom
         saved_data = mock_load_json.call_args[0][0]
         assert "2d_structure" in saved_data
         atoms = saved_data["2d_structure"]["atoms"]
@@ -294,7 +291,6 @@ def test_save_project_default_filename(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
-    # 1. With existing path
     io.host.init_manager.current_file_path = str(
         tmp_path / "subdir" / "my_molecule.pmeprj"
     )
@@ -306,12 +302,9 @@ def test_save_project_default_filename(mock_parser_host, tmp_path):
 
         args, _ = mock_save.call_args
         suggested_path = args[2]
-        # Should be in same dir, same name (without ext potentially, or used as is depending on logic)
-        # Logic says: os.path.join(dirname, basename_no_ext)
         expected = str(tmp_path / "subdir" / "my_molecule")
         assert suggested_path == expected
 
-    # 2. No existing path
     io.host.init_manager.current_file_path = None
     with patch(
         "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
@@ -326,9 +319,7 @@ def test_save_project_extension_enforcement(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
-    # User types "test" without extension
     save_path_input = str(tmp_path / "test")
-    # Expected output
     expected_path = str(tmp_path / "test.pmeprj")
 
     with (
@@ -352,7 +343,6 @@ def test_save_project_success_state_update(mock_parser_host, tmp_path):
 
     save_path = str(tmp_path / "saved.pmeprj")
 
-    # Mock deepcopy to just return the object (or a copy), avoiding issues with MagicMocks
     with (
         patch(
             "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "")
@@ -369,3 +359,174 @@ def test_save_project_success_state_update(mock_parser_host, tmp_path):
         assert io.host.init_manager.current_file_path == save_path
         assert io.host.update_window_title.called
         assert io.host.state_manager._saved_state is not None
+
+
+# ---------------------------------------------------------------------------
+# DummyProjectIoRaw — standalone, creates its own host (from test_project_io_raw.py)
+# ---------------------------------------------------------------------------
+
+
+class DummyProjectIoRaw(IOManager):
+    def __init__(self, host=None):
+        self.host = host or MagicMock()
+        IOManager.__init__(self, self.host)
+
+        self.host.state_manager = MagicMock()
+        self.host.init_manager = MagicMock()
+        self.host.ui_manager = MagicMock()
+        self.host.edit_actions_manager = MagicMock()
+        self.host.view_3d_manager = MagicMock()
+        self.host.compute_manager = MagicMock()
+
+        from moleditpy.core.molecular_data import MolecularData
+
+        self.host.state_manager.data = MolecularData()
+        self.host.view_3d_manager.current_mol = None
+        self.host.init_manager.current_file_path = None
+        self.host.state_manager.has_unsaved_changes = False
+
+        self.host.state_manager.get_current_state.return_value = {"atoms": "mock"}
+        self.host.state_manager.update_window_title = MagicMock()
+        self.host.state_manager.set_state_from_data = MagicMock()
+
+        self.host.ui_manager.restore_ui_for_editing = MagicMock()
+        self.host.edit_actions_manager.clear_all.return_value = True
+        self.host.edit_actions_manager.reset_undo_stack = MagicMock()
+
+        self.statusBar_mock = MagicMock()
+        self.host.statusBar.return_value = self.statusBar_mock
+
+        def set_current_file_path(path):
+            self.host.init_manager.current_file_path = path
+
+        self.host.set_current_file_path.side_effect = set_current_file_path
+
+        def set_has_unsaved_changes(val):
+            self.host.state_manager.has_unsaved_changes = val
+
+        self.host.set_has_unsaved_changes.side_effect = set_has_unsaved_changes
+
+        def update_status_message(message, timeout=0):
+            if timeout == 0:
+                self.statusBar_mock.showMessage(message)
+            else:
+                self.statusBar_mock.showMessage(message, timeout)
+
+        self.host.update_status_message.side_effect = update_status_message
+
+    def __getattr__(self, name):
+        """Allow legacy access to host attributes for test convenience."""
+        return getattr(self.host, name)
+
+    @property
+    def data(self):
+        return self.host.state_manager.data
+
+    @property
+    def current_mol(self):
+        return self.host.view_3d_manager.current_mol
+
+    @current_mol.setter
+    def current_mol(self, v):
+        self.host.view_3d_manager.current_mol = v
+
+    @property
+    def current_file_path(self):
+        return self.host.init_manager.current_file_path
+
+    @current_file_path.setter
+    def current_file_path(self, v):
+        self.host.init_manager.current_file_path = v
+
+    @property
+    def has_unsaved_changes(self):
+        return self.host.state_manager.has_unsaved_changes
+
+    @has_unsaved_changes.setter
+    def has_unsaved_changes(self, v):
+        self.host.state_manager.has_unsaved_changes = v
+
+    def statusBar(self):
+        return self.statusBar_mock
+
+
+@pytest.fixture
+def io():
+    return DummyProjectIoRaw()
+
+
+def test_save_raw_data_no_data(io):
+    """Verify error message when trying to save empty project."""
+    io.data.atoms = {}
+    io.current_mol = None
+    io.save_raw_data()
+    io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
+
+
+def test_save_raw_data_success(io, tmp_path):
+    """Verify successful saving via file dialog."""
+    io.data.atoms = {1: "C"}
+    save_path = str(tmp_path / "test.pmeraw")
+
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(save_path, "Project Files (*.pmeraw)"),
+    ):
+        io.save_raw_data()
+
+        assert os.path.exists(save_path)
+        with open(save_path, "rb") as f:
+            data = pickle.load(f)
+            assert data == {"atoms": "mock"}
+
+        assert io.host.init_manager.current_file_path == save_path
+        assert io.host.state_manager.has_unsaved_changes is False
+        io.statusBar().showMessage.assert_called_with(f"Project saved to {save_path}")
+
+
+def test_save_raw_data_cancel(io):
+    """Verify that nothing happens if the user cancels the save dialog."""
+    io.data.atoms = {1: "C"}
+    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
+        io.save_raw_data()
+        io.statusBar().showMessage.assert_not_called()
+
+
+def test_load_raw_data_dialog_success(io, tmp_path):
+    """Verify loading via file dialog."""
+    load_path = str(tmp_path / "load_test.pmeraw")
+    sample_data = {"atoms": "loaded"}
+    with open(load_path, "wb") as f:
+        pickle.dump(sample_data, f)
+
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
+        return_value=(load_path, "Project Files (*.pmeraw)"),
+    ):
+        io.load_raw_data()
+
+        io.host.state_manager.set_state_from_data.assert_called_with(sample_data)
+        assert io.host.init_manager.current_file_path == load_path
+        assert io.host.state_manager.has_unsaved_changes is False
+        io.statusBar().showMessage.assert_called_with(
+            f"Project loaded from {load_path}"
+        )
+
+
+def test_load_raw_data_cancel(io):
+    """Verify that nothing happens if the user cancels the load dialog."""
+    with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
+        io.load_raw_data()
+        io.host.state_manager.set_state_from_data.assert_not_called()
+
+
+def test_load_raw_data_io_error(io, tmp_path):
+    """Verify handling of I/O errors during load."""
+    bad_path = str(tmp_path / "corrupt.pmeraw")
+    with open(bad_path, "w") as f:
+        f.write("not a pickle")
+
+    io.load_raw_data(bad_path)
+    io.statusBar().showMessage.assert_called()
+    msg = io.statusBar().showMessage.call_args[0][0]
+    assert "Invalid project file format" in msg
