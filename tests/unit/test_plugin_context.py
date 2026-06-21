@@ -9,6 +9,7 @@ instead of direct mw.state_manager access.
 import sys
 import os
 import unittest
+import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
 
 # Ensure moleditpy is importable
@@ -41,13 +42,6 @@ class TestMarkProjectModified(unittest.TestCase):
         ctx = _make_context(mw)
         ctx.mark_project_modified()
         mw.state_manager.update_window_title.assert_called_once()
-
-    def test_no_crash_when_mw_is_none(self):
-        ctx = _make_context(mw=None)
-        try:
-            ctx.mark_project_modified()
-        except Exception as exc:
-            self.fail(f"mark_project_modified() raised with mw=None: {exc}")
 
     def test_no_crash_when_state_manager_missing(self):
         mw = MagicMock(spec=[])  # no attributes
@@ -101,9 +95,6 @@ class TestRefreshUi(unittest.TestCase):
         _make_context(mw).refresh_ui()
         mw.state_manager.update_window_title.assert_called_once()
 
-    def test_no_crash_when_mw_is_none(self):
-        _make_context(None).refresh_ui()
-
     def test_no_crash_when_managers_missing(self):
         _make_context(MagicMock(spec=[])).refresh_ui()
 
@@ -113,9 +104,6 @@ class TestFit3dView(unittest.TestCase):
         mw = MagicMock()
         _make_context(mw).fit_3d_view()
         mw.view_3d_manager.fit_to_view.assert_called_once()
-
-    def test_no_crash_when_mw_is_none(self):
-        _make_context(None).fit_3d_view()
 
     def test_no_crash_when_fit_to_view_missing(self):
         mw = MagicMock(spec=["view_3d_manager"])
@@ -138,9 +126,6 @@ class TestClearCanvas(unittest.TestCase):
             push_to_undo=False
         )
 
-    def test_no_crash_when_mw_is_none(self):
-        _make_context(None).clear_canvas()
-
     def test_no_crash_when_manager_missing(self):
         _make_context(MagicMock(spec=[])).clear_canvas()
 
@@ -155,9 +140,6 @@ class TestSet3dFeaturesEnabled(unittest.TestCase):
         mw = MagicMock()
         _make_context(mw).set_3d_features_enabled(False)
         mw.ui_manager.enable_3d_features.assert_called_once_with(False)
-
-    def test_no_crash_when_mw_is_none(self):
-        _make_context(None).set_3d_features_enabled(True)
 
     def test_no_crash_when_ui_manager_missing(self):
         _make_context(MagicMock(spec=[])).set_3d_features_enabled(False)
@@ -174,9 +156,6 @@ class TestSetAnalysisEnabled(unittest.TestCase):
         _make_context(mw).set_analysis_enabled(False)
         mw.init_manager.analysis_action.setEnabled.assert_called_once_with(False)
 
-    def test_no_crash_when_mw_is_none(self):
-        _make_context(None).set_analysis_enabled(True)
-
     def test_no_crash_when_analysis_action_missing(self):
         mw = MagicMock(spec=["init_manager"])
         mw.init_manager = MagicMock(spec=[])
@@ -189,9 +168,6 @@ class TestCheckChemistryProblems(unittest.TestCase):
         _make_context(mw).check_chemistry_problems()
         mw.compute_manager.check_chemistry_problems_fallback.assert_called_once()
 
-    def test_no_crash_when_mw_is_none(self):
-        _make_context(None).check_chemistry_problems()
-
     def test_no_crash_when_compute_manager_missing(self):
         _make_context(MagicMock(spec=[])).check_chemistry_problems()
 
@@ -201,9 +177,6 @@ class TestRefresh2dScene(unittest.TestCase):
         mw = MagicMock()
         _make_context(mw).refresh_2d_scene()
         mw.init_manager.scene.update_all_items.assert_called_once()
-
-    def test_no_crash_when_mw_is_none(self):
-        _make_context(None).refresh_2d_scene()
 
     def test_no_crash_when_init_manager_missing(self):
         _make_context(MagicMock(spec=[])).refresh_2d_scene()
@@ -218,6 +191,24 @@ class TestRefresh2dScene(unittest.TestCase):
         mw.init_manager = MagicMock(spec=["scene"])
         mw.init_manager.scene = MagicMock(spec=[])
         _make_context(mw).refresh_2d_scene()
+
+
+@pytest.mark.parametrize("call", [
+    lambda ctx: ctx.mark_project_modified(),
+    lambda ctx: ctx.refresh_ui(),
+    lambda ctx: ctx.fit_3d_view(),
+    lambda ctx: ctx.clear_canvas(),
+    lambda ctx: ctx.set_3d_features_enabled(True),
+    lambda ctx: ctx.set_analysis_enabled(True),
+    lambda ctx: ctx.check_chemistry_problems(),
+    lambda ctx: ctx.refresh_2d_scene(),
+], ids=[
+    "mark_project_modified", "refresh_ui", "fit_3d_view", "clear_canvas",
+    "set_3d_features_enabled", "set_analysis_enabled",
+    "check_chemistry_problems", "refresh_2d_scene",
+])
+def test_no_crash_when_mw_is_none(call):
+    call(_make_context(None))
 
 
 if __name__ == "__main__":
