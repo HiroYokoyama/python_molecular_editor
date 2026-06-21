@@ -109,153 +109,63 @@ class DummyHost:
 # to pass the "Accepted" branch.  Returning anything else → Rejected path.
 
 
+from contextlib import contextmanager
+
+
+@contextmanager
+def _make_charge_dialog(line_edit_text="0", accepted=True, skip_btn_class=None):
+    """Patch all Qt widgets used by prompt_for_charge."""
+    le = MagicMock()
+    le.text.return_value = line_edit_text
+    btn_patch = (
+        patch("moleditpy.ui.io_logic.QPushButton", skip_btn_class)
+        if skip_btn_class is not None
+        else patch("moleditpy.ui.io_logic.QPushButton")
+    )
+    with (
+        patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
+        patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
+        patch("moleditpy.ui.io_logic.QVBoxLayout"),
+        patch("moleditpy.ui.io_logic.QHBoxLayout"),
+        patch("moleditpy.ui.io_logic.QLabel"),
+        patch("moleditpy.ui.io_logic.QDialogButtonBox"),
+        btn_patch,
+    ):
+        dlg = MagicMock()
+        code = MockDlg.DialogCode.Accepted if accepted else MockDlg.DialogCode.Rejected
+        dlg.exec.return_value = code
+        MockDlg.return_value = dlg
+        yield MockDlg, le
+
+
 class TestPromptForCharge:
-    """Tests for IOManager.prompt_for_charge()."""
-
     def _make_io(self):
-        host = DummyHost()
-        return IOManager(host), host
+        return IOManager(DummyHost())
 
-    # Shared patcher names
-    _PATCHES = [
-        "moleditpy.ui.io_logic.QVBoxLayout",
-        "moleditpy.ui.io_logic.QHBoxLayout",
-        "moleditpy.ui.io_logic.QLabel",
-        "moleditpy.ui.io_logic.QDialogButtonBox",
-    ]
-
-    def test_accept_with_default_charge(self, qapp):
-        """Accept with default text '0' → (0, True, False)."""
-        io, _ = self._make_io()
-        le = MagicMock()
-        le.text.return_value = "0"
-
-        with (
-            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
-            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
-            patch("moleditpy.ui.io_logic.QVBoxLayout"),
-            patch("moleditpy.ui.io_logic.QHBoxLayout"),
-            patch("moleditpy.ui.io_logic.QLabel"),
-            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
-            patch("moleditpy.ui.io_logic.QPushButton"),
-        ):
-            dlg = MagicMock()
-            dlg.exec.return_value = MockDlg.DialogCode.Accepted  # same sentinel
-            MockDlg.return_value = dlg
-
+    @pytest.mark.parametrize("text,expected_charge", [
+        ("0", 0),
+        ("2", 2),
+        ("-1", -1),
+        ("abc", 0),  # non-numeric falls back to 0
+    ])
+    def test_accept_returns_charge(self, qapp, text, expected_charge):
+        io = self._make_io()
+        with _make_charge_dialog(line_edit_text=text, accepted=True):
             charge, ok, skip = io.prompt_for_charge()
-
-        assert charge == 0
-        assert ok is True
-        assert skip is False
-
-    def test_accept_with_positive_charge(self, qapp):
-        """Text '2' → charge 2."""
-        io, _ = self._make_io()
-        le = MagicMock()
-        le.text.return_value = "2"
-
-        with (
-            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
-            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
-            patch("moleditpy.ui.io_logic.QVBoxLayout"),
-            patch("moleditpy.ui.io_logic.QHBoxLayout"),
-            patch("moleditpy.ui.io_logic.QLabel"),
-            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
-            patch("moleditpy.ui.io_logic.QPushButton"),
-        ):
-            dlg = MagicMock()
-            dlg.exec.return_value = MockDlg.DialogCode.Accepted
-            MockDlg.return_value = dlg
-
-            charge, ok, skip = io.prompt_for_charge()
-
-        assert charge == 2
-        assert ok is True
-        assert skip is False
-
-    def test_accept_with_negative_charge(self, qapp):
-        """Text '-1' → charge -1."""
-        io, _ = self._make_io()
-        le = MagicMock()
-        le.text.return_value = "-1"
-
-        with (
-            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
-            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
-            patch("moleditpy.ui.io_logic.QVBoxLayout"),
-            patch("moleditpy.ui.io_logic.QHBoxLayout"),
-            patch("moleditpy.ui.io_logic.QLabel"),
-            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
-            patch("moleditpy.ui.io_logic.QPushButton"),
-        ):
-            dlg = MagicMock()
-            dlg.exec.return_value = MockDlg.DialogCode.Accepted
-            MockDlg.return_value = dlg
-
-            charge, ok, skip = io.prompt_for_charge()
-
-        assert charge == -1
-        assert ok is True
-        assert skip is False
-
-    def test_invalid_text_falls_back_to_zero(self, qapp):
-        """Non-numeric text 'abc' → charge falls back to 0."""
-        io, _ = self._make_io()
-        le = MagicMock()
-        le.text.return_value = "abc"
-
-        with (
-            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
-            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
-            patch("moleditpy.ui.io_logic.QVBoxLayout"),
-            patch("moleditpy.ui.io_logic.QHBoxLayout"),
-            patch("moleditpy.ui.io_logic.QLabel"),
-            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
-            patch("moleditpy.ui.io_logic.QPushButton"),
-        ):
-            dlg = MagicMock()
-            dlg.exec.return_value = MockDlg.DialogCode.Accepted
-            MockDlg.return_value = dlg
-
-            charge, ok, skip = io.prompt_for_charge()
-
-        assert charge == 0
+        assert charge == expected_charge
         assert ok is True
         assert skip is False
 
     def test_cancel_returns_none_false_false(self, qapp):
-        """Rejected exec → (None, False, False)."""
-        io, _ = self._make_io()
-        le = MagicMock()
-        le.text.return_value = "0"
-
-        with (
-            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
-            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
-            patch("moleditpy.ui.io_logic.QVBoxLayout"),
-            patch("moleditpy.ui.io_logic.QHBoxLayout"),
-            patch("moleditpy.ui.io_logic.QLabel"),
-            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
-            patch("moleditpy.ui.io_logic.QPushButton"),
-        ):
-            dlg = MagicMock()
-            # Return something that is != MockDlg.DialogCode.Accepted
-            dlg.exec.return_value = MockDlg.DialogCode.Rejected
-            MockDlg.return_value = dlg
-
+        io = self._make_io()
+        with _make_charge_dialog(accepted=False):
             charge, ok, skip = io.prompt_for_charge()
-
         assert charge is None
         assert ok is False
         assert skip is False
 
     def test_skip_chemistry_returns_zero_true_true(self, qapp):
-        """Skip button fires callback before exec returns Accepted → (0, True, True)."""
-        io, _ = self._make_io()
-        le = MagicMock()
-        le.text.return_value = "0"
-
+        io = self._make_io()
         captured_cb = []
 
         class FakeSkipBtn:
@@ -267,29 +177,18 @@ class TestPromptForCharge:
                 class _Sig:
                     def connect(self_, cb):
                         captured_cb.append(cb)
-
                 return _Sig()
 
-        with (
-            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
-            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
-            patch("moleditpy.ui.io_logic.QVBoxLayout"),
-            patch("moleditpy.ui.io_logic.QHBoxLayout"),
-            patch("moleditpy.ui.io_logic.QLabel"),
-            patch("moleditpy.ui.io_logic.QDialogButtonBox"),
-            patch("moleditpy.ui.io_logic.QPushButton", FakeSkipBtn),
-        ):
-            dlg = MagicMock()
-            accepted = MockDlg.DialogCode.Accepted  # capture before exec fires
+        with _make_charge_dialog(skip_btn_class=FakeSkipBtn) as (MockDlg, _):
+            dlg = MockDlg.return_value
+            accepted = MockDlg.DialogCode.Accepted
 
             def _exec():
                 if captured_cb:
-                    captured_cb[0]()  # fire skip callback
-                return accepted  # return the same sentinel
+                    captured_cb[0]()
+                return accepted
 
             dlg.exec.side_effect = _exec
-            MockDlg.return_value = dlg
-
             charge, ok, skip = io.prompt_for_charge()
 
         assert charge == 0

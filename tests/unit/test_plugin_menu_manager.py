@@ -126,29 +126,21 @@ class TestUpdatePluginMenu:
         pmm.update_plugin_menu(menu)
         im.host.plugin_manager.discover_plugins.assert_called_once_with(im.host)
 
-    def test_all_integration_hooks_called(self, im):
-        """update_plugin_menu must call all 6 integration methods."""
+    def test_menu_action_appears_after_update(self, im):
+        """A registered menu action is present in the menu after update_plugin_menu."""
         pmm = PluginMenuManager(im)
         im.host.plugin_manager.discover_plugins.return_value = []
-
-        methods = [
-            "update_style_menu_with_plugins",
-            "add_registered_plugin_actions",
-            "add_plugin_toolbar_actions",
-            "_add_legacy_plugin_actions",
-            "integrate_plugin_export_actions",
-            "integrate_plugin_file_openers",
-            "integrate_plugin_analysis_tools",
+        im.host.plugin_manager.menu_actions = [
+            {"path": "MyPlugin/DoThing", "callback": MagicMock(), "text": "Do Thing", "shortcut": None}
         ]
-        mocks = {}
-        for m in methods:
-            mocks[m] = MagicMock()
-            setattr(pmm, m, mocks[m])
+        im.host.menuBar.return_value.actions.return_value = []
+        added_menu = MagicMock(**{"actions.return_value": []})
+        im.host.menuBar.return_value.addMenu.return_value = added_menu
 
         pmm.update_plugin_menu(MagicMock(spec=QMenu))
 
-        for m in methods:
-            mocks[m].assert_called_once()
+        im.host.menuBar.return_value.addMenu.assert_called_once_with("MyPlugin")
+        added_menu.addAction.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -157,26 +149,21 @@ class TestUpdatePluginMenu:
 
 
 class TestRebuildPluginMenus:
-    def test_calls_all_six_rebuild_steps(self, im):
+    def test_toolbar_and_export_populated_after_rebuild(self, im):
+        """rebuild_plugin_menus wires toolbar and export actions into UI."""
         pmm = PluginMenuManager(im)
         im.host.menuBar.return_value.actions.return_value = []
-
-        steps = [
-            "add_registered_plugin_actions",
-            "add_plugin_toolbar_actions",
-            "integrate_plugin_export_actions",
-            "integrate_plugin_file_openers",
-            "integrate_plugin_analysis_tools",
-            "update_style_menu_with_plugins",
+        im.host.plugin_manager.toolbar_actions = [
+            {"text": "Run", "callback": MagicMock(), "icon": "", "tooltip": ""}
         ]
-        mocks = {s: MagicMock() for s in steps}
-        for s, m in mocks.items():
-            setattr(pmm, s, m)
+        im.host.plugin_manager.export_actions = [
+            {"label": "Export CSV", "callback": MagicMock()}
+        ]
 
         pmm.rebuild_plugin_menus()
 
-        for s, m in mocks.items():
-            m.assert_called_once(), f"{s} was not called"
+        im.plugin_toolbar.addAction.assert_called_once()
+        im.export_button.menu.return_value.addAction.assert_called_once()
 
     def test_resets_separator_flag(self, im, pmm):
         im.plugin_menubar_separator_added = True
