@@ -4,7 +4,7 @@ This document explains the internal architecture of the MoleditPy plugin system.
 
 ## Overview
 
-The MoleditPy plugin system allows developers to extend the application's functionality without modifying the core codebase. It provides a managed API surface and a backward-compatibility layer to ensure stability across architectural refactors.
+The MoleditPy plugin system allows developers to extend the application's functionality without modifying the core codebase. It provides a managed API surface to ensure stability across architectural refactors.
 
 | Component | Responsibility | Key Class | Location |
 | :--- | :--- | :--- | :--- |
@@ -29,16 +29,7 @@ The manager uses Python's `ast` (Abstract Syntax Tree) module to safely extract 
 
 ---
 
-## 2. Backward Compatibility Layer (`moleditpy.modules`)
-
-A critical part of the modern MoleditPy architecture is the **Import Proxy Layer**. When the internal package structure was refactored (e.g., moving `MolecularData` to `core/`), a compatibility shim was added in `moleditpy.modules`.
-
-- **Proxy Mechanism**: When a legacy plugin attempts to import from `moleditpy.molecular_data`, the `moleditpy.modules` hook intercepts the request and transparently redirects it to the new location in `moleditpy.core.molecular_data`.
-- **Longevity**: This ensures that community-developed plugins remain functional even as the core architecture evolves toward a more decoupled design.
-
----
-
-## 3. Extension Points
+## 2. Extension Points
 
 Plugins interact with the application through the `PluginContext`. Key extension points include:
 
@@ -49,7 +40,7 @@ Plugins interact with the application through the `PluginContext`. Key extension
 
 ---
 
-## 4. Plugin Management UI
+## 3. Plugin Management UI
 
 The `PluginManagerWindow` (`plugins/plugin_manager_window.py`) provides a user-friendly interface for:
 - **Status Monitoring**: Viewing which plugins are successfully loaded and which encountered errors.
