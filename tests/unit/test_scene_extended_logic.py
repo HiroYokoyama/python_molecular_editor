@@ -1,3 +1,4 @@
+﻿"""Unit tests for MoleculeScene extended atom and bond logic."""
 import pytest
 from PyQt6.QtCore import Qt, QPointF
 from moleditpy.ui.molecule_scene import MoleculeScene

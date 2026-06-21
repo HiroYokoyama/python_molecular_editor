@@ -1,3 +1,4 @@
+﻿"""Unit tests for ComputeManager optimization trigger logic."""
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.compute_logic import ComputeManager

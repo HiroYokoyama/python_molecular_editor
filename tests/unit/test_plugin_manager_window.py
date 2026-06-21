@@ -1,3 +1,4 @@
+﻿"""Unit tests for PluginManagerWindow drag-and-drop and UI behavior."""
 from unittest.mock import MagicMock, patch
 
 import pytest

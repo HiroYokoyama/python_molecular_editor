@@ -1,3 +1,4 @@
+﻿"""Unit tests for UIManager robustness and edge cases."""
 from unittest.mock import MagicMock
 from moleditpy.ui.ui_manager import UIManager
 

@@ -1,3 +1,4 @@
+﻿"""Unit tests for sip_isdeleted_safe utility."""
 from unittest.mock import patch, MagicMock
 from moleditpy.utils.sip_isdeleted_safe import sip_isdeleted_safe
 

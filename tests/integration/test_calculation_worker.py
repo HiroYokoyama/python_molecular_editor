@@ -1,3 +1,4 @@
+﻿"""Integration tests for CalculationWorker with real RDKit computation."""
 import pytest
 import sys
 from rdkit import Chem

@@ -1,3 +1,4 @@
+﻿"""GUI tests for MainWindow UI manager integration."""
 from unittest.mock import MagicMock, patch
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtWidgets import QMenu, QToolBar, QFileDialog, QToolButton

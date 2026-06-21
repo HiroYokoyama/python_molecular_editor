@@ -1,3 +1,4 @@
+﻿"""Unit tests for advanced MoleculeScene mouse interactions."""
 import pytest
 from PyQt6.QtWidgets import QApplication, QGraphicsView
 from PyQt6.QtCore import Qt, QPointF

@@ -1,3 +1,4 @@
+﻿"""Integration tests for chiral atom label display in 3D view."""
 from rdkit import Chem
 from moleditpy.ui.mirror_dialog import MirrorDialog
 

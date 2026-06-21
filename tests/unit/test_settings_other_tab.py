@@ -1,3 +1,4 @@
+﻿"""Unit tests for SettingsOtherTab."""
 from moleditpy.ui.settings_tabs.settings_other_tab import SettingsOtherTab
 from moleditpy.utils.default_settings import DEFAULT_SETTINGS
 

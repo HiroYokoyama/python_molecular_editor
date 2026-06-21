@@ -1,3 +1,4 @@
+﻿"""Integration tests for headless main() startup and import sanity."""
 import sys
 import textwrap
 from unittest.mock import patch

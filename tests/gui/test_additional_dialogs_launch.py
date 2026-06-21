@@ -1,3 +1,4 @@
+﻿"""GUI tests for PlanarizeDialog, MirrorDialog, and additional dialog lifecycle."""
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem

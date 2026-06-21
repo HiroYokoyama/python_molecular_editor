@@ -1,3 +1,4 @@
+﻿"""Unit tests for ring bond priority in MoleculeScene."""
 from unittest.mock import MagicMock
 from moleditpy.core.molecular_data import MolecularData
 from moleditpy.ui.molecule_scene import MoleculeScene

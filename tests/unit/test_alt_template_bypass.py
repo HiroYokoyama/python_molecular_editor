@@ -1,3 +1,4 @@
+﻿"""Unit tests for alt-key template bypass in TemplateMixin."""
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPointF

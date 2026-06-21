@@ -1,3 +1,4 @@
+﻿"""Unit tests for CalculationWorker optimization and intermolecular modes."""
 import pytest
 import numpy as np
 from rdkit import Chem

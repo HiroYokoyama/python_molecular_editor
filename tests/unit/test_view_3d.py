@@ -1,3 +1,4 @@
+﻿"""Unit tests for View3DManager rendering and camera operations."""
 import pytest
 from unittest.mock import MagicMock, patch
 import numpy as np

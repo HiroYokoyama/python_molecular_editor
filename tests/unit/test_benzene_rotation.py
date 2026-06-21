@@ -1,3 +1,4 @@
+﻿"""Unit tests for 2D benzene rotation and reorientation."""
 import pytest
 from unittest.mock import MagicMock
 from moleditpy.ui.molecular_scene_handler import TemplateMixin

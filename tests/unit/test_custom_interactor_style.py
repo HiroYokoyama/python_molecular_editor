@@ -1,3 +1,4 @@
+﻿"""Unit tests for CustomInteractorStyle 3D event handling."""
 from unittest.mock import MagicMock, patch
 from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
 from PyQt6.QtCore import Qt

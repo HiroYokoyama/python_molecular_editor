@@ -1,3 +1,4 @@
+﻿"""Unit tests for stereochemistry handling in MolecularData."""
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.core.molecular_data import MolecularData

@@ -1,3 +1,4 @@
+﻿"""Unit tests for parser edge cases and malformed input handling."""
 import pytest
 from unittest.mock import MagicMock, patch
 from rdkit import Chem

@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
+"""GUI tests for MainWindow startup, file I/O, and core operations."""
 import pytest
 from PyQt6.QtCore import QPointF, Qt, QMimeData, QUrl
 from PyQt6.QtGui import QDropEvent

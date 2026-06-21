@@ -1,3 +1,4 @@
+﻿"""Unit tests for template snapping alignment in TemplateMixin and KeyboardMixin."""
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QKeyEvent

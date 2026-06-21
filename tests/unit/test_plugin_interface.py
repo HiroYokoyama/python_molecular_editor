@@ -1,3 +1,4 @@
+﻿"""Unit tests for PluginContext and Plugin3DController delegation API."""
 import pytest
 from unittest.mock import MagicMock
 from moleditpy.plugins.plugin_interface import PluginContext, Plugin3DController

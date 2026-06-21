@@ -1,3 +1,4 @@
+﻿"""Unit tests for 3D scene and model settings tabs."""
 from unittest.mock import patch, MagicMock
 from moleditpy.ui.settings_tabs.settings_3d_tabs import (
     Settings3DSceneTab,

@@ -1,3 +1,4 @@
+﻿"""Unit tests for MOL, SDF, SMILES, and XYZ file parsers."""
 import os
 import sys
 import pytest

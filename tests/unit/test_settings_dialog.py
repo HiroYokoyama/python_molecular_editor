@@ -1,3 +1,4 @@
+﻿"""Unit tests for SettingsDialog multi-tab layout and settings flow."""
 from unittest.mock import patch, MagicMock
 from moleditpy.ui.settings_dialog import SettingsDialog
 from moleditpy.utils.default_settings import DEFAULT_SETTINGS

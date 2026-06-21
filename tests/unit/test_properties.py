@@ -1,3 +1,4 @@
+﻿"""Unit tests for molecular property calculations via AnalysisWindow."""
 from rdkit import Chem
 from moleditpy.ui.analysis_window import AnalysisWindow
 from unittest.mock import MagicMock

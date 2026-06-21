@@ -1,3 +1,4 @@
+﻿"""Unit tests for CalculationWorker geometry and molecular-data operations."""
 from rdkit import Chem
 from moleditpy.ui.calculation_worker import CalculationWorker
 from moleditpy.core.molecular_data import MolecularData

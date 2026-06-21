@@ -1,3 +1,4 @@
+﻿"""Unit tests for ColorSettingsDialog."""
 from unittest.mock import patch, MagicMock
 from moleditpy.ui.color_settings_dialog import ColorSettingsDialog
 from moleditpy.utils.default_settings import DEFAULT_SETTINGS

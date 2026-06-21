@@ -1,3 +1,4 @@
+﻿"""Unit tests for AtomItem and BondItem visual properties."""
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QPointF, QRectF, QLineF

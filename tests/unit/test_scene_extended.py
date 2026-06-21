@@ -1,3 +1,4 @@
+﻿"""Unit tests for MoleculeScene extended behaviors and keyboard operations."""
 import pytest
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QKeyEvent, QTransform

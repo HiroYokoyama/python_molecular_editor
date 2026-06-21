@@ -1,3 +1,4 @@
+﻿"""Unit tests for EditActionsManager 2D edit operations."""
 import os
 import sys
 import pytest

@@ -1,3 +1,4 @@
+﻿"""Unit tests for atom placement and bonding via KeyboardMixin."""
 import pytest
 from unittest.mock import MagicMock
 from PyQt6.QtCore import QPointF

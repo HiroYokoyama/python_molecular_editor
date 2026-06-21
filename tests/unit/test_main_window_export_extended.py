@@ -1,3 +1,4 @@
+﻿"""Unit tests for ExportManager STL, OBJ, PNG, and SVG export paths."""
 import pytest
 from unittest.mock import MagicMock, Mock, patch, mock_open
 import numpy as np

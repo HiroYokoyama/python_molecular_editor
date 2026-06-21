@@ -1,3 +1,4 @@
+﻿"""Unit tests for 3D geometry measurement calculations."""
 import pytest
 import sys
 import numpy as np
