@@ -325,8 +325,6 @@ _Radical electrons should survive JSON round-trip._
 - assert len(mock_parser_host.data.atoms) == 1
 - assert next(iter(mock_parser_host.data.atoms.values()))['radical'] == 2
 
-## tests/unit/test_app_state_persistence.py
-
 ### test_pmeprj_serialization_roundtrip
 _Test full project serialization/deserialization (PMEPRJ)._
 
@@ -772,8 +770,6 @@ _Verify that apply_changes pushes updates to the parent window settings._
 - assert mock_parser_host.settings_dirty is True
 - assert mock_parser_host.settings['cpk_colors']['O'] == '#00ff00'
 - assert mock_parser_host.settings['ball_stick_bond_color'] == '#112233'
-
-## tests/unit/test_color_settings_dialog_extended.py
 
 ### test_pick_bs_bond_color_valid_updates_changed_bs
 _No description provided._
@@ -2005,8 +2001,6 @@ _Verify toggling different atoms accumulates them independently._
 
 - assert edit3d.selected_atoms_3d == {1, 2}
 
-## tests/unit/test_edit_3d_logic_extended.py
-
 ### test_toggle_on_when_edit_mode_active_disables_edit_mode
 _No description provided._
 
@@ -2137,8 +2131,6 @@ _Test calculation of implicit hydrogens for display._
 _Test copy selection MimeData generation._
 
 - assert mock_clipboard.setMimeData.called
-
-## tests/unit/test_edit_actions_extended.py
 
 ### TestEditActionsExtended.test_apply_chem_check_force_skip
 _No description provided._
@@ -3652,8 +3644,6 @@ _No description provided._
 - assert plotter.camera_position == [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
 - plotter.render.assert_called()
 
-## tests/unit/test_move_group_dialog_extended.py
-
 ### TestInit.test_preselected_atoms_triggers_on_atom_picked
 _No description provided._
 
@@ -4050,8 +4040,6 @@ _Verify saving a molecule as a MOL file._
 
 - assert os.path.exists(save_path)
 - assert 'C  ' in content
-
-## tests/unit/test_parsers_extended.py
 
 ### test_load_mol_file_fallback_to_sd_supplier
 _Verify fallback to ForwardSDMolSupplier when standard MolBlock reading fails._
@@ -4814,8 +4802,6 @@ _Test SHA-256 calculation for files and directories._
 - assert pm._sha256_for_file(str(f)) == 'N/A'
 - assert pm._sha256_for_directory(str(d)) == 'N/A'
 
-## tests/unit/test_plugin_manager_extended.py
-
 ### TestPluginManagerExtended.test_imports_fallback
 _No description provided._
 
@@ -4919,7 +4905,7 @@ _No description provided._
 - assert pm.plugin_windows['P1']['w1'] == 'WIN'
 - assert pm.get_window('P1', 'w1') == 'WIN'
 
-### TestPluginManagerExtended.test_invoke_document_reset_handlers
+### TestPluginManagerExtended.test_invoke_document_reset_handlers_logs_error
 _No description provided._
 
 - mock_log.assert_called()
@@ -5211,7 +5197,7 @@ _No description provided._
 
 - sub_menu.removeAction.assert_called_with(tagged)
 
-## tests/unit/test_project_io_extended.py
+## tests/unit/test_project_io.py
 
 ### test_save_project_no_data
 _Verify error message when trying to save an empty project._
@@ -5309,8 +5295,6 @@ _Verify that application state is updated correctly after a successful save._
 - assert io.host.init_manager.current_file_path == save_path
 - assert io.host.update_window_title.called
 - assert io.host.state_manager._saved_state is not None
-
-## tests/unit/test_project_io_raw.py
 
 ### test_save_raw_data_no_data
 _Verify error message when trying to save empty project._
@@ -6914,8 +6898,6 @@ _Verify that fit_to_view calculates bounding box and fits view when scene has it
 - view_2d.setTransformationAnchor.assert_called()
 - view_2d.setResizeAnchor.assert_called()
 - view_2d.fitInView.assert_called_once()
-
-## tests/unit/test_view_3d_logic_extended.py
 
 ### test_add_3d_atom_glyphs_styles
 _Verify radii and resolutions for different styles in _add_3d_atom_glyphs._
