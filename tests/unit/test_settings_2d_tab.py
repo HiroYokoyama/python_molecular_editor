@@ -6,6 +6,7 @@ from moleditpy.utils.default_settings import DEFAULT_SETTINGS
 
 
 def test_init_uses_default_colors(app):
+    """Settings2DTab initialises color fields from DEFAULT_SETTINGS."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     assert tab.current_bg_color_2d == DEFAULT_SETTINGS["background_color_2d"]
     assert tab.current_bond_color_2d == DEFAULT_SETTINGS["bond_color_2d"]
@@ -46,6 +47,7 @@ def test_update_ui_sets_sliders(app):
 
 
 def test_update_ui_sets_cap_style(app):
+    """update_ui() reflects bond_cap_style_2d in the combo box."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
     settings["bond_cap_style_2d"] = "Flat"

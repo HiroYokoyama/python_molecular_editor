@@ -20,7 +20,7 @@ from moleditpy.main import _DOWNGRADED_QT_PATTERNS, _qt_message_handler
 
 @pytest.mark.parametrize("pattern", _DOWNGRADED_QT_PATTERNS)
 def test_downgraded_pattern_routes_to_debug(pattern):
-    msg = f"Qt warning: {pattern} details"
+    msg = f"Qt: {pattern} details"
     with patch("logging.debug") as mock_debug, patch("logging.log") as mock_log:
         _qt_message_handler(QtMsgType.QtWarningMsg, MagicMock(), msg)
     mock_debug.assert_called_once_with("Qt: %s", msg)

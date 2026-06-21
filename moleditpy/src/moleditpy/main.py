@@ -34,7 +34,7 @@ _QT_LOG_LEVEL = {
     QtMsgType.QtFatalMsg: logging.CRITICAL,
 }
 
-_DOWNGRADED_QT_PATTERNS = ("Retiring to obtain clipboard",)
+_DOWNGRADED_QT_PATTERNS = ("Retrying to obtain clipboard",)
 
 
 def _qt_message_handler(mode: QtMsgType, _context: Any, message: str) -> None:
