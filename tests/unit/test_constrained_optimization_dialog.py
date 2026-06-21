@@ -365,6 +365,7 @@ class TestCellChanged:
         assert dlg.constraints[0][3] == pytest.approx(2.5e4)
 
     def test_invalid_value_reverts_to_original(self, make_dialog):
+        """Entering a non-numeric cell value reverts the cell to the original constraint value."""
         dlg = self._setup_one_constraint(make_dialog)
         original_val = dlg.constraints[0][2]
 

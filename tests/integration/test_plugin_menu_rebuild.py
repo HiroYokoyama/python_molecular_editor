@@ -350,6 +350,7 @@ class TestExportActionEndToEnd:
 
 class TestAnalysisToolEndToEnd:
     def test_analysis_tools_appear_in_analysis_menu(self):
+        """Registered analysis tools appear as actions in the Analysis menu after rebuild."""
         callback = MagicMock()
         pm = _make_plugin_manager(
             analysis_tools=[
