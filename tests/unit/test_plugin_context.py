@@ -10,7 +10,7 @@ import sys
 import os
 import unittest
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock
 
 # Ensure moleditpy is importable
 _SRC = os.path.normpath(
@@ -103,55 +103,41 @@ class TestFit3dView(unittest.TestCase):
         _make_context(mw).fit_3d_view()
 
 
-class TestClearCanvas(unittest.TestCase):
-    def test_calls_clear_2d_editor_default(self):
-        mw = MagicMock()
-        _make_context(mw).clear_canvas()
-        mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(
-            push_to_undo=True
-        )
-
-    def test_calls_clear_2d_editor_no_undo(self):
-        mw = MagicMock()
-        _make_context(mw).clear_canvas(push_to_undo=False)
-        mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(
-            push_to_undo=False
-        )
-
-    def test_no_crash_when_manager_missing(self):
-        _make_context(MagicMock(spec=[])).clear_canvas()
+@pytest.mark.parametrize("push_to_undo", [True, False])
+def test_clear_canvas_delegates(push_to_undo):
+    mw = MagicMock()
+    _make_context(mw).clear_canvas(push_to_undo=push_to_undo)
+    mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(
+        push_to_undo=push_to_undo
+    )
 
 
-class TestSet3dFeaturesEnabled(unittest.TestCase):
-    def test_calls_enable_3d_features_true(self):
-        mw = MagicMock()
-        _make_context(mw).set_3d_features_enabled(True)
-        mw.ui_manager.enable_3d_features.assert_called_once_with(True)
-
-    def test_calls_enable_3d_features_false(self):
-        mw = MagicMock()
-        _make_context(mw).set_3d_features_enabled(False)
-        mw.ui_manager.enable_3d_features.assert_called_once_with(False)
-
-    def test_no_crash_when_ui_manager_missing(self):
-        _make_context(MagicMock(spec=[])).set_3d_features_enabled(False)
+def test_clear_canvas_no_crash_when_manager_missing():
+    _make_context(MagicMock(spec=[])).clear_canvas()
 
 
-class TestSetAnalysisEnabled(unittest.TestCase):
-    def test_calls_set_enabled_true(self):
-        mw = MagicMock()
-        _make_context(mw).set_analysis_enabled(True)
-        mw.init_manager.analysis_action.setEnabled.assert_called_once_with(True)
+@pytest.mark.parametrize("enabled", [True, False])
+def test_set_3d_features_enabled_delegates(enabled):
+    mw = MagicMock()
+    _make_context(mw).set_3d_features_enabled(enabled)
+    mw.ui_manager.enable_3d_features.assert_called_once_with(enabled)
 
-    def test_calls_set_enabled_false(self):
-        mw = MagicMock()
-        _make_context(mw).set_analysis_enabled(False)
-        mw.init_manager.analysis_action.setEnabled.assert_called_once_with(False)
 
-    def test_no_crash_when_analysis_action_missing(self):
-        mw = MagicMock(spec=["init_manager"])
-        mw.init_manager = MagicMock(spec=[])
-        _make_context(mw).set_analysis_enabled(True)
+def test_set_3d_features_enabled_no_crash_when_ui_manager_missing():
+    _make_context(MagicMock(spec=[])).set_3d_features_enabled(False)
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_set_analysis_enabled_delegates(enabled):
+    mw = MagicMock()
+    _make_context(mw).set_analysis_enabled(enabled)
+    mw.init_manager.analysis_action.setEnabled.assert_called_once_with(enabled)
+
+
+def test_set_analysis_enabled_no_crash_when_action_missing():
+    mw = MagicMock(spec=["init_manager"])
+    mw.init_manager = MagicMock(spec=[])
+    _make_context(mw).set_analysis_enabled(True)
 
 
 class TestCheckChemistryProblems(unittest.TestCase):
@@ -185,20 +171,29 @@ class TestRefresh2dScene(unittest.TestCase):
         _make_context(mw).refresh_2d_scene()
 
 
-@pytest.mark.parametrize("call", [
-    lambda ctx: ctx.mark_project_modified(),
-    lambda ctx: ctx.refresh_ui(),
-    lambda ctx: ctx.fit_3d_view(),
-    lambda ctx: ctx.clear_canvas(),
-    lambda ctx: ctx.set_3d_features_enabled(True),
-    lambda ctx: ctx.set_analysis_enabled(True),
-    lambda ctx: ctx.check_chemistry_problems(),
-    lambda ctx: ctx.refresh_2d_scene(),
-], ids=[
-    "mark_project_modified", "refresh_ui", "fit_3d_view", "clear_canvas",
-    "set_3d_features_enabled", "set_analysis_enabled",
-    "check_chemistry_problems", "refresh_2d_scene",
-])
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda ctx: ctx.mark_project_modified(),
+        lambda ctx: ctx.refresh_ui(),
+        lambda ctx: ctx.fit_3d_view(),
+        lambda ctx: ctx.clear_canvas(),
+        lambda ctx: ctx.set_3d_features_enabled(True),
+        lambda ctx: ctx.set_analysis_enabled(True),
+        lambda ctx: ctx.check_chemistry_problems(),
+        lambda ctx: ctx.refresh_2d_scene(),
+    ],
+    ids=[
+        "mark_project_modified",
+        "refresh_ui",
+        "fit_3d_view",
+        "clear_canvas",
+        "set_3d_features_enabled",
+        "set_analysis_enabled",
+        "check_chemistry_problems",
+        "refresh_2d_scene",
+    ],
+)
 def test_no_crash_when_mw_is_none(call):
     call(_make_context(None))
 

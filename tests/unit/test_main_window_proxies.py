@@ -117,17 +117,11 @@ def test_scene_property_delegates_to_init_manager(app):
 # ---------------------------------------------------------------------------
 
 
-def test_draw_molecule_3d_sets_current_mol(app):
+def test_draw_molecule_3d_proxy(app):
     mw = _make_window()
     mock_mol = MagicMock()
     mw.draw_molecule_3d(mock_mol)
     assert mw.view_3d_manager.current_mol is mock_mol
-
-
-def test_draw_molecule_3d_delegates_to_view_3d_manager(app):
-    mw = _make_window()
-    mock_mol = MagicMock()
-    mw.draw_molecule_3d(mock_mol)
     mw.view_3d_manager.draw_molecule_3d.assert_called_once_with(mock_mol)
 
 
