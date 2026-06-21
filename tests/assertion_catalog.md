@@ -2904,6 +2904,25 @@ _Test BondItem.update_position resilience when atoms exist._
 
 - assert line.length() == 0.0
 
+## tests/unit/test_main_qt_handler.py
+
+### test_downgraded_pattern_routes_to_debug
+_No description provided._
+
+- mock_debug.assert_called_once_with('Qt: %s', msg)
+- mock_log.assert_not_called()
+
+### test_known_mode_maps_to_correct_level
+_No description provided._
+
+- mock_log.assert_called_once_with(expected_level, 'Qt: %s', msg)
+- mock_debug.assert_not_called()
+
+### test_unknown_mode_falls_back_to_warning
+_No description provided._
+
+- mock_log.assert_called_once_with(logging.WARNING, 'Qt: %s', msg)
+
 ## tests/unit/test_main_window_export_extended.py
 
 ### test_export_stl_success
