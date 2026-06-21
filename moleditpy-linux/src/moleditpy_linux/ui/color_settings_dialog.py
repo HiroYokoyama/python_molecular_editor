@@ -240,6 +240,7 @@ class ColorSettingsDialog(QDialog):
         layout.addLayout(h)
 
     def on_element_clicked(self) -> None:
+        """Open a color picker for the clicked element button and update its swatch."""
         btn = self.sender()
         symbol = btn.text()
         cur = self.current_settings.get("cpk_colors", {}).get(symbol)
@@ -257,6 +258,7 @@ class ColorSettingsDialog(QDialog):
             )
 
     def reset_all(self) -> None:
+        """Revert all CPK and ball-and-stick colors to their defaults."""
         self.changed_cpk = {}
         self._reset_all_flag = True
 
@@ -284,6 +286,7 @@ class ColorSettingsDialog(QDialog):
         self.bs_button.setToolTip(hexv)
 
     def apply_changes(self) -> None:
+        """Write changed color settings to the application settings and redraw."""
         if not self.parent_window or not hasattr(self.parent_window, "init_manager"):
             return
 
@@ -370,10 +373,12 @@ class ColorSettingsDialog(QDialog):
                 self.parent_window.view_3d_manager.draw_molecule_3d(mol)
 
     def accept(self) -> None:
+        """Apply changes and close the dialog."""
         self.apply_changes()
         super().accept()
 
     def pick_bs_bond_color(self) -> None:
+        """Open a color picker for the ball-and-stick bond color."""
         settings = self.current_settings or {}
         cur = getattr(self, "changed_bs_color", None) or settings.get(
             "ball_stick_bond_color"

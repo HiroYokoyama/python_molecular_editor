@@ -29,6 +29,8 @@ from .plugin_interface import PluginContext
 
 
 class PluginManager:
+    """Discovers, loads, and manages lifecycle of all installed plugins."""
+
     def compute_sha256(self, path: str) -> str:
         """Computes SHA-256 for a file or a directory (concatenated hashes of all files)."""
         if os.path.isfile(path):
@@ -98,9 +100,11 @@ class PluginManager:
         ] = {}  # Map of plugin_name -> {window_id -> window}
 
     def get_main_window(self) -> Any:
+        """Return the current main window reference."""
         return self.main_window
 
     def set_main_window(self, mw: Any) -> None:
+        """Set the main window reference."""
         self.main_window = mw
 
     def ensure_plugin_dir(self) -> None:
@@ -420,6 +424,7 @@ class PluginManager:
         icon: str,
         shortcut: str,
     ) -> None:
+        """Register a plugin menu action with its path, callback, and display metadata."""
         self.menu_actions.append(
             {
                 "plugin": plugin_name,
@@ -434,6 +439,7 @@ class PluginManager:
     def register_toolbar_action(
         self, plugin_name: str, callback: Callable, text: str, icon: str, tooltip: str
     ) -> None:
+        """Register a plugin toolbar button with its callback and display metadata."""
         self.toolbar_actions.append(
             {
                 "plugin": plugin_name,
@@ -447,6 +453,7 @@ class PluginManager:
     def register_drop_handler(
         self, plugin_name: str, callback: Callable, priority: int
     ) -> None:
+        """Register a drag-and-drop handler with a given priority."""
         self.drop_handlers.append(
             {"priority": priority, "plugin": plugin_name, "callback": callback}
         )
@@ -456,6 +463,7 @@ class PluginManager:
     def register_export_action(
         self, plugin_name: str, label: str, callback: Callable
     ) -> None:
+        """Register a plugin export action with its label and callback."""
         self.export_actions.append(
             {"plugin": plugin_name, "label": label, "callback": callback}
         )
@@ -463,6 +471,7 @@ class PluginManager:
     def register_optimization_method(
         self, plugin_name: str, method_name: str, callback: Callable
     ) -> None:
+        """Register a named 3D optimization method provided by a plugin."""
         # Key by upper-case method name for consistency
         self.optimization_methods[method_name.upper()] = {
             "plugin": plugin_name,
@@ -473,6 +482,7 @@ class PluginManager:
     def register_file_opener(
         self, plugin_name: str, extension: str, callback: Callable, priority: int = 0
     ) -> None:
+        """Register a file-type handler for the given extension."""
         # Normalize extension to lowercase
         ext = extension.lower()
         if not ext.startswith("."):
@@ -492,20 +502,24 @@ class PluginManager:
     def register_analysis_tool(
         self, plugin_name: str, label: str, callback: Callable
     ) -> None:
+        """Register a plugin analysis tool with its label and callback."""
         self.analysis_tools.append(
             {"plugin": plugin_name, "label": label, "callback": callback}
         )
 
     # State Persistence registration
     def register_save_handler(self, plugin_name: str, callback: Callable) -> None:
+        """Register a plugin session-save callback."""
         self.save_handlers[plugin_name] = callback
 
     def register_load_handler(self, plugin_name: str, callback: Callable) -> None:
+        """Register a plugin session-load callback."""
         self.load_handlers[plugin_name] = callback
 
     def register_3d_style(
         self, plugin_name: str, style_name: str, callback: Callable
     ) -> None:
+        """Register a named custom 3D rendering style."""
         self.custom_3d_styles[style_name] = {
             "plugin": plugin_name,
             "callback": callback,

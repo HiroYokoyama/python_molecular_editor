@@ -51,6 +51,8 @@ if TYPE_CHECKING:
 
 
 class Rotate2DDialog(QDialog):
+    """Simple dialog with a slider and spinbox for choosing a 2D rotation angle."""
+
     def __init__(
         self, parent: Optional[QWidget] = None, initial_angle: float = 0
     ) -> None:
@@ -92,6 +94,7 @@ class Rotate2DDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def get_angle(self) -> float:
+        """Return the current rotation angle value from the spin box."""
         return self.angle_spin.value()
 
 
@@ -825,11 +828,13 @@ class EditActionsManager:
             self.host.statusBar().showMessage("Error rotating molecule.")
 
     def select_all(self) -> None:
+        """Select all atoms and bonds in the 2D scene."""
         for item in self.host.init_manager.scene.items():
             if isinstance(item, (AtomItem, BondItem)):
                 item.setSelected(True)
 
     def clear_all(self, skip_check: bool = False) -> bool:
+        """Clear the entire document, resetting both 2D and 3D state."""
         # Check for unsaved changes
         if not skip_check and self.host.state_manager:
             if not self.host.state_manager.check_unsaved_changes():
@@ -897,6 +902,7 @@ class EditActionsManager:
         return True
 
     def clear_2d_editor(self, push_to_undo: bool = True) -> None:
+        """Reset the 2D molecule data and clear the scene, optionally pushing undo."""
         # Clear 2D editor (no undo push)
         self.host.set_molecule_data(MolecularData())
         self.host.init_manager.scene.clear()
@@ -1096,6 +1102,7 @@ class EditActionsManager:
             logging.exception(f"Unexpected error in update_implicit_hydrogens: {e}")
 
     def clean_up_2d_structure(self) -> None:
+        """Run RDKit 2D coordinate cleanup and re-layout."""
         self.host.statusBar().showMessage("Optimizing 2D structure...")
 
         # Clear existing problem flags

@@ -27,6 +27,8 @@ from .settings_tab_base import SettingsTabBase
 
 
 class SettingsOtherTab(SettingsTabBase):
+    """Settings tab for miscellaneous application options."""
+
     def __init__(
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:

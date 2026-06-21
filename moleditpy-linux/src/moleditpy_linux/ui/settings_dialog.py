@@ -30,6 +30,8 @@ from ..utils.default_settings import DEFAULT_SETTINGS
 
 
 class SettingsDialog(QDialog):
+    """Multi-tab settings dialog for all application preferences."""
+
     def __init__(self, current_settings: Any, parent: Any = None) -> None:
         super().__init__(parent)
         self.tab_2d = None
@@ -122,16 +124,19 @@ class SettingsDialog(QDialog):
         self.update_ui_from_settings(current_settings)
 
     def update_ui_from_settings(self, settings: Any) -> None:
+        """Push a settings dict to all tab widgets."""
         for i in range(self.tab_widget.count()):
             self.tab_widget.widget(i).update_ui(settings)
 
     def get_settings(self) -> Any:
+        """Collect and return settings from all tabs as a merged dict."""
         settings = {}
         for i in range(self.tab_widget.count()):
             settings.update(self.tab_widget.widget(i).get_settings())
         return settings
 
     def reset_current_tab(self) -> None:
+        """Reset the currently visible tab to its default values."""
         self.tab_widget.currentWidget().reset_to_defaults()
         QMessageBox.information(
             self,
@@ -140,6 +145,7 @@ class SettingsDialog(QDialog):
         )
 
     def reset_all_settings(self) -> None:
+        """Prompt the user and reset all settings tabs to defaults."""
         reply = QMessageBox.question(
             self,
             "Reset All Settings",
@@ -151,6 +157,7 @@ class SettingsDialog(QDialog):
             self.apply_settings()
 
     def apply_settings(self) -> None:
+        """Write UI values back to the host settings and trigger a redraw."""
         if not self.parent_window:
             return
 
@@ -188,5 +195,6 @@ class SettingsDialog(QDialog):
             self.parent_window.statusBar().showMessage("Settings applied successfully")
 
     def accept(self) -> None:
+        """Apply settings and close the dialog."""
         self.apply_settings()
         super().accept()

@@ -27,6 +27,8 @@ from .settings_tab_base import SettingsTabBase
 
 
 class Settings3DSceneTab(SettingsTabBase):
+    """Settings tab for 3D scene options (background, lighting, projection)."""
+
     def __init__(
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:
@@ -122,6 +124,8 @@ class Settings3DSceneTab(SettingsTabBase):
 
 
 class SettingsModelTab(SettingsTabBase):
+    """Settings tab for a specific 3D rendering model (Ball & Stick, CPK, etc.)."""
+
     def __init__(
         self,
         model_prefix: str,

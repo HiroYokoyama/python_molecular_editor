@@ -21,6 +21,8 @@ from PyQt6.QtCore import pyqtSignal
 
 
 class PeriodicTableDialog(QDialog):
+    """Dialog with a grid of element buttons for selecting an atom symbol."""
+
     element_selected = pyqtSignal(str)
 
     def __init__(self, parent: Optional[Any] = None) -> None:
@@ -190,6 +192,7 @@ class PeriodicTableDialog(QDialog):
             layout.addWidget(b, row, col)
 
     def on_button_clicked(self) -> None:
+        """Emit element_selected with the button's symbol and accept the dialog."""
         b = self.sender()
         self.element_selected.emit(b.text())
         self.accept()

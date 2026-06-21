@@ -21,12 +21,33 @@ from .utils.constants import VERSION
 
 # VERSION is resolved above (before Qt) so --version works without launching the app.
 
+from PyQt6.QtCore import QtMsgType, qInstallMessageHandler
 from PyQt6.QtWidgets import QApplication
 
 from .ui.main_window import MainWindow
 
+_QT_LOG_LEVEL = {
+    QtMsgType.QtDebugMsg: logging.DEBUG,
+    QtMsgType.QtInfoMsg: logging.INFO,
+    QtMsgType.QtWarningMsg: logging.WARNING,
+    QtMsgType.QtCriticalMsg: logging.ERROR,
+    QtMsgType.QtFatalMsg: logging.CRITICAL,
+}
+
+_DOWNGRADED_QT_PATTERNS = ("Retrying to obtain clipboard",)
+
+
+def _qt_message_handler(mode: QtMsgType, _context: Any, message: str) -> None:
+    """Route Qt log messages to Python logging, downgrading known noisy warnings."""
+    for pattern in _DOWNGRADED_QT_PATTERNS:
+        if pattern in message:
+            logging.debug("Qt: %s", message)
+            return
+    logging.log(_QT_LOG_LEVEL.get(mode, logging.WARNING), "Qt: %s", message)
+
 
 def setup_logging() -> None:
+    """Configure root logger and install a global unhandled-exception handler."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s (%(pathname)s:%(lineno)d): %(message)s",
@@ -49,12 +70,11 @@ def setup_logging() -> None:
 
 
 def main() -> None:
-    # Setup logging as early as possible
+    """Parse CLI arguments, configure logging, and launch the GUI."""
     setup_logging()
 
-    # --- Additional handling for Windows taskbar icon ---
     if sys.platform == "win32":
-        myappid = "hyoko.moleditpy_linux.1.0"  # Application-specific ID (arbitrary)
+        myappid = "hyoko.moleditpy_linux.1.0"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     parser = argparse.ArgumentParser(
@@ -80,7 +100,6 @@ def main() -> None:
     # parse_known_args so Qt's own argv flags (e.g. -platform) are passed through
     args, remaining = parser.parse_known_args()
 
-    # --- Headless Plugin Installation ---
     if args.install_plugin:
         plugin_path = os.path.abspath(args.install_plugin)
         if not os.path.exists(plugin_path):
@@ -95,7 +114,6 @@ def main() -> None:
         pm = PluginManager()
         sha256 = pm.compute_sha256(plugin_path)
 
-        # Extract metadata
         metadata_file = plugin_path
         if os.path.isdir(plugin_path):
             init_py = os.path.join(plugin_path, "__init__.py")
@@ -136,10 +154,10 @@ def main() -> None:
             sys.exit(0)
 
     app = QApplication([sys.argv[0]] + remaining)
+    qInstallMessageHandler(_qt_message_handler)
     window = MainWindow(initial_file=args.file, safe_mode=args.safe)
     window.show()
 
-    # Force Windows to refresh taskbar/titlebar icon after event loop starts
     if sys.platform == "win32":
         try:
             from PyQt6.QtCore import QTimer

@@ -22,6 +22,8 @@ from ..utils.constants import CPK_COLORS
 
 
 class TemplatePreviewItem(QGraphicsItem):
+    """Ghost overlay item that previews ring or user-template placement."""
+
     def __init__(self) -> None:
         super().__init__()
         self.setZValue(2)
@@ -34,6 +36,7 @@ class TemplatePreviewItem(QGraphicsItem):
         self.is_user_template = False
 
     def set_geometry(self, points: list[QPointF], is_aromatic: bool = False) -> None:
+        """Set polygon points for a standard ring template preview."""
         self.prepareGeometryChange()
         self.polygon = QPolygonF(points)
         self.is_aromatic = is_aromatic
@@ -46,6 +49,7 @@ class TemplatePreviewItem(QGraphicsItem):
         bonds_info: list[Any],
         atoms_data: list[dict[str, Any]],
     ) -> None:
+        """Set point and bond data for a user-defined template preview."""
         self.prepareGeometryChange()
         self.user_template_points = points
         self.user_template_bonds = bonds_info
@@ -56,6 +60,7 @@ class TemplatePreviewItem(QGraphicsItem):
         self.update()
 
     def boundingRect(self) -> QRectF:
+        """Return the bounding rect encompassing the preview geometry."""
         if self.is_user_template and self.user_template_points:
             # Calculate bounding rect for user template
             min_x = min(p.x() for p in self.user_template_points)
@@ -73,6 +78,7 @@ class TemplatePreviewItem(QGraphicsItem):
         option: Optional[QStyleOptionGraphicsItem],
         widget: Optional[QWidget] = None,
     ) -> None:
+        """Dispatch to the regular or user-template painter."""
         if painter is None:
             return
         if self.is_user_template:
@@ -81,6 +87,7 @@ class TemplatePreviewItem(QGraphicsItem):
             self.paint_regular_template(painter)
 
     def paint_regular_template(self, painter: QPainter) -> None:
+        """Paint a standard ring or aromatic template as a polygon outline."""
         painter.setPen(self.pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         if not self.polygon.isEmpty():
@@ -91,6 +98,7 @@ class TemplatePreviewItem(QGraphicsItem):
                 painter.drawEllipse(center, radius, radius)
 
     def paint_user_template(self, painter: QPainter) -> None:
+        """Paint bonds and atom symbols for a user-defined template preview."""
         if not self.user_template_points:
             return
 

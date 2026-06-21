@@ -40,6 +40,8 @@ if TYPE_CHECKING:
 
 
 class AngleDialog(GeometryBaseDialog):
+    """Dialog for interactively viewing and adjusting a bond angle."""
+
     def __init__(
         self,
         mol: Chem.Mol,
@@ -73,6 +75,7 @@ class AngleDialog(GeometryBaseDialog):
         self.init_ui()
 
     def init_ui(self) -> None:
+        """Build the angle adjustment UI with atom picker, slider, and input field."""
         self.setWindowTitle("Adjust Angle")
         self.setModal(False)
         layout = QVBoxLayout(self)

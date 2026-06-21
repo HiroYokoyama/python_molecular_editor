@@ -696,6 +696,8 @@ print(ob_mol.write("mol"))
 
 
 class CalculationWorker(QObject):
+    """QObject worker that runs 3D geometry optimization on a background QThread."""
+
     status_update = pyqtSignal(str)
     finished = pyqtSignal(object)
     error = pyqtSignal(object)

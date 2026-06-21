@@ -227,6 +227,7 @@ class MainInitManager:
             )  # Suppress non-critical UI/menu initialization errors
 
     def init_ui(self) -> None:
+        """Set the window icon and initialize main layout, toolbars, and menu bar."""
         script_dir = os.path.dirname(os.path.abspath(__file__))
         if sys.platform == "win32":
             icon_path = os.path.join(script_dir, "..", "assets", "icon.ico")
@@ -250,6 +251,7 @@ class MainInitManager:
         self._setup_action_groups(self.toolbar, self.toolbar_bottom)
 
     def init_menu_bar(self) -> None:
+        """Populate the menu bar with all standard and plugin menus."""
         menu_bar = self.host.menuBar()
 
         self._init_file_menu(menu_bar)
@@ -268,6 +270,7 @@ class MainInitManager:
         self.plugin_menu_manager.update_plugin_menu(self.plugin_menu)
 
     def init_worker_thread(self) -> None:
+        """Initialize shared state for managing background calculation workers."""
         # Initialize shared state for calculation runs.
         self.halt_ids: set[Any] = set()
         self.next_conversion_id = 1
@@ -412,6 +415,7 @@ class MainInitManager:
             logging.error(f"Failed to update CPK colors from settings: {e}")
 
     def open_settings_dialog(self) -> None:
+        """Open the application settings dialog."""
         dialog = SettingsDialog(self.settings, self.host)
         # Settings application and 3D view updates are handled by the accept() method.
         dialog.exec()
@@ -561,6 +565,7 @@ class MainInitManager:
             self.optimization_method = self.settings["optimization_method"]
 
     def save_settings(self) -> None:
+        """Persist the current settings to disk if they are dirty."""
         if not self.settings_dirty or self.settings == self.host.initial_settings:
             return
         try:

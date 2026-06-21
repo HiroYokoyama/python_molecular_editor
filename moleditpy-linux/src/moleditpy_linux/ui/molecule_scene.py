@@ -34,6 +34,8 @@ from .molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMix
 
 
 class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene):
+    """Central QGraphicsScene that owns all 2D atom and bond items."""
+
     def __init__(self, data: Any, window: Any) -> None:
         super().__init__()
         self.data, self.window = data, window
@@ -283,6 +285,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.update_all_items()
 
     def reinitialize_items(self) -> None:
+        """Reset transient scene state including template preview and deleted-item list."""
         self.template_preview = TemplatePreviewItem()
         self.addItem(self.template_preview)
         self.template_preview.hide()
@@ -309,6 +312,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         return needs_update
 
     def mousePressEvent(self, event: Any) -> None:
+        """Handle mouse press to begin atom/bond creation or selection."""
         self.press_pos = event.scenePos()
         self.was_selected_on_press = False
         if self.mode == "select" and event.button() == Qt.MouseButton.LeftButton:
@@ -471,6 +475,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: Any) -> None:
+        """Update the bond preview line or template ghost during mouse drag."""
         if not self.window.ui_manager.is_2d_editable:
             return
 
@@ -510,6 +515,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: Any) -> None:
+        """Finalize atom/bond creation or selection on mouse release."""
         if not self.window.ui_manager.is_2d_editable:
             return
 
@@ -949,6 +955,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             self._deleted_items = []
 
     def leaveEvent(self, event: Any) -> None:
+        """Hide the template preview when the cursor leaves the scene."""
         self.template_preview.hide()
 
     def refresh_mode_state(self) -> None:

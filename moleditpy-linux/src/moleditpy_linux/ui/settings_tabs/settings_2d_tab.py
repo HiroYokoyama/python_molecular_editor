@@ -28,6 +28,8 @@ from .settings_tab_base import SettingsTabBase
 
 
 class Settings2DTab(SettingsTabBase):
+    """Settings tab for 2D editor appearance options (fonts, colors, bond style)."""
+
     def __init__(
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:
