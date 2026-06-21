@@ -20,32 +20,96 @@ class TestPluginInterface:
         assert ctx._manager == mock_manager
         assert ctx._plugin_name == "TestPlugin"
 
-    def test_add_menu_action(self, mock_manager):
-        """Test add_menu_action delegation."""
+    @pytest.mark.parametrize("invoke,check", [
+        (
+            lambda ctx, cb: ctx.add_menu_action("File/Test", cb, "Test Action", "icon.png", "Ctrl+T"),
+            lambda mgr, cb: mgr.register_menu_action.assert_called_once_with(
+                "TestPlugin", "File/Test", cb, "Test Action", "icon.png", "Ctrl+T"),
+        ),
+        (
+            lambda ctx, cb: ctx.add_toolbar_action(cb, "Toolbar Action", "icon.png", "Tooltip"),
+            lambda mgr, cb: mgr.register_toolbar_action.assert_called_once_with(
+                "TestPlugin", cb, "Toolbar Action", "icon.png", "Tooltip"),
+        ),
+        (
+            lambda ctx, cb: ctx.register_drop_handler(cb, 5),
+            lambda mgr, cb: mgr.register_drop_handler.assert_called_once_with(
+                "TestPlugin", cb, 5),
+        ),
+        (
+            lambda ctx, cb: ctx.add_export_action("Export Plugin", cb),
+            lambda mgr, cb: mgr.register_export_action.assert_called_once_with(
+                "TestPlugin", "Export Plugin", cb),
+        ),
+        (
+            lambda ctx, cb: ctx.register_optimization_method("My Opt", cb),
+            lambda mgr, cb: mgr.register_optimization_method.assert_called_once_with(
+                "TestPlugin", "My Opt", cb),
+        ),
+        (
+            lambda ctx, cb: ctx.register_file_opener(".ext", cb, 10),
+            lambda mgr, cb: mgr.register_file_opener.assert_called_once_with(
+                "TestPlugin", ".ext", cb, 10),
+        ),
+        (
+            lambda ctx, cb: ctx.add_analysis_tool("Analyze This", cb),
+            lambda mgr, cb: mgr.register_analysis_tool.assert_called_once_with(
+                "TestPlugin", "Analyze This", cb),
+        ),
+        (
+            lambda ctx, cb: ctx.register_save_handler(cb),
+            lambda mgr, cb: mgr.register_save_handler.assert_called_once_with(
+                "TestPlugin", cb),
+        ),
+        (
+            lambda ctx, cb: ctx.register_load_handler(cb),
+            lambda mgr, cb: mgr.register_load_handler.assert_called_once_with(
+                "TestPlugin", cb),
+        ),
+        (
+            lambda ctx, cb: ctx.register_3d_style("My Style", cb),
+            lambda mgr, cb: mgr.register_3d_style.assert_called_once_with(
+                "TestPlugin", "My Style", cb),
+        ),
+        (
+            lambda ctx, cb: ctx.register_document_reset_handler(cb),
+            lambda mgr, cb: mgr.register_document_reset_handler.assert_called_once_with(
+                "TestPlugin", cb),
+        ),
+        (
+            lambda ctx, _: ctx.push_undo_checkpoint(),
+            lambda mgr, _: mgr.push_undo_checkpoint.assert_called_once(),
+        ),
+        (
+            lambda ctx, _: ctx.get_selected_atom_indices(),
+            lambda mgr, _: mgr.get_selected_atom_indices.assert_called_once(),
+        ),
+        (
+            lambda ctx, cb: ctx.register_window("win1", cb),
+            lambda mgr, cb: mgr.register_window.assert_called_once_with(
+                "TestPlugin", "win1", cb),
+        ),
+        (
+            lambda ctx, _: ctx.get_window("win1"),
+            lambda mgr, _: mgr.get_window.assert_called_once_with("TestPlugin", "win1"),
+        ),
+        (
+            lambda ctx, _: ctx.show_status_message("hello", 1000),
+            lambda mgr, _: mgr.show_status_message.assert_called_once_with("hello", 1000),
+        ),
+    ], ids=[
+        "add_menu_action", "add_toolbar_action", "register_drop_handler",
+        "add_export_action", "register_optimization_method", "register_file_opener",
+        "add_analysis_tool", "register_save_handler", "register_load_handler",
+        "register_3d_style", "register_document_reset_handler",
+        "push_undo_checkpoint", "get_selected_atom_indices",
+        "register_window", "get_window", "show_status_message",
+    ])
+    def test_delegates_to_manager(self, mock_manager, invoke, check):
+        cb = MagicMock()
         ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.add_menu_action("File/Test", callback, "Test Action", "icon.png", "Ctrl+T")
-        mock_manager.register_menu_action.assert_called_once_with(
-            "TestPlugin", "File/Test", callback, "Test Action", "icon.png", "Ctrl+T"
-        )
-
-    def test_add_toolbar_action(self, mock_manager):
-        """Test add_toolbar_action delegation."""
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.add_toolbar_action(callback, "Toolbar Action", "icon.png", "Tooltip")
-        mock_manager.register_toolbar_action.assert_called_once_with(
-            "TestPlugin", callback, "Toolbar Action", "icon.png", "Tooltip"
-        )
-
-    def test_register_drop_handler(self, mock_manager):
-        """Test register_drop_handler delegation."""
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.register_drop_handler(callback, 5)
-        mock_manager.register_drop_handler.assert_called_once_with(
-            "TestPlugin", callback, 5
-        )
+        invoke(ctx, cb)
+        check(mock_manager, cb)
 
     def test_get_3d_controller(self, mock_manager, mock_main_window):
         """Test get_3d_controller returns a controller linked to main window."""
@@ -89,60 +153,6 @@ class TestPluginInterface:
         ctx.current_molecule = "fail"
         # No error raised is the pass condition
 
-    def test_add_export_action(self, mock_manager):
-        """Test add_export_action delegation."""
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.add_export_action("Export Plugin", callback)
-        mock_manager.register_export_action.assert_called_once_with(
-            "TestPlugin", "Export Plugin", callback
-        )
-
-    def test_register_optimization_method(self, mock_manager):
-        """Test register_optimization_method delegation."""
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.register_optimization_method("My Opt", callback)
-        mock_manager.register_optimization_method.assert_called_once_with(
-            "TestPlugin", "My Opt", callback
-        )
-
-    def test_register_file_opener(self, mock_manager):
-        """Test register_file_opener delegation."""
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.register_file_opener(".ext", callback, 10)
-        mock_manager.register_file_opener.assert_called_once_with(
-            "TestPlugin", ".ext", callback, 10
-        )
-
-    def test_add_analysis_tool(self, mock_manager):
-        """Test add_analysis_tool delegation."""
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.add_analysis_tool("Analyze This", callback)
-        mock_manager.register_analysis_tool.assert_called_once_with(
-            "TestPlugin", "Analyze This", callback
-        )
-
-    def test_register_save_handler(self, mock_manager):
-        """Test register_save_handler delegation."""
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.register_save_handler(callback)
-        mock_manager.register_save_handler.assert_called_once_with(
-            "TestPlugin", callback
-        )
-
-    def test_register_load_handler(self, mock_manager):
-        """Test register_load_handler delegation."""
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.register_load_handler(callback)
-        mock_manager.register_load_handler.assert_called_once_with(
-            "TestPlugin", callback
-        )
-
     def test_register_3d_context_menu(self, mock_manager):
         """Test deprecated register_3d_context_menu emits DeprecationWarning."""
         import pytest
@@ -150,24 +160,6 @@ class TestPluginInterface:
         ctx = PluginContext(mock_manager, "TestPlugin")
         with pytest.warns(DeprecationWarning, match="deprecated"):
             ctx.register_3d_context_menu(MagicMock(), "Label")
-
-    def test_register_3d_style(self, mock_manager):
-        """Test register_3d_style delegation."""
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.register_3d_style("My Style", callback)
-        mock_manager.register_3d_style.assert_called_once_with(
-            "TestPlugin", "My Style", callback
-        )
-
-    def test_register_document_reset_handler(self, mock_manager):
-        """Test register_document_reset_handler delegation."""
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        callback = MagicMock()
-        ctx.register_document_reset_handler(callback)
-        mock_manager.register_document_reset_handler.assert_called_once_with(
-            "TestPlugin", callback
-        )
 
     def test_3d_controller_set_atom_color(self, mock_main_window):
         """Test Plugin3DController.set_atom_color."""
@@ -325,34 +317,6 @@ class TestPluginInterface:
         ctx, _ = self._ctx_with_settings({})
         ctx.set_setting("count", 7)
         assert ctx.get_setting("count", 0) == 7
-
-    def test_push_undo_checkpoint(self, mock_manager):
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        ctx.push_undo_checkpoint()
-        mock_manager.push_undo_checkpoint.assert_called_once()
-
-    def test_get_selected_atom_indices(self, mock_manager):
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        ctx.get_selected_atom_indices()
-        mock_manager.get_selected_atom_indices.assert_called_once()
-
-    def test_register_window(self, mock_manager):
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        window = MagicMock()
-        ctx.register_window("win1", window)
-        mock_manager.register_window.assert_called_once_with(
-            "TestPlugin", "win1", window
-        )
-
-    def test_get_window(self, mock_manager):
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        ctx.get_window("win1")
-        mock_manager.get_window.assert_called_once_with("TestPlugin", "win1")
-
-    def test_show_status_message(self, mock_manager):
-        ctx = PluginContext(mock_manager, "TestPlugin")
-        ctx.show_status_message("hello", 1000)
-        mock_manager.show_status_message.assert_called_once_with("hello", 1000)
 
     def test_plotter(self, mock_manager, mock_main_window):
         mock_manager.get_main_window.return_value = mock_main_window
