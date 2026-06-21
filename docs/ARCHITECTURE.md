@@ -32,7 +32,7 @@ To ensure stability in the hybrid Python/C++ environment (PyQt6/VTK), the applic
 | :--- | :--- | :--- |
 | **`moleditpy.core`** | **Pure Scientific Logic**: Stateless chemical algorithms and the fundamental data model. | `molecular_data.py`, `mol_geometry.py` |
 | **`moleditpy.ui`** | **GUI & UI Logic**: PyQt6/VTK components, Managers, and I/O logic coupled with the interface. | `main_window.py`, `compute_logic.py`, `io_logic.py`, `view_3d_logic.py` |
-| **`moleditpy.utils`** | **Common Utilities**: Threading helpers, system constants, and safe SIP interaction. | `constants.py`, `sip_isdeleted_safe.py`, `system_utils.py` |
+| **`moleditpy.utils`** | **Common Utilities**: Threading helpers, system constants, safe SIP interaction, and default settings. | `constants.py`, `default_settings.py`, `sip_isdeleted_safe.py`, `system_utils.py` |
 | **`moleditpy.plugins`**| **Extension Layer**: Discovery and dynamic loading of Python scripts. | `plugin_manager.py`, `plugin_interface.py` |
 | **`moleditpy.assets`** | **Media Content**: Application icons and graphical assets. | `icon.png`, `icon.ico` |
 
