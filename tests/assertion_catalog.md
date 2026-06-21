@@ -3048,14 +3048,10 @@ _No description provided._
 
 - assert mw.scene is mock_scene
 
-### test_draw_molecule_3d_sets_current_mol
+### test_draw_molecule_3d_proxy
 _No description provided._
 
 - assert mw.view_3d_manager.current_mol is mock_mol
-
-### test_draw_molecule_3d_delegates_to_view_3d_manager
-_No description provided._
-
 - mw.view_3d_manager.draw_molecule_3d.assert_called_once_with(mock_mol)
 
 ### test_draw_molecule_3d_none_mol
@@ -4112,45 +4108,30 @@ _No description provided._
 _No description provided._
 
 
-### TestClearCanvas.test_calls_clear_2d_editor_default
+### test_clear_canvas_delegates
 _No description provided._
 
-- mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(push_to_undo=True)
+- mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(push_to_undo=push_to_undo)
 
-### TestClearCanvas.test_calls_clear_2d_editor_no_undo
-_No description provided._
-
-- mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(push_to_undo=False)
-
-### TestClearCanvas.test_no_crash_when_manager_missing
+### test_clear_canvas_no_crash_when_manager_missing
 _No description provided._
 
 
-### TestSet3dFeaturesEnabled.test_calls_enable_3d_features_true
+### test_set_3d_features_enabled_delegates
 _No description provided._
 
-- mw.ui_manager.enable_3d_features.assert_called_once_with(True)
+- mw.ui_manager.enable_3d_features.assert_called_once_with(enabled)
 
-### TestSet3dFeaturesEnabled.test_calls_enable_3d_features_false
-_No description provided._
-
-- mw.ui_manager.enable_3d_features.assert_called_once_with(False)
-
-### TestSet3dFeaturesEnabled.test_no_crash_when_ui_manager_missing
+### test_set_3d_features_enabled_no_crash_when_ui_manager_missing
 _No description provided._
 
 
-### TestSetAnalysisEnabled.test_calls_set_enabled_true
+### test_set_analysis_enabled_delegates
 _No description provided._
 
-- mw.init_manager.analysis_action.setEnabled.assert_called_once_with(True)
+- mw.init_manager.analysis_action.setEnabled.assert_called_once_with(enabled)
 
-### TestSetAnalysisEnabled.test_calls_set_enabled_false
-_No description provided._
-
-- mw.init_manager.analysis_action.setEnabled.assert_called_once_with(False)
-
-### TestSetAnalysisEnabled.test_no_crash_when_analysis_action_missing
+### test_set_analysis_enabled_no_crash_when_action_missing
 _No description provided._
 
 
