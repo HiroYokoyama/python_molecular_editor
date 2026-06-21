@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **82.46%**
+- **Overall Project Coverage**: **82.44%**
 
 ### Coverage Breakdown
 
@@ -23,7 +23,7 @@
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    298 |     39 |   86.9% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |    167 |     44 |   73.7% |
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     80 |      4 |   95.0% |
-| moleditpy\src\moleditpy\ui\bond_item.py                 |    366 |     59 |   83.9% |
+| moleditpy\src\moleditpy\ui\bond_item.py                 |    366 |     60 |   83.6% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    237 |     17 |   92.8% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    552 |     90 |   83.7% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    166 |     13 |   92.2% |
@@ -42,7 +42,7 @@
 | moleditpy\src\moleditpy\ui\main_window.py               |    196 |     14 |   92.9% |
 | moleditpy\src\moleditpy\ui\main_window_init.py          |   1052 |    112 |   89.4% |
 | moleditpy\src\moleditpy\ui\mirror_dialog.py             |     72 |      7 |   90.3% |
-| moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    952 |    160 |   83.2% |
+| moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    952 |    161 |   83.1% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    614 |    128 |   79.2% |
 | moleditpy\src\moleditpy\ui\move_group_dialog.py         |    386 |    130 |   66.3% |
 | moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py |    390 |     41 |   89.5% |
@@ -54,7 +54,7 @@
 | moleditpy\src\moleditpy\ui\template_preview_item.py     |    102 |      3 |   97.1% |
 | moleditpy\src\moleditpy\ui\template_preview_view.py     |     46 |      4 |   91.3% |
 | moleditpy\src\moleditpy\ui\translation_dialog.py        |    276 |     21 |   92.4% |
-| moleditpy\src\moleditpy\ui\ui_manager.py                |    368 |     98 |   73.4% |
+| moleditpy\src\moleditpy\ui\ui_manager.py                |    368 |    100 |   72.8% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    360 |     79 |   78.1% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1007 |    259 |   74.3% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |     77 |      0 |  100.0% |
@@ -66,7 +66,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      0 |  100.0% |
-| **TOTAL** | **15522** | **2722** | **82.46%** |
+| **TOTAL** | **15522** | **2726** | **82.44%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

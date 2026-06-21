@@ -498,19 +498,7 @@ _No description provided._
 _No description provided._
 
 
-### test_close_event_clears_labels_and_disables_picking
-_No description provided._
-
-- mock_clear.assert_called_once()
-- mock_disable.assert_called_once()
-
-### test_reject_clears_labels_and_disables_picking
-_No description provided._
-
-- mock_clear.assert_called_once()
-- mock_disable.assert_called_once()
-
-### test_accept_clears_labels_and_disables_picking
+### test_cleanup_clears_labels_and_disables_picking
 _No description provided._
 
 - mock_clear.assert_called_once()
@@ -607,7 +595,7 @@ _Verify that 'safe connection' scoring prioritizes rotations where template sing
 
 - assert rot % 2 == 0
 
-## tests/unit/test_calculation_worker.py
+## tests/unit/test_calculation_worker_core.py
 
 ### test_calculation_worker_init
 _No description provided._
@@ -2717,43 +2705,22 @@ _Verify XYZ export logic._
 
 ## tests/unit/test_io_manager.py
 
-### TestPromptForCharge.test_accept_with_default_charge
-_Accept with default text '0' → (0, True, False)._
+### TestPromptForCharge.test_accept_returns_charge
+_No description provided._
 
-- assert charge == 0
-- assert ok is True
-- assert skip is False
-
-### TestPromptForCharge.test_accept_with_positive_charge
-_Text '2' → charge 2._
-
-- assert charge == 2
-- assert ok is True
-- assert skip is False
-
-### TestPromptForCharge.test_accept_with_negative_charge
-_Text '-1' → charge -1._
-
-- assert charge == -1
-- assert ok is True
-- assert skip is False
-
-### TestPromptForCharge.test_invalid_text_falls_back_to_zero
-_Non-numeric text 'abc' → charge falls back to 0._
-
-- assert charge == 0
+- assert charge == expected_charge
 - assert ok is True
 - assert skip is False
 
 ### TestPromptForCharge.test_cancel_returns_none_false_false
-_Rejected exec → (None, False, False)._
+_No description provided._
 
 - assert charge is None
 - assert ok is False
 - assert skip is False
 
 ### TestPromptForCharge.test_skip_chemistry_returns_zero_true_true
-_Skip button fires callback before exec returns Accepted → (0, True, True)._
+_No description provided._
 
 - assert charge == 0
 - assert ok is True
@@ -3328,7 +3295,7 @@ _Verify E/Z stereo double bond maps to STEREOZ in RDKit._
 - assert double_bond.GetBondType() == Chem.BondType.DOUBLE
 - assert double_bond.GetStereo() == Chem.BondStereo.STEREOZ
 
-## tests/unit/test_molecule_scene_coverage.py
+## tests/unit/test_molecule_scene_behavior.py
 
 ### TestGetSetting.test_returns_value_from_settings
 _No description provided._
@@ -3901,13 +3868,6 @@ _No description provided._
 - assert plotter.camera_position == [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
 - plotter.render.assert_called()
 
-## tests/unit/test_no_external_private_calls.py
-
-### TestNoExternalPrivateCalls.test_no_external_private_calls
-_No description provided._
-
-- self.assertTrue(os.path.isdir(pkg_dir), f'Directory not found: {pkg_dir}')
-
 ## tests/unit/test_parser_robustness.py
 
 ### test_set_mol_prop_safe_robustness
@@ -4132,19 +4092,11 @@ _No description provided._
 - self.assertTrue(hasattr(PluginContext, 'mark_project_modified'), 'PluginContext must expose mark_project_modified()')
 - self.assertTrue(callable(getattr(PluginContext, 'mark_project_modified')))
 
-### TestRefreshUi.test_calls_update_realtime_info
+### TestRefreshUi.test_calls_all_required_managers
 _No description provided._
 
 - mw.state_manager.update_realtime_info.assert_called_once()
-
-### TestRefreshUi.test_calls_update_undo_redo_actions
-_No description provided._
-
 - mw.edit_actions_manager.update_undo_redo_actions.assert_called_once()
-
-### TestRefreshUi.test_calls_update_window_title
-_No description provided._
-
 - mw.state_manager.update_window_title.assert_called_once()
 
 ### TestRefreshUi.test_no_crash_when_managers_missing
@@ -4240,20 +4192,9 @@ _Test PluginContext initialization._
 - assert ctx._manager == mock_manager
 - assert ctx._plugin_name == 'TestPlugin'
 
-### TestPluginInterface.test_add_menu_action
-_Test add_menu_action delegation._
+### TestPluginInterface.test_delegates_to_manager
+_No description provided._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Test', callback, 'Test Action', 'icon.png', 'Ctrl+T')
-
-### TestPluginInterface.test_add_toolbar_action
-_Test add_toolbar_action delegation._
-
-- mock_manager.register_toolbar_action.assert_called_once_with('TestPlugin', callback, 'Toolbar Action', 'icon.png', 'Tooltip')
-
-### TestPluginInterface.test_register_drop_handler
-_Test register_drop_handler delegation._
-
-- mock_manager.register_drop_handler.assert_called_once_with('TestPlugin', callback, 5)
 
 ### TestPluginInterface.test_get_3d_controller
 _Test get_3d_controller returns a controller linked to main window._
@@ -4278,49 +4219,9 @@ _Test current_molecule when main window is None._
 
 - assert ctx.current_molecule is None
 
-### TestPluginInterface.test_add_export_action
-_Test add_export_action delegation._
-
-- mock_manager.register_export_action.assert_called_once_with('TestPlugin', 'Export Plugin', callback)
-
-### TestPluginInterface.test_register_optimization_method
-_Test register_optimization_method delegation._
-
-- mock_manager.register_optimization_method.assert_called_once_with('TestPlugin', 'My Opt', callback)
-
-### TestPluginInterface.test_register_file_opener
-_Test register_file_opener delegation._
-
-- mock_manager.register_file_opener.assert_called_once_with('TestPlugin', '.ext', callback, 10)
-
-### TestPluginInterface.test_add_analysis_tool
-_Test add_analysis_tool delegation._
-
-- mock_manager.register_analysis_tool.assert_called_once_with('TestPlugin', 'Analyze This', callback)
-
-### TestPluginInterface.test_register_save_handler
-_Test register_save_handler delegation._
-
-- mock_manager.register_save_handler.assert_called_once_with('TestPlugin', callback)
-
-### TestPluginInterface.test_register_load_handler
-_Test register_load_handler delegation._
-
-- mock_manager.register_load_handler.assert_called_once_with('TestPlugin', callback)
-
 ### TestPluginInterface.test_register_3d_context_menu
 _Test deprecated register_3d_context_menu emits DeprecationWarning._
 
-
-### TestPluginInterface.test_register_3d_style
-_Test register_3d_style delegation._
-
-- mock_manager.register_3d_style.assert_called_once_with('TestPlugin', 'My Style', callback)
-
-### TestPluginInterface.test_register_document_reset_handler
-_Test register_document_reset_handler delegation._
-
-- mock_manager.register_document_reset_handler.assert_called_once_with('TestPlugin', callback)
 
 ### TestPluginInterface.test_3d_controller_set_atom_color
 _Test Plugin3DController.set_atom_color._
@@ -4403,31 +4304,6 @@ _set_setting is a no-op when main window is None._
 _Value written with set_setting can be read back with get_setting._
 
 - assert ctx.get_setting('count', 0) == 7
-
-### TestPluginInterface.test_push_undo_checkpoint
-_No description provided._
-
-- mock_manager.push_undo_checkpoint.assert_called_once()
-
-### TestPluginInterface.test_get_selected_atom_indices
-_No description provided._
-
-- mock_manager.get_selected_atom_indices.assert_called_once()
-
-### TestPluginInterface.test_register_window
-_No description provided._
-
-- mock_manager.register_window.assert_called_once_with('TestPlugin', 'win1', window)
-
-### TestPluginInterface.test_get_window
-_No description provided._
-
-- mock_manager.get_window.assert_called_once_with('TestPlugin', 'win1')
-
-### TestPluginInterface.test_show_status_message
-_No description provided._
-
-- mock_manager.show_status_message.assert_called_once_with('hello', 1000)
 
 ### TestPluginInterface.test_plotter
 _No description provided._
@@ -4900,14 +4776,17 @@ _No description provided._
 
 - im.host.plugin_manager.discover_plugins.assert_called_once_with(im.host)
 
-### TestUpdatePluginMenu.test_all_integration_hooks_called
-_update_plugin_menu must call all 6 integration methods._
+### TestUpdatePluginMenu.test_menu_action_appears_after_update
+_A registered menu action is present in the menu after update_plugin_menu._
 
-- mocks[m].assert_called_once()
+- im.host.menuBar.return_value.addMenu.assert_called_once_with('MyPlugin')
+- added_menu.addAction.assert_called_once()
 
-### TestRebuildPluginMenus.test_calls_all_six_rebuild_steps
-_No description provided._
+### TestRebuildPluginMenus.test_toolbar_and_export_populated_after_rebuild
+_rebuild_plugin_menus wires toolbar and export actions into UI._
 
+- im.plugin_toolbar.addAction.assert_called_once()
+- im.export_button.menu.return_value.addAction.assert_called_once()
 
 ### TestRebuildPluginMenus.test_resets_separator_flag
 _No description provided._
@@ -5781,25 +5660,13 @@ _No description provided._
 
 - assert dialog.parent_window.init_manager.settings['background_color_2d'] == '#123456'
 
-### test_apply_settings_calls_save_settings
+### test_apply_settings_fires_all_side_effects
 _No description provided._
 
-- dialog.parent_window.init_manager.save_settings.assert_called()
-
-### test_apply_settings_calls_apply_3d_settings
-_No description provided._
-
-- dialog.parent_window.view_3d_manager.apply_3d_settings.assert_called()
-
-### test_apply_settings_calls_update_cpk_colors
-_No description provided._
-
-- dialog.parent_window.init_manager.update_cpk_colors_from_settings.assert_called()
-
-### test_apply_settings_shows_status_message
-_No description provided._
-
-- dialog.parent_window.statusBar.return_value.showMessage.assert_called_with('Settings applied successfully')
+- p.init_manager.save_settings.assert_called()
+- p.view_3d_manager.apply_3d_settings.assert_called()
+- p.init_manager.update_cpk_colors_from_settings.assert_called()
+- p.statusBar.return_value.showMessage.assert_called_with('Settings applied successfully')
 
 ### test_apply_settings_redraws_molecule_when_present
 _No description provided._
@@ -7923,5 +7790,3 @@ _Test that pressing 1, 2, 3 bonds to an existing atom if it's nearby._
 - assert len(data.atoms) == 2
 - assert len(data.bonds) == 1
 - assert bond_key in data.bonds
-
-## tests/gui/test_plugin_manager_redundant.py
