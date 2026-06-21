@@ -1195,7 +1195,7 @@ _Editing the force-constant cell updates the constraint's stored force value._
 - assert dlg.constraints[0][3] == pytest.approx(25000.0)
 
 ### TestCellChanged.test_invalid_value_reverts_to_original
-_No description provided._
+_Entering a non-numeric cell value reverts the cell to the original constraint value._
 
 - assert dlg.constraints[0][2] == pytest.approx(original_val)
 
@@ -7183,7 +7183,7 @@ _All registered export actions are each added to the export menu._
 - assert im.export_button.menu.return_value.addAction.call_count == 2
 
 ### TestAnalysisToolEndToEnd.test_analysis_tools_appear_in_analysis_menu
-_No description provided._
+_Registered analysis tools appear as actions in the Analysis menu after rebuild._
 
 - analysis_menu.addSeparator.assert_called_once()
 - assert analysis_menu.addAction.call_count == 1
