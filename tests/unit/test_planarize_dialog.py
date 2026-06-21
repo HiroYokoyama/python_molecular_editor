@@ -1,14 +1,8 @@
 """
 Unit tests for ui/planarize_dialog.py (PlanarizeDialog).
 
-Covers:
-  - on_atom_picked: toggle select/deselect
-  - preselected_atoms: loaded on init
-  - clear_selection: empties set, disables apply
-  - select_all_atoms: selects all N atoms
-  - update_display: label text and apply_button state at 0 / 1-2 / >=3 atoms
-  - apply_planarize: guard (<3 atoms), geometry math (atoms in a plane stay planar),
-    undo is pushed
+Shared BasePickingDialog contract tests (pick/select/display) live in
+PickingDialogContractTests and run via TestPlanarizeDialogContract.
 """
 
 import os
@@ -18,6 +12,8 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from PyQt6.QtWidgets import QApplication
+from rdkit import Chem, Geometry
+from rdkit.Chem import AllChem
 
 _src = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
@@ -25,10 +21,7 @@ _src = os.path.abspath(
 if os.path.isdir(_src) and _src not in sys.path:
     sys.path.insert(0, _src)
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+from _picking_dialog_contract import PickingDialogContractTests, make_ethane, make_mock_mw
 
 
 @pytest.fixture(scope="session")
@@ -36,152 +29,48 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-def _ethane():
-    from rdkit import Chem
-    from rdkit.Chem import AllChem
-
-    mol = Chem.MolFromSmiles("CC")
+def _planar_mol():
+    mol = Chem.MolFromSmiles("C1CCC1")
     mol = Chem.AddHs(mol)
-    AllChem.EmbedMolecule(mol, randomSeed=42)
+    AllChem.EmbedMolecule(mol, randomSeed=1)
+    conf = mol.GetConformer()
+    for i, (x, y, z) in enumerate([(1, 0, 0.1), (0, 1, -0.1), (-1, 0, 0.1), (0, -1, -0.1)]):
+        conf.SetAtomPosition(i, Geometry.Point3D(x, y, z))
     return mol
 
 
-def _make_mw(mol):
-    mw = MagicMock()
-    mw._picking_consumed = False
-    mw.view_3d_manager.atom_positions_3d = np.array(
-        mol.GetConformer().GetPositions(), dtype=float
-    )
-    return mw
+# ---------------------------------------------------------------------------
+# Shared BasePickingDialog contract
+# ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def make_dialog(qapp):
-    created = []
-
-    def _factory(mol=None, preselected_atoms=None):
+class TestPlanarizeDialogContract(PickingDialogContractTests):
+    @pytest.fixture
+    def make_dialog(self, qapp):
         from moleditpy.ui.planarize_dialog import PlanarizeDialog
 
-        _mol = mol if mol is not None else _ethane()
-        mw = _make_mw(_mol)
-        with (
-            patch.object(PlanarizeDialog, "show_atom_labels"),
-            patch.object(PlanarizeDialog, "clear_atom_labels"),
-            patch.object(PlanarizeDialog, "enable_picking"),
-            patch.object(PlanarizeDialog, "disable_picking"),
-        ):
-            dlg = PlanarizeDialog(_mol, mw, preselected_atoms=preselected_atoms)
-        created.append(dlg)
-        return dlg, _mol, mw
+        created = []
 
-    yield _factory
+        def _factory(mol=None, preselected_atoms=None):
+            _mol = mol if mol is not None else make_ethane()
+            mw = make_mock_mw(_mol)
+            with (
+                patch.object(PlanarizeDialog, "show_atom_labels"),
+                patch.object(PlanarizeDialog, "clear_atom_labels"),
+                patch.object(PlanarizeDialog, "enable_picking"),
+                patch.object(PlanarizeDialog, "disable_picking"),
+            ):
+                dlg = PlanarizeDialog(_mol, mw, preselected_atoms=preselected_atoms)
+            created.append(dlg)
+            return dlg, _mol, mw
 
-    for dlg in created:
-        try:
-            dlg.close()
-        except Exception:
-            pass
+        yield _factory
 
-
-# ---------------------------------------------------------------------------
-# on_atom_picked
-# ---------------------------------------------------------------------------
-
-
-class TestOnAtomPicked:
-    def test_pick_adds_atom(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.on_atom_picked(0)
-        assert 0 in dlg.selected_atoms
-
-    def test_repick_removes_atom(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.on_atom_picked(0)
-        dlg.on_atom_picked(0)
-        assert 0 not in dlg.selected_atoms
-
-    def test_multiple_picks_accumulate(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        for i in range(4):
-            dlg.on_atom_picked(i)
-        assert dlg.selected_atoms == {0, 1, 2, 3}
-
-
-# ---------------------------------------------------------------------------
-# preselected_atoms
-# ---------------------------------------------------------------------------
-
-
-class TestPreselectedAtoms:
-    def test_preselected_atoms_loaded(self, make_dialog):
-        dlg, _, _ = make_dialog(preselected_atoms=[0, 1, 2])
-        assert dlg.selected_atoms == {0, 1, 2}
-
-
-# ---------------------------------------------------------------------------
-# clear_selection
-# ---------------------------------------------------------------------------
-
-
-class TestClearSelection:
-    def test_clear_empties_and_disables(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        for i in range(4):
-            dlg.on_atom_picked(i)
-        with patch.object(type(dlg), "clear_atom_labels"):
-            dlg.clear_selection()
-        assert len(dlg.selected_atoms) == 0
-        assert not dlg.apply_button.isEnabled()
-
-
-# ---------------------------------------------------------------------------
-# select_all_atoms
-# ---------------------------------------------------------------------------
-
-
-class TestSelectAllAtoms:
-    def test_select_all_selects_every_atom(self, make_dialog):
-        dlg, mol, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"):
-            dlg.select_all_atoms()
-        assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
-
-    def test_select_all_enables_apply(self, make_dialog):
-        dlg, mol, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"):
-            dlg.select_all_atoms()
-        assert dlg.apply_button.isEnabled()
-
-
-# ---------------------------------------------------------------------------
-# update_display
-# ---------------------------------------------------------------------------
-
-
-class TestUpdateDisplay:
-    def test_zero_atoms_disables_apply(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.selected_atoms.clear()
-        dlg.update_display()
-        assert not dlg.apply_button.isEnabled()
-
-    def test_two_atoms_disables_apply(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.selected_atoms = {0, 1}
-        dlg.update_display()
-        assert not dlg.apply_button.isEnabled()
-
-    def test_three_atoms_enables_apply(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.selected_atoms = {0, 1, 2}
-        dlg.update_display()
-        assert dlg.apply_button.isEnabled()
-
-    def test_count_shown_in_label(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.selected_atoms = {0, 1, 2, 3}
-        dlg.update_display()
-        assert "4" in dlg.selection_label.text()
+        for dlg in created:
+            try:
+                dlg.close()
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -190,15 +79,32 @@ class TestUpdateDisplay:
 
 
 class TestApplyPlanarizeGuard:
-    def test_fewer_than_three_atoms_shows_warning(self, make_dialog):
-        dlg, _, _ = make_dialog()
+    @pytest.fixture
+    def dlg(self, qapp):
+        from moleditpy.ui.planarize_dialog import PlanarizeDialog
+
+        mol = make_ethane()
+        mw = make_mock_mw(mol)
+        with (
+            patch.object(PlanarizeDialog, "show_atom_labels"),
+            patch.object(PlanarizeDialog, "clear_atom_labels"),
+            patch.object(PlanarizeDialog, "enable_picking"),
+            patch.object(PlanarizeDialog, "disable_picking"),
+        ):
+            d = PlanarizeDialog(mol, mw)
+        yield d
+        try:
+            d.close()
+        except Exception:
+            pass
+
+    def test_fewer_than_three_atoms_shows_warning(self, dlg):
         dlg.selected_atoms = {0, 1}
         with patch("moleditpy.ui.planarize_dialog.QMessageBox") as mb:
             dlg.apply_planarize()
         mb.warning.assert_called_once()
 
-    def test_zero_atoms_shows_warning(self, make_dialog):
-        dlg, _, _ = make_dialog()
+    def test_zero_atoms_shows_warning(self, dlg):
         dlg.selected_atoms.clear()
         with patch("moleditpy.ui.planarize_dialog.QMessageBox") as mb:
             dlg.apply_planarize()
@@ -211,95 +117,44 @@ class TestApplyPlanarizeGuard:
 
 
 class TestApplyPlanarizeGeometry:
-    def _planar_mol(self):
-        """4 atoms in XY plane with small Z noise — planarize should reduce Z variance."""
-        from rdkit import Chem, Geometry
-        from rdkit.Chem import AllChem
+    def _make_dlg(self, mol, qapp):
+        from moleditpy.ui.planarize_dialog import PlanarizeDialog
 
-        mol = Chem.MolFromSmiles("C1CCC1")
-        mol = Chem.AddHs(mol)
-        AllChem.EmbedMolecule(mol, randomSeed=1)
-        conf = mol.GetConformer()
-        pts = [
-            (1.0, 0.0, 0.1),
-            (0.0, 1.0, -0.1),
-            (-1.0, 0.0, 0.1),
-            (0.0, -1.0, -0.1),
-        ]
-        for i, (x, y, z) in enumerate(pts):
-            conf.SetAtomPosition(i, Geometry.Point3D(x, y, z))
-        return mol
-
-    def test_planarize_reduces_z_spread(self, make_dialog):
-        mol = self._planar_mol()
-        mw = _make_mw(mol)
-        # atom_positions_3d must reflect the mol positions
+        mw = make_mock_mw(mol)
         mw.view_3d_manager.atom_positions_3d = np.array(
             mol.GetConformer().GetPositions(), dtype=float
         )
-
-        from moleditpy.ui.planarize_dialog import PlanarizeDialog
-
         with (
             patch.object(PlanarizeDialog, "show_atom_labels"),
             patch.object(PlanarizeDialog, "clear_atom_labels"),
             patch.object(PlanarizeDialog, "enable_picking"),
             patch.object(PlanarizeDialog, "disable_picking"),
         ):
-            dlg = PlanarizeDialog(mol, mw)
+            return PlanarizeDialog(mol, mw), mw
 
+    def test_planarize_reduces_z_spread(self, qapp):
+        mol = _planar_mol()
+        dlg, _ = self._make_dlg(mol, qapp)
         dlg.selected_atoms = {0, 1, 2, 3}
-        before_z_var = np.var(
-            [mol.GetConformer().GetAtomPosition(i).z for i in range(4)]
-        )
+        before_z_var = np.var([mol.GetConformer().GetAtomPosition(i).z for i in range(4)])
 
         with patch("moleditpy.ui.planarize_dialog.QMessageBox"):
             dlg.apply_planarize()
 
-        after_z_var = np.var(
-            [mol.GetConformer().GetAtomPosition(i).z for i in range(4)]
-        )
+        after_z_var = np.var([mol.GetConformer().GetAtomPosition(i).z for i in range(4)])
         assert after_z_var <= before_z_var + 1e-6
 
-    def test_planarize_pushes_undo(self, make_dialog):
-        mol = self._planar_mol()
-        mw = _make_mw(mol)
-        mw.view_3d_manager.atom_positions_3d = np.array(
-            mol.GetConformer().GetPositions(), dtype=float
-        )
-
-        from moleditpy.ui.planarize_dialog import PlanarizeDialog
-
-        with (
-            patch.object(PlanarizeDialog, "show_atom_labels"),
-            patch.object(PlanarizeDialog, "clear_atom_labels"),
-            patch.object(PlanarizeDialog, "enable_picking"),
-            patch.object(PlanarizeDialog, "disable_picking"),
-        ):
-            dlg = PlanarizeDialog(mol, mw)
-
+    def test_planarize_pushes_undo(self, qapp):
+        mol = _planar_mol()
+        dlg, mw = self._make_dlg(mol, qapp)
         dlg.selected_atoms = {0, 1, 2, 3}
         with patch("moleditpy.ui.planarize_dialog.QMessageBox"):
             dlg.apply_planarize()
         mw.edit_actions_manager.push_undo_state.assert_called()
 
-    def test_apply_calls_draw_molecule_3d(self, make_dialog):
-        mol = self._planar_mol()
-        mw = _make_mw(mol)
-        mw.view_3d_manager.atom_positions_3d = np.array(
-            mol.GetConformer().GetPositions(), dtype=float
-        )
-
-        from moleditpy.ui.planarize_dialog import PlanarizeDialog
-
-        with (
-            patch.object(PlanarizeDialog, "show_atom_labels"),
-            patch.object(PlanarizeDialog, "clear_atom_labels"),
-            patch.object(PlanarizeDialog, "enable_picking"),
-            patch.object(PlanarizeDialog, "disable_picking"),
-        ):
-            dlg = PlanarizeDialog(mol, mw)
-
+    def test_apply_calls_draw_molecule_3d(self, qapp):
+        mol = _planar_mol()
+        dlg, mw = self._make_dlg(mol, qapp)
         dlg.selected_atoms = {0, 1, 2, 3}
         with patch("moleditpy.ui.planarize_dialog.QMessageBox"):
             dlg.apply_planarize()

@@ -22,62 +22,6 @@ _Verify left clicks do not trigger the easter egg._
 
 ## tests/unit/test_align_plane_dialog.py
 
-### TestOnAtomPicked.test_pick_adds_atom
-_No description provided._
-
-- assert 0 in dlg.selected_atoms
-
-### TestOnAtomPicked.test_repick_removes_atom
-_No description provided._
-
-- assert 0 not in dlg.selected_atoms
-
-### TestOnAtomPicked.test_multiple_picks_accumulate
-_No description provided._
-
-- assert dlg.selected_atoms == {0, 1, 2, 3}
-
-### TestPreselectedAtoms.test_preselected_atoms_loaded
-_No description provided._
-
-- assert dlg.selected_atoms == {0, 1, 2}
-
-### TestClearSelection.test_clear_empties_selection
-_No description provided._
-
-- assert len(dlg.selected_atoms) == 0
-- assert not dlg.apply_button.isEnabled()
-
-### TestSelectAllAtoms.test_select_all_selects_every_atom
-_No description provided._
-
-- assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
-
-### TestSelectAllAtoms.test_select_all_enables_apply
-_No description provided._
-
-- assert dlg.apply_button.isEnabled()
-
-### TestUpdateDisplay.test_zero_atoms_disables_apply
-_No description provided._
-
-- assert not dlg.apply_button.isEnabled()
-
-### TestUpdateDisplay.test_two_atoms_disables_apply
-_No description provided._
-
-- assert not dlg.apply_button.isEnabled()
-
-### TestUpdateDisplay.test_three_atoms_enables_apply
-_No description provided._
-
-- assert dlg.apply_button.isEnabled()
-
-### TestUpdateDisplay.test_count_shown_in_label
-_No description provided._
-
-- assert '4' in dlg.selection_label.text()
-
 ### TestApplyPlaneAlignGuard.test_fewer_than_three_atoms_shows_warning
 _No description provided._
 
@@ -89,7 +33,7 @@ _No description provided._
 - mb.warning.assert_called_once()
 
 ### TestApplyPlaneAlignMath.test_xy_align_reduces_z_variance
-_Atoms already in XY plane aligned to XY: z-coords should stay ~0._
+_No description provided._
 
 - assert abs(after[i][2]) < 0.5
 
@@ -99,17 +43,17 @@ _No description provided._
 - mw.view_3d_manager.draw_molecule_3d.assert_called()
 
 ### TestApplyPlaneAlignMath.test_align_plane_with_move_to_zero_plane_true
-_When move_to_zero_plane is True, the aligned plane of selected atoms is shifted to z=0._
+_No description provided._
 
 - assert pos[i][2] == pytest.approx(0.0, abs=1e-05)
 
 ### TestApplyPlaneAlignMath.test_align_plane_with_move_to_zero_plane_false
-_When move_to_zero_plane is False, the aligned plane is not shifted to z=0._
+_No description provided._
 
 - assert abs(pos[i][2]) > 1.0
 
 ### TestApplyPlaneAlignMath.test_align_plane_already_aligned_with_move_to_zero_plane_true
-_If already aligned, setting move_to_zero_plane to True shifts the plane to z=0._
+_No description provided._
 
 - assert pos[i][2] == pytest.approx(0.0, abs=1e-05)
 
@@ -4132,62 +4076,6 @@ _Test that clicking a button emits element_selected and accepts the dialog._
 - assert h_button is not None
 
 ## tests/unit/test_planarize_dialog.py
-
-### TestOnAtomPicked.test_pick_adds_atom
-_No description provided._
-
-- assert 0 in dlg.selected_atoms
-
-### TestOnAtomPicked.test_repick_removes_atom
-_No description provided._
-
-- assert 0 not in dlg.selected_atoms
-
-### TestOnAtomPicked.test_multiple_picks_accumulate
-_No description provided._
-
-- assert dlg.selected_atoms == {0, 1, 2, 3}
-
-### TestPreselectedAtoms.test_preselected_atoms_loaded
-_No description provided._
-
-- assert dlg.selected_atoms == {0, 1, 2}
-
-### TestClearSelection.test_clear_empties_and_disables
-_No description provided._
-
-- assert len(dlg.selected_atoms) == 0
-- assert not dlg.apply_button.isEnabled()
-
-### TestSelectAllAtoms.test_select_all_selects_every_atom
-_No description provided._
-
-- assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
-
-### TestSelectAllAtoms.test_select_all_enables_apply
-_No description provided._
-
-- assert dlg.apply_button.isEnabled()
-
-### TestUpdateDisplay.test_zero_atoms_disables_apply
-_No description provided._
-
-- assert not dlg.apply_button.isEnabled()
-
-### TestUpdateDisplay.test_two_atoms_disables_apply
-_No description provided._
-
-- assert not dlg.apply_button.isEnabled()
-
-### TestUpdateDisplay.test_three_atoms_enables_apply
-_No description provided._
-
-- assert dlg.apply_button.isEnabled()
-
-### TestUpdateDisplay.test_count_shown_in_label
-_No description provided._
-
-- assert '4' in dlg.selection_label.text()
 
 ### TestApplyPlanarizeGuard.test_fewer_than_three_atoms_shows_warning
 _No description provided._

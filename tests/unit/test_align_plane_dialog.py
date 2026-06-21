@@ -1,14 +1,8 @@
 """
 Unit tests for ui/align_plane_dialog.py (AlignPlaneDialog).
 
-Covers:
-  - on_atom_picked: toggle select/deselect, update_display side-effects
-  - preselected_atoms: loaded on init
-  - clear_selection: empties set and disables apply
-  - select_all_atoms: selects all N atoms from mol
-  - update_display: label text and apply_button state at 0 / 1-2 / >=3 atoms
-  - apply_PlaneAlign: guard (<3 atoms), plane-normal math (atoms in XY plane → XY align leaves z small)
-  - apply_PlaneAlign pushes undo via _update_molecule_geometry path
+Shared BasePickingDialog contract tests (pick/select/display) live in
+PickingDialogContractTests and run via TestAlignPlaneDialogContract.
 """
 
 import os
@@ -18,6 +12,8 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from PyQt6.QtWidgets import QApplication
+from rdkit import Chem, Geometry
+from rdkit.Chem import AllChem
 
 _src = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
@@ -25,10 +21,7 @@ _src = os.path.abspath(
 if os.path.isdir(_src) and _src not in sys.path:
     sys.path.insert(0, _src)
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+from _picking_dialog_contract import PickingDialogContractTests, make_ethane, make_mock_mw
 
 
 @pytest.fixture(scope="session")
@@ -36,154 +29,48 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-def _ethane():
-    from rdkit import Chem
-    from rdkit.Chem import AllChem
-
-    mol = Chem.MolFromSmiles("CC")
+def _flat_mol_in_xy():
+    mol = Chem.MolFromSmiles("C1CCC1")
     mol = Chem.AddHs(mol)
-    AllChem.EmbedMolecule(mol, randomSeed=42)
+    AllChem.EmbedMolecule(mol, randomSeed=1)
+    conf = mol.GetConformer()
+    for i, (x, y, z) in enumerate([(1, 0, 0), (0, 1, 0), (-1, 0, 0), (0, -1, 0)]):
+        conf.SetAtomPosition(i, Geometry.Point3D(x, y, z))
     return mol
 
 
-def _make_mw(mol):
-    mw = MagicMock()
-    mw._picking_consumed = False
-    mw.view_3d_manager.atom_positions_3d = np.array(
-        mol.GetConformer().GetPositions(), dtype=float
-    )
-    return mw
+# ---------------------------------------------------------------------------
+# Shared BasePickingDialog contract
+# ---------------------------------------------------------------------------
 
 
-@pytest.fixture
-def make_dialog(qapp):
-    created = []
-
-    def _factory(mol=None, plane="xy", preselected_atoms=None):
+class TestAlignPlaneDialogContract(PickingDialogContractTests):
+    @pytest.fixture
+    def make_dialog(self, qapp):
         from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
 
-        _mol = mol if mol is not None else _ethane()
-        mw = _make_mw(_mol)
-        with (
-            patch.object(AlignPlaneDialog, "show_atom_labels"),
-            patch.object(AlignPlaneDialog, "clear_atom_labels"),
-            patch.object(AlignPlaneDialog, "enable_picking"),
-            patch.object(AlignPlaneDialog, "disable_picking"),
-        ):
-            dlg = AlignPlaneDialog(
-                _mol, mw, plane=plane, preselected_atoms=preselected_atoms
-            )
-        created.append(dlg)
-        return dlg, _mol, mw
+        created = []
 
-    yield _factory
+        def _factory(mol=None, plane="xy", preselected_atoms=None):
+            _mol = mol if mol is not None else make_ethane()
+            mw = make_mock_mw(_mol)
+            with (
+                patch.object(AlignPlaneDialog, "show_atom_labels"),
+                patch.object(AlignPlaneDialog, "clear_atom_labels"),
+                patch.object(AlignPlaneDialog, "enable_picking"),
+                patch.object(AlignPlaneDialog, "disable_picking"),
+            ):
+                dlg = AlignPlaneDialog(_mol, mw, plane=plane, preselected_atoms=preselected_atoms)
+            created.append(dlg)
+            return dlg, _mol, mw
 
-    for dlg in created:
-        try:
-            dlg.close()
-        except Exception:
-            pass
+        yield _factory
 
-
-# ---------------------------------------------------------------------------
-# on_atom_picked
-# ---------------------------------------------------------------------------
-
-
-class TestOnAtomPicked:
-    def test_pick_adds_atom(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.on_atom_picked(0)
-        assert 0 in dlg.selected_atoms
-
-    def test_repick_removes_atom(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.on_atom_picked(0)
-        dlg.on_atom_picked(0)
-        assert 0 not in dlg.selected_atoms
-
-    def test_multiple_picks_accumulate(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        for i in range(4):
-            dlg.on_atom_picked(i)
-        assert dlg.selected_atoms == {0, 1, 2, 3}
-
-
-# ---------------------------------------------------------------------------
-# preselected_atoms
-# ---------------------------------------------------------------------------
-
-
-class TestPreselectedAtoms:
-    def test_preselected_atoms_loaded(self, make_dialog):
-        dlg, _, _ = make_dialog(preselected_atoms=[0, 1, 2])
-        assert dlg.selected_atoms == {0, 1, 2}
-
-
-# ---------------------------------------------------------------------------
-# clear_selection
-# ---------------------------------------------------------------------------
-
-
-class TestClearSelection:
-    def test_clear_empties_selection(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        for i in range(4):
-            dlg.on_atom_picked(i)
-        with patch.object(type(dlg), "clear_atom_labels"):
-            dlg.clear_selection()
-        assert len(dlg.selected_atoms) == 0
-        assert not dlg.apply_button.isEnabled()
-
-
-# ---------------------------------------------------------------------------
-# select_all_atoms
-# ---------------------------------------------------------------------------
-
-
-class TestSelectAllAtoms:
-    def test_select_all_selects_every_atom(self, make_dialog):
-        dlg, mol, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"):
-            dlg.select_all_atoms()
-        assert dlg.selected_atoms == set(range(mol.GetNumAtoms()))
-
-    def test_select_all_enables_apply(self, make_dialog):
-        dlg, mol, _ = make_dialog()
-        with patch.object(type(dlg), "show_atom_labels"):
-            dlg.select_all_atoms()
-        assert dlg.apply_button.isEnabled()
-
-
-# ---------------------------------------------------------------------------
-# update_display
-# ---------------------------------------------------------------------------
-
-
-class TestUpdateDisplay:
-    def test_zero_atoms_disables_apply(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.selected_atoms.clear()
-        dlg.update_display()
-        assert not dlg.apply_button.isEnabled()
-
-    def test_two_atoms_disables_apply(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.selected_atoms = {0, 1}
-        dlg.update_display()
-        assert not dlg.apply_button.isEnabled()
-
-    def test_three_atoms_enables_apply(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.selected_atoms = {0, 1, 2}
-        dlg.update_display()
-        assert dlg.apply_button.isEnabled()
-
-    def test_count_shown_in_label(self, make_dialog):
-        dlg, _, _ = make_dialog()
-        dlg.selected_atoms = {0, 1, 2, 3}
-        dlg.update_display()
-        assert "4" in dlg.selection_label.text()
+        for dlg in created:
+            try:
+                dlg.close()
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -192,15 +79,32 @@ class TestUpdateDisplay:
 
 
 class TestApplyPlaneAlignGuard:
-    def test_fewer_than_three_atoms_shows_warning(self, make_dialog):
-        dlg, _, _ = make_dialog()
+    @pytest.fixture
+    def dlg(self, qapp):
+        from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
+
+        mol = make_ethane()
+        mw = make_mock_mw(mol)
+        with (
+            patch.object(AlignPlaneDialog, "show_atom_labels"),
+            patch.object(AlignPlaneDialog, "clear_atom_labels"),
+            patch.object(AlignPlaneDialog, "enable_picking"),
+            patch.object(AlignPlaneDialog, "disable_picking"),
+        ):
+            d = AlignPlaneDialog(mol, mw, plane="xy")
+        yield d
+        try:
+            d.close()
+        except Exception:
+            pass
+
+    def test_fewer_than_three_atoms_shows_warning(self, dlg):
         dlg.selected_atoms = {0, 1}
         with patch("moleditpy.ui.align_plane_dialog.QMessageBox") as mb:
             dlg.apply_PlaneAlign()
         mb.warning.assert_called_once()
 
-    def test_zero_atoms_shows_warning(self, make_dialog):
-        dlg, _, _ = make_dialog()
+    def test_zero_atoms_shows_warning(self, dlg):
         dlg.selected_atoms.clear()
         with patch("moleditpy.ui.align_plane_dialog.QMessageBox") as mb:
             dlg.apply_PlaneAlign()
@@ -213,33 +117,10 @@ class TestApplyPlaneAlignGuard:
 
 
 class TestApplyPlaneAlignMath:
-    def _flat_mol_in_xy(self):
-        """4-atom molecule lying exactly in the XY plane with noise."""
-        from rdkit import Chem, Geometry
-        from rdkit.Chem import AllChem
-
-        mol = Chem.MolFromSmiles("C1CCC1")
-        mol = Chem.AddHs(mol)
-        AllChem.EmbedMolecule(mol, randomSeed=1)
-        # Override first 4 atoms to lie in XY plane (z=0)
-        conf = mol.GetConformer()
-        xy_pts = [
-            (1.0, 0.0, 0.0),
-            (0.0, 1.0, 0.0),
-            (-1.0, 0.0, 0.0),
-            (0.0, -1.0, 0.0),
-        ]
-        for i, (x, y, z) in enumerate(xy_pts):
-            conf.SetAtomPosition(i, Geometry.Point3D(x, y, z))
-        return mol
-
-    def test_xy_align_reduces_z_variance(self, make_dialog):
-        """Atoms already in XY plane aligned to XY: z-coords should stay ~0."""
-        mol = self._flat_mol_in_xy()
-        mw = MagicMock()
-        mw._picking_consumed = False
-        positions = mol.GetConformer().GetPositions()
-        mw.view_3d_manager.atom_positions_3d = positions.copy()
+    def test_xy_align_reduces_z_variance(self, qapp):
+        mol = _flat_mol_in_xy()
+        mw = make_mock_mw(mol)
+        mw.view_3d_manager.atom_positions_3d = mol.GetConformer().GetPositions().copy()
 
         from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
 
@@ -255,68 +136,90 @@ class TestApplyPlaneAlignMath:
         dlg.apply_PlaneAlign()
 
         after = mol.GetConformer().GetPositions()
-        # All 4 atoms should have near-zero z after alignment
         for i in range(4):
             assert abs(after[i][2]) < 0.5
 
-    def test_apply_calls_draw_molecule_3d(self, make_dialog):
-        dlg, mol, mw = make_dialog()
+    def test_apply_calls_draw_molecule_3d(self, qapp):
+        from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
+
+        mol = make_ethane()
+        mw = make_mock_mw(mol)
         with (
-            patch.object(type(dlg), "show_atom_labels"),
-            patch.object(type(dlg), "select_all_atoms"),
+            patch.object(AlignPlaneDialog, "show_atom_labels"),
+            patch.object(AlignPlaneDialog, "clear_atom_labels"),
+            patch.object(AlignPlaneDialog, "enable_picking"),
+            patch.object(AlignPlaneDialog, "disable_picking"),
         ):
-            dlg.selected_atoms = set(range(mol.GetNumAtoms()))
+            dlg = AlignPlaneDialog(mol, mw, plane="xy")
+        dlg.selected_atoms = set(range(mol.GetNumAtoms()))
         dlg.apply_PlaneAlign()
         mw.view_3d_manager.draw_molecule_3d.assert_called()
 
-    def test_align_plane_with_move_to_zero_plane_true(self, make_dialog):
-        """When move_to_zero_plane is True, the aligned plane of selected atoms is shifted to z=0."""
-        mol = self._flat_mol_in_xy()
-        # Shift all atoms along Z initially so centroid Z is non-zero
+    def test_align_plane_with_move_to_zero_plane_true(self, qapp):
+        mol = _flat_mol_in_xy()
         conf = mol.GetConformer()
         for i in range(mol.GetNumAtoms()):
             p = conf.GetAtomPosition(i)
             conf.SetAtomPosition(i, (p.x, p.y, p.z + 4.0))
 
-        dlg, mol, _ = make_dialog(mol=mol, plane="xy")
+        from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
+
+        mw = make_mock_mw(mol)
+        with (
+            patch.object(AlignPlaneDialog, "show_atom_labels"),
+            patch.object(AlignPlaneDialog, "clear_atom_labels"),
+            patch.object(AlignPlaneDialog, "enable_picking"),
+            patch.object(AlignPlaneDialog, "disable_picking"),
+        ):
+            dlg = AlignPlaneDialog(mol, mw, plane="xy")
         dlg.selected_atoms = [1, 2, 3]
         dlg.move_to_zero_plane_checkbox.setChecked(True)
         dlg.apply_PlaneAlign()
         pos = mol.GetConformer().GetPositions()
-        # The selected atoms' z positions should be exactly 0
         for i in [1, 2, 3]:
             assert pos[i][2] == pytest.approx(0.0, abs=1e-5)
 
-    def test_align_plane_with_move_to_zero_plane_false(self, make_dialog):
-        """When move_to_zero_plane is False, the aligned plane is not shifted to z=0."""
-        mol = self._flat_mol_in_xy()
-        # Shift all atoms along Z initially
+    def test_align_plane_with_move_to_zero_plane_false(self, qapp):
+        mol = _flat_mol_in_xy()
         conf = mol.GetConformer()
         for i in range(mol.GetNumAtoms()):
             p = conf.GetAtomPosition(i)
             conf.SetAtomPosition(i, (p.x, p.y, p.z + 4.0))
 
-        dlg, mol, _ = make_dialog(mol=mol, plane="xy")
+        from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
+
+        mw = make_mock_mw(mol)
+        with (
+            patch.object(AlignPlaneDialog, "show_atom_labels"),
+            patch.object(AlignPlaneDialog, "clear_atom_labels"),
+            patch.object(AlignPlaneDialog, "enable_picking"),
+            patch.object(AlignPlaneDialog, "disable_picking"),
+        ):
+            dlg = AlignPlaneDialog(mol, mw, plane="xy")
         dlg.selected_atoms = [1, 2, 3]
         dlg.move_to_zero_plane_checkbox.setChecked(False)
         dlg.apply_PlaneAlign()
         pos = mol.GetConformer().GetPositions()
-        # The selected atoms' z positions should still be around 4.0, not 0
         for i in [1, 2, 3]:
             assert abs(pos[i][2]) > 1.0
 
-    def test_align_plane_already_aligned_with_move_to_zero_plane_true(
-        self, make_dialog
-    ):
-        """If already aligned, setting move_to_zero_plane to True shifts the plane to z=0."""
-        mol = self._flat_mol_in_xy()
-        # Already aligned to XY plane (z=0), but shifted to z=3.0
+    def test_align_plane_already_aligned_with_move_to_zero_plane_true(self, qapp):
+        mol = _flat_mol_in_xy()
         conf = mol.GetConformer()
         for i in range(mol.GetNumAtoms()):
             p = conf.GetAtomPosition(i)
             conf.SetAtomPosition(i, (p.x, p.y, 3.0))
 
-        dlg, mol, _ = make_dialog(mol=mol, plane="xy")
+        from moleditpy.ui.align_plane_dialog import AlignPlaneDialog
+
+        mw = make_mock_mw(mol)
+        with (
+            patch.object(AlignPlaneDialog, "show_atom_labels"),
+            patch.object(AlignPlaneDialog, "clear_atom_labels"),
+            patch.object(AlignPlaneDialog, "enable_picking"),
+            patch.object(AlignPlaneDialog, "disable_picking"),
+        ):
+            dlg = AlignPlaneDialog(mol, mw, plane="xy")
         dlg.selected_atoms = [1, 2, 3]
         dlg.move_to_zero_plane_checkbox.setChecked(True)
         dlg.apply_PlaneAlign()
