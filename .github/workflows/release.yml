@@ -44,9 +44,10 @@ jobs:
             exit 1
           }
 
-          $existingTag = git tag -l "$VERSION"
-          if ($existingTag -eq $VERSION) {
-            Write-Error "Tag already exists: $VERSION"
+          $existingBare = git tag -l "$VERSION"
+          $existingV    = git tag -l "v$VERSION"
+          if ($existingBare -eq $VERSION -or $existingV -eq "v$VERSION") {
+            Write-Error "Tag already exists: $VERSION or v$VERSION"
             exit 1
           }
 
@@ -192,9 +193,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add moleditpy/pyproject.toml moleditpy-linux/ windows-installer/script/script.iss windows-installer/script/MoleditPy.spec windows-installer/windows_installer.md windows-installer/windows_installer-jp.md
           git commit -m "Bump version to ${env:APP_VERSION}"
-          git tag "${env:APP_VERSION}"
+          git tag "v${env:APP_VERSION}"
           git push origin HEAD:${{ github.ref_name }}
-          git push origin "${env:APP_VERSION}"
+          git push origin "v${env:APP_VERSION}"
 
   publish-and-create-release:
     runs-on: ubuntu-latest
@@ -246,7 +247,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.APP_VERSION }}
+          tag_name: v${{ env.APP_VERSION }}
           prerelease: ${{ steps.prerelease_check.outputs.is_prerelease == 'true' }}
           files: |
             dist/moleditpy/*
