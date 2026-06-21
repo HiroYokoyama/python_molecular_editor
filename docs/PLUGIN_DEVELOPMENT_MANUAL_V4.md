@@ -591,7 +591,7 @@ def highlight_selection(context):
 While V3 encourages using `context`, sometimes you need direct access to the `MainWindow` (`mw`) for specialized Qt or PyVista operations. Obtain it via `mw = context.get_main_window()`.
 
 ### 6.1 Core Proxy Properties (Convenience)
-V3 maintains several proxy properties on `mw` for backward compatibility and convenience.
+V4 maintains several proxy properties on `mw` for backward compatibility and convenience.
 
 | Attribute / Method | Description |
 | :--- | :--- |
@@ -600,7 +600,7 @@ V3 maintains several proxy properties on `mw` for backward compatibility and con
 | `mw.current_mol` | Proxy for `mw.view_3d_manager.current_mol`. The active RDKit molecule. |
 | `mw.draw_molecule_3d(mol)` | Proxy method to trigger a full 3D redraw of the scene. |
 
-### 6.2 The Managed Architecture (V3)
+### 6.2 The Managed Architecture
 In Version 3.0, most core logic is separated into specialized **Managers**. If a feature is not available as a proxy on `mw`, you should look in the corresponding manager.
 
 | Attribute Path | Type | Description |
