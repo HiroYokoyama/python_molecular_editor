@@ -663,17 +663,17 @@ _Verify that 'safe connection' scoring prioritizes rotations where template sing
 
 - assert rot % 2 == 0
 
-## tests/unit/test_calculation_worker_direct.py
+## tests/unit/test_calculation_worker.py
 
 ### test_calculation_worker_init
-_Verify the initial state of the CalculationWorker._
+_No description provided._
 
 - assert isinstance(worker, QObject)
 - assert getattr(worker, 'halt_ids', None) is None
 - assert not getattr(worker, 'halt_all', False)
 
 ### test_calculation_worker_explicit_stereo_m_cfg
-_Test parsing of M CFG labels in MOL block._
+_No description provided._
 
 - assert len(finish_captor.emitted_values) > 0
 - assert bond.GetStereo() == Chem.BondStereo.STEREOE
@@ -684,62 +684,58 @@ _No description provided._
 - assert any(('No atoms to convert' in str(val) for val in error_captor.emitted_values))
 
 ### test_calculation_worker_none_conversion_mode_defaults_to_fallback
-_Explicit None should behave like an omitted conversion mode._
+_No description provided._
 
 - assert mock_rdkit.called
 
 ### test_calculation_worker_safe_helpers_halted
-_Test that safe helpers don't emit finished if halted._
+_No description provided._
 
 - assert len(finish_captor.emitted_values) == 0
 
 ### test_calculation_worker_rdkit_embedding_fail_fallback
-_Test that embedding failure triggers fallback status or error messages._
+_No description provided._
 
 - assert any((keyword in all_msgs_str for keyword in ['embedding failed', 'conversion failed', 'bounds fail']))
 
-## tests/unit/test_calculation_worker_optimize.py
-
 ### test_optimize_only_mmff94s
-_Test optimize_only mode with MMFF94s._
+_No description provided._
 
 - assert len(finish_captor.emitted_values) > 0
 - assert res_mol.HasProp('_pme_optimization_method')
 - assert res_mol.GetProp('_pme_optimization_method').upper() == 'MMFF94S_RDKIT'
 
 ### test_optimize_only_uff
-_Test optimize_only mode with UFF._
+_No description provided._
 
 - assert len(finish_captor.emitted_values) > 0
 - assert res_mol.GetProp('_pme_optimization_method') == 'UFF_RDKIT'
 
 ### test_collision_avoidance_trigger
-_Test that collision avoidance is called in direct mode._
+_No description provided._
 
 - assert len(finish_captor.emitted_values) > 0
 - assert dist > 0.01
 
 ### test_iterative_optimize_halt
-_Test that iterative optimization respects halt signals._
+_No description provided._
 
 
 ### test_obabel_optimization_flow
-_Test the flow of OpenBabel optimization (mocked)._
+_No description provided._
 
 - assert mock_opt.called
 - assert len(finish_captor.emitted_values) > 0
 - assert res_mol.GetProp('_pme_optimization_method') == 'UFF_OBABEL'
 
-## tests/unit/test_calculation_worker_optimize_intermolecular.py
-
 ### test_intermolecular_interaction_toggle
-_Test that ignoreInterfragInteractions is correctly toggled via options._
+_No description provided._
 
 - assert abs(dist_off - 6.0) < 1e-05
 - assert dist_on < 5.0
 
 ### test_intermolecular_interaction_uff
-_Test UFF path as well._
+_No description provided._
 
 - assert abs(dist_off - 6.0) < 1e-05
 
@@ -4230,10 +4226,6 @@ _No description provided._
 
 - mw.state_manager.update_window_title.assert_called_once()
 
-### TestMarkProjectModified.test_no_crash_when_mw_is_none
-_No description provided._
-
-
 ### TestMarkProjectModified.test_no_crash_when_state_manager_missing
 _No description provided._
 
@@ -4267,10 +4259,6 @@ _No description provided._
 
 - mw.state_manager.update_window_title.assert_called_once()
 
-### TestRefreshUi.test_no_crash_when_mw_is_none
-_No description provided._
-
-
 ### TestRefreshUi.test_no_crash_when_managers_missing
 _No description provided._
 
@@ -4279,10 +4267,6 @@ _No description provided._
 _No description provided._
 
 - mw.view_3d_manager.fit_to_view.assert_called_once()
-
-### TestFit3dView.test_no_crash_when_mw_is_none
-_No description provided._
-
 
 ### TestFit3dView.test_no_crash_when_fit_to_view_missing
 _No description provided._
@@ -4298,10 +4282,6 @@ _No description provided._
 
 - mw.edit_actions_manager.clear_2d_editor.assert_called_once_with(push_to_undo=False)
 
-### TestClearCanvas.test_no_crash_when_mw_is_none
-_No description provided._
-
-
 ### TestClearCanvas.test_no_crash_when_manager_missing
 _No description provided._
 
@@ -4315,10 +4295,6 @@ _No description provided._
 _No description provided._
 
 - mw.ui_manager.enable_3d_features.assert_called_once_with(False)
-
-### TestSet3dFeaturesEnabled.test_no_crash_when_mw_is_none
-_No description provided._
-
 
 ### TestSet3dFeaturesEnabled.test_no_crash_when_ui_manager_missing
 _No description provided._
@@ -4334,10 +4310,6 @@ _No description provided._
 
 - mw.init_manager.analysis_action.setEnabled.assert_called_once_with(False)
 
-### TestSetAnalysisEnabled.test_no_crash_when_mw_is_none
-_No description provided._
-
-
 ### TestSetAnalysisEnabled.test_no_crash_when_analysis_action_missing
 _No description provided._
 
@@ -4346,10 +4318,6 @@ _No description provided._
 _No description provided._
 
 - mw.compute_manager.check_chemistry_problems_fallback.assert_called_once()
-
-### TestCheckChemistryProblems.test_no_crash_when_mw_is_none
-_No description provided._
-
 
 ### TestCheckChemistryProblems.test_no_crash_when_compute_manager_missing
 _No description provided._
@@ -4360,10 +4328,6 @@ _No description provided._
 
 - mw.init_manager.scene.update_all_items.assert_called_once()
 
-### TestRefresh2dScene.test_no_crash_when_mw_is_none
-_No description provided._
-
-
 ### TestRefresh2dScene.test_no_crash_when_init_manager_missing
 _No description provided._
 
@@ -4373,6 +4337,10 @@ _No description provided._
 
 
 ### TestRefresh2dScene.test_no_crash_when_update_all_items_missing
+_No description provided._
+
+
+### test_no_crash_when_mw_is_none
 _No description provided._
 
 
