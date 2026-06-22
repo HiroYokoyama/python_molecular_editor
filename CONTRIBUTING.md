@@ -74,8 +74,8 @@ import logging
 
 try:
     do_something()
-except Exception:
-    logging.exception("Failed to do something")
+except Exception as e:
+    logging.exception("Failed to do something: %s", e)
 ```
 
 ### C. GUI & Interaction (Manual + Defensive)
