@@ -20,14 +20,14 @@ When opening an Issue, please include:
 2.  Install the package in editable mode (recommended for development) or standard mode:
     ```bash
     # Standard install
-    pip install .
+    pip install ./moleditpy
 
     # Or for active development (changes reflect immediately)
-    # pip install -e .
+    pip install -e moleditpy/
     ```
-3.  Install development tools (pylint, pytest, coverage):
+3.  Install development tools and test dependencies:
     ```bash
-    pip install pylint pytest coverage
+    pip install pytest pytest-qt pytest-cov pytest-timeout pylint
     ```
 
 ## 3. Coding Standards
@@ -35,17 +35,17 @@ When opening an Issue, please include:
 We maintain a strict code quality standard. Before submitting a Pull Request (PR), ensure your code meets the following:
 
 * **Pylint Score:** The project maintains a score of **> 9.0/10**.
-    * Run `pylint src/moleditpy` and fix warnings.
+    * Run `pylint moleditpy/src/moleditpy/` and fix warnings.
     * Do not suppress warnings locally without a valid reason.
 * **Style:** Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/).
-* **Type Hinting:** Use Python type hints for all function arguments and return values in Core Logic.
+* **Type Hinting:** Use Python type hints for all function and method arguments and return values.
 
 ## 4. Testing & Stability Policy
 
 MoleditPy uses a hybrid approach to quality assurance: **Automated Unit Tests** for logic and **Manual Checklists** for UI.
 
 ### A. Automated Tests & Coverage
-* Files in `core/` related to calculation, parsing, or data structure (e.g., `molecular_data.py`, `calculation_worker.py`) **MUST** have unit tests.
+* Core files in `moleditpy/src/moleditpy/core/` related to molecular geometry or data structures (e.g., `molecular_data.py`), or files related to calculation/parsing (e.g., `calculation_worker.py` and `io_logic.py` in `moleditpy/src/moleditpy/ui/`) **MUST** have unit tests.
 * **Target Coverage:** Maintain or exceed **80%** full application coverage.
 * Any new public method added to `plugin_interface.py` (`PluginContext` or `Plugin3DController`) **MUST** have a corresponding test in `tests/unit/test_plugin_interface.py`.
 
@@ -70,11 +70,12 @@ except Exception:
     pass
 
 # CORRECT
+import logging
+
 try:
     do_something()
 except Exception:
-    import traceback
-    print(traceback.format_exc())   # or use the app logger
+    logging.exception("Failed to do something")
 ```
 
 ### C. GUI & Interaction (Manual + Defensive)
@@ -85,8 +86,8 @@ except Exception:
 
 1.  **Branching:** Create a new branch for your feature or fix (e.g., `feature/new-bond-algo` or `fix/dialog-layout`).
 2.  **Verification:**
-    * Run tests: `pytest`
-    * Check linting: `pylint src/moleditpy`
+    * Run tests: Run the unified test runner using `python tests/run_all_tests.py` (or specify `--unit` / `--integration` as needed, and add `--headless` or prefix with `MOLEDITPY_HEADLESS=1 QT_QPA_PLATFORM=offscreen` if running in a headless environment like CI or WSL).
+    * Check linting: `pylint moleditpy/src/moleditpy/` (or run `python tests/run_all_tests.py --pylint`).
 3.  **Description:** Describe your changes clearly. If it's a UI change, screenshots are highly appreciated.
 4.  **Review:** Wait for a maintainer to review your code. We may ask for changes to meet the Pylint score or logging requirements.
 
