@@ -1238,6 +1238,8 @@ class EditActionsManager:
             vector = QPointF(vx, vy)
             for atom_id in group_ids:
                 item = self.host.init_manager.scene.atom_items.get(atom_id)
+                if item is None:
+                    continue
                 new_pos = item.pos() + vector
                 item.setPos(new_pos)
                 self.host.state_manager.data.set_atom_pos(atom_id, new_pos)

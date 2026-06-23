@@ -1448,8 +1448,6 @@ class View3DManager:
             # Suppress non-critical property access noise
             return False
 
-        return False
-
     def has_original_atom_ids(self) -> bool:
         """Determine if the current molecule has Original Atom IDs"""
         if not self.current_mol or self.current_mol.GetNumAtoms() == 0:
