@@ -593,6 +593,8 @@ class EditActionsManager:
                     continue
 
                 parent_item = self.host.init_manager.scene.atom_items.get(orig_id)
+                if parent_item is None:
+                    continue
                 parent_pos = parent_item.pos()
 
                 # Determine angles based on neighbors to avoid collisions
