@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import math
 import logging
-from typing import Any, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import (
@@ -27,7 +27,16 @@ from PyQt6.QtGui import (
     QPen,
     QPolygonF,
 )
-from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene, QWidget
+from PyQt6.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsScene,
+    QGraphicsSceneHoverEvent,
+    QStyleOptionGraphicsItem,
+    QWidget,
+)
+
+if TYPE_CHECKING:
+    from .atom_item import AtomItem
 
 from ..utils.constants import (
     DESIRED_BOND_PIXEL_WIDTH,
@@ -138,14 +147,14 @@ class BondItem(QGraphicsItem):
         return min(0.9, 0.8 + 0.1 * openness)
 
     def __init__(
-        self, atom1_item: Any, atom2_item: Any, order: int = 1, stereo: int = 0
+        self, atom1_item: AtomItem, atom2_item: AtomItem, order: int = 1, stereo: int = 0
     ) -> None:
         super().__init__()
         # Validate input parameters
         if atom1_item is None or atom2_item is None:
             raise ValueError("BondItem requires non-None atom items")
-        self.atom1: Any = atom1_item
-        self.atom2: Any = atom2_item
+        self.atom1: Optional[AtomItem] = atom1_item
+        self.atom2: Optional[AtomItem] = atom2_item
         self.order: int = order
         self.stereo: int = stereo
 
@@ -314,7 +323,7 @@ class BondItem(QGraphicsItem):
     def paint(
         self,
         painter: Optional[QPainter],
-        option: Any,
+        option: QStyleOptionGraphicsItem,
         widget: Optional[QWidget] = None,
     ) -> None:
         """Render the bond as single, double, triple, wedge, or dashed line."""
@@ -589,7 +598,7 @@ class BondItem(QGraphicsItem):
             logging.exception("Error updating bond position")
             # Continue without crashing
 
-    def hoverEnterEvent(self, event: Any) -> None:
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
         """Highlight the bond on mouse hover."""
         self.hovered = True
         self.update()
@@ -597,7 +606,7 @@ class BondItem(QGraphicsItem):
             self.scene().set_hovered_item(self)
         super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event: Any) -> None:
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
         """Remove hover highlight when the mouse leaves."""
         if self.hovered:
             self.hovered = False

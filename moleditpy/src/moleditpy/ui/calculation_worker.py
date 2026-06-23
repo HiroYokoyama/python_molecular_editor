@@ -95,7 +95,7 @@ def _resolve_method_key(opt_method: str) -> str:
 
 
 def _adjust_collision_avoidance(
-    rd_mol: Any,
+    rd_mol: Chem.Mol,
     check_halted_cb: Callable[[], bool],
     safe_status_cb: Callable[[str], None],
 ) -> None:
@@ -216,7 +216,7 @@ def _adjust_collision_avoidance(
 
 
 def _iterative_optimize(
-    mol: Any,
+    mol: Chem.Mol,
     method: str,
     check_halted_cb: Callable[[], bool],
     safe_status_cb: Callable[[str], None],
@@ -266,7 +266,7 @@ def _iterative_optimize(
 
 
 def _iterative_optimize_obabel(
-    mol: Any,
+    mol: Chem.Mol,
     method: str,
     check_halted_cb: Callable[[], bool],
     safe_status_cb: Callable[[str], None],
@@ -305,7 +305,7 @@ def _iterative_optimize_obabel(
         return False
 
 
-def _parse_explicit_stereo(mol_block: str) -> Dict[int, Any]:
+def _parse_explicit_stereo(mol_block: str) -> Dict[int, Chem.BondStereo]:
     """Parse explicit stereochemistry from the MOL block."""
     explicit_stereo = {}
     mol_lines = mol_block.split("\n")
@@ -326,7 +326,7 @@ def _parse_explicit_stereo(mol_block: str) -> Dict[int, Any]:
     return explicit_stereo
 
 
-def _apply_explicit_stereo(mol: Any, explicit_stereo: Dict[int, Any]) -> None:
+def _apply_explicit_stereo(mol: Chem.Mol, explicit_stereo: Dict[int, Chem.BondStereo]) -> None:
     """Apply explicit stereochemistry to the molecule."""
     for bond_idx, stereo_type in explicit_stereo.items():
         if bond_idx < mol.GetNumBonds():
@@ -366,11 +366,11 @@ def _apply_explicit_stereo(mol: Any, explicit_stereo: Dict[int, Any]) -> None:
 
 def _perform_direct_conversion(
     mol_block: str,
-    mol: Any,
+    mol: Chem.Mol,
     options: Optional[Dict[str, Any]],
     _check_halted: Callable[[], bool],
     _safe_status: Callable[[str], None],
-) -> Optional[Any]:
+) -> Optional[Chem.Mol]:
     """Direct 3D conversion using 2D coordinates and adding missing H without embedding."""
     parsed_coords, stereo_dirs = [], []
     # Best-effort attempt to parse 2D coordinates from MOL block for direct conversion.
@@ -554,7 +554,7 @@ def _perform_direct_conversion(
 
 
 def _perform_optimize_only(
-    mol: Any,
+    mol: Chem.Mol,
     options: Optional[Dict[str, Any]],
     worker_id: Any,
     _check_halted: Callable[[], bool],
@@ -818,7 +818,7 @@ class CalculationWorker(QObject):
 
     def _prepare_molecule_for_calc(
         self, mol_block: str, helpers: Dict[str, Any]
-    ) -> Tuple[Any, Dict[int, Any]]:
+    ) -> Tuple[Chem.Mol, Dict[int, Chem.BondStereo]]:
         """Parse MOL block and extract explicit stereochemistry info."""
         mol = Chem.MolFromMolBlock(mol_block, removeHs=False)
         if not mol:
@@ -834,8 +834,8 @@ class CalculationWorker(QObject):
 
     def _run_rdkit_workflow(
         self,
-        mol: Any,
-        ex_stereo: Dict[int, Any],
+        mol: Chem.Mol,
+        ex_stereo: Dict[int, Chem.BondStereo],
         options: Dict[str, Any],
         helpers: Dict[str, Any],
     ) -> bool:
@@ -958,7 +958,7 @@ class CalculationWorker(QObject):
         )
 
     def _run_direct_workflow(
-        self, mol_block: str, mol: Any, options: Dict[str, Any], helpers: Dict[str, Any]
+        self, mol_block: str, mol: Chem.Mol, options: Dict[str, Any], helpers: Dict[str, Any]
     ) -> None:
         """Execute direct 2D->3D conversion."""
         mol = _perform_direct_conversion(

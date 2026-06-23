@@ -13,7 +13,10 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import math
 from collections import deque
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
+
+if TYPE_CHECKING:
+    from rdkit import Chem
 
 import numpy as np
 
@@ -82,7 +85,7 @@ def calc_angle_deg(
 
 
 def get_connected_group(
-    mol: Any, start_atom: int, exclude: Optional[int] = None
+    mol: Chem.Mol, start_atom: int, exclude: Optional[int] = None
 ) -> Set[int]:
     """Return the set of atom indices reachable from *start_atom*
     without passing through *exclude*.
@@ -422,7 +425,7 @@ def is_problematic_valence(
 
 
 def inject_ez_stereo_to_mol_block(
-    mol_block: str, rdkit_mol: Any, bonds_data: Dict[Tuple[int, int], Any]
+    mol_block: str, rdkit_mol: Chem.Mol, bonds_data: Dict[Tuple[int, int], Dict[str, Any]]
 ) -> str:
     """Generate a modified MOL block with 'M CFG' lines for E/Z stereochemistry.
 
@@ -521,7 +524,7 @@ def identify_valence_problems(
     return problem_atom_ids
 
 
-def optimize_2d_coords(mol: Any) -> Dict[int, Tuple[float, float]]:
+def optimize_2d_coords(mol: Chem.Mol) -> Dict[int, Tuple[float, float]]:
     """Generate 2D coordinates using RDKit and return a map of (x, y) tuples."""
     from rdkit.Chem import AllChem
 
@@ -572,7 +575,7 @@ def resolve_2d_overlaps(
     adjacency_list: Dict[int, List[int]],
     overlap_threshold: float = 0.5,
     move_distance: float = 20,
-    has_bond_check_func: Optional[Any] = None,
+    has_bond_check_func: Optional[Callable[[int, int], bool]] = None,
 ) -> List[Tuple[Set[int], Tuple[float, float]]]:
     """Detect and resolve overlapping atom groups in 2D.
 
@@ -601,13 +604,13 @@ def resolve_2d_overlaps(
     # Union-Find for overlap groups
     parent = {aid: aid for aid in atom_ids}
 
-    def find_set(aid: Any) -> Any:
+    def find_set(aid: int) -> int:
         if parent[aid] == aid:
             return aid
         parent[aid] = find_set(parent[aid])
         return parent[aid]
 
-    def unite_sets(aid1: Any, aid2: Any) -> None:
+    def unite_sets(aid1: int, aid2: int) -> None:
         root1 = find_set(aid1)
         root2 = find_set(aid2)
         if root1 != root2:

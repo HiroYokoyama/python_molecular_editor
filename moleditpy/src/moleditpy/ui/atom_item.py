@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import (
@@ -23,7 +23,15 @@ from PyQt6.QtGui import (
     QPainterPath,
     QPen,
 )
-from PyQt6.QtWidgets import QGraphicsItem, QWidget
+from PyQt6.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsSceneHoverEvent,
+    QStyleOptionGraphicsItem,
+    QWidget,
+)
+
+if TYPE_CHECKING:
+    from .bond_item import BondItem
 
 from ..utils.constants import (
     ATOM_RADIUS,
@@ -46,7 +54,7 @@ class AtomItem(QGraphicsItem):
         self.symbol: str = symbol
         self.charge: int = charge
         self.radical: int = radical
-        self.bonds: List[Any] = []
+        self.bonds: List[BondItem] = []
         self.chiral_label: Optional[str] = None
 
         self.setPos(pos)
@@ -315,7 +323,7 @@ class AtomItem(QGraphicsItem):
     def paint(
         self,
         painter: Optional[QPainter],
-        option: Any,
+        option: QStyleOptionGraphicsItem,
         widget: Optional[QWidget] = None,
     ) -> None:
         """Paint the atom symbol and its associated labels (charge, radical)."""
@@ -507,14 +515,14 @@ class AtomItem(QGraphicsItem):
                 self.update_style()
         return res
 
-    def hoverEnterEvent(self, event: Any) -> None:
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
         """Highlight the atom on mouse hover."""
         # Enable highlight on hover regardless of scene mode
         self.hovered = True
         self.update()
         super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event: Any) -> None:
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
         """Remove hover highlight when the mouse leaves."""
         if self.hovered:
             self.hovered = False

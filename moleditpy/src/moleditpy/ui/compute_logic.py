@@ -360,7 +360,7 @@ class ComputeManager:
 
         self._start_calculation_worker(mol_block, options, run_id)
 
-    def _prepare_rdkit_mol_for_conversion(self) -> Optional[Any]:
+    def _prepare_rdkit_mol_for_conversion(self) -> Optional[Chem.Mol]:
         mol = self.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
         if not mol or mol.GetNumAtoms() == 0:
             self.check_chemistry_problems_fallback()
@@ -386,7 +386,7 @@ class ComputeManager:
             return None
         return mol
 
-    def _handle_chemistry_problems(self, mol: Any, problems: List[Any]) -> None:
+    def _handle_chemistry_problems(self, mol: Chem.Mol, problems: List[Any]) -> None:
         self.host.init_manager.scene.clear_all_problem_flags()
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
         self.host.statusBar().showMessage(msg)
@@ -405,7 +405,7 @@ class ComputeManager:
                     item.update()
         self.host.init_manager.view_2d.setFocus()
 
-    def _setup_mol_block_for_worker(self, mol: Any) -> str:
+    def _setup_mol_block_for_worker(self, mol: Chem.Mol) -> str:
         mol_block = self.host.state_manager.data.to_mol_block()
         if not mol_block:
             mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
