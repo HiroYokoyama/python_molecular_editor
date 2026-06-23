@@ -506,21 +506,12 @@ class BondItem(QGraphicsItem):
                         # --- Label Settings ---
                         font_size = 20
                         font_family = FONT_FAMILY
-                        try:
-                            if self.scene() and self.scene().views():
-                                win = self.scene().views()[0].window()
-                                if win and hasattr(win, "settings"):
-                                    font_size = win.settings.get(
-                                        "atom_font_size_2d", 20
-                                    )
-                                    font_family = win.settings.get(
-                                        "atom_font_family_2d", FONT_FAMILY
-                                    )
-                        except (AttributeError, RuntimeError, TypeError, ValueError):
-                            # Silent failure for non-critical 2D atom font setting
-                            # If we can't get custom settings, we just use defaults.
-                            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
-                            pass
+                        _sc = self.scene()
+                        if _sc is not None and hasattr(_sc, "get_setting"):
+                            font_size = _sc.get_setting("atom_font_size_2d", 20)
+                            font_family = _sc.get_setting(
+                                "atom_font_family_2d", FONT_FAMILY
+                            )
 
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
                         font.setItalic(True)

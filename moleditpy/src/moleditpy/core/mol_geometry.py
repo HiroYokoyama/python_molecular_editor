@@ -504,7 +504,7 @@ def identify_valence_problems(
     problem_atom_ids = []
 
     # Pre-calculate bond orders per atom
-    bond_orders: Dict[int, int] = {}
+    bond_orders: Dict[int, float] = {}
     for (id1, id2), bond in bonds_data.items():
         order = bond.get("order", 1)
         bond_orders[id1] = bond_orders.get(id1, 0) + order

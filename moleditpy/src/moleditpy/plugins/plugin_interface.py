@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 from typing import Any, Callable, List, Optional, Union
 
 
@@ -518,6 +519,7 @@ class PluginContext:
 
             return "\n".join(xyz_lines)
         except Exception:
+            logging.debug("to_xyz_block failed", exc_info=True)
             return None
 
 
