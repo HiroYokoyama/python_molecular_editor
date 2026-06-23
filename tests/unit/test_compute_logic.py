@@ -591,6 +591,71 @@ def test_optimize_3d_unavailable_method(mock_parser_host):
     assert any("Selected optimization" in msg for msg in messages)
 
 
+def test_on_calculation_error_mmff_fail_shows_uff_dialog(mock_parser_host):
+    """When MMFF fails, on_calculation_error shows a UFF retry dialog instead of auto-fallback."""
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"w1"}
+
+    with patch(
+        "moleditpy.ui.compute_logic.QMessageBox.question",
+        return_value=QMessageBox.StandardButton.No,
+    ) as mock_dialog:
+        compute.on_calculation_error(("w1", "Optimization with MMFF94s (RDKit) failed."))
+
+    mock_dialog.assert_called_once()
+    call_args = mock_dialog.call_args[0]
+    assert "UFF" in call_args[2]
+
+
+def test_on_calculation_error_mmff_fail_user_accepts_uff(mock_parser_host):
+    """When user accepts UFF retry after MMFF failure, optimize_3d_structure is called with UFF_RDKIT."""
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"w1"}
+
+    with (
+        patch(
+            "moleditpy.ui.compute_logic.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.Yes,
+        ),
+        patch.object(compute, "optimize_3d_structure") as mock_optimize,
+    ):
+        compute.on_calculation_error(("w1", "Optimization with MMFF94s (RDKit) failed."))
+
+    mock_optimize.assert_called_once_with("UFF_RDKIT")
+
+
+def test_on_calculation_error_mmff_fail_user_declines_uff(mock_parser_host):
+    """When user declines UFF retry, a critical error dialog is shown instead."""
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"w1"}
+
+    with (
+        patch(
+            "moleditpy.ui.compute_logic.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.No,
+        ),
+        patch(
+            "moleditpy.ui.compute_logic.QMessageBox.critical"
+        ) as mock_critical,
+    ):
+        compute.on_calculation_error(("w1", "Optimization with MMFF94s (RDKit) failed."))
+
+    mock_critical.assert_called_once()
+
+
+def test_on_calculation_error_non_mmff_no_uff_dialog(mock_parser_host):
+    """Non-MMFF errors do not trigger the UFF retry dialog."""
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"w1"}
+
+    with patch(
+        "moleditpy.ui.compute_logic.QMessageBox.question"
+    ) as mock_dialog:
+        compute.on_calculation_error(("w1", "Some other error occurred."))
+
+    mock_dialog.assert_not_called()
+
+
 def test_on_calculation_finished_collision_single_frag(mock_parser_host):
     """Test collision logic is skipped for single fragment."""
     compute = DummyCompute(mock_parser_host)

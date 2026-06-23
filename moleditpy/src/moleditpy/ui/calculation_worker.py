@@ -242,14 +242,6 @@ def _iterative_optimize(
                 ff = AllChem.MMFFGetMoleculeForceField(
                     mol, props, confId=0, ignoreInterfragInteractions=ignore_interfrag
                 )
-            else:
-                safe_status_cb(
-                    "MMFF94 skipped (unsupported atoms). Reverting to UFF..."
-                )
-                ff = AllChem.UFFGetMoleculeForceField(
-                    mol, confId=0, ignoreInterfragInteractions=ignore_interfrag
-                )
-                method = "UFF (Fallback)"
 
         if not ff:
             safe_status_cb(f"Failed to setup {method} Force Field.")
@@ -582,6 +574,7 @@ def _perform_optimize_only(
     opt_func = (
         _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
     )
+    opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
     if not opt_func(
         mol,
         method_key,
@@ -589,14 +582,9 @@ def _perform_optimize_only(
         _safe_status,
         options=options if backend == "RDKIT" else None,
     ):
-        _safe_status(
-            f"Warning: Optimization with {opt_method} failed. Structure preserved."
-        )
-        with contextlib.suppress(KeyError):
-            mol.ClearProp("_pme_optimization_method")
+        raise RuntimeError(f"Optimization with {opt_label} failed.")
 
     # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
-    opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
     _safe_status(f"Process completed (Existing 3D Structure / {opt_label}).")
     _safe_finished((worker_id, mol))
 

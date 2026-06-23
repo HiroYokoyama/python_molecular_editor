@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFontComboBox,
     QFormLayout,
+    QHBoxLayout,
     QLabel,
     QPushButton,
     QWidget,
@@ -35,6 +36,9 @@ class Settings2DTab(SettingsTabBase):
     ) -> None:
         super().__init__(default_settings, parent)
         self.atom_font_family_2d_combo = None
+        self.atom_font_bold_2d_btn = None
+        self.atom_font_italic_2d_btn = None
+        self.atom_font_underline_2d_btn = None
         self.atom_use_bond_color_2d_checkbox = None
         self.bg_color_2d_button = None
         self.bond_cap_style_2d_combo = None
@@ -143,6 +147,37 @@ class Settings2DTab(SettingsTabBase):
                 self.atom_font_size_2d_slider, self.atom_font_size_2d_label
             ),
         )
+
+        self.atom_font_bold_2d_btn = QPushButton("B")
+        self.atom_font_bold_2d_btn.setCheckable(True)
+        self.atom_font_bold_2d_btn.setFixedSize(28, 24)
+        bold_font = QFont()
+        bold_font.setBold(True)
+        self.atom_font_bold_2d_btn.setFont(bold_font)
+
+        self.atom_font_italic_2d_btn = QPushButton("I")
+        self.atom_font_italic_2d_btn.setCheckable(True)
+        self.atom_font_italic_2d_btn.setFixedSize(28, 24)
+        italic_font = QFont()
+        italic_font.setItalic(True)
+        self.atom_font_italic_2d_btn.setFont(italic_font)
+
+        self.atom_font_underline_2d_btn = QPushButton("U")
+        self.atom_font_underline_2d_btn.setCheckable(True)
+        self.atom_font_underline_2d_btn.setFixedSize(28, 24)
+        underline_font = QFont()
+        underline_font.setUnderline(True)
+        self.atom_font_underline_2d_btn.setFont(underline_font)
+
+        style_row = QHBoxLayout()
+        style_row.setSpacing(4)
+        style_row.addWidget(self.atom_font_bold_2d_btn)
+        style_row.addWidget(self.atom_font_italic_2d_btn)
+        style_row.addWidget(self.atom_font_underline_2d_btn)
+        style_row.addStretch()
+        style_widget = QWidget()
+        style_widget.setLayout(style_row)
+        form_layout.addRow("Atom Label Style:", style_widget)
 
         self.atom_use_bond_color_2d_checkbox = QCheckBox()
         self.atom_use_bond_color_2d_checkbox.setToolTip(
@@ -289,6 +324,15 @@ class Settings2DTab(SettingsTabBase):
         self.atom_font_size_2d_slider.setValue(
             settings_dict.get("atom_font_size_2d", 20)
         )
+        self.atom_font_bold_2d_btn.setChecked(
+            settings_dict.get("atom_font_bold_2d", True)
+        )
+        self.atom_font_italic_2d_btn.setChecked(
+            settings_dict.get("atom_font_italic_2d", False)
+        )
+        self.atom_font_underline_2d_btn.setChecked(
+            settings_dict.get("atom_font_underline_2d", False)
+        )
         self.atom_use_bond_color_2d_checkbox.setChecked(
             settings_dict.get("atom_use_bond_color_2d", False)
         )
@@ -321,6 +365,9 @@ class Settings2DTab(SettingsTabBase):
             "bond_dash_count_2d": self.bond_dash_count_2d_slider.value(),
             "atom_font_family_2d": self.atom_font_family_2d_combo.currentFont().family(),
             "atom_font_size_2d": self.atom_font_size_2d_slider.value(),
+            "atom_font_bold_2d": self.atom_font_bold_2d_btn.isChecked(),
+            "atom_font_italic_2d": self.atom_font_italic_2d_btn.isChecked(),
+            "atom_font_underline_2d": self.atom_font_underline_2d_btn.isChecked(),
             "atom_use_bond_color_2d": self.atom_use_bond_color_2d_checkbox.isChecked(),
             "bond_snapping_distance_2d": float(
                 self.bond_snapping_distance_2d_slider.value()
