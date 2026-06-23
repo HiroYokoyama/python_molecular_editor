@@ -181,11 +181,11 @@ def test_on_remove_plugin_package(
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.question")
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.critical")
 @patch("os.path.exists", return_value=True)
-@patch("os.remove", side_effect=RuntimeError("Remove error"))
+@patch("os.remove", side_effect=PermissionError("Remove error"))
 def test_on_remove_plugin_error(
     mock_remove, mock_exists, mock_critical, mock_question, mock_plugin_manager, qtbot
 ):
-    """on_remove_plugin shows a critical error dialog when os.remove raises."""
+    """on_remove_plugin shows a critical error dialog when os.remove raises OSError."""
     mock_question.return_value = QMessageBox.StandardButton.Yes
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)

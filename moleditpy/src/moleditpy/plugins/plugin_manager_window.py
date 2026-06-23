@@ -213,7 +213,7 @@ class PluginManagerWindow(QDialog):
                             "Success",
                             f"Removed '{plugin.get('name', 'Unknown')}'.",
                         )
-                    except (AttributeError, RuntimeError, ValueError) as e:
+                    except OSError as e:
                         QMessageBox.critical(
                             self, "Error", f"Failed to delete plugin: {e}"
                         )
