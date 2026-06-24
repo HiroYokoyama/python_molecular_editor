@@ -707,7 +707,7 @@ class UserTemplateDialog(QDialog):
                 self.load_user_templates()  # Refresh the display
                 self.selected_template = None
                 self.delete_button.setEnabled(False)
-            except (AttributeError, RuntimeError, ValueError) as e:
+            except OSError as e:
                 QMessageBox.critical(
                     self, "Error", f"Failed to delete template: {str(e)}"
                 )

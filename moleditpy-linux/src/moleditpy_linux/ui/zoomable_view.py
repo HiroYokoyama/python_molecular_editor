@@ -40,6 +40,8 @@ class ZoomableView(QGraphicsView):
 
     def wheelEvent(self, event: Optional[QWheelEvent]) -> None:
         """Event handler for mouse wheel rotation"""
+        if event is None:
+            return
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             zoom_in_factor = 1.1
             zoom_out_factor = 1 / zoom_in_factor
@@ -123,6 +125,8 @@ class ZoomableView(QGraphicsView):
 
     def viewportEvent(self, event: Optional[QEvent]) -> bool:
         """Handle native gestures (like pinch zoom on trackpads)"""
+        if event is None:
+            return super().viewportEvent(event)
         if event.type() == QEvent.Type.NativeGesture:
             # Detect pinch zoom gestures
             if event.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:

@@ -11,10 +11,12 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import ctypes
+import json
+import logging
+import logging.handlers
+import os
 import sys
 import argparse
-import logging
-import os
 from typing import Any
 
 from .utils.constants import VERSION
@@ -46,22 +48,55 @@ def _qt_message_handler(mode: QtMsgType, _context: Any, message: str) -> None:
     logging.log(_QT_LOG_LEVEL.get(mode, logging.WARNING), "Qt: %s", message)
 
 
+def _read_startup_log_settings() -> tuple[bool, bool]:
+    """Read log_to_file and log_level_debug from settings.json before Qt starts.
+
+    Returns (log_to_file, log_level_debug). Falls back to (False, False) on any error.
+    """
+    settings_path = os.path.join(os.path.expanduser("~"), ".moleditpy", "settings.json")
+    try:
+        with open(settings_path, encoding="utf-8") as f:
+            data = json.load(f)
+        return bool(data.get("log_to_file", False)), bool(
+            data.get("log_level_debug", False)
+        )
+    except (OSError, json.JSONDecodeError, ValueError):
+        return False, False
+
+
 def setup_logging() -> None:
     """Configure root logger and install a global unhandled-exception handler."""
+    log_to_file, log_level_debug = _read_startup_log_settings()
+    level = logging.DEBUG if log_level_debug else logging.INFO
+    fmt = "%(asctime)s [%(levelname)s] %(name)s (%(pathname)s:%(lineno)d): %(message)s"
+
     logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s (%(pathname)s:%(lineno)d): %(message)s",
+        level=level,
+        format=fmt,
         stream=sys.stdout,
         force=True,
     )
 
+    if log_to_file:
+        log_dir = os.path.join(os.path.expanduser("~"), ".moleditpy")
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+            log_path = os.path.join(log_dir, "moleditpy_linux.log")
+            fh = logging.handlers.RotatingFileHandler(
+                log_path, maxBytes=1_048_576, backupCount=3, encoding="utf-8"
+            )
+            fh.setLevel(level)
+            fh.setFormatter(logging.Formatter(fmt))
+            logging.getLogger().addHandler(fh)
+            logging.info("File logging enabled: %s", log_path)
+        except OSError as e:
+            logging.warning("Could not open log file: %s", e)
+
     def handle_exception(exc_type: Any, exc_value: Any, exc_traceback: Any) -> None:
         """Log unhandled exceptions using the configured logging system."""
         if issubclass(exc_type, KeyboardInterrupt):
-            # Allow keyboard interrupt to exit normally
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
-
         logging.error(
             "Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback)
         )

@@ -542,13 +542,9 @@ class StateManager:
         # 3D viewer mode
         is_3d_mode = json_data.get("is_3d_viewer_mode", False)
         # Restore last successful optimization method if present in file
-        try:
-            method = json_data.get("last_successful_optimization_method", None)
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                self.host.set_last_successful_optimization_method(method)
-        except (AttributeError, RuntimeError, TypeError):
-            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-            pass
+        method = json_data.get("last_successful_optimization_method", None)
+        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            self.host.set_last_successful_optimization_method(method)
 
         # Plugin State Restoration (Phase 3)
         self._preserved_plugin_data = {}  # Reset preserved data on new load

@@ -797,7 +797,8 @@ class ExportManager:
         finally:
             for item, was_visible in items_to_restore.items():
                 item.setVisible(was_visible)
-            self.host.init_manager.scene.setBackgroundBrush(original_background)
+            if original_background is not None:
+                self.host.init_manager.scene.setBackgroundBrush(original_background)
             if self.host.init_manager.view_2d:
                 self.host.init_manager.view_2d.viewport().update()
 

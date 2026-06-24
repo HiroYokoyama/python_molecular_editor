@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import (
@@ -23,7 +23,12 @@ from PyQt6.QtGui import (
     QPainterPath,
     QPen,
 )
-from PyQt6.QtWidgets import QGraphicsItem, QWidget
+from PyQt6.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsSceneHoverEvent,
+    QStyleOptionGraphicsItem,
+    QWidget,
+)
 
 from ..utils.constants import (
     ATOM_RADIUS,
@@ -33,6 +38,9 @@ from ..utils.constants import (
     FONT_WEIGHT_BOLD,
 )
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
+
+if TYPE_CHECKING:
+    from .bond_item import BondItem
 
 
 class AtomItem(QGraphicsItem):
@@ -46,7 +54,7 @@ class AtomItem(QGraphicsItem):
         self.symbol: str = symbol
         self.charge: int = charge
         self.radical: int = radical
-        self.bonds: List[Any] = []
+        self.bonds: List[BondItem] = []
         self.chiral_label: Optional[str] = None
 
         self.setPos(pos)
@@ -67,16 +75,24 @@ class AtomItem(QGraphicsItem):
         """Refresh font, color, and visibility based on current scene settings."""
         if sip_isdeleted_safe(self):
             return
-        # Allow updating font preference dynamically
         font_size = 20
         font_family = FONT_FAMILY
+        font_bold = True
+        font_italic = False
+        font_underline = False
 
         scene = self.scene()
         if scene is not None and hasattr(scene, "get_setting"):
             font_size = scene.get_setting("atom_font_size_2d", 20)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            font_bold = scene.get_setting("atom_font_bold_2d", True)
+            font_italic = scene.get_setting("atom_font_italic_2d", False)
+            font_underline = scene.get_setting("atom_font_underline_2d", False)
 
-        self.font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
+        weight = QFont.Weight.Bold if font_bold else QFont.Weight.Normal
+        self.font = QFont(font_family, font_size, weight)
+        self.font.setItalic(font_italic)
+        self.font.setUnderline(font_underline)
         self.prepareGeometryChange()
 
         self.is_visible = not (
@@ -89,16 +105,23 @@ class AtomItem(QGraphicsItem):
 
     def boundingRect(self) -> QRectF:
         """Calculate the bounding rectangle for the atom item."""
-        # --- Calculate text position and size using logic matching paint() ---
-        # Get dynamic font size and family
         font_size = 20
         font_family = FONT_FAMILY
+        font_bold = True
+        font_italic = False
+        font_underline = False
         scene = self.scene()
         if scene is not None and hasattr(scene, "get_setting"):
             font_size = scene.get_setting("atom_font_size_2d", 20)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            font_bold = scene.get_setting("atom_font_bold_2d", True)
+            font_italic = scene.get_setting("atom_font_italic_2d", False)
+            font_underline = scene.get_setting("atom_font_underline_2d", False)
 
-        font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
+        weight = QFont.Weight.Bold if font_bold else QFont.Weight.Normal
+        font = QFont(font_family, font_size, weight)
+        font.setItalic(font_italic)
+        font.setUnderline(font_underline)
         fm = QFontMetricsF(font)
 
         hydrogen_part = ""
@@ -207,13 +230,21 @@ class AtomItem(QGraphicsItem):
 
         font_size = 20
         font_family = FONT_FAMILY
+        font_bold = True
+        font_italic = False
+        font_underline = False
         scene = self.scene()
-        if scene is not None:
-            if hasattr(scene, "get_setting"):
-                font_size = scene.get_setting("atom_font_size_2d", 20)
-                font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+        if scene is not None and hasattr(scene, "get_setting"):
+            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            font_bold = scene.get_setting("atom_font_bold_2d", True)
+            font_italic = scene.get_setting("atom_font_italic_2d", False)
+            font_underline = scene.get_setting("atom_font_underline_2d", False)
 
-        font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
+        weight = QFont.Weight.Bold if font_bold else QFont.Weight.Normal
+        font = QFont(font_family, font_size, weight)
+        font.setItalic(font_italic)
+        font.setUnderline(font_underline)
         fm = QFontMetricsF(font)
 
         hydrogen_part = ""
@@ -292,7 +323,7 @@ class AtomItem(QGraphicsItem):
     def paint(
         self,
         painter: Optional[QPainter],
-        option: Any,
+        option: QStyleOptionGraphicsItem,
         widget: Optional[QWidget] = None,
     ) -> None:
         """Paint the atom symbol and its associated labels (charge, radical)."""
@@ -484,14 +515,14 @@ class AtomItem(QGraphicsItem):
                 self.update_style()
         return res
 
-    def hoverEnterEvent(self, event: Any) -> None:
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
         """Highlight the atom on mouse hover."""
         # Enable highlight on hover regardless of scene mode
         self.hovered = True
         self.update()
         super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event: Any) -> None:
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
         """Remove hover highlight when the mouse leaves."""
         if self.hovered:
             self.hovered = False
