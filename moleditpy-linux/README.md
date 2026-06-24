@@ -134,9 +134,9 @@ moleditpy
   * **3D Visualization (PyVista / pyvistaqt):** 3D rendering is achieved by generating PyVista meshes (spheres and cylinders) from RDKit conformer coordinates. A custom `vtkInteractorStyle` enables direct drag-and-drop editing of atoms in the 3D view.
   * **Modular Architecture:** The codebase is organized into dedicated packages for `core` logic, `ui` components, and `utils`. The main application logic is decomposed into reusable mixins, ensuring long-term maintainability and easier verification.
 
-## License
+## License & Disclaimer
 
-This project is licensed under the **GNU General Public License v3.0 (GPL-v3)**. See the `LICENSE` file for details.
+This project is licensed under the GNU General Public License v3.0 (GPLv3) - see the [LICENSE](LICENSE) file for details. As open-source software, it is provided 'as is' without warranty of any kind, and the author assumes no responsibility or liability for the results. Although outputs have been carefully verified, users are strongly encouraged to independently check and validate them for critical applications (such as publications). If you encounter any bugs, please open an issue.
 
 ## Citation
 
@@ -268,9 +268,9 @@ moleditpy
   * **化学計算 (RDKit / Open Babel):** 2DデータからRDKit分子オブジェクトを生成し、3D座標生成や分子特性計算を実行します。RDKitでの3D座標生成が失敗した際は、Open Babelにフォールバックします。重い計算処理は別スレッド (`QThread`) で実行し、GUIの応答性を維持しています。
   * **3D可視化 (PyVista / pyvistaqt):** RDKitのコンフォーマ座標からPyVistaのメッシュ（球や円柱）を生成して描画します。カスタムの`vtkInteractorStyle`を実装し、3Dビュー内での原子の直接的なドラッグ＆ドロップ編集を可能にしています。
 
-## ライセンス
+## ライセンス & 免責事項
 
-このプロジェクトは **GNU General Public License v3.0 (GPL-v3)** のもとで公開されています。詳細は `LICENSE` ファイルを参照してください。
+このプロジェクトは GNU General Public License v3.0 (GPLv3) のもとでライセンスされています。詳細は [LICENSE](LICENSE) ファイルを参照してください。オープンソースソフトウェアとして、本ソフトウェアは「現状のまま」提供され、いかなる明示または黙示の保証も行いません。また、本ソフトウェアを使用した結果について、作者は一切の責任や義務を負いません。出力結果は慎重に検証されていますが、学術論文の作成など重要な用途においては、ユーザーご自身で結果を独立して確認および検証することを強くお勧めします。バグに遭遇した場合は、Issueを作成してください。
 
 ## 引用
 

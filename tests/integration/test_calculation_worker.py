@@ -380,9 +380,9 @@ def test_calculation_worker_constraint_embedding_fallback(qtbot, app):
         assert mock_embed.call_count >= 2
 
 
-def test_calculation_worker_opt_failure_emits_error(qtbot, app):
+def test_calculation_worker_opt_failure_auto_fallback_to_uff(qtbot, app):
     """
-    Test that optimization failure emits an error string instead of failing silently or hanging.
+    Test that MMFF optimization failure auto-falls back to UFF.
     """
     data = MolecularData()
     c = data.add_atom("C", QPointF(0, 0))
@@ -392,21 +392,29 @@ def test_calculation_worker_opt_failure_emits_error(qtbot, app):
     mol_block = data.to_mol_block()
 
     worker = CalculationWorker()
+    status_messages = []
+    worker.status_update.connect(lambda msg: status_messages.append(msg))
 
     with (
         patch(
             "rdkit.Chem.AllChem.MMFFGetMoleculeProperties", return_value=None
         ) as mock_mmff_props,
     ):
-        # We now wait for the finished signal because optimization failure is non-fatal
         with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
-            worker.run_calculation(mol_block, {"conversion_mode": "rdkit"})
+            worker.run_calculation(
+                mol_block,
+                {"conversion_mode": "rdkit", "optimization_method": "MMFF_RDKIT"},
+            )
 
         assert mock_mmff_props.called
         res_id, res_mol = blocker.args[0]
         assert res_mol is not None
-        # Check that it tried to set the optimization method property but maybe cleared it or didn't set it
-        # The key is that it didn't emit an error and returned a molecule.
+        assert res_mol.HasProp("_pme_optimization_method")
+        assert res_mol.GetProp("_pme_optimization_method") == "UFF_RDKIT"
+        assert any(
+            "Process completed (RDKit Conversion / UFF (RDKit))" in msg
+            for msg in status_messages
+        )
 
 
 def test_calculation_worker_mmff_variants(qtbot, app):

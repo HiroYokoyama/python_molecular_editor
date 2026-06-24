@@ -7007,11 +7007,14 @@ _Test the fallback to constraint-based embedding when initial embedding fails._
 
 - assert mock_embed.call_count >= 2
 
-### test_calculation_worker_opt_failure_emits_error
-_Test that optimization failure emits an error string instead of failing silently or hanging._
+### test_calculation_worker_opt_failure_auto_fallback_to_uff
+_Test that MMFF optimization failure auto-falls back to UFF._
 
 - assert mock_mmff_props.called
 - assert res_mol is not None
+- assert res_mol.HasProp('_pme_optimization_method')
+- assert res_mol.GetProp('_pme_optimization_method') == 'UFF_RDKIT'
+- assert any(('Process completed (RDKit Conversion / UFF (RDKit))' in msg for msg in status_messages))
 
 ### test_calculation_worker_mmff_variants
 _Test switching between MMFF94 and MMFF94s._
