@@ -1,5 +1,6 @@
-"""Unit tests for the Qt message handler (_qt_message_handler) in moleditpy.main."""
+"""Unit tests for the Qt message handler and startup logging helpers in moleditpy.main."""
 
+import json
 import logging
 import sys
 import os
@@ -15,7 +16,11 @@ if _SRC not in sys.path:
 
 from PyQt6.QtCore import QtMsgType
 
-from moleditpy.main import _DOWNGRADED_QT_PATTERNS, _qt_message_handler
+from moleditpy.main import (
+    _DOWNGRADED_QT_PATTERNS,
+    _qt_message_handler,
+    _read_startup_log_settings,
+)
 
 
 @pytest.mark.parametrize("pattern", _DOWNGRADED_QT_PATTERNS)
@@ -53,3 +58,47 @@ def test_unknown_mode_falls_back_to_warning():
     with patch("logging.log") as mock_log:
         _qt_message_handler(999, MagicMock(), msg)
     mock_log.assert_called_once_with(logging.WARNING, "Qt: %s", msg)
+
+
+# ---------------------------------------------------------------------------
+# _read_startup_log_settings
+# ---------------------------------------------------------------------------
+
+
+def test_read_startup_log_settings_both_true(tmp_path):
+    """Returns (True, True) when both keys are set in settings.json."""
+    settings_dir = tmp_path / ".moleditpy"
+    settings_dir.mkdir()
+    (settings_dir / "settings.json").write_text(
+        json.dumps({"log_to_file": True, "log_level_debug": True}), encoding="utf-8"
+    )
+    with patch("os.path.expanduser", return_value=str(tmp_path)):
+        result = _read_startup_log_settings()
+    assert result == (True, True)
+
+
+def test_read_startup_log_settings_defaults_false(tmp_path):
+    """Returns (False, False) when keys are absent from settings.json."""
+    settings_dir = tmp_path / ".moleditpy"
+    settings_dir.mkdir()
+    (settings_dir / "settings.json").write_text(json.dumps({}), encoding="utf-8")
+    with patch("os.path.expanduser", return_value=str(tmp_path)):
+        result = _read_startup_log_settings()
+    assert result == (False, False)
+
+
+def test_read_startup_log_settings_missing_file(tmp_path):
+    """Returns (False, False) when settings.json does not exist."""
+    with patch("os.path.expanduser", return_value=str(tmp_path)):
+        result = _read_startup_log_settings()
+    assert result == (False, False)
+
+
+def test_read_startup_log_settings_invalid_json(tmp_path):
+    """Returns (False, False) on malformed JSON."""
+    settings_dir = tmp_path / ".moleditpy"
+    settings_dir.mkdir()
+    (settings_dir / "settings.json").write_text("not json{{", encoding="utf-8")
+    with patch("os.path.expanduser", return_value=str(tmp_path)):
+        result = _read_startup_log_settings()
+    assert result == (False, False)

@@ -56,6 +56,8 @@ DEFAULT_SETTINGS = {
     "optimize_intermolecular_interaction_rdkit": True,
     "skip_chemistry_checks": False,
     "always_ask_charge": False,
+    "log_to_file": False,
+    "log_level_debug": False,
     # --- Color ---
     "bond_color": "#808080",
     "cpk_colors": {},
