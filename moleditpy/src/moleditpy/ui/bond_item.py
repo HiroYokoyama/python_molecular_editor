@@ -35,9 +35,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-if TYPE_CHECKING:
-    from .atom_item import AtomItem
-
 from ..utils.constants import (
     DESIRED_BOND_PIXEL_WIDTH,
     EZ_LABEL_BOX_SIZE,
@@ -47,6 +44,9 @@ from ..utils.constants import (
     FONT_WEIGHT_BOLD,
     HOVER_PEN_WIDTH,
 )
+
+if TYPE_CHECKING:
+    from .atom_item import AtomItem
 
 
 class BondItem(QGraphicsItem):

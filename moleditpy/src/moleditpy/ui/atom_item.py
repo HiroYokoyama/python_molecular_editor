@@ -30,9 +30,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-if TYPE_CHECKING:
-    from .bond_item import BondItem
-
 from ..utils.constants import (
     ATOM_RADIUS,
     CPK_COLORS,
@@ -41,6 +38,9 @@ from ..utils.constants import (
     FONT_WEIGHT_BOLD,
 )
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
+
+if TYPE_CHECKING:
+    from .bond_item import BondItem
 
 
 class AtomItem(QGraphicsItem):

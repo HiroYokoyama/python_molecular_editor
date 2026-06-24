@@ -640,7 +640,7 @@ class EditActionsManager:
                 bond_length = 75
 
                 # Helper: determine bond_stereo for hydrogen
-                def _choose_stereo(i: Any) -> Any:
+                def _choose_stereo(i: int) -> int:
                     # 0: plain, 1: wedge, 2: dash, 3: plain, 4+: all plain
                     if i == 0:
                         return 0
@@ -924,7 +924,7 @@ class EditActionsManager:
         if push_to_undo:
             self.host.edit_actions_manager.push_undo_state()
 
-    def _compute_h_counts(self, mol: Any) -> Dict[int, int]:
+    def _compute_h_counts(self, mol: Optional[Chem.Mol]) -> Dict[int, int]:
         """Build a mapping of original_id -> hydrogen count without touching Qt items."""
         h_count_map = {}
         if mol is None:
@@ -1215,7 +1215,7 @@ class EditActionsManager:
 
         from moleditpy.core.mol_geometry import resolve_2d_overlaps
 
-        def has_bond_check(id1: Any, id2: Any) -> Any:
+        def has_bond_check(id1: int, id2: int) -> bool:
             item1 = self.host.init_manager.scene.atom_items.get(id1)
             item2 = self.host.init_manager.scene.atom_items.get(id2)
             return (
@@ -1267,7 +1267,7 @@ class EditActionsManager:
         self.host.statusBar().showMessage("Resolved overlapping groups.", 2000)
 
     def adjust_molecule_positions_to_avoid_collisions(
-        self, mol: Any, frags: Any
+        self, mol: Chem.Mol, frags: List[List[int]]
     ) -> None:
         """Adjust molecule positions to avoid collisions (BBox optimized)."""
         if len(frags) <= 1:
@@ -1415,7 +1415,7 @@ class EditActionsManager:
                         moved = True
 
     def apply_chem_check_and_set_flags(
-        self, mol: Any, source_desc: Optional[str] = None, force_skip: bool = False
+        self, mol: Optional[Chem.Mol], source_desc: Optional[str] = None, force_skip: bool = False
     ) -> None:
         """Central helper to apply chemical sanitization (or skip it) and set
         chem_check_tried / chem_check_failed flags consistently.
