@@ -56,6 +56,8 @@ DEFAULT_SETTINGS = {
     "optimize_intermolecular_interaction_rdkit": True,
     "skip_chemistry_checks": False,
     "always_ask_charge": False,
+    "log_to_file": False,
+    "log_level_debug": False,
     # --- Color ---
     "bond_color": "#808080",
     "cpk_colors": {},
@@ -71,6 +73,9 @@ DEFAULT_SETTINGS = {
     "bond_wedge_width_2d": 6.0,
     "bond_dash_count_2d": 8,
     "atom_font_family_2d": "Arial",
+    "atom_font_bold_2d": True,
+    "atom_font_italic_2d": False,
+    "atom_font_underline_2d": False,
     "template_fusing_enabled_2d": True,
     "template_fusing_distance_2d": 7.0,
     "template_snapping_distance_2d": 14.0,

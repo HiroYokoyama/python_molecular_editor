@@ -137,7 +137,7 @@ class IOManager:
             settings = self.host.init_manager.settings
             skip_checks = bool(settings.get("skip_chemistry_checks", False))
 
-            def _set_prop(m: Any, key: str, val: Any) -> None:
+            def _set_prop(m: Chem.Mol, key: str, val: Any) -> None:
                 try:
                     if isinstance(val, int):
                         m.SetIntProp(key, val)
@@ -251,7 +251,7 @@ class IOManager:
         except ValueError:
             return 0, True, False
 
-    def estimate_bonds_from_distances(self, mol: Any) -> int:
+    def estimate_bonds_from_distances(self, mol: Chem.RWMol) -> int:
         """Estimate bonds based on interatomic distances using covalent radii."""
         conf = mol.GetConformer()
         num_atoms = mol.GetNumAtoms()
@@ -938,7 +938,7 @@ class IOManager:
         except (TypeError, ValueError, RuntimeError, AttributeError) as e:
             self.host.statusBar().showMessage(f"Error loading project file: {e}")
 
-    def _set_mol_prop(self, mol: Any, prop_name: str, value: Any) -> None:
+    def _set_mol_prop(self, mol: Chem.Mol, prop_name: str, value: Any) -> None:
         """Set an RDKit molecule property safely."""
         try:
             if isinstance(value, int):
@@ -950,7 +950,7 @@ class IOManager:
         except (RuntimeError, ValueError, AttributeError, TypeError):
             pass
 
-    def _get_mol_prop(self, mol: Any, prop_name: str, default: Any = None) -> Any:
+    def _get_mol_prop(self, mol: Chem.Mol, prop_name: str, default: Any = None) -> Any:
         """Get an RDKit molecule property safely, trying int/float/str in order."""
         try:
             if not mol.HasProp(prop_name):
@@ -965,7 +965,7 @@ class IOManager:
             return default
 
 
-def _set_mol_prop_safe(mol: Any, key: str, val: Any) -> None:
+def _set_mol_prop_safe(mol: Chem.Mol, key: str, val: Any) -> None:
     """Module-level helper: set an int or float property on an RDKit mol silently."""
     import contextlib
 

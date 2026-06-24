@@ -378,3 +378,66 @@ def test_intermolecular_interaction_uff():
     )
 
     assert abs(dist_off - 6.0) < 1e-5
+
+
+# ---------------------------------------------------------------------------
+# UFF fallback removal tests
+# ---------------------------------------------------------------------------
+
+
+def test_iterative_optimize_mmff_unsupported_returns_false():
+    """_iterative_optimize returns False (no UFF fallback) when MMFF props are None."""
+    from moleditpy.ui.calculation_worker import _iterative_optimize
+
+    mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, randomSeed=42)
+
+    def check_halted():
+        return False
+
+    status_msgs = []
+
+    def safe_status(msg):
+        status_msgs.append(msg)
+
+    with patch(
+        "moleditpy.ui.calculation_worker.AllChem.MMFFGetMoleculeProperties",
+        return_value=None,
+    ):
+        result = _iterative_optimize(mol, "MMFF94s", check_halted, safe_status)
+
+    assert result is False
+    assert any("Failed to setup" in m for m in status_msgs)
+
+
+def test_optimize_only_mmff_unsupported_emits_error():
+    """optimize_only with unsupported MMFF (props=None) emits an error signal, not success."""
+    worker = CalculationWorker()
+
+    mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, randomSeed=42)
+    mol_block = Chem.MolToMolBlock(mol)
+
+    finish_captor = SignalCaptor()
+    error_captor = SignalCaptor()
+    worker.finished.connect(finish_captor.capture)
+    worker.error.connect(error_captor.capture)
+
+    options = {
+        "conversion_mode": "optimize_only",
+        "optimization_method": "MMFF_RDKIT",
+        "worker_id": 99,
+    }
+
+    with patch(
+        "moleditpy.ui.calculation_worker.AllChem.MMFFGetMoleculeProperties",
+        return_value=None,
+    ):
+        worker.run_calculation(mol_block, options)
+
+    assert len(finish_captor.emitted_values) == 0, "No success when MMFF unsupported"
+    assert len(error_captor.emitted_values) > 0, "Error signal expected"
+    err_msg = str(error_captor.emitted_values[0])
+    assert "MMFF" in err_msg.upper() or "failed" in err_msg.lower()

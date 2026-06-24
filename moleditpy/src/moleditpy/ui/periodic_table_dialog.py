@@ -157,13 +157,15 @@ class PeriodicTableDialog(QDialog):
             b = QPushButton(symbol)
             b.setFixedSize(40, 40)
 
-            # Prefer saved user override (from parent.settings), otherwise use CPK_COLORS
+            # Prefer saved user override (from parent.init_manager.settings), otherwise use CPK_COLORS
             try:
-                overrides = (
-                    parent.settings.get("cpk_colors", {})
-                    if parent and hasattr(parent, "settings")
-                    else {}
-                )
+                settings = {}
+                if parent:
+                    if hasattr(parent, "init_manager") and parent.init_manager:
+                        settings = parent.init_manager.settings
+                    elif hasattr(parent, "settings"):
+                        settings = parent.settings
+                overrides = settings.get("cpk_colors", {})
                 override = overrides.get(symbol)
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 override = None

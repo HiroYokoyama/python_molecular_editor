@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import math
 import logging
-from typing import Any, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import (
@@ -27,7 +27,13 @@ from PyQt6.QtGui import (
     QPen,
     QPolygonF,
 )
-from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene, QWidget
+from PyQt6.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsScene,
+    QGraphicsSceneHoverEvent,
+    QStyleOptionGraphicsItem,
+    QWidget,
+)
 
 from ..utils.constants import (
     DESIRED_BOND_PIXEL_WIDTH,
@@ -38,6 +44,9 @@ from ..utils.constants import (
     FONT_WEIGHT_BOLD,
     HOVER_PEN_WIDTH,
 )
+
+if TYPE_CHECKING:
+    from .atom_item import AtomItem
 
 
 class BondItem(QGraphicsItem):
@@ -138,14 +147,18 @@ class BondItem(QGraphicsItem):
         return min(0.9, 0.8 + 0.1 * openness)
 
     def __init__(
-        self, atom1_item: Any, atom2_item: Any, order: int = 1, stereo: int = 0
+        self,
+        atom1_item: AtomItem,
+        atom2_item: AtomItem,
+        order: int = 1,
+        stereo: int = 0,
     ) -> None:
         super().__init__()
         # Validate input parameters
         if atom1_item is None or atom2_item is None:
             raise ValueError("BondItem requires non-None atom items")
-        self.atom1: Any = atom1_item
-        self.atom2: Any = atom2_item
+        self.atom1: Optional[AtomItem] = atom1_item
+        self.atom2: Optional[AtomItem] = atom2_item
         self.order: int = order
         self.stereo: int = stereo
 
@@ -314,7 +327,7 @@ class BondItem(QGraphicsItem):
     def paint(
         self,
         painter: Optional[QPainter],
-        option: Any,
+        option: QStyleOptionGraphicsItem,
         widget: Optional[QWidget] = None,
     ) -> None:
         """Render the bond as single, double, triple, wedge, or dashed line."""
@@ -506,21 +519,12 @@ class BondItem(QGraphicsItem):
                         # --- Label Settings ---
                         font_size = 20
                         font_family = FONT_FAMILY
-                        try:
-                            if self.scene() and self.scene().views():
-                                win = self.scene().views()[0].window()
-                                if win and hasattr(win, "settings"):
-                                    font_size = win.settings.get(
-                                        "atom_font_size_2d", 20
-                                    )
-                                    font_family = win.settings.get(
-                                        "atom_font_family_2d", FONT_FAMILY
-                                    )
-                        except (AttributeError, RuntimeError, TypeError, ValueError):
-                            # Silent failure for non-critical 2D atom font setting
-                            # If we can't get custom settings, we just use defaults.
-                            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
-                            pass
+                        _sc = self.scene()
+                        if _sc is not None and hasattr(_sc, "get_setting"):
+                            font_size = _sc.get_setting("atom_font_size_2d", 20)
+                            font_family = _sc.get_setting(
+                                "atom_font_family_2d", FONT_FAMILY
+                            )
 
                         font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
                         font.setItalic(True)
@@ -598,7 +602,7 @@ class BondItem(QGraphicsItem):
             logging.exception("Error updating bond position")
             # Continue without crashing
 
-    def hoverEnterEvent(self, event: Any) -> None:
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
         """Highlight the bond on mouse hover."""
         self.hovered = True
         self.update()
@@ -606,7 +610,7 @@ class BondItem(QGraphicsItem):
             self.scene().set_hovered_item(self)
         super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event: Any) -> None:
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
         """Remove hover highlight when the mouse leaves."""
         if self.hovered:
             self.hovered = False

@@ -12,16 +12,21 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import logging
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
-from PyQt6.QtCore import QLineF, Qt, QPointF
+from PyQt6.QtCore import QEvent, QLineF, Qt, QPointF
 from PyQt6.QtGui import QPen
 from PyQt6.QtWidgets import (
     QApplication,
     QGraphicsItem,
     QGraphicsLineItem,
     QGraphicsScene,
+    QGraphicsSceneMouseEvent,
 )
+
+if TYPE_CHECKING:
+    from ..core.molecular_data import MolecularData
+    from .main_window import MainWindow
 
 from .atom_item import AtomItem
 from .bond_item import BondItem
@@ -36,11 +41,11 @@ from .molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMix
 class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene):
     """Central QGraphicsScene that owns all 2D atom and bond items."""
 
-    def __init__(self, data: Any, window: Any) -> None:
+    def __init__(self, data: MolecularData, window: MainWindow) -> None:
         super().__init__()
         self.data, self.window = data, window
-        self.atom_items: Dict[Any, Any] = {}
-        self.bond_items: Dict[Any, Any] = {}
+        self.atom_items: Dict[int, AtomItem] = {}
+        self.bond_items: Dict[Tuple[int, int], BondItem] = {}
         self._deleted_items = []
         self.initial_positions_in_event = {}
         self.template_context = {}
@@ -289,9 +294,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.template_preview = TemplatePreviewItem()
         self.addItem(self.template_preview)
         self.template_preview.hide()
-        self.template_preview_points: List[Any] = []
+        self.template_preview_points: List[QPointF] = []
         self.template_context: Dict[str, Any] = {}
-        self._deleted_items: List[Any] = []
+        self._deleted_items: List[QGraphicsItem] = []
 
         app = QApplication.instance()
         if app is not None and hasattr(app, "aboutToQuit"):
@@ -311,7 +316,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 needs_update = True
         return needs_update
 
-    def mousePressEvent(self, event: Any) -> None:
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         """Handle mouse press to begin atom/bond creation or selection."""
         self.press_pos = event.scenePos()
         self.was_selected_on_press = False
@@ -323,7 +328,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self.data_changed_in_event = False
 
         # Record initial positions by safely checking for deleted objects
-        self.initial_positions_in_event: Dict[Any, QPointF] = {}
+        self.initial_positions_in_event: Dict[AtomItem, QPointF] = {}
         for item in self.items():
             if isinstance(item, AtomItem) and not sip_isdeleted_safe(item):
                 try:
@@ -346,7 +351,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             # is part of that selection, delete all selected items (atoms/bonds).
             try:
                 # Use getattr safely for selectedItems if scene state is transitioning
-                raw_selected: List[Any] = getattr(self, "selectedItems", lambda: [])()
+                raw_selected: List[QGraphicsItem] = getattr(
+                    self, "selectedItems", lambda: []
+                )()
                 selected_items = [
                     it
                     for it in raw_selected
@@ -474,7 +481,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         else:
             super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event: Any) -> None:
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         """Update the bond preview line or template ghost during mouse drag."""
         if not self.window.ui_manager.is_2d_editable:
             return
@@ -514,7 +521,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             # Even in template mode, hover events are propagated here
             super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event: Any) -> None:
+    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         """Finalize atom/bond creation or selection on mouse release."""
         if not self.window.ui_manager.is_2d_editable:
             return
@@ -813,7 +820,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         # Clear template context but NOT the template data itself to allow multiple placements
         self.template_context = {}
 
-    def mouseDoubleClickEvent(self, event: Any) -> None:
+    def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         """Handle double click events."""
         item = self.itemAt(event.scenePos(), self.views()[0].transform())
 
@@ -954,7 +961,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             logging.debug(f"Error clearing _deleted_items list: {e}")
             self._deleted_items = []
 
-    def leaveEvent(self, event: Any) -> None:
+    def leaveEvent(self, event: QEvent) -> None:
         """Hide the template preview when the cursor leaves the scene."""
         self.template_preview.hide()
 
@@ -979,6 +986,6 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         self.update_template_preview(scene_pos)
                     return
 
-    def set_hovered_item(self, item: Any) -> None:
+    def set_hovered_item(self, item: Optional[QGraphicsItem]) -> None:
         """Record currently hovered item"""
         self.hovered_item = item

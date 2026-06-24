@@ -122,6 +122,9 @@ def test_get_settings_returns_all_keys(app):
         "bond_dash_count_2d",
         "atom_font_family_2d",
         "atom_font_size_2d",
+        "atom_font_bold_2d",
+        "atom_font_italic_2d",
+        "atom_font_underline_2d",
         "atom_use_bond_color_2d",
         "template_fusing_enabled_2d",
         "template_fusing_distance_2d",
@@ -129,6 +132,50 @@ def test_get_settings_returns_all_keys(app):
         "bond_snapping_distance_2d",
     }
     assert expected_keys == set(result.keys())
+
+
+def test_atom_font_style_defaults(app):
+    """Bold/Italic/Underline buttons reflect DEFAULT_SETTINGS on init."""
+    tab = Settings2DTab(DEFAULT_SETTINGS)
+    tab.update_ui(DEFAULT_SETTINGS)
+    assert (
+        tab.atom_font_bold_2d_btn.isChecked() == DEFAULT_SETTINGS["atom_font_bold_2d"]
+    )
+    assert (
+        tab.atom_font_italic_2d_btn.isChecked()
+        == DEFAULT_SETTINGS["atom_font_italic_2d"]
+    )
+    assert (
+        tab.atom_font_underline_2d_btn.isChecked()
+        == DEFAULT_SETTINGS["atom_font_underline_2d"]
+    )
+
+
+def test_atom_font_style_update_ui(app):
+    """update_ui() sets Bold/Italic/Underline button state from settings dict."""
+    tab = Settings2DTab(DEFAULT_SETTINGS)
+    settings = dict(DEFAULT_SETTINGS)
+    settings["atom_font_bold_2d"] = False
+    settings["atom_font_italic_2d"] = True
+    settings["atom_font_underline_2d"] = True
+    tab.update_ui(settings)
+    assert tab.atom_font_bold_2d_btn.isChecked() is False
+    assert tab.atom_font_italic_2d_btn.isChecked() is True
+    assert tab.atom_font_underline_2d_btn.isChecked() is True
+
+
+def test_atom_font_style_get_settings_roundtrip(app):
+    """get_settings() returns Bold/Italic/Underline matching what was set via update_ui()."""
+    tab = Settings2DTab(DEFAULT_SETTINGS)
+    settings = dict(DEFAULT_SETTINGS)
+    settings["atom_font_bold_2d"] = False
+    settings["atom_font_italic_2d"] = True
+    settings["atom_font_underline_2d"] = True
+    tab.update_ui(settings)
+    result = tab.get_settings()
+    assert result["atom_font_bold_2d"] is False
+    assert result["atom_font_italic_2d"] is True
+    assert result["atom_font_underline_2d"] is True
 
 
 @patch("moleditpy.ui.settings_tabs.settings_2d_tab.QColorDialog.getColor")

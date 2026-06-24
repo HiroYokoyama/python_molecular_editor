@@ -48,6 +48,8 @@ def test_get_settings_returns_correct_keys(app):
         "display_kekule_3d",
         "display_aromatic_circles_3d",
         "aromatic_torus_thickness_factor",
+        "log_to_file",
+        "log_level_debug",
     }
     assert expected_keys == set(result.keys())
 
@@ -148,3 +150,35 @@ def test_sync_slider_from_spinbox(app):
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     tab.aromatic_torus_thickness_label.setValue(1.50)
     assert tab.aromatic_torus_thickness_slider.value() == 150
+
+
+def test_log_to_file_default_unchecked(app):
+    """log_to_file checkbox is unchecked by default."""
+    tab = SettingsOtherTab(DEFAULT_SETTINGS)
+    tab.update_ui(DEFAULT_SETTINGS)
+    assert tab.log_to_file_checkbox.isChecked() is False
+    assert tab.log_level_debug_checkbox.isChecked() is False
+
+
+def test_log_settings_roundtrip(app):
+    """Enabling log_to_file and log_level_debug round-trips through get_settings."""
+    tab = SettingsOtherTab(DEFAULT_SETTINGS)
+    settings = dict(DEFAULT_SETTINGS)
+    settings["log_to_file"] = True
+    settings["log_level_debug"] = True
+    tab.update_ui(settings)
+    result = tab.get_settings()
+    assert result["log_to_file"] is True
+    assert result["log_level_debug"] is True
+
+
+def test_log_settings_off_roundtrip(app):
+    """Disabling both log settings returns False in get_settings."""
+    tab = SettingsOtherTab(DEFAULT_SETTINGS)
+    settings = dict(DEFAULT_SETTINGS)
+    settings["log_to_file"] = False
+    settings["log_level_debug"] = False
+    tab.update_ui(settings)
+    result = tab.get_settings()
+    assert result["log_to_file"] is False
+    assert result["log_level_debug"] is False

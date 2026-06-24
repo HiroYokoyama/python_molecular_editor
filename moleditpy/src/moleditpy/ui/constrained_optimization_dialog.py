@@ -728,10 +728,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         if not hasattr(self, "selection_labels"):
             self.selection_labels = []
 
-        if (
-            self.main_window.view_3d_manager.atom_positions_3d is None
-            or self.main_window.view_3d_manager.atom_positions_3d is None
-        ):
+        if self.main_window.view_3d_manager.atom_positions_3d is None:
             return  # Do nothing if 3D coordinates are missing
 
         max_idx = len(self.main_window.view_3d_manager.atom_positions_3d) - 1

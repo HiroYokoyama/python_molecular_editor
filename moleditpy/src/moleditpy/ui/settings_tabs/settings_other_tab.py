@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QFormLayout,
     QFrame,
     QHBoxLayout,
+    QLabel,
     QSlider,
     QWidget,
     QDoubleSpinBox,
@@ -39,6 +40,8 @@ class SettingsOtherTab(SettingsTabBase):
         self.aromatic_torus_thickness_slider = None
         self.kekule_3d_checkbox = None
         self.skip_chem_checks_checkbox = None
+        self.log_to_file_checkbox = None
+        self.log_level_debug_checkbox = None
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -107,6 +110,29 @@ class SettingsOtherTab(SettingsTabBase):
         atl.addWidget(self.aromatic_torus_thickness_label)
         form_layout.addRow("Aromatic torus thickness (× bond radius):", atl)
 
+        line2 = QFrame()
+        line2.setFrameShape(QFrame.Shape.HLine)
+        line2.setFrameShadow(QFrame.Shadow.Sunken)
+        form_layout.addRow(line2)
+
+        self.log_to_file_checkbox = QCheckBox()
+        self.log_to_file_checkbox.setToolTip(
+            "Save application log to ~/.moleditpy/moleditpy.log (rotated, max 1 MB × 3)."
+        )
+        form_layout.addRow(
+            "Save log to file (~/.moleditpy/moleditpy.log):", self.log_to_file_checkbox
+        )
+
+        self.log_level_debug_checkbox = QCheckBox()
+        self.log_level_debug_checkbox.setToolTip(
+            "Log DEBUG-level messages in addition to INFO/WARNING/ERROR."
+        )
+        form_layout.addRow("Enable DEBUG level logging:", self.log_level_debug_checkbox)
+
+        restart_warning = QLabel("⚠ Logging changes take effect after restart.")
+        restart_warning.setStyleSheet("color: orange;")
+        form_layout.addRow(restart_warning)
+
     def _on_kekule_toggled(self, checked: bool) -> None:
         self.aromatic_circle_checkbox.setEnabled(not checked)
 
@@ -134,6 +160,11 @@ class SettingsOtherTab(SettingsTabBase):
         thick = settings_dict.get("aromatic_torus_thickness_factor", 0.6)
         self.aromatic_torus_thickness_slider.setValue(int(thick * 100))
 
+        self.log_to_file_checkbox.setChecked(settings_dict.get("log_to_file", False))
+        self.log_level_debug_checkbox.setChecked(
+            settings_dict.get("log_level_debug", False)
+        )
+
     def get_settings(self) -> dict[str, Any]:
         return {
             "skip_chemistry_checks": self.skip_chem_checks_checkbox.isChecked(),
@@ -142,4 +173,6 @@ class SettingsOtherTab(SettingsTabBase):
             "display_aromatic_circles_3d": self.aromatic_circle_checkbox.isChecked(),
             "aromatic_torus_thickness_factor": self.aromatic_torus_thickness_slider.value()
             / 100.0,
+            "log_to_file": self.log_to_file_checkbox.isChecked(),
+            "log_level_debug": self.log_level_debug_checkbox.isChecked(),
         }
