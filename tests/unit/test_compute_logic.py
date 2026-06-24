@@ -600,7 +600,9 @@ def test_on_calculation_error_mmff_fail_shows_uff_dialog(mock_parser_host):
         "moleditpy.ui.compute_logic.QMessageBox.question",
         return_value=QMessageBox.StandardButton.No,
     ) as mock_dialog:
-        compute.on_calculation_error(("w1", "Optimization with MMFF94s (RDKit) failed."))
+        compute.on_calculation_error(
+            ("w1", "Optimization with MMFF94s (RDKit) failed.")
+        )
 
     mock_dialog.assert_called_once()
     call_args = mock_dialog.call_args[0]
@@ -619,7 +621,9 @@ def test_on_calculation_error_mmff_fail_user_accepts_uff(mock_parser_host):
         ),
         patch.object(compute, "optimize_3d_structure") as mock_optimize,
     ):
-        compute.on_calculation_error(("w1", "Optimization with MMFF94s (RDKit) failed."))
+        compute.on_calculation_error(
+            ("w1", "Optimization with MMFF94s (RDKit) failed.")
+        )
 
     mock_optimize.assert_called_once_with("UFF_RDKIT")
 
@@ -634,11 +638,11 @@ def test_on_calculation_error_mmff_fail_user_declines_uff(mock_parser_host):
             "moleditpy.ui.compute_logic.QMessageBox.question",
             return_value=QMessageBox.StandardButton.No,
         ),
-        patch(
-            "moleditpy.ui.compute_logic.QMessageBox.critical"
-        ) as mock_critical,
+        patch("moleditpy.ui.compute_logic.QMessageBox.critical") as mock_critical,
     ):
-        compute.on_calculation_error(("w1", "Optimization with MMFF94s (RDKit) failed."))
+        compute.on_calculation_error(
+            ("w1", "Optimization with MMFF94s (RDKit) failed.")
+        )
 
     mock_critical.assert_called_once()
 
@@ -648,9 +652,7 @@ def test_on_calculation_error_non_mmff_no_uff_dialog(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
     compute.active_worker_ids = {"w1"}
 
-    with patch(
-        "moleditpy.ui.compute_logic.QMessageBox.question"
-    ) as mock_dialog:
+    with patch("moleditpy.ui.compute_logic.QMessageBox.question") as mock_dialog:
         compute.on_calculation_error(("w1", "Some other error occurred."))
 
     mock_dialog.assert_not_called()

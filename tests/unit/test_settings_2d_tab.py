@@ -138,9 +138,17 @@ def test_atom_font_style_defaults(app):
     """Bold/Italic/Underline buttons reflect DEFAULT_SETTINGS on init."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     tab.update_ui(DEFAULT_SETTINGS)
-    assert tab.atom_font_bold_2d_btn.isChecked() == DEFAULT_SETTINGS["atom_font_bold_2d"]
-    assert tab.atom_font_italic_2d_btn.isChecked() == DEFAULT_SETTINGS["atom_font_italic_2d"]
-    assert tab.atom_font_underline_2d_btn.isChecked() == DEFAULT_SETTINGS["atom_font_underline_2d"]
+    assert (
+        tab.atom_font_bold_2d_btn.isChecked() == DEFAULT_SETTINGS["atom_font_bold_2d"]
+    )
+    assert (
+        tab.atom_font_italic_2d_btn.isChecked()
+        == DEFAULT_SETTINGS["atom_font_italic_2d"]
+    )
+    assert (
+        tab.atom_font_underline_2d_btn.isChecked()
+        == DEFAULT_SETTINGS["atom_font_underline_2d"]
+    )
 
 
 def test_atom_font_style_update_ui(app):

@@ -671,6 +671,19 @@ _UFF with intermolecular interaction disabled keeps molecules at their initial s
 
 - assert abs(dist_off - 6.0) < 1e-05
 
+### test_iterative_optimize_mmff_unsupported_returns_false
+__iterative_optimize returns False (no UFF fallback) when MMFF props are None._
+
+- assert result is False
+- assert any(('Failed to setup' in m for m in status_msgs))
+
+### test_optimize_only_mmff_unsupported_emits_error
+_optimize_only with unsupported MMFF (props=None) emits an error signal, not success._
+
+- assert len(finish_captor.emitted_values) == 0
+- assert len(error_captor.emitted_values) > 0
+- assert 'MMFF' in err_msg.upper() or 'failed' in err_msg.lower()
+
 ## tests/unit/test_color_settings_dialog.py
 
 ### test_color_settings_dialog_initialization
@@ -920,6 +933,27 @@ _Test UFF fallback failure handles gracefully._
 _Test error when optimization method is unavailable._
 
 - assert any(('Selected optimization' in msg for msg in messages))
+
+### test_on_calculation_error_mmff_fail_shows_uff_dialog
+_When MMFF fails, on_calculation_error shows a UFF retry dialog instead of auto-fallback._
+
+- mock_dialog.assert_called_once()
+- assert 'UFF' in call_args[2]
+
+### test_on_calculation_error_mmff_fail_user_accepts_uff
+_When user accepts UFF retry after MMFF failure, optimize_3d_structure is called with UFF_RDKIT._
+
+- mock_optimize.assert_called_once_with('UFF_RDKIT')
+
+### test_on_calculation_error_mmff_fail_user_declines_uff
+_When user declines UFF retry, a critical error dialog is shown instead._
+
+- mock_critical.assert_called_once()
+
+### test_on_calculation_error_non_mmff_no_uff_dialog
+_Non-MMFF errors do not trigger the UFF retry dialog._
+
+- mock_dialog.assert_not_called()
 
 ### test_on_calculation_finished_collision_single_frag
 _Test collision logic is skipped for single fragment._
@@ -2923,6 +2957,26 @@ _Unknown Qt message type defaults to logging.WARNING._
 
 - mock_log.assert_called_once_with(logging.WARNING, 'Qt: %s', msg)
 
+### test_read_startup_log_settings_both_true
+_Returns (True, True) when both keys are set in settings.json._
+
+- assert result == (True, True)
+
+### test_read_startup_log_settings_defaults_false
+_Returns (False, False) when keys are absent from settings.json._
+
+- assert result == (False, False)
+
+### test_read_startup_log_settings_missing_file
+_Returns (False, False) when settings.json does not exist._
+
+- assert result == (False, False)
+
+### test_read_startup_log_settings_invalid_json
+_Returns (False, False) on malformed JSON._
+
+- assert result == (False, False)
+
 ## tests/unit/test_main_window_export_extended.py
 
 ### test_export_stl_success
@@ -4227,13 +4281,13 @@ _Test deprecated register_3d_context_menu emits DeprecationWarning._
 _Test Plugin3DController.set_atom_color._
 
 - mock_main_window.view_3d_manager.update_atom_color_override.assert_called_once_with(1, '#FF0000')
-- mock_main_window.plotter.render.assert_called_once()
+- mock_main_window.view_3d_manager.plotter.render.assert_called_once()
 
 ### TestPluginInterface.test_3d_controller_set_bond_color
 _Test Plugin3DController.set_bond_color._
 
 - mock_main_window.view_3d_manager.update_bond_color_override.assert_called_once_with(2, '#00FF00')
-- mock_main_window.plotter.render.assert_called_once()
+- mock_main_window.view_3d_manager.plotter.render.assert_called_once()
 
 ### TestPluginInterface.test_add_plugin_menu
 _add_plugin_menu prepends 'Plugin/' to the path._
@@ -4363,7 +4417,7 @@ _set_bond_color_by_atoms looks up the bond and applies the color override._
 
 - mock_mol.GetBondBetweenAtoms.assert_called_once_with(1, 2)
 - mock_main_window.view_3d_manager.update_bond_color_override.assert_called_once_with(5, '#112233')
-- mock_main_window.plotter.render.assert_called_once()
+- mock_main_window.view_3d_manager.plotter.render.assert_called_once()
 
 ## tests/unit/test_plugin_manager.py
 
@@ -4709,7 +4763,7 @@ _on_remove_plugin removes a package plugin by calling shutil.rmtree on its direc
 - mock_info.assert_called()
 
 ### test_on_remove_plugin_error
-_on_remove_plugin shows a critical error dialog when os.remove raises._
+_on_remove_plugin shows a critical error dialog when os.remove raises OSError._
 
 - mock_critical.assert_called_with(window, 'Error', 'Failed to delete plugin: Remove error')
 
@@ -5417,6 +5471,27 @@ _get_settings() returns a dict containing all expected 2D settings keys._
 
 - assert expected_keys == set(result.keys())
 
+### test_atom_font_style_defaults
+_Bold/Italic/Underline buttons reflect DEFAULT_SETTINGS on init._
+
+- assert tab.atom_font_bold_2d_btn.isChecked() == DEFAULT_SETTINGS['atom_font_bold_2d']
+- assert tab.atom_font_italic_2d_btn.isChecked() == DEFAULT_SETTINGS['atom_font_italic_2d']
+- assert tab.atom_font_underline_2d_btn.isChecked() == DEFAULT_SETTINGS['atom_font_underline_2d']
+
+### test_atom_font_style_update_ui
+_update_ui() sets Bold/Italic/Underline button state from settings dict._
+
+- assert tab.atom_font_bold_2d_btn.isChecked() is False
+- assert tab.atom_font_italic_2d_btn.isChecked() is True
+- assert tab.atom_font_underline_2d_btn.isChecked() is True
+
+### test_atom_font_style_get_settings_roundtrip
+_get_settings() returns Bold/Italic/Underline matching what was set via update_ui()._
+
+- assert result['atom_font_bold_2d'] is False
+- assert result['atom_font_italic_2d'] is True
+- assert result['atom_font_underline_2d'] is True
+
 ### test_pick_bg_color_updates_on_valid
 _Selecting a valid color from the dialog updates current_bg_color_2d._
 
@@ -5775,6 +5850,24 @@ _reset_to_defaults restores settings to default values._
 _Setting the spinbox value syncs the torus thickness slider accordingly._
 
 - assert tab.aromatic_torus_thickness_slider.value() == 150
+
+### test_log_to_file_default_unchecked
+_log_to_file checkbox is unchecked by default._
+
+- assert tab.log_to_file_checkbox.isChecked() is False
+- assert tab.log_level_debug_checkbox.isChecked() is False
+
+### test_log_settings_roundtrip
+_Enabling log_to_file and log_level_debug round-trips through get_settings._
+
+- assert result['log_to_file'] is True
+- assert result['log_level_debug'] is True
+
+### test_log_settings_off_roundtrip
+_Disabling both log settings returns False in get_settings._
+
+- assert result['log_to_file'] is False
+- assert result['log_level_debug'] is False
 
 ## tests/unit/test_settings_tab_base.py
 
