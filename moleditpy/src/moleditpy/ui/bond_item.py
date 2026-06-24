@@ -147,7 +147,11 @@ class BondItem(QGraphicsItem):
         return min(0.9, 0.8 + 0.1 * openness)
 
     def __init__(
-        self, atom1_item: AtomItem, atom2_item: AtomItem, order: int = 1, stereo: int = 0
+        self,
+        atom1_item: AtomItem,
+        atom2_item: AtomItem,
+        order: int = 1,
+        stereo: int = 0,
     ) -> None:
         super().__init__()
         # Validate input parameters

@@ -13,7 +13,18 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import math
 from collections import deque
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 if TYPE_CHECKING:
     from rdkit import Chem
@@ -425,7 +436,9 @@ def is_problematic_valence(
 
 
 def inject_ez_stereo_to_mol_block(
-    mol_block: str, rdkit_mol: Chem.Mol, bonds_data: Dict[Tuple[int, int], Dict[str, Any]]
+    mol_block: str,
+    rdkit_mol: Chem.Mol,
+    bonds_data: Dict[Tuple[int, int], Dict[str, Any]],
 ) -> str:
     """Generate a modified MOL block with 'M CFG' lines for E/Z stereochemistry.
 

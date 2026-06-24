@@ -326,7 +326,9 @@ def _parse_explicit_stereo(mol_block: str) -> Dict[int, Chem.BondStereo]:
     return explicit_stereo
 
 
-def _apply_explicit_stereo(mol: Chem.Mol, explicit_stereo: Dict[int, Chem.BondStereo]) -> None:
+def _apply_explicit_stereo(
+    mol: Chem.Mol, explicit_stereo: Dict[int, Chem.BondStereo]
+) -> None:
     """Apply explicit stereochemistry to the molecule."""
     for bond_idx, stereo_type in explicit_stereo.items():
         if bond_idx < mol.GetNumBonds():
@@ -958,7 +960,11 @@ class CalculationWorker(QObject):
         )
 
     def _run_direct_workflow(
-        self, mol_block: str, mol: Chem.Mol, options: Dict[str, Any], helpers: Dict[str, Any]
+        self,
+        mol_block: str,
+        mol: Chem.Mol,
+        options: Dict[str, Any],
+        helpers: Dict[str, Any],
     ) -> None:
         """Execute direct 2D->3D conversion."""
         mol = _perform_direct_conversion(

@@ -351,7 +351,9 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             # is part of that selection, delete all selected items (atoms/bonds).
             try:
                 # Use getattr safely for selectedItems if scene state is transitioning
-                raw_selected: List[QGraphicsItem] = getattr(self, "selectedItems", lambda: [])()
+                raw_selected: List[QGraphicsItem] = getattr(
+                    self, "selectedItems", lambda: []
+                )()
                 selected_items = [
                     it
                     for it in raw_selected
