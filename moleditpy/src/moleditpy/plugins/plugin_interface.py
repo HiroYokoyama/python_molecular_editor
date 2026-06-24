@@ -367,7 +367,7 @@ class PluginContext:
             default: Value to return if the setting is not found.
         """
         mw = self.get_main_window()
-        if mw and hasattr(mw, "init_manager") and hasattr(mw.init_manager, "settings"):
+        if mw and hasattr(mw, "init_manager"):
             namespaced = f"plugin.{self._plugin_name}.{key}"
             return mw.init_manager.settings.get(namespaced, default)
         return default
@@ -384,11 +384,10 @@ class PluginContext:
             value: Value to store (must be JSON-serializable).
         """
         mw = self.get_main_window()
-        if mw and hasattr(mw, "init_manager") and hasattr(mw.init_manager, "settings"):
+        if mw and hasattr(mw, "init_manager"):
             namespaced = f"plugin.{self._plugin_name}.{key}"
             mw.init_manager.settings[namespaced] = value
-            if hasattr(mw.init_manager, "settings_dirty"):
-                mw.init_manager.settings_dirty = True
+            mw.init_manager.settings_dirty = True
 
     def mark_project_modified(self) -> None:
         """Mark the current project as having unsaved changes and update the window title."""
@@ -396,8 +395,9 @@ class PluginContext:
         if mw and hasattr(mw, "state_manager"):
             try:
                 mw.state_manager.has_unsaved_changes = True
-                if hasattr(mw.state_manager, "update_window_title"):
-                    mw.state_manager.update_window_title()
+                fn = getattr(mw.state_manager, "update_window_title", None)
+                if fn:
+                    fn()
             except Exception:
                 pass
 
@@ -488,8 +488,10 @@ class PluginContext:
         mw = self.get_main_window()
         if mw and hasattr(mw, "init_manager"):
             scene = getattr(mw.init_manager, "scene", None)
-            if scene is not None and hasattr(scene, "update_all_items"):
-                scene.update_all_items()
+            if scene is not None:
+                fn = getattr(scene, "update_all_items", None)
+                if fn:
+                    fn()
 
     def load_from_smiles(self, smiles: str) -> None:
         """Add a molecule from a SMILES string to the 2D editor."""
