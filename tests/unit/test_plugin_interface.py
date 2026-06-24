@@ -203,30 +203,26 @@ class TestPluginInterface:
     def test_3d_controller_set_atom_color(self, mock_main_window):
         """Test Plugin3DController.set_atom_color."""
         controller = Plugin3DController(mock_main_window)
-        # Mock the view_3d_manager and plotter
         mock_main_window.view_3d_manager = MagicMock()
-        mock_main_window.plotter = MagicMock()
 
         controller.set_atom_color(1, "#FF0000")
 
         mock_main_window.view_3d_manager.update_atom_color_override.assert_called_once_with(
             1, "#FF0000"
         )
-        mock_main_window.plotter.render.assert_called_once()
+        mock_main_window.view_3d_manager.plotter.render.assert_called_once()
 
     def test_3d_controller_set_bond_color(self, mock_main_window):
         """Test Plugin3DController.set_bond_color."""
         controller = Plugin3DController(mock_main_window)
-        # Mock the view_3d_manager and plotter
         mock_main_window.view_3d_manager = MagicMock()
-        mock_main_window.plotter = MagicMock()
 
         controller.set_bond_color(2, "#00FF00")
 
         mock_main_window.view_3d_manager.update_bond_color_override.assert_called_once_with(
             2, "#00FF00"
         )
-        mock_main_window.plotter.render.assert_called_once()
+        mock_main_window.view_3d_manager.plotter.render.assert_called_once()
 
     # ------------------------------------------------------------------
     # Tests for methods added in V3.1
@@ -481,17 +477,16 @@ class TestPluginInterface:
         mock_bond.GetIdx.return_value = 5
         mock_mol.GetBondBetweenAtoms.return_value = mock_bond
 
-        mock_main_window.current_mol = mock_mol
         mock_main_window.view_3d_manager = MagicMock()
-        mock_main_window.plotter = MagicMock()
+        mock_main_window.view_3d_manager.current_mol = mock_mol
 
         controller.set_bond_color_by_atoms(1, 2, "#112233")
         mock_mol.GetBondBetweenAtoms.assert_called_once_with(1, 2)
         mock_main_window.view_3d_manager.update_bond_color_override.assert_called_once_with(
             5, "#112233"
         )
-        mock_main_window.plotter.render.assert_called_once()
+        mock_main_window.view_3d_manager.plotter.render.assert_called_once()
 
         # test no mol
-        mock_main_window.current_mol = None
+        mock_main_window.view_3d_manager.current_mol = None
         controller.set_bond_color_by_atoms(1, 2, "#112233")

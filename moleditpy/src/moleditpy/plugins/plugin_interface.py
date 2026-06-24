@@ -174,10 +174,11 @@ class PluginContext:
         """Switch the application UI layout to 3D viewer mode (Public API)."""
         mw = self.get_main_window()
         if mw is not None and hasattr(mw, "ui_manager"):
-            if hasattr(mw.ui_manager, "enter_3d_viewer_mode"):
-                mw.ui_manager.enter_3d_viewer_mode()
-            elif hasattr(mw.ui_manager, "enter_3d_viewer_ui_mode"):
-                mw.ui_manager.enter_3d_viewer_ui_mode()
+            fn = getattr(mw.ui_manager, "enter_3d_viewer_mode", None) or getattr(
+                mw.ui_manager, "enter_3d_viewer_ui_mode", None
+            )
+            if fn:
+                fn()
 
     def enter_3d_mode(self) -> None:
         """Switch UI layout to 3D viewer mode. Alias for enter_3d_viewer_mode."""
@@ -241,16 +242,11 @@ class PluginContext:
         """Force the 3D window to redraw using the current molecule."""
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
-            mol = getattr(mw.view_3d_manager, "current_mol", None)
+            mol = mw.view_3d_manager.current_mol
             if mol:
                 mw.view_3d_manager.draw_molecule_3d(mol)
-            else:
-                # Also redraw/clear plotter if no molecule
-                if (
-                    hasattr(mw.view_3d_manager, "plotter")
-                    and mw.view_3d_manager.plotter
-                ):
-                    mw.view_3d_manager.plotter.render()
+            elif mw.view_3d_manager.plotter:
+                mw.view_3d_manager.plotter.render()
 
     def reset_3d_camera(self) -> None:
         """Zoom in and re-center the 3D viewport to fit the current molecule."""
@@ -415,14 +411,16 @@ class PluginContext:
         if mw is None:
             return
         if hasattr(mw, "state_manager"):
-            if hasattr(mw.state_manager, "update_realtime_info"):
-                mw.state_manager.update_realtime_info()
-            if hasattr(mw.state_manager, "update_window_title"):
-                mw.state_manager.update_window_title()
-        if hasattr(mw, "edit_actions_manager") and hasattr(
-            mw.edit_actions_manager, "update_undo_redo_actions"
-        ):
-            mw.edit_actions_manager.update_undo_redo_actions()
+            fn = getattr(mw.state_manager, "update_realtime_info", None)
+            if fn:
+                fn()
+            fn = getattr(mw.state_manager, "update_window_title", None)
+            if fn:
+                fn()
+        if hasattr(mw, "edit_actions_manager"):
+            fn = getattr(mw.edit_actions_manager, "update_undo_redo_actions", None)
+            if fn:
+                fn()
 
     def fit_3d_view(self) -> None:
         """Zoom and re-center the 3D viewport to fit the current molecule."""
@@ -543,8 +541,8 @@ class Plugin3DController:
         v3d = self._get_v3d()
         if v3d:
             v3d.update_atom_color_override(atom_index, color_hex)
-            if hasattr(self._mw, "plotter") and self._mw.plotter:
-                self._mw.plotter.render()
+            if v3d.plotter:
+                v3d.plotter.render()
 
     def set_bond_color(self, bond_index: int, color_hex: str) -> None:
         """
@@ -557,8 +555,8 @@ class Plugin3DController:
         v3d = self._get_v3d()
         if v3d:
             v3d.update_bond_color_override(bond_index, color_hex)
-            if hasattr(self._mw, "plotter") and self._mw.plotter:
-                self._mw.plotter.render()
+            if v3d.plotter:
+                v3d.plotter.render()
 
     def set_bond_color_by_atoms(
         self, atom_idx1: int, atom_idx2: int, color_hex: str
@@ -571,7 +569,8 @@ class Plugin3DController:
             atom_idx2: Second RDKit atom index.
             color_hex: Hex string e.g., "#00FF00".
         """
-        mol = getattr(self._mw, "current_mol", None)
+        v3d = self._get_v3d()
+        mol = v3d.current_mol if v3d else None
         if not mol:
             return
 
