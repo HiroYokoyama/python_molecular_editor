@@ -548,7 +548,22 @@ def _perform_direct_conversion(
             _safe_status,
             options=options if backend == "RDKIT" else None,
         ):
-            raise RuntimeError(f"Optimization with {opt_method} failed.")
+            fallback_success = False
+            if backend == "RDKIT" and "MMFF" in method_key:
+                _safe_status("MMFF optimization failed. Auto-falling back to UFF...")
+                fallback_success = opt_func(
+                    mol, "UFF", _check_halted, _safe_status, options=options
+                )
+                if fallback_success:
+                    with contextlib.suppress(Exception):
+                        mol.SetProp("_pme_optimization_method", "UFF_RDKIT")
+
+            if not fallback_success:
+                _safe_status(
+                    "Warning: Optimization failed. Using unoptimized structure."
+                )
+                with contextlib.suppress(Exception):
+                    mol.ClearProp("_pme_optimization_method")
 
     if _check_halted():
         raise WorkerHaltError("Halted")
@@ -664,15 +679,30 @@ print(ob_mol.write("mol"))
             _safe_status,
             options=options if backend == "RDKIT" else None,
         ):
-            _safe_status("Warning: Optimization failed. Using unoptimized structure.")
-            # Best-effort property cleanup if optimization was skipped
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                rd_mol.ClearProp("_pme_optimization_method")
+            fallback_success = False
+            if backend == "RDKIT" and "MMFF" in method_key:
+                _safe_status("MMFF optimization failed. Auto-falling back to UFF...")
+                fallback_success = opt_func(
+                    rd_mol, "UFF", _check_halted, _safe_status, options=options
+                )
+                if fallback_success:
+                    with contextlib.suppress(Exception):
+                        rd_mol.SetProp("_pme_optimization_method", "UFF_RDKIT")
+
+            if not fallback_success:
+                _safe_status(
+                    "Warning: Optimization failed. Using unoptimized structure."
+                )
+                with contextlib.suppress(Exception):
+                    rd_mol.ClearProp("_pme_optimization_method")
 
         if _check_halted():
             raise WorkerHaltError("Halted")
         # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
-        opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
+        final_opt = "Unoptimized"
+        if rd_mol.HasProp("_pme_optimization_method"):
+            final_opt = rd_mol.GetProp("_pme_optimization_method")
+        opt_label = _OPT_METHOD_LABELS.get(final_opt, final_opt)
         _safe_status(f"Process completed (Open Babel Conversion / {opt_label}).")
         _safe_finished((worker_id, rd_mol))
         return True
@@ -925,9 +955,22 @@ class CalculationWorker(QObject):
             _safe_status,
             options=options if backend == "RDKIT" else None,
         ):
-            _safe_status("Warning: Optimization failed. Using unoptimized structure.")
-            with contextlib.suppress(Exception):
-                mol.ClearProp("_pme_optimization_method")
+            fallback_success = False
+            if backend == "RDKIT" and "MMFF" in method_key:
+                _safe_status("MMFF optimization failed. Auto-falling back to UFF...")
+                fallback_success = opt_func(
+                    mol, "UFF", _check_halted, _safe_status, options=options
+                )
+                if fallback_success:
+                    with contextlib.suppress(Exception):
+                        mol.SetProp("_pme_optimization_method", "UFF_RDKIT")
+
+            if not fallback_success:
+                _safe_status(
+                    "Warning: Optimization failed. Using unoptimized structure."
+                )
+                with contextlib.suppress(Exception):
+                    mol.ClearProp("_pme_optimization_method")
 
         # Final stereo restoration check
         for b_idx, s, satoms in orig_stereo:
@@ -939,7 +982,10 @@ class CalculationWorker(QObject):
         if _check_halted():
             raise WorkerHaltError("Halted")
         # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
-        opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
+        final_opt = "Unoptimized"
+        if mol.HasProp("_pme_optimization_method"):
+            final_opt = mol.GetProp("_pme_optimization_method")
+        opt_label = _OPT_METHOD_LABELS.get(final_opt, final_opt)
         _safe_status(f"Process completed (RDKit Conversion / {opt_label}).")
         _safe_finished((w_id, mol))
         return True
@@ -972,9 +1018,11 @@ class CalculationWorker(QObject):
         )
         # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
         _safe_status = helpers["status"]
-        opt_method = (options or {}).get("optimization_method") or "MMFF94s_RDKIT"
         if (options or {}).get("do_optimize", True):
-            opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
+            final_opt = "Unoptimized"
+            if mol.HasProp("_pme_optimization_method"):
+                final_opt = mol.GetProp("_pme_optimization_method")
+            opt_label = _OPT_METHOD_LABELS.get(final_opt, final_opt)
             _safe_status(f"Process completed (Direct 2D->3D Conversion / {opt_label}).")
         else:
             _safe_status("Process completed (Direct 2D->3D Conversion).")
