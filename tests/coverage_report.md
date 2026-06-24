@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **82.54%**
+- **Overall Project Coverage**: **82.47%**
 
 ### Coverage Breakdown
 
@@ -25,9 +25,9 @@
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     80 |      4 |   95.0% |
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    362 |     56 |   84.5% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    237 |     17 |   92.8% |
-| moleditpy\src\moleditpy\ui\calculation_worker.py        |    547 |     87 |   84.1% |
+| moleditpy\src\moleditpy\ui\calculation_worker.py        |    581 |    103 |   82.3% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    166 |     13 |   92.2% |
-| moleditpy\src\moleditpy\ui\compute_logic.py             |    388 |     89 |   77.1% |
+| moleditpy\src\moleditpy\ui\compute_logic.py             |    387 |     89 |   77.0% |
 | moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py |    472 |    120 |   74.6% |
 | moleditpy\src\moleditpy\ui\custom_interactor_style.py   |    470 |    247 |   47.4% |
 | moleditpy\src\moleditpy\ui\custom_qt_interactor.py      |     44 |     35 |   20.5% |
@@ -66,7 +66,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      0 |  100.0% |
-| **TOTAL** | **15644** | **2732** | **82.54%** |
+| **TOTAL** | **15677** | **2748** | **82.47%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

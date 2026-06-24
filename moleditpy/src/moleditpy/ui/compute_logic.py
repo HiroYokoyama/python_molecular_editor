@@ -484,13 +484,13 @@ class ComputeManager:
             method_key = None
             if mol and mol.HasProp("_pme_optimization_method"):
                 method_key = mol.GetProp("_pme_optimization_method")
-            if not method_key:
-                method_key = self.host.init_manager.optimization_method
             if method_key:
                 labels = self.host.init_manager.opt3d_method_labels or {}
                 self.last_successful_optimization_method = labels.get(
                     method_key, method_key
                 )
+            else:
+                self.last_successful_optimization_method = "Unoptimized"
         except (AttributeError, TypeError):
             # Safe defensive fallback catching AttributeError, TypeError
             pass
@@ -539,7 +539,7 @@ class ComputeManager:
                     "Retry with UFF?",
                     f"{msg}\n\nWould you like to retry using UFF (RDKit) instead?",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.Yes,
                 )
                 if reply == QMessageBox.StandardButton.Yes:
                     self.optimize_3d_structure("UFF_RDKIT")
