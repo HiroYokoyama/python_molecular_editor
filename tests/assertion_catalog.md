@@ -7014,6 +7014,7 @@ _Test that MMFF optimization failure auto-falls back to UFF._
 - assert res_mol is not None
 - assert res_mol.HasProp('_pme_optimization_method')
 - assert res_mol.GetProp('_pme_optimization_method') == 'UFF_RDKIT'
+- assert any(('Process completed (RDKit Conversion / UFF (RDKit))' in msg for msg in status_messages))
 
 ### test_calculation_worker_mmff_variants
 _Test switching between MMFF94 and MMFF94s._

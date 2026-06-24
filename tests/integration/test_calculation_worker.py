@@ -392,6 +392,8 @@ def test_calculation_worker_opt_failure_auto_fallback_to_uff(qtbot, app):
     mol_block = data.to_mol_block()
 
     worker = CalculationWorker()
+    status_messages = []
+    worker.status_update.connect(lambda msg: status_messages.append(msg))
 
     with (
         patch(
@@ -409,6 +411,10 @@ def test_calculation_worker_opt_failure_auto_fallback_to_uff(qtbot, app):
         assert res_mol is not None
         assert res_mol.HasProp("_pme_optimization_method")
         assert res_mol.GetProp("_pme_optimization_method") == "UFF_RDKIT"
+        assert any(
+            "Process completed (RDKit Conversion / UFF (RDKit))" in msg
+            for msg in status_messages
+        )
 
 
 def test_calculation_worker_mmff_variants(qtbot, app):
