@@ -2806,6 +2806,16 @@ _init_manager.current_file_path is updated to the loaded file._
 
 - assert host.init_manager.current_file_path == str(xyz)
 
+### TestShowXYZData.test_sets_current_mol_and_draws
+_XYZ text display sets current_mol and enters 3D viewer mode._
+
+- assert result is mol
+- assert host.view_3d_manager.current_mol is mol
+- host.view_3d_manager.draw_molecule_3d.assert_called_once_with(mol)
+- host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+- host.ui_manager.enable_3d_features.assert_called_once_with(True)
+- assert host.is_xyz_derived is True
+
 ### TestSave3DAsMol.test_no_mol_shows_error_no_dialog
 _current_mol is None → error message, dialog never opened._
 
@@ -4004,6 +4014,25 @@ _Verify XYZ loading with automatic bond estimation._
 - assert mol.GetNumAtoms() == 2
 - assert mol.GetNumBonds() == 1
 
+### test_load_xyz_with_dummy_atom
+_Verify XYZ dummy atoms load as atomic-number-zero placeholders._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 2
+- assert mol.GetNumBonds() == 0
+- assert dummy_atom.GetAtomicNum() == 0
+- assert dummy_atom.GetSymbol() == '*'
+- assert dummy_atom.GetProp('xyz_original_symbol') == dummy_symbol
+- assert mol.HasProp('_xyz_skip_checks')
+
+### test_load_headerless_xyz_atom_rows
+_Verify XYZ import also accepts atom coordinate rows without headers._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 2
+- assert mol.GetAtomWithIdx(0).GetAtomicNum() == 0
+- assert mol.GetAtomWithIdx(0).GetProp('xyz_original_symbol') == '-'
+
 ### test_save_as_mol_logic
 _Verify saving a molecule as a MOL file._
 
@@ -4026,11 +4055,15 @@ _Verify handling of user cancellation during the charge input loop._
 
 - assert result is None
 
-### test_load_xyz_unrecognized_symbol
-_Test load_xyz_file raises ValueError for unrecognized element symbols._
+### test_load_xyz_unrecognized_symbol_as_dummy
+_Verify unrecognized XYZ symbols load as dummy atom placeholders._
 
-- assert mol is None
-- assert any(('Unrecognized element symbol' in m for m in msgs))
+- assert mol is not None
+- assert mol.GetNumAtoms() == 1
+- assert dummy_atom.GetAtomicNum() == 0
+- assert dummy_atom.GetSymbol() == '*'
+- assert dummy_atom.GetProp('xyz_original_symbol') == 'Xx'
+- assert mol.HasProp('_xyz_skip_checks')
 
 ### test_load_mol_file_with_v2000_fix
 _Verify that malformed V2000 headers are fixed automatically during MOL load._
@@ -4401,6 +4434,12 @@ _enter_3d_mode is an alias for enter_3d_viewer_mode._
 _load_from_smiles delegates to string_importer_manager and is safe when absent._
 
 - mock_main_window.string_importer_manager.load_from_smiles.assert_called_once_with('C')
+
+### TestPluginInterface.test_show_xyz_data
+_show_xyz_data delegates to IOManager and returns the loaded molecule._
+
+- assert mol == 'mol'
+- mock_main_window.io_manager.show_xyz_data.assert_called_once_with(xyz_text, source_name='plugin result')
 
 ### TestPluginInterface.test_to_xyz_block
 _to_xyz_block returns an XYZ string from current_mol, or None if no mol._
