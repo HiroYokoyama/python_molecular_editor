@@ -57,7 +57,7 @@ CLIPBOARD_MIME_TYPE = "application/x-moleditpy-fragment"
 
 # XYZ dummy/pseudo-atom labels that map to RDKit wildcard atom (*)
 DUMMY_XYZ_SYMBOLS: frozenset[str] = frozenset(
-    {"*", "-", "X", "DU", "DUM", "DUMMY", "Q", "BQ", "LP"}
+    {"*", "-", "X", "DA", "DU", "DUM", "DUMMY", "Q", "BQ", "LP"}
 )
 
 # Physical bond length (approximate) used to convert scene pixels to angstroms.
