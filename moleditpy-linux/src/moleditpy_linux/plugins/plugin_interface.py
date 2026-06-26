@@ -499,6 +499,17 @@ class PluginContext:
         if mw and hasattr(mw, "string_importer_manager"):
             mw.string_importer_manager.load_from_smiles(smiles)
 
+    def show_xyz_data(
+        self, xyz_text: str, source_name: str = "XYZ data"
+    ) -> Optional[Any]:
+        """Display XYZ text in the 3D viewer and return the loaded RDKit Mol."""
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "io_manager"):
+            show = getattr(mw.io_manager, "show_xyz_data", None)
+            if show is not None:
+                return show(xyz_text, source_name=source_name)
+        return None
+
     def to_xyz_block(self) -> Optional[str]:
         """Return the current 3D structure as an XYZ block (only element x y z lines)."""
         mol = self.current_mol
