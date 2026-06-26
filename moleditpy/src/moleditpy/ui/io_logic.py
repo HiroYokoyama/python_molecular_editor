@@ -112,14 +112,17 @@ class IOManager:
         if not lines:
             raise ValueError("XYZ file format error: too few lines")
 
+        atom_start = 2
         try:
-            num_atoms = int(lines[0])
-            atom_start = 2
             if len(lines) < 2:
                 raise ValueError("XYZ file format error: too few lines")
+            num_atoms = int(lines[0])
             if num_atoms == 0:
                 raise ValueError("XYZ file has zero atoms")
-        except ValueError:
+        except ValueError as exc:
+            # Not a standard headed XYZ — treat all lines as atom rows
+            if "zero atoms" in str(exc) or "too few" in str(exc):
+                raise
             num_atoms = len(lines)
             atom_start = 0
 
@@ -177,8 +180,8 @@ class IOManager:
                     candidate = mol_copy.GetMol()
                     _set_prop(candidate, "_xyz_charge", charge_val)
                     return candidate
-                except (RuntimeError, ValueError, TypeError) as e:
-                    raise e
+                except (RuntimeError, ValueError, TypeError):
+                    raise
             else:
                 self.estimate_bonds_from_distances(mol)
                 candidate = mol.GetMol()
@@ -190,7 +193,6 @@ class IOManager:
             _set_prop(final_mol, "_xyz_skip_checks", 1)
         else:
             final_mol = None
-            settings = self.host.init_manager.settings
             # First try with charge 0 (per user's 'first try with 0 then ask' requirement)
             # but only if "Always ask" is not explicitly enabled in settings.
             if not settings.get("always_ask_charge", False):
@@ -230,8 +232,6 @@ class IOManager:
                             raise e
 
         if final_mol:
-            final_mol.xyz_atom_data = atoms_data
-        if final_mol and has_dummy_atoms and not hasattr(final_mol, "xyz_atom_data"):
             final_mol.xyz_atom_data = atoms_data
         return final_mol
 
