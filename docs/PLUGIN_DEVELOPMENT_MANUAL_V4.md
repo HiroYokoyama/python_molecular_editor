@@ -129,6 +129,7 @@ The `context` object passed to `initialize(context)` is your safe proxy to the a
 | **Files** | `register_drop_handler(cb, priority)` | Handle drag-and-drop onto the window |
 | **Molecule** | `current_molecule` | Get / set the active RDKit mol |
 | **Molecule** | `load_from_smiles(smiles)` | Add molecule from SMILES string |
+| **Molecule** | `show_xyz_data(xyz_text, source_name="XYZ data")` | Display XYZ text in the 3D viewer |
 | **Molecule** | `to_xyz_block()` | Export current 3D coordinates as an XYZ block |
 | **Molecule** | `get_selected_atom_indices()` | Indices of user-selected atoms |
 | **Molecule** | `push_undo_checkpoint()` | Snapshot state to undo stack |
@@ -290,6 +291,25 @@ Get or set the active RDKit molecule object.
 #### `load_from_smiles(smiles)`
 Generate a 2D structure from a SMILES string and automatically add it to the 2D editor canvas.
 - **smiles** (`str`): The SMILES string.
+
+#### `show_xyz_data(xyz_text, source_name="XYZ data")`
+Parse XYZ text, set it as the active molecule, switch to the 3D viewer, and draw it immediately.
+- **xyz_text** (`str`): Either a full XYZ block with atom count/comment lines, or headerless atom rows in `symbol x y z` format.
+- **source_name** (`str`): Optional label used in the status bar.
+- **Returns** (`Optional[rdkit.Chem.Mol]`): The loaded molecule, or None if parsing fails.
+
+Dummy or non-standard atom labels are loaded as RDKit dummy atoms (`*`). This includes labels such as `-`, `X`, `X:`, and any unrecognized element token. Dummy atoms keep their original token in the atom property `xyz_original_symbol`.
+
+```python
+xyz_text = """- 0.000 0.000 0.000
+C 1.250 0.000 0.000
+O 2.400 0.000 0.000
+"""
+
+mol = context.show_xyz_data(xyz_text, source_name="ORCA result")
+if mol is None:
+    context.show_status_message("Failed to display XYZ data.", 3000)
+```
 
 #### `to_xyz_block()`
 Extracts the current 3D molecule structure and returns it as a string containing only the atomic elements and X, Y, Z coordinates. Omits standard XYZ headers (like atom count).

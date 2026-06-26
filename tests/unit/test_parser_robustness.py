@@ -150,7 +150,7 @@ def test_load_mol_counts_fix():
     "invalid_xyz",
     [
         "1\nTitle\n",  # Missing atom line
-        "1\nTitle\nX 0 0 0",  # Invalid element
+        "1\nTitle\nC 0.0 0.0",  # Missing coordinate (Z)
         "0\nTitle\n",  # Zero atoms
     ],
 )

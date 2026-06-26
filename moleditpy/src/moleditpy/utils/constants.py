@@ -55,6 +55,11 @@ BOND_OFFSET = 3.5
 DEFAULT_BOND_LENGTH = 75  # Standard bond length used in templates
 CLIPBOARD_MIME_TYPE = "application/x-moleditpy-fragment"
 
+# XYZ dummy/pseudo-atom labels that map to RDKit wildcard atom (*)
+DUMMY_XYZ_SYMBOLS: frozenset[str] = frozenset(
+    {"*", "-", "X", "DA", "DU", "DUM", "DUMMY", "Q", "BQ", "LP"}
+)
+
 # Physical bond length (approximate) used to convert scene pixels to angstroms.
 # DEFAULT_BOND_LENGTH is the length in pixels used in the editor UI for a typical bond.
 # Many molecular file formats expect coordinates in angstroms; use ~1.5 Å as a typical single-bond length.
