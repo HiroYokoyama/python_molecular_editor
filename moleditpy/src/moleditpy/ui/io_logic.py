@@ -37,6 +37,9 @@ from rdkit.Chem import AllChem, rdGeometry, rdMolTransforms, Descriptors
 from ..utils.constants import COVALENT_RADII, VERSION
 
 
+DUMMY_XYZ_SYMBOLS = {"*", "-", "X", "DU", "DUM", "DUMMY", "Q", "BQ", "LP"}
+
+
 class IOManager:
     """Independent manager for IO actions (Load/Save), ported from Mixins."""
 
@@ -84,6 +87,154 @@ class IOManager:
         lines[3] = self.fix_mol_counts_line(lines[3])
         return "\n".join(lines)
 
+    def _normalize_xyz_symbol(self, raw_symbol: str) -> Tuple[str, bool]:
+        """Return the RDKit symbol for an XYZ atom and whether it is a dummy."""
+        stripped = raw_symbol.strip()
+        if ":" in stripped:
+            return "*", True
+        if stripped.upper() in DUMMY_XYZ_SYMBOLS:
+            return "*", True
+        symbol = stripped.capitalize()
+        try:
+            atomic_num = Chem.GetPeriodicTable().GetAtomicNumber(symbol)
+        except (RuntimeError, ValueError, TypeError):
+            return "*", True
+        if atomic_num <= 0:
+            return "*", True
+        return symbol, False
+
+    def _mol_from_xyz_lines(self, raw_lines: list[str]) -> Any:
+        """Create an RDKit molecule from XYZ text lines."""
+        lines = [ln.strip() for ln in raw_lines if not ln.strip().startswith("#")]
+        while lines and not lines[0]:
+            lines.pop(0)
+
+        if not lines:
+            raise ValueError("XYZ file format error: too few lines")
+
+        try:
+            num_atoms = int(lines[0])
+            atom_start = 2
+            if len(lines) < 2:
+                raise ValueError("XYZ file format error: too few lines")
+            if num_atoms == 0:
+                raise ValueError("XYZ file has zero atoms")
+        except ValueError:
+            num_atoms = len(lines)
+            atom_start = 0
+
+        atoms_data = []
+        has_dummy_atoms = False
+        atom_lines = lines[atom_start : atom_start + num_atoms]
+        if len(atom_lines) < num_atoms:
+            raise ValueError("XYZ file format error: fewer atom rows than expected")
+
+        for i, line in enumerate(atom_lines):
+            parts = line.split()
+            if len(parts) < 4:
+                raise ValueError(f"Invalid atom data at line {atom_start + i + 1}")
+            raw_symbol = parts[0]
+            symbol, is_dummy = self._normalize_xyz_symbol(raw_symbol)
+            has_dummy_atoms = has_dummy_atoms or is_dummy
+            atoms_data.append(
+                (symbol, float(parts[1]), float(parts[2]), float(parts[3]))
+            )
+
+        if not atoms_data:
+            raise ValueError("No valid atoms found in XYZ file")
+
+        mol = Chem.RWMol()
+        conf = Chem.Conformer(len(atoms_data))
+        for i, (symbol, x, y, z) in enumerate(atoms_data):
+            atom = Chem.Atom(symbol)
+            atom.SetIntProp("xyz_unique_id", i)
+            if atom.GetAtomicNum() == 0:
+                atom.SetProp("xyz_original_symbol", atom_lines[i].split()[0])
+            mol.AddAtom(atom)
+            conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
+        mol.AddConformer(conf)
+
+        settings = self.host.init_manager.settings
+        skip_checks = bool(settings.get("skip_chemistry_checks", False))
+
+        def _set_prop(m: Chem.Mol, key: str, val: Any) -> None:
+            try:
+                if isinstance(val, int):
+                    m.SetIntProp(key, val)
+                elif isinstance(val, float):
+                    m.SetDoubleProp(key, val)
+            except (RuntimeError, TypeError, ValueError):
+                # Safe defensive fallback catching RuntimeError, TypeError, ValueError
+                pass
+
+        def _process(charge_val: int, use_rd_determine: bool = True) -> Any:
+            if use_rd_determine:
+                try:
+                    from rdkit.Chem import rdDetermineBonds
+
+                    mol_copy = Chem.RWMol(mol)
+                    rdDetermineBonds.DetermineBonds(mol_copy, charge=charge_val)
+                    candidate = mol_copy.GetMol()
+                    _set_prop(candidate, "_xyz_charge", charge_val)
+                    return candidate
+                except (RuntimeError, ValueError, TypeError) as e:
+                    raise e
+            else:
+                self.estimate_bonds_from_distances(mol)
+                candidate = mol.GetMol()
+                _set_prop(candidate, "_xyz_charge", charge_val)
+                return candidate
+
+        if skip_checks or has_dummy_atoms:
+            final_mol = _process(0, use_rd_determine=False)
+            _set_prop(final_mol, "_xyz_skip_checks", 1)
+        else:
+            final_mol = None
+            settings = self.host.init_manager.settings
+            # First try with charge 0 (per user's 'first try with 0 then ask' requirement)
+            # but only if "Always ask" is not explicitly enabled in settings.
+            if not settings.get("always_ask_charge", False):
+                try:
+                    final_mol = _process(0, use_rd_determine=True)
+                except (RuntimeError, ValueError, TypeError):
+                    final_mol = None
+
+            # If still no final_mol (because always_ask is True, or charge 0 failed)
+            if final_mol is None:
+                while True:
+                    prompt_fn = getattr(self, "prompt_for_charge", None)
+                    if callable(prompt_fn):
+                        result = prompt_fn()
+                        if isinstance(result, tuple) and len(result) == 3:
+                            charge_val, ok, skip_flag = result
+                        else:
+                            charge_val, ok, skip_flag = 0, True, False
+                    else:
+                        charge_val, ok, skip_flag = 0, True, False
+
+                    if not ok:
+                        return None
+                    if skip_flag:
+                        final_mol = _process(0, use_rd_determine=False)
+                        _set_prop(final_mol, "_xyz_skip_checks", 1)
+                        break
+                    try:
+                        final_mol = _process(charge_val, use_rd_determine=True)
+                        break
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        if self.host.statusBar():
+                            self.host.statusBar().showMessage(
+                                f"Chemistry failed for charge {charge_val}: {e}. Try a different charge or skip."
+                            )
+                        if not callable(prompt_fn):
+                            raise e
+
+        if final_mol:
+            final_mol.xyz_atom_data = atoms_data
+        if final_mol and has_dummy_atoms and not hasattr(final_mol, "xyz_atom_data"):
+            final_mol.xyz_atom_data = atoms_data
+        return final_mol
+
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
         """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
         if not self.host.state_manager.check_unsaved_changes():
@@ -91,130 +242,53 @@ class IOManager:
 
         try:
             with open(file_path, "r", encoding="utf-8") as f:
-                raw_lines = f.readlines()
-
-            lines = [ln.strip() for ln in raw_lines if not ln.strip().startswith("#")]
-            while lines and not lines[0]:
-                lines.pop(0)
-
-            if len(lines) < 2:
-                raise ValueError("XYZ file format error: too few lines")
-
-            num_atoms = int(lines[0])
-            if num_atoms == 0:
-                raise ValueError("XYZ file has zero atoms")
-
-            atoms_data = []
-            for i, line in enumerate(lines[2 : 2 + num_atoms]):
-                parts = line.split()
-                if len(parts) < 4:
-                    raise ValueError(f"Invalid atom data at line {i + 3}")
-                symbol = parts[0].capitalize()
-                try:
-                    Chem.Atom(symbol)
-                except (RuntimeError, ValueError):
-                    settings = self.host.init_manager.settings
-                    if settings.get("skip_chemistry_checks", False):
-                        symbol = "C"
-                    else:
-                        raise ValueError(f"Unrecognized element symbol: {parts[0]}")
-                atoms_data.append(
-                    (symbol, float(parts[1]), float(parts[2]), float(parts[3]))
-                )
-
-            if not atoms_data:
-                raise ValueError("No valid atoms found in XYZ file")
-
-            mol = Chem.RWMol()
-            conf = Chem.Conformer(len(atoms_data))
-            for i, (symbol, x, y, z) in enumerate(atoms_data):
-                atom = Chem.Atom(symbol)
-                atom.SetIntProp("xyz_unique_id", i)
-                mol.AddAtom(atom)
-                conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
-            mol.AddConformer(conf)
-
-            settings = self.host.init_manager.settings
-            skip_checks = bool(settings.get("skip_chemistry_checks", False))
-
-            def _set_prop(m: Chem.Mol, key: str, val: Any) -> None:
-                try:
-                    if isinstance(val, int):
-                        m.SetIntProp(key, val)
-                    elif isinstance(val, float):
-                        m.SetDoubleProp(key, val)
-                except (RuntimeError, TypeError, ValueError):
-                    # Safe defensive fallback catching RuntimeError, TypeError, ValueError
-                    pass
-
-            def _process(charge_val: int, use_rd_determine: bool = True) -> Any:
-                if use_rd_determine:
-                    try:
-                        from rdkit.Chem import rdDetermineBonds
-
-                        mol_copy = Chem.RWMol(mol)
-                        rdDetermineBonds.DetermineBonds(mol_copy, charge=charge_val)
-                        candidate = mol_copy.GetMol()
-                        _set_prop(candidate, "_xyz_charge", charge_val)
-                        return candidate
-                    except (RuntimeError, ValueError, TypeError) as e:
-                        raise e
-                else:
-                    self.estimate_bonds_from_distances(mol)
-                    candidate = mol.GetMol()
-                    _set_prop(candidate, "_xyz_charge", charge_val)
-                    return candidate
-
-            if skip_checks:
-                final_mol = _process(0, use_rd_determine=False)
-                _set_prop(final_mol, "_xyz_skip_checks", 1)
-            else:
-                final_mol = None
-                settings = self.host.init_manager.settings
-                # First try with charge 0 (per user's 'first try with 0 then ask' requirement)
-                # but only if "Always ask" is not explicitly enabled in settings.
-                if not settings.get("always_ask_charge", False):
-                    try:
-                        final_mol = _process(0, use_rd_determine=True)
-                    except (RuntimeError, ValueError, TypeError):
-                        final_mol = None
-
-                # If still no final_mol (because always_ask is True, or charge 0 failed)
-                if final_mol is None:
-                    while True:
-                        prompt_fn = getattr(self, "prompt_for_charge", None)
-                        if callable(prompt_fn):
-                            result = prompt_fn()
-                            if isinstance(result, tuple) and len(result) == 3:
-                                charge_val, ok, skip_flag = result
-                            else:
-                                charge_val, ok, skip_flag = 0, True, False
-                        else:
-                            charge_val, ok, skip_flag = 0, True, False
-
-                        if not ok:
-                            return None
-                        if skip_flag:
-                            final_mol = _process(0, use_rd_determine=False)
-                            _set_prop(final_mol, "_xyz_skip_checks", 1)
-                            break
-                        try:
-                            final_mol = _process(charge_val, use_rd_determine=True)
-                            break
-                        except (RuntimeError, ValueError, TypeError) as e:
-                            if self.host.statusBar():
-                                self.host.statusBar().showMessage(
-                                    f"Chemistry failed for charge {charge_val}: {e}. Try a different charge or skip."
-                                )
-                            if not callable(prompt_fn):
-                                raise e
-
-                if final_mol:
-                    final_mol.xyz_atom_data = atoms_data
-            return final_mol
-
+                return self._mol_from_xyz_lines(f.readlines())
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
             self.host.statusBar().showMessage(f"Error parsing XYZ file: {e}")
+            return None
+
+    def load_xyz_block(self, xyz_text: str) -> Optional[Any]:
+        """Load XYZ text and create an RDKit Mol without opening a file dialog."""
+        try:
+            return self._mol_from_xyz_lines(xyz_text.splitlines())
+        except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
+            self.host.statusBar().showMessage(f"Error parsing XYZ data: {e}")
+            return None
+
+    def show_xyz_data(
+        self, xyz_text: str, source_name: str = "XYZ data"
+    ) -> Optional[Any]:
+        """Load XYZ text, set it as the current molecule, and draw it in 3D."""
+        try:
+            mol = self.load_xyz_block(xyz_text)
+            if mol is None:
+                return None
+
+            self.host.edit_actions_manager.clear_all(skip_check=True)
+            self.host.set_current_molecule(mol)
+            self.host.set_atom_id_to_rdkit_idx_map({})
+
+            skip_flag = False
+            if mol.HasProp("_xyz_skip_checks"):
+                skip_flag = bool(mol.GetIntProp("_xyz_skip_checks"))
+            self.host.is_xyz_derived = skip_flag or (mol.GetNumBonds() == 0)
+
+            self.host.view_3d_manager.draw_molecule_3d(mol)
+            self.host.ui_manager.enter_3d_viewer_mode()
+            self.host.ui_manager.enable_3d_features(True)
+            self.host.view_3d_manager.update_atom_id_menu_text()
+            self.host.view_3d_manager.update_atom_id_menu_state()
+
+            if self.host.statusBar():
+                self.host.statusBar().showMessage(
+                    f"3D Viewer Mode: Loaded {source_name}"
+                )
+            self.host.set_has_unsaved_changes(False)
+            self.host.state_manager.update_window_title()
+            return mol
+        except (RuntimeError, TypeError, ValueError, AttributeError) as e:
+            if self.host.statusBar():
+                self.host.statusBar().showMessage(f"XYZ display failed: {e}")
             return None
 
     def prompt_for_charge(self) -> Tuple[Optional[int], bool, bool]:
@@ -261,6 +335,8 @@ class IOManager:
             for j in range(i + 1, num_atoms):
                 atom_i = mol.GetAtomWithIdx(i)
                 atom_j = mol.GetAtomWithIdx(j)
+                if atom_i.GetAtomicNum() == 0 or atom_j.GetAtomicNum() == 0:
+                    continue
                 distance = rdMolTransforms.GetBondLength(conf, i, j)
                 symbol_i = atom_i.GetSymbol()
                 symbol_j = atom_j.GetSymbol()

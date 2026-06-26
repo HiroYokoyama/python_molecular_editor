@@ -282,6 +282,40 @@ def test_load_xyz_file_with_estimation(mock_parser_host, tmp_path):
     assert mol.GetNumBonds() == 1
 
 
+@pytest.mark.parametrize("dummy_symbol", ["X", "X:", "-"])
+def test_load_xyz_with_dummy_atom(mock_parser_host, tmp_path, dummy_symbol):
+    """Verify XYZ dummy atoms load as atomic-number-zero placeholders."""
+    parser = DummyParser(mock_parser_host)
+    xyz_content = f"2\nDummy site\n{dummy_symbol} 0.0 0.0 0.0\nC 1.0 0.0 0.0\n"
+    xyz_file = tmp_path / "dummy.xyz"
+    xyz_file.write_text(xyz_content)
+
+    mol = parser.load_xyz_file(str(xyz_file))
+
+    assert mol is not None
+    assert mol.GetNumAtoms() == 2
+    assert mol.GetNumBonds() == 0
+    dummy_atom = mol.GetAtomWithIdx(0)
+    assert dummy_atom.GetAtomicNum() == 0
+    assert dummy_atom.GetSymbol() == "*"
+    assert dummy_atom.GetProp("xyz_original_symbol") == dummy_symbol
+    assert mol.HasProp("_xyz_skip_checks")
+
+
+def test_load_headerless_xyz_atom_rows(mock_parser_host, tmp_path):
+    """Verify XYZ import also accepts atom coordinate rows without headers."""
+    parser = DummyParser(mock_parser_host)
+    xyz_file = tmp_path / "headerless.xyz"
+    xyz_file.write_text("- 0.0 0.0 0.0\nC 1.0 0.0 0.0\n")
+
+    mol = parser.load_xyz_file(str(xyz_file))
+
+    assert mol is not None
+    assert mol.GetNumAtoms() == 2
+    assert mol.GetAtomWithIdx(0).GetAtomicNum() == 0
+    assert mol.GetAtomWithIdx(0).GetProp("xyz_original_symbol") == "-"
+
+
 def test_save_as_mol_logic(mock_parser_host, tmp_path):
     """Verify saving a molecule as a MOL file."""
     parser = DummyParser(mock_parser_host)
@@ -343,18 +377,20 @@ def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
     assert result is None
 
 
-def test_load_xyz_unrecognized_symbol(mock_parser_host, tmp_path):
-    """Test load_xyz_file raises ValueError for unrecognized element symbols."""
+def test_load_xyz_unrecognized_symbol_as_dummy(mock_parser_host, tmp_path):
+    """Verify unrecognized XYZ symbols load as dummy atom placeholders."""
     parser = DummyParserExt(mock_parser_host)
     xyz_path = tmp_path / "unknown.xyz"
     xyz_path.write_text("1\nUnknown\nXx 0.0 0.0 0.0\n")
     parser.settings["skip_chemistry_checks"] = False
     mol = parser.load_xyz_file(str(xyz_path))
-    assert mol is None
-    msgs = [
-        str(c.args[0]) for c in parser.statusBar().showMessage.call_args_list if c.args
-    ]
-    assert any("Unrecognized element symbol" in m for m in msgs)
+    assert mol is not None
+    assert mol.GetNumAtoms() == 1
+    dummy_atom = mol.GetAtomWithIdx(0)
+    assert dummy_atom.GetAtomicNum() == 0
+    assert dummy_atom.GetSymbol() == "*"
+    assert dummy_atom.GetProp("xyz_original_symbol") == "Xx"
+    assert mol.HasProp("_xyz_skip_checks")
 
 
 def test_load_mol_file_with_v2000_fix(mock_parser_host, tmp_path):

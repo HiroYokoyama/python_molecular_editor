@@ -352,6 +352,29 @@ class TestLoadXYZFor3DViewing:
         assert host.init_manager.current_file_path == str(xyz)
 
 
+class TestShowXYZData:
+    """Tests for IOManager.show_xyz_data()."""
+
+    def test_sets_current_mol_and_draws(self, qapp):
+        """XYZ text display sets current_mol and enters 3D viewer mode."""
+        host = DummyHost()
+        io = IOManager(host)
+        mol = MagicMock()
+        mol.HasProp.return_value = True
+        mol.GetIntProp.return_value = 1
+        mol.GetNumBonds.return_value = 0
+        io.load_xyz_block = MagicMock(return_value=mol)
+
+        result = io.show_xyz_data("- 0.0 0.0 0.0\n", "plugin result")
+
+        assert result is mol
+        assert host.view_3d_manager.current_mol is mol
+        host.view_3d_manager.draw_molecule_3d.assert_called_once_with(mol)
+        host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+        host.ui_manager.enable_3d_features.assert_called_once_with(True)
+        assert host.is_xyz_derived is True
+
+
 # ===========================================================================
 # Tests for save_3d_as_mol
 # ===========================================================================

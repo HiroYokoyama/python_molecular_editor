@@ -442,6 +442,21 @@ class TestPluginInterface:
         del mock_main_window.string_importer_manager
         ctx.load_from_smiles("C")  # Should not raise
 
+    def test_show_xyz_data(self, mock_manager, mock_main_window):
+        """show_xyz_data delegates to IOManager and returns the loaded molecule."""
+        mock_manager.get_main_window.return_value = mock_main_window
+        mock_main_window.io_manager = MagicMock()
+        mock_main_window.io_manager.show_xyz_data.return_value = "mol"
+        ctx = PluginContext(mock_manager, "TestPlugin")
+        xyz_text = "1\nGenerated\n- 0.0 0.0 0.0\n"
+
+        mol = ctx.show_xyz_data(xyz_text, source_name="plugin result")
+
+        assert mol == "mol"
+        mock_main_window.io_manager.show_xyz_data.assert_called_once_with(
+            xyz_text, source_name="plugin result"
+        )
+
     def test_to_xyz_block(self, mock_manager, mock_main_window):
         """to_xyz_block returns an XYZ string from current_mol, or None if no mol."""
         from rdkit import Chem
