@@ -34,10 +34,7 @@ from PyQt6.QtWidgets import (
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry, rdMolTransforms, Descriptors
 
-from ..utils.constants import COVALENT_RADII, VERSION
-
-
-DUMMY_XYZ_SYMBOLS = {"*", "-", "X", "DU", "DUM", "DUMMY", "Q", "BQ", "LP"}
+from ..utils.constants import COVALENT_RADII, DUMMY_XYZ_SYMBOLS, VERSION
 
 
 class IOManager:
