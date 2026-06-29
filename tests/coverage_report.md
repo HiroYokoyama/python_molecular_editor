@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **82.47%**
+- **Overall Project Coverage**: **82.34%**
 
 ### Coverage Breakdown
 
@@ -10,8 +10,8 @@
 | moleditpy\src\moleditpy\main.py                         |    112 |     33 |   70.5% |
 | moleditpy\src\moleditpy\core\mol_geometry.py            |    260 |     19 |   92.7% |
 | moleditpy\src\moleditpy\core\molecular_data.py          |    245 |     29 |   88.2% |
-| moleditpy\src\moleditpy\plugins\plugin_interface.py     |    231 |      6 |   97.4% |
-| moleditpy\src\moleditpy\plugins\plugin_manager.py       |    369 |     10 |   97.3% |
+| moleditpy\src\moleditpy\plugins\plugin_interface.py     |    233 |      6 |   97.4% |
+| moleditpy\src\moleditpy\plugins\plugin_manager.py       |    370 |     10 |   97.3% |
 | moleditpy\src\moleditpy\plugins\plugin_manager_window.py |    185 |      2 |   98.9% |
 | moleditpy\src\moleditpy\ui\__init__.py                  |      7 |      3 |   57.1% |
 | moleditpy\src\moleditpy\ui\about_dialog.py              |     64 |     13 |   79.7% |
@@ -45,7 +45,7 @@
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    952 |    161 |   83.1% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    614 |    128 |   79.2% |
 | moleditpy\src\moleditpy\ui\move_group_dialog.py         |    386 |    130 |   66.3% |
-| moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py |    390 |     41 |   89.5% |
+| moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py |    462 |     75 |   83.8% |
 | moleditpy\src\moleditpy\ui\periodic_table_dialog.py     |     37 |      2 |   94.6% |
 | moleditpy\src\moleditpy\ui\planarize_dialog.py          |    111 |     10 |   91.0% |
 | moleditpy\src\moleditpy\ui\plugin_menu_manager.py       |    252 |     49 |   80.6% |
@@ -66,7 +66,7 @@
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     36 |      0 |  100.0% |
-| **TOTAL** | **15743** | **2760** | **82.47%** |
+| **TOTAL** | **15818** | **2794** | **82.34%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

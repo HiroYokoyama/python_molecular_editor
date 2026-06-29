@@ -190,11 +190,9 @@ class PluginContext:
         Get or set the current molecule (RDKit Mol object). Shortcut for current_molecule.
         """
         mw = self.get_main_window()
-        return (
-            mw.view_3d_manager.current_mol
-            if mw and hasattr(mw, "view_3d_manager")
-            else None
-        )
+        if mw and hasattr(mw, "view_3d_manager"):
+            return mw.view_3d_manager.current_mol
+        return None
 
     @current_mol.setter
     def current_mol(self, mol: Any) -> None:
