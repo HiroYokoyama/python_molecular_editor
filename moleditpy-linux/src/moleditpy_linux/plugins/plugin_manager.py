@@ -588,7 +588,8 @@ class PluginManager:
                         selected_atom_ids.add(item.atom_id)
 
                 # Now map these editor IDs to RDKit indices
-                mol = getattr(self.main_window, "current_mol", None)
+                v3d = getattr(self.main_window, "view_3d_manager", None)
+                mol = v3d.current_mol if v3d else None
                 if mol and selected_atom_ids:
                     for i in range(mol.GetNumAtoms()):
                         atom = mol.GetAtomWithIdx(i)

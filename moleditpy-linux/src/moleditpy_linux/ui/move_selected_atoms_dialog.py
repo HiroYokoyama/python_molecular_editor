@@ -56,6 +56,8 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         self.mouse_moved_during_drag: bool = False
         self._consume_next_left_release: bool = False
         self.highlight_actor: Optional[pv.Actor] = None
+        self.original_style: Optional[Any] = None
+        self.rubber_band_style: Optional[Any] = None
 
         self.widgets: dict[str, Any] = {}
 
@@ -211,6 +213,13 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
     def _init_buttons_ui(self, layout: QVBoxLayout) -> None:
         """Initialize bottom buttons."""
         button_layout = QHBoxLayout()
+
+        box_select_btn = QPushButton("Box Selection: OFF")
+        box_select_btn.setCheckable(True)
+        box_select_btn.clicked.connect(self.toggle_box_selection)
+        self.widgets["box_select_btn"] = box_select_btn
+        button_layout.addWidget(box_select_btn)
+
         clear_btn = QPushButton("Clear Selection")
         clear_btn.clicked.connect(self.clear_selection)
         self.widgets["clear_button"] = clear_btn
@@ -237,6 +246,24 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
             return super().eventFilter(obj, event)
 
         e_type = event.type()
+
+        btn = self.widgets.get("box_select_btn")
+        box_selection_on = btn is not None and btn.isChecked()
+
+        if e_type == QEvent.Type.MouseButtonPress:
+            self._click_press_pos = getattr(event, "pos", lambda: None)()
+        elif e_type == QEvent.Type.MouseButtonRelease:
+            if hasattr(self, "_click_press_pos") and self._click_press_pos is not None:
+                pos = getattr(event, "pos", lambda: None)()
+                if pos:
+                    diff = pos - self._click_press_pos
+                    if diff.manhattanLength() < 3:
+                        if box_selection_on:
+                            self.clear_selection()
+            self._click_press_pos = None
+
+        if box_selection_on:
+            return False
 
         if e_type == QEvent.Type.MouseButtonDblClick:
             # Ignore double clicks and reset state
@@ -645,3 +672,78 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         self.update_display()
         self.is_dragging_group = False
         self.drag_start_pos = None
+
+    def toggle_box_selection(self, checked: bool) -> None:
+        """Toggle Box Selection mode using PyVista's rectangle picker."""
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is None or plotter.interactor is None:
+            return
+
+        btn = self.widgets["box_select_btn"]
+        if checked:
+            btn.setText("Box Selection: ON")
+            # Save original style if not saved
+            if self.original_style is None:
+                self.original_style = plotter.interactor.GetInteractorStyle()
+
+            # Using PyVista's built-in picking which reliably draws the box correctly
+            plotter.enable_rectangle_picking(
+                callback=self.on_rectangle_picked,
+                show_message=False,
+                start=True,
+                color="red",
+            )
+        else:
+            btn.setText("Box Selection: OFF")
+            plotter.disable_picking()
+            # Restore original style
+            if self.original_style is not None:
+                plotter.interactor.SetInteractorStyle(self.original_style)
+                self.rubber_band_style = None
+
+    def on_rectangle_picked(self, selection: Any) -> None:
+        """Handle PyVista rectangle picking callback."""
+        if not hasattr(selection, "viewport"):
+            return
+
+        x0, y0, x1, y1 = selection.viewport
+        x_min = min(x0, x1)
+        x_max = max(x0, x1)
+        y_min = min(y0, y1)
+        y_max = max(y0, y1)
+
+        # If the drag box is small, treat it as a single click to clear selection
+        if abs(x_max - x_min) < 15 and abs(y_max - y_min) < 15:
+            self.clear_selection()
+            return
+
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is None:
+            return
+        renderer = plotter.renderer
+
+        positions = self.main_window.view_3d_manager.atom_positions_3d
+        if positions is not None:
+            added = False
+            for atom_idx, pos in enumerate(positions):
+                renderer.SetWorldPoint(float(pos[0]), float(pos[1]), float(pos[2]), 1.0)
+                renderer.WorldToDisplay()
+                display = renderer.GetDisplayPoint()
+
+                if x_min <= display[0] <= x_max and y_min <= display[1] <= y_max:
+                    if atom_idx not in self.selected_atoms:
+                        self.selected_atoms.add(atom_idx)
+                        added = True
+
+            if added:
+                self.show_atom_labels()
+                self.update_display()
+
+    def reject(self) -> None:
+        """Clean up when dialog closes."""
+        # Ensure we restore the interactor style if it was left in Box Selection mode
+        btn = self.widgets.get("box_select_btn")
+        if btn and btn.isChecked():
+            btn.setChecked(False)
+            self.toggle_box_selection(False)
+        super().reject()
