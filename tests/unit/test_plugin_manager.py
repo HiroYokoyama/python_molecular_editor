@@ -682,7 +682,8 @@ except BaseException:
         atom.GetIntProp.return_value = 99
         mol.GetAtomWithIdx.return_value = atom
 
-        pm.main_window.current_mol = mol
+        pm.main_window.view_3d_manager = MagicMock()
+        pm.main_window.view_3d_manager.current_mol = mol
 
         indices = pm.get_selected_atom_indices()
         assert indices == [0]

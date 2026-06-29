@@ -3947,6 +3947,18 @@ _show_atom_labels restores the camera position after adding highlight meshes._
 - assert plotter.camera_position == [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
 - plotter.render.assert_called()
 
+### test_box_selection_toggle_button
+_Test that the Box Selection toggle enables/disables rectangle picking._
+
+- plotter.enable_rectangle_picking.assert_called_once()
+- assert dlg.original_style == 'mock_style'
+- plotter.disable_picking.assert_called_once()
+
+### test_box_selection_click_to_reset
+_Test that a single click clears the selection when Box Selection is ON._
+
+- mock_clear.assert_called_once()
+
 ## tests/unit/test_parser_robustness.py
 
 ### test_set_mol_prop_safe_robustness
