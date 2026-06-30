@@ -107,7 +107,8 @@ def sync_linux_for_e2e(base_dir):
 
 
 def run_suite(
-    name, path, env_vars=None, extra_args=None, enable_cov=True, exitfirst=False
+    name, path, env_vars=None, extra_args=None, enable_cov=True, exitfirst=False,
+    cov_source=None,
 ):
     """Run a test suite in a separate process for isolation."""
     print(
@@ -130,7 +131,8 @@ def run_suite(
     ]
 
     if enable_cov:
-        cmd.extend(["--cov=moleditpy", "--cov-append", "--cov-report="])
+        source = cov_source or "moleditpy"
+        cmd.extend([f"--cov={source}", "--cov-append", "--cov-report="])
 
     if extra_args:
         cmd.extend(extra_args)
@@ -359,6 +361,11 @@ if __name__ == "__main__":
 
     for name, path in suites:
         try:
+            # E2E uses moleditpy_linux on Linux, moleditpy elsewhere
+            e2e_cov = (
+                "moleditpy_linux" if name == "E2E" and platform.system() == "Linux"
+                else None
+            )
             ret_code = run_suite(
                 name,
                 path,
@@ -366,6 +373,7 @@ if __name__ == "__main__":
                 extra_args=extra_pytest_args,
                 enable_cov=enable_cov,
                 exitfirst=args.exitfirst,
+                cov_source=e2e_cov,
             )
             results[name] = "PASSED" if ret_code == 0 else "FAILED"
         except KeyboardInterrupt:
