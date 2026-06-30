@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 import argparse
 import subprocess
 import time
@@ -84,6 +85,25 @@ def _run_once(name, cmd, env):
     duration = time.time() - start_ts
     print(f"  [END] {name}: exit={returncode} elapsed={duration:.1f}s", flush=True)
     return returncode, "".join(output_lines), duration
+
+
+def sync_linux_for_e2e(base_dir):
+    """Sync moleditpy → moleditpy-linux before running e2e tests on Linux."""
+    sync_script = os.path.join(base_dir, "scripts", "sync_linux_version.py")
+    if not os.path.exists(sync_script):
+        print("  [SKIP] sync_linux_version.py not found — skipping Linux sync", flush=True)
+        return
+    print("\n>>> Syncing Linux version before E2E tests...", flush=True)
+    result = subprocess.run(
+        [sys.executable, sync_script],
+        cwd=base_dir,
+        capture_output=True,
+        text=True,
+    )
+    print(result.stdout, end="", flush=True)
+    if result.returncode != 0:
+        print(f"  Warning: sync_linux_version.py exited {result.returncode}", flush=True)
+        print(result.stderr, end="", flush=True)
 
 
 def run_suite(
@@ -331,6 +351,8 @@ if __name__ == "__main__":
     if args.integration or run_all:
         suites.append(("INTEGRATION", INTEGRATION_DIR))
     if args.e2e or run_all:
+        if platform.system() == "Linux":
+            sync_linux_for_e2e(BASE_DIR)
         suites.append(("E2E", E2E_DIR))
     if args.gui or run_all:
         suites.append(("GUI", GUI_DIR))
@@ -362,6 +384,7 @@ if __name__ == "__main__":
     for name, path in [
         ("UNIT", UNIT_DIR),
         ("INTEGRATION", INTEGRATION_DIR),
+        ("E2E", E2E_DIR),
         ("GUI", GUI_DIR),
     ]:
         status = results.get(name, "SKIPPED")
