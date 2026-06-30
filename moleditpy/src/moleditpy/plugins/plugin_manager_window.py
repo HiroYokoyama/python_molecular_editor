@@ -156,13 +156,12 @@ class PluginManagerWindow(QDialog):
             self.btn_remove.setEnabled(has_selection)
 
     def on_reload(self, silent: bool = False) -> None:
-        """Reload all plugins from disk and refresh the table."""
-        # Trigger reload in main manager
+        """Reload all plugins from disk, rebuild main-window UI, and refresh the table."""
         if self.plugin_manager.main_window:
             self.plugin_manager.discover_plugins(self.plugin_manager.main_window)
+            self.plugin_manager.rebuild_plugin_menus()
             self.refresh_plugin_list()
 
-            # For immediate feedback:
             if not silent:
                 QMessageBox.information(self, "Reloaded", "Plugins have been reloaded.")
         else:
