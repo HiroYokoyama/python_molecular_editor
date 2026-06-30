@@ -48,6 +48,7 @@ _OS_LABEL = platform.system()  # "Windows" / "Linux" / "Darwin"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _build_ethane() -> str:
     """Return a MOL-block string for ethane (2 C, 1 bond) via MolecularData."""
     data = MolecularData()
@@ -91,6 +92,7 @@ def _assert_ethane_3d(mol, mode_label: str) -> None:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_ethane_2d_structure():
     """Ethane can be built as a 2D MolecularData on every platform."""

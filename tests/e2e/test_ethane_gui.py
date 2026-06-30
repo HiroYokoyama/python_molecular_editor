@@ -23,6 +23,7 @@ _OS_LABEL = platform.system()
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _draw_ethane(window):
     """Draw ethane (2 C atoms, 1 bond) in the 2D scene programmatically."""
     scene = window.init_manager.scene
@@ -39,9 +40,7 @@ def _assert_ethane_3d(mol):
     assert mol.GetNumConformers() > 0, f"[{_OS_LABEL}] no 3D conformer"
 
     carbons = [a for a in mol.GetAtoms() if a.GetSymbol() == "C"]
-    assert len(carbons) == 2, (
-        f"[{_OS_LABEL}] expected 2 carbons, got {len(carbons)}"
-    )
+    assert len(carbons) == 2, f"[{_OS_LABEL}] expected 2 carbons, got {len(carbons)}"
 
     conf = mol.GetConformer()
     p0 = np.array(conf.GetAtomPosition(carbons[0].GetIdx()))
@@ -56,6 +55,7 @@ def _assert_ethane_3d(mol):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.gui
 def test_mainwindow_launches(window):
@@ -89,9 +89,7 @@ def test_ethane_2d_to_3d_via_button(window, qtbot):
     """Clicking Convert produces a real 3D mol with correct C-C geometry."""
     _draw_ethane(window)
 
-    qtbot.mouseClick(
-        window.init_manager.convert_button, Qt.MouseButton.LeftButton
-    )
+    qtbot.mouseClick(window.init_manager.convert_button, Qt.MouseButton.LeftButton)
     qtbot.waitUntil(
         lambda: window.view_3d_manager.current_mol is not None, timeout=5000
     )
@@ -103,9 +101,7 @@ def test_ethane_2d_to_3d_via_button(window, qtbot):
 def test_3d_buttons_enabled_after_conversion(window, qtbot):
     """Export and Optimize buttons become active after a successful conversion."""
     _draw_ethane(window)
-    qtbot.mouseClick(
-        window.init_manager.convert_button, Qt.MouseButton.LeftButton
-    )
+    qtbot.mouseClick(window.init_manager.convert_button, Qt.MouseButton.LeftButton)
     qtbot.waitUntil(
         lambda: window.view_3d_manager.current_mol is not None, timeout=5000
     )
@@ -119,9 +115,7 @@ def test_3d_buttons_enabled_after_conversion(window, qtbot):
 def test_clear_resets_3d_mol(window, qtbot):
     """Clear All resets current_mol back to None."""
     _draw_ethane(window)
-    qtbot.mouseClick(
-        window.init_manager.convert_button, Qt.MouseButton.LeftButton
-    )
+    qtbot.mouseClick(window.init_manager.convert_button, Qt.MouseButton.LeftButton)
     qtbot.waitUntil(
         lambda: window.view_3d_manager.current_mol is not None, timeout=5000
     )

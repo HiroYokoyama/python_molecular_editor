@@ -38,6 +38,7 @@ else:
 # VTK / PyVista mocking — must happen before any app module is imported
 # ---------------------------------------------------------------------------
 
+
 def _force_mock(name: str) -> types.ModuleType:
     mod = types.ModuleType(name)
     mod.__path__ = []
@@ -49,18 +50,34 @@ vtk = _force_mock("vtk")
 
 
 class _DummyCellPicker:
-    def SetTolerance(self, v): pass
-    def Pick(self, x, y, z, r): pass
-    def GetActor(self): return None
+    def SetTolerance(self, v):
+        pass
+
+    def Pick(self, x, y, z, r):
+        pass
+
+    def GetActor(self):
+        return None
 
 
 class _DummyAxesWidget:
-    def SetOrientationMarker(self, m): pass
-    def SetInteractor(self, i): pass
-    def SetViewport(self, *a): pass
-    def On(self): pass
-    def Off(self): pass
-    def SetInteractive(self, v): pass
+    def SetOrientationMarker(self, m):
+        pass
+
+    def SetInteractor(self, i):
+        pass
+
+    def SetViewport(self, *a):
+        pass
+
+    def On(self):
+        pass
+
+    def Off(self):
+        pass
+
+    def SetInteractive(self, v):
+        pass
 
 
 vtk.vtkCellPicker = _DummyCellPicker
@@ -76,14 +93,29 @@ vinter = _force_mock("vtkmodules.vtkInteractionStyle")
 
 
 class _DummyInteractorStyle:
-    def __init__(self, *a, **k): pass
-    def AddObserver(self, *a, **k): pass
-    def GetInteractor(self): return _mock.MagicMock()
-    def OnLeftButtonDown(self, *a): pass
-    def OnLeftButtonUp(self, *a): pass
-    def OnRightButtonDown(self, *a): pass
-    def OnRightButtonUp(self, *a): pass
-    def OnMouseMove(self, *a): pass
+    def __init__(self, *a, **k):
+        pass
+
+    def AddObserver(self, *a, **k):
+        pass
+
+    def GetInteractor(self):
+        return _mock.MagicMock()
+
+    def OnLeftButtonDown(self, *a):
+        pass
+
+    def OnLeftButtonUp(self, *a):
+        pass
+
+    def OnRightButtonDown(self, *a):
+        pass
+
+    def OnRightButtonUp(self, *a):
+        pass
+
+    def OnMouseMove(self, *a):
+        pass
 
 
 vinter.vtkInteractorStyleTrackballCamera = _DummyInteractorStyle
@@ -95,13 +127,28 @@ pvqt = _force_mock("pyvistaqt")
 class _DummyPlotterBase:
     def __init__(self, *a, **k):
         self.camera_position = [(0, 0, 5), (0, 0, 0), (0, 1, 0)]
-    def add_mesh(self, *a, **k): return _mock.MagicMock()
-    def add_point_labels(self, *a, **k): return []
-    def clear(self): pass
-    def render(self): pass
-    def reset_camera(self): pass
-    def add_light(self, *a, **k): return _mock.MagicMock()
-    def remove_actor(self, *a, **k): return True
+
+    def add_mesh(self, *a, **k):
+        return _mock.MagicMock()
+
+    def add_point_labels(self, *a, **k):
+        return []
+
+    def clear(self):
+        pass
+
+    def render(self):
+        pass
+
+    def reset_camera(self):
+        pass
+
+    def add_light(self, *a, **k):
+        return _mock.MagicMock()
+
+    def remove_actor(self, *a, **k):
+        return True
+
     @property
     def camera(self):
         c = _mock.MagicMock()
@@ -114,10 +161,18 @@ class _DummyPolyData(_mock.MagicMock):
         super().__init__(*a, **k)
         self.point_data = {}
         self.cell_data = {}
-    def __getitem__(self, k): return _mock.MagicMock()
-    def __setitem__(self, k, v): pass
-    def glyph(self, *a, **k): return _mock.MagicMock()
-    def tube(self, *a, **k): return _mock.MagicMock()
+
+    def __getitem__(self, k):
+        return _mock.MagicMock()
+
+    def __setitem__(self, k, v):
+        pass
+
+    def glyph(self, *a, **k):
+        return _mock.MagicMock()
+
+    def tube(self, *a, **k):
+        return _mock.MagicMock()
 
 
 pyv.Plotter = _DummyPlotterBase
@@ -192,11 +247,21 @@ def window(app, qtbot, monkeypatch):
             self.load_handlers = {}
             self.custom_3d_styles = {}
             self.document_reset_handlers = []
-        def discover_plugins(self, parent=None): return []
-        def update_plugin_menu(self, menu): pass
-        def set_main_window(self, mw): pass
-        def run_plugin(self, module, mw): pass
-        def rebuild_plugin_menus(self): pass
+
+        def discover_plugins(self, parent=None):
+            return []
+
+        def update_plugin_menu(self, menu):
+            pass
+
+        def set_main_window(self, mw):
+            pass
+
+        def run_plugin(self, module, mw):
+            pass
+
+        def rebuild_plugin_menus(self):
+            pass
 
     monkeypatch.setattr(
         f"{_PKG}.ui.main_window_init.PluginManager", _DummyPM, raising=False
@@ -228,11 +293,13 @@ def window(app, qtbot, monkeypatch):
 
     monkeypatch.setattr(
         f"{_PKG}.ui.main_window_init.MainInitManager.apply_initial_settings",
-        lambda *a, **k: None, raising=False,
+        lambda *a, **k: None,
+        raising=False,
     )
     monkeypatch.setattr(
         f"{_PKG}.ui.view_3d_logic.View3DManager.apply_3d_settings",
-        lambda *a, **k: None, raising=False,
+        lambda *a, **k: None,
+        raising=False,
     )
 
     # Real RDKit conversion, synchronous (no QThread)
@@ -255,7 +322,8 @@ def window(app, qtbot, monkeypatch):
 
     monkeypatch.setattr(
         f"{_PKG}.ui.compute_logic.ComputeManager.trigger_conversion",
-        _sync_trigger, raising=False,
+        _sync_trigger,
+        raising=False,
     )
 
     monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
