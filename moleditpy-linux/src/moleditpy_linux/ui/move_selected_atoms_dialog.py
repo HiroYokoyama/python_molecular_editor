@@ -57,7 +57,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         self._consume_next_left_release: bool = False
         self.highlight_actor: Optional[pv.Actor] = None
         self.original_style: Optional[Any] = None
-        self.rubber_band_style: Optional[Any] = None
+        self._click_press_pos: Optional[Any] = None
 
         self.widgets: dict[str, Any] = {}
 
@@ -699,7 +699,6 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
             # Restore original style
             if self.original_style is not None:
                 plotter.interactor.SetInteractorStyle(self.original_style)
-                self.rubber_band_style = None
 
     def on_rectangle_picked(self, selection: Any) -> None:
         """Handle PyVista rectangle picking callback."""
