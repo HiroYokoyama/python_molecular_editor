@@ -9,6 +9,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SRC_DIR = os.path.join(BASE_DIR, "moleditpy", "src")
 UNIT_DIR = os.path.join(BASE_DIR, "tests", "unit")
 INTEGRATION_DIR = os.path.join(BASE_DIR, "tests", "integration")
+E2E_DIR = os.path.join(BASE_DIR, "tests", "e2e")
 GUI_DIR = os.path.join(BASE_DIR, "tests", "gui")
 
 # Avoid colorama/COM issues on Windows by disabling color globally for pytest
@@ -215,6 +216,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--integration", action="store_true", help="Run ONLY Integration tests"
     )
+    parser.add_argument("--e2e", action="store_true", help="Run ONLY E2E tests")
     parser.add_argument("--gui", action="store_true", help="Run ONLY GUI tests")
     parser.add_argument(
         "--no-report", action="store_true", help="Skip reporting phase entirely"
@@ -322,12 +324,14 @@ if __name__ == "__main__":
 
     # Define suites to run
     suites = []
-    run_all = not (args.unit or args.integration or args.gui)
+    run_all = not (args.unit or args.integration or args.e2e or args.gui)
 
     if args.unit or run_all:
         suites.append(("UNIT", UNIT_DIR))
     if args.integration or run_all:
         suites.append(("INTEGRATION", INTEGRATION_DIR))
+    if args.e2e or run_all:
+        suites.append(("E2E", E2E_DIR))
     if args.gui or run_all:
         suites.append(("GUI", GUI_DIR))
 
