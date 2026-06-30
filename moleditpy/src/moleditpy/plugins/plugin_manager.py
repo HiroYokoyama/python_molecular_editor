@@ -206,9 +206,10 @@ class PluginManager:
                 shutil.copy2(file_path, dest_path)
                 msg = f"Installed {filename}"
 
-            # Reload plugins after install
+            # Reload plugins after install and rebuild UI immediately
             if self.main_window:
                 self.discover_plugins(self.main_window)
+                self.rebuild_plugin_menus()
             return True, msg
         except (
             AttributeError,
@@ -314,6 +315,13 @@ class PluginManager:
                         stub.__path__ = []
                         stub.__package__ = parent_name
                         sys.modules[parent_name] = stub
+
+            # Purge stale cache so package submodules reload from disk on re-exec
+            for _cached_key in list(sys.modules.keys()):
+                if _cached_key == unique_module_name or _cached_key.startswith(
+                    unique_module_name + "."
+                ):
+                    del sys.modules[_cached_key]
 
             spec = importlib.util.spec_from_file_location(
                 unique_module_name,

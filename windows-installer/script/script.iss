@@ -41,6 +41,7 @@ ArchitecturesAllowed=x64compatible
 ; the 64-bit view of the registry.
 ArchitecturesInstallIn64BitMode=x64compatible
 ChangesAssociations=yes
+CloseApplications=yes
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
@@ -69,4 +70,31 @@ Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\shell\open\command"; Value
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+
+[Code]
+function GetUninstallString(): String;
+var
+  sRegPath: String;
+  sResult: String;
+begin
+  sRegPath := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{1E91AFB8-A4B8-4E30-A3E7-3E17140160E6}_is1';
+  sResult := '';
+  if not RegQueryStringValue(HKLM, sRegPath, 'UninstallString', sResult) then
+    RegQueryStringValue(HKCU, sRegPath, 'UninstallString', sResult);
+  Result := sResult;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  sUnInstallString: String;
+  iResultCode: Integer;
+begin
+  if CurStep = ssInstall then
+  begin
+    sUnInstallString := GetUninstallString();
+    if sUnInstallString <> '' then
+      Exec(RemoveQuotes(sUnInstallString), '/SILENT /NORESTART /SUPPRESSMSGBOXES',
+           '', SW_HIDE, ewWaitUntilTerminated, iResultCode);
+  end;
+end;
 

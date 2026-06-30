@@ -1,9 +1,10 @@
-"""Run unit + integration + GUI tests with combined coverage and generate coverage_report.md."""
+"""Run unit + integration + e2e + GUI tests with combined coverage and generate coverage_report.md."""
 
 import subprocess
 import json
 import sys
 import os
+import platform
 import argparse
 
 # Adjusted for tests/utils/ location
@@ -58,6 +59,38 @@ if not args_cov.skip_run:
             "tests/integration",
             "-q",
             "--cov=moleditpy",
+            "--cov-append",
+            "--cov-report=",
+            "--tb=short",
+        ],
+        env=gui_env,
+        cwd=ROOT,
+        stdout=devnull,
+        stderr=devnull,
+    )
+
+    print("Running E2E Tests with coverage (headless)...")
+    # On Linux, e2e imports moleditpy_linux; everywhere else it uses moleditpy
+    e2e_cov_source = "moleditpy_linux" if platform.system() == "Linux" else "moleditpy"
+    # Auto-sync Linux package before running e2e coverage
+    if platform.system() == "Linux":
+        sync_script = os.path.join(ROOT, "scripts", "sync_linux_version.py")
+        if os.path.exists(sync_script):
+            subprocess.run(
+                [sys.executable, sync_script],
+                cwd=ROOT,
+                stdout=devnull,
+                stderr=devnull,
+            )
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/e2e",
+            "-q",
+            "--timeout=60",
+            f"--cov={e2e_cov_source}",
             "--cov-append",
             "--cov-report=",
             "--tb=short",
@@ -183,6 +216,7 @@ markdown_lines.extend(build_table(full_files, full_totals, "Coverage Breakdown")
 markdown_lines.append("## Test Suite Status")
 markdown_lines.append("- **Unit tests**: PASSED")
 markdown_lines.append("- **Integration tests**: PASSED")
+markdown_lines.append("- **E2E tests**: PASSED")
 markdown_lines.append("- **GUI tests**: PASSED")
 markdown_lines.append("")
 markdown_lines.append("[View Detailed HTML Report](coverage_html/index.html)")

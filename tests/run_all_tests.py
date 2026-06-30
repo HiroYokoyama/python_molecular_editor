@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 import argparse
 import subprocess
 import time
@@ -9,6 +10,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SRC_DIR = os.path.join(BASE_DIR, "moleditpy", "src")
 UNIT_DIR = os.path.join(BASE_DIR, "tests", "unit")
 INTEGRATION_DIR = os.path.join(BASE_DIR, "tests", "integration")
+E2E_DIR = os.path.join(BASE_DIR, "tests", "e2e")
 GUI_DIR = os.path.join(BASE_DIR, "tests", "gui")
 
 # Avoid colorama/COM issues on Windows by disabling color globally for pytest
@@ -85,8 +87,28 @@ def _run_once(name, cmd, env):
     return returncode, "".join(output_lines), duration
 
 
+def sync_linux_for_e2e(base_dir):
+    """Sync moleditpy → moleditpy-linux before running e2e tests on Linux."""
+    sync_script = os.path.join(base_dir, "scripts", "sync_linux_version.py")
+    if not os.path.exists(sync_script):
+        print("  [SKIP] sync_linux_version.py not found — skipping Linux sync", flush=True)
+        return
+    print("\n>>> Syncing Linux version before E2E tests...", flush=True)
+    result = subprocess.run(
+        [sys.executable, sync_script],
+        cwd=base_dir,
+        capture_output=True,
+        text=True,
+    )
+    print(result.stdout, end="", flush=True)
+    if result.returncode != 0:
+        print(f"  Warning: sync_linux_version.py exited {result.returncode}", flush=True)
+        print(result.stderr, end="", flush=True)
+
+
 def run_suite(
-    name, path, env_vars=None, extra_args=None, enable_cov=True, exitfirst=False
+    name, path, env_vars=None, extra_args=None, enable_cov=True, exitfirst=False,
+    cov_source=None,
 ):
     """Run a test suite in a separate process for isolation."""
     print(
@@ -109,7 +131,8 @@ def run_suite(
     ]
 
     if enable_cov:
-        cmd.extend(["--cov=moleditpy", "--cov-append", "--cov-report="])
+        source = cov_source or "moleditpy"
+        cmd.extend([f"--cov={source}", "--cov-append", "--cov-report="])
 
     if extra_args:
         cmd.extend(extra_args)
@@ -215,6 +238,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--integration", action="store_true", help="Run ONLY Integration tests"
     )
+    parser.add_argument("--e2e", action="store_true", help="Run ONLY E2E tests")
     parser.add_argument("--gui", action="store_true", help="Run ONLY GUI tests")
     parser.add_argument(
         "--no-report", action="store_true", help="Skip reporting phase entirely"
@@ -322,17 +346,26 @@ if __name__ == "__main__":
 
     # Define suites to run
     suites = []
-    run_all = not (args.unit or args.integration or args.gui)
+    run_all = not (args.unit or args.integration or args.e2e or args.gui)
 
     if args.unit or run_all:
         suites.append(("UNIT", UNIT_DIR))
     if args.integration or run_all:
         suites.append(("INTEGRATION", INTEGRATION_DIR))
+    if args.e2e or run_all:
+        if platform.system() == "Linux":
+            sync_linux_for_e2e(BASE_DIR)
+        suites.append(("E2E", E2E_DIR))
     if args.gui or run_all:
         suites.append(("GUI", GUI_DIR))
 
     for name, path in suites:
         try:
+            # E2E uses moleditpy_linux on Linux, moleditpy elsewhere
+            e2e_cov = (
+                "moleditpy_linux" if name == "E2E" and platform.system() == "Linux"
+                else None
+            )
             ret_code = run_suite(
                 name,
                 path,
@@ -340,6 +373,7 @@ if __name__ == "__main__":
                 extra_args=extra_pytest_args,
                 enable_cov=enable_cov,
                 exitfirst=args.exitfirst,
+                cov_source=e2e_cov,
             )
             results[name] = "PASSED" if ret_code == 0 else "FAILED"
         except KeyboardInterrupt:
@@ -358,6 +392,7 @@ if __name__ == "__main__":
     for name, path in [
         ("UNIT", UNIT_DIR),
         ("INTEGRATION", INTEGRATION_DIR),
+        ("E2E", E2E_DIR),
         ("GUI", GUI_DIR),
     ]:
         status = results.get(name, "SKIPPED")
