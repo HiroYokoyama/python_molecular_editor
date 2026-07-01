@@ -113,7 +113,7 @@ jobs:
               text = path.read_text(encoding="utf-8")
               text = re.sub(
                   r'releases/download/[^/]+/MoleditPy_[^_]+_win64_',
-                  f'releases/download/{version}/MoleditPy_{version}_win64_',
+                  f'releases/download/v{version}/MoleditPy_{version}_win64_',
                   text,
               )
               path.write_text(text, encoding="utf-8")
