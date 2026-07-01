@@ -99,7 +99,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ${{ steps.idx.outputs.flags }} "${{ steps.pkg.outputs.spec }}"
 
-      - name: E2E test
+      - name: Smoke test
         shell: python
         run: |
           from importlib.metadata import version
