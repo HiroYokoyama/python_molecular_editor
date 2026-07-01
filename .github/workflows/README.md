@@ -49,6 +49,41 @@ This workflow:
 
 It does not commit, tag, push, or create a GitHub Release.
 
+## `test-pip-install.yml` - Pip Install Verification
+
+Manually verifies that the published packages install and run correctly on a fresh machine with no local source available.
+
+Run it from GitHub Actions:
+
+1. Open **Actions**.
+2. Select **Test pip install**.
+3. Click **Run workflow**.
+4. Optionally enter a version (e.g. `4.1.4`). Leave blank for the latest published version.
+5. Choose **PyPI** (default) or **TestPyPI** as the install source.
+
+### What it tests
+
+Each matrix leg installs the target package from scratch on a clean runner and then runs the real `tests/e2e/` suite against the installed package. The env var `MOLEDITPY_USE_INSTALLED=1` tells the e2e conftest to use `importlib.util.find_spec` to locate the pip-installed package instead of the local source tree.
+
+The e2e suite covers:
+
+- `test_ethane_conversion.py` — builds a 2D ethane molecule, serialises it to a MOL block, parses it with RDKit, embeds it to 3D (ETKDGv2 + MMFF), and asserts the C–C distance is chemically valid (1.3–1.7 Å).
+- `test_ethane_gui.py` — launches the real `MainWindow` headlessly (VTK/PyVista mocked), draws ethane in the 2D scene, clicks the Convert button, and asserts the resulting 3D mol is correct.
+
+### Test matrix
+
+| Package | OS | Python versions |
+| --- | --- | --- |
+| MoleditPy | Windows, macOS | 3.9–3.14 |
+| MoleditPy-linux | Ubuntu, Windows, macOS | 3.9–3.14 |
+
+Pip download cache is enabled (`cache: 'pip'`) to speed up the 30-leg matrix.
+
+### Notes
+
+- `MOLEDITPY_USE_INSTALLED=1` only affects the e2e test conftest. All other workflows are unaffected and continue to use the local source tree as before.
+- `test_main_package_is_active` is automatically skipped when `MoleditPy-linux` is the active package on Windows/macOS (cross-platform pip-install scenario).
+
 ## `release.yml` - Production Release
 
 Manually builds and publishes an official release.
@@ -60,6 +95,7 @@ Run it from GitHub Actions:
 3. Click **Run workflow**.
 4. Select the `main` branch.
 5. Enter a release version such as `3.4.1`.
+6. Optionally uncheck **Upload and publish to Zenodo after release** to skip Zenodo (default: checked).
 
 This workflow:
 
@@ -68,16 +104,17 @@ This workflow:
 3. Rejects the release if the tag already exists.
 4. Runs unit and integration tests on `windows-latest` with Python 3.12.
 5. Updates `moleditpy/pyproject.toml`.
-6. Runs `python scripts/sync_linux_version.py`.
-7. Builds `MoleditPy` and `MoleditPy-linux` distributions.
-8. Builds `dist/MoleditPy/MoleditPy.exe` with PyInstaller from the Linux package source.
-9. Creates `MoleditPy_<version>_win64_portable.zip`.
-10. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
-11. Commits the version and Linux sync changes.
-12. Creates and pushes the release tag.
+6. Copies the root `README.md` to `moleditpy/README.md` and `moleditpy-linux/README.md` if the content has changed.
+7. Runs `python scripts/sync_linux_version.py`.
+8. Builds `MoleditPy` and `MoleditPy-linux` distributions.
+9. Builds `dist/MoleditPy/MoleditPy.exe` with PyInstaller from the Linux package source.
+10. Creates `MoleditPy_<version>_win64_portable.zip`.
+11. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
+12. Commits the version bump, README sync, and Linux sync changes, then creates and pushes the release tag.
 13. Starts a separate `ubuntu-latest` publishing job.
 14. Publishes both Python packages to PyPI.
 15. Creates a GitHub Release and attaches the distributions, installer, and portable ZIP.
+16. If the **Zenodo** checkbox is checked: downloads the release assets and publishes them to the production Zenodo record via `scripts/update_zenodo.py`.
 
 ## Release Workflow Architecture
 
@@ -163,7 +200,8 @@ The release workflows generate:
 `release.yml` commits these release-time changes:
 
 - `moleditpy/pyproject.toml`
-- `moleditpy-linux/`
+- `moleditpy/README.md` (if updated from root `README.md`)
+- `moleditpy-linux/` (entire directory, including `README.md` if updated)
 - `windows-installer/script/script.iss`
 - `windows-installer/script/MoleditPy.spec`
 
