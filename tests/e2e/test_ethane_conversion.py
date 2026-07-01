@@ -10,11 +10,14 @@ import os
 import sys
 import platform
 import importlib
+import importlib.util
 import pytest
 from PyQt6.QtCore import QPointF
 
 # ---------------------------------------------------------------------------
-# Package selection: moleditpy_linux on Linux, moleditpy everywhere else
+# Package selection: moleditpy_linux on Linux, moleditpy everywhere else.
+# Set MOLEDITPY_USE_INSTALLED=1 to use whichever package is pip-installed
+# instead of the local source tree (used by the pip-install CI workflow).
 # ---------------------------------------------------------------------------
 _IS_LINUX = sys.platform.startswith("linux")
 
@@ -25,7 +28,13 @@ _MAIN_SRC = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
 )
 
-if _IS_LINUX and os.path.isdir(_LINUX_SRC):
+if os.environ.get("MOLEDITPY_USE_INSTALLED") == "1":
+    # CI pip-install mode: use whichever package is installed; skip local source.
+    if importlib.util.find_spec("moleditpy_linux") is not None:
+        _PKG = "moleditpy_linux"
+    else:
+        _PKG = "moleditpy"
+elif _IS_LINUX and os.path.isdir(_LINUX_SRC):
     if _LINUX_SRC not in sys.path:
         sys.path.insert(0, _LINUX_SRC)
     _PKG = "moleditpy_linux"
@@ -155,7 +164,10 @@ def test_linux_package_is_active():
     assert _PKG == "moleditpy_linux"
 
 
-@pytest.mark.skipif(_IS_LINUX, reason="Windows/macOS-only: verify main package is used")
+@pytest.mark.skipif(
+    _IS_LINUX or _PKG != "moleditpy",
+    reason="Windows/macOS-only: verify main package is used (skipped when moleditpy_linux is active)",
+)
 def test_main_package_is_active():
     """On Windows/macOS, moleditpy must be the active package."""
     assert _PKG == "moleditpy"

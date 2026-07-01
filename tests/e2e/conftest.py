@@ -9,6 +9,7 @@ instantiated headlessly.  The `window` fixture selects the right package
 import os
 import sys
 import types
+import importlib.util
 import pytest
 from unittest import mock as _mock
 from PyQt6.QtWidgets import QApplication
@@ -25,7 +26,13 @@ _MAIN_SRC = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
 )
 
-if _IS_LINUX and os.path.isdir(_LINUX_SRC):
+if os.environ.get("MOLEDITPY_USE_INSTALLED") == "1":
+    # CI pip-install mode: use whichever package is installed; skip local source.
+    if importlib.util.find_spec("moleditpy_linux") is not None:
+        _PKG = "moleditpy_linux"
+    else:
+        _PKG = "moleditpy"
+elif _IS_LINUX and os.path.isdir(_LINUX_SRC):
     if _LINUX_SRC not in sys.path:
         sys.path.insert(0, _LINUX_SRC)
     _PKG = "moleditpy_linux"
