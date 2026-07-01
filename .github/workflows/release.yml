@@ -7,6 +7,11 @@ on:
         description: "Release version without a leading v, for example 1.2.3"
         required: true
         type: string
+      zenodo:
+        description: "Upload and publish to Zenodo after release"
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -113,6 +118,20 @@ jobs:
               )
               path.write_text(text, encoding="utf-8")
 
+      - name: Copy root README to packages
+        shell: python
+        run: |
+          from pathlib import Path
+
+          src = Path("README.md").read_text(encoding="utf-8")
+          for dest_path in ("moleditpy/README.md", "moleditpy-linux/README.md"):
+              dest = Path(dest_path)
+              if not dest.exists() or dest.read_text(encoding="utf-8") != src:
+                  dest.write_text(src, encoding="utf-8")
+                  print(f"Updated {dest_path}")
+              else:
+                  print(f"No change: {dest_path}")
+
       - name: Sync Linux Package
         run: |
           python scripts/sync_linux_version.py
@@ -191,7 +210,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add moleditpy/pyproject.toml moleditpy-linux/ windows-installer/script/script.iss windows-installer/script/MoleditPy.spec windows-installer/windows_installer.md windows-installer/windows_installer-jp.md
+          git add moleditpy/pyproject.toml moleditpy/README.md moleditpy-linux/ windows-installer/script/script.iss windows-installer/script/MoleditPy.spec windows-installer/windows_installer.md windows-installer/windows_installer-jp.md
           git commit -m "Bump version to ${env:APP_VERSION}"
           git tag "v${env:APP_VERSION}"
           git push origin HEAD:${{ github.ref_name }}
@@ -254,3 +273,40 @@ jobs:
             dist/moleditpy-linux/*
             dist/windows/*
           generate_release_notes: true
+
+  zenodo-upload:
+    if: ${{ inputs.zenodo }}
+    runs-on: ubuntu-latest
+    needs: publish-and-create-release
+    env:
+      APP_VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Download Release Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist
+          TAG="v${APP_VERSION}"
+          gh release download "$TAG" --pattern "*.tar.gz" --pattern "*.whl" --dir dist --skip-existing || true
+          curl -L -o "dist/source.tar.gz" "https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+          echo "Downloaded assets:"
+          ls -la dist/
+
+      - name: Upload and Publish to Zenodo
+        env:
+          ZENODO_TOKEN: ${{ secrets.ZENODO_TOKEN }}
+        run: |
+          python scripts/update_zenodo.py \
+            --publish \
+            --deposition-id 20463243 \
+            --version-string "v${APP_VERSION}" \
+            dist/*

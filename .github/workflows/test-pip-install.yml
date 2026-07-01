@@ -104,23 +104,46 @@ jobs:
         run: |
           from importlib.metadata import version
           from ${{ matrix.module_name }}.core.molecular_data import MolecularData
+          from rdkit import Chem
+          from rdkit.Chem import AllChem
+          import numpy as np
 
+          # --- version check ---
           print("${{ matrix.package }}", version("${{ matrix.dist_name }}"))
 
-          # Build a C-C-O molecule using plain tuples (no Qt needed)
+          # --- MolecularData: build ethane (C-C) ---
           mol = MolecularData()
           c1 = mol.add_atom("C", (0.0, 0.0))
           c2 = mol.add_atom("C", (50.0, 0.0))
-          o  = mol.add_atom("O", (100.0, 0.0))
           mol.add_bond(c1, c2, order=1)
-          mol.add_bond(c2, o, order=1)
+          assert len(mol.atoms) == 2, f"Expected 2 atoms, got {len(mol.atoms)}"
+          assert len(mol.bonds) == 1, f"Expected 1 bond, got {len(mol.bonds)}"
 
-          assert len(mol.atoms) == 3, f"Expected 3 atoms, got {len(mol.atoms)}"
-          assert len(mol.bonds) == 2, f"Expected 2 bonds, got {len(mol.bonds)}"
-
+          # --- MOL block serialization ---
           block = mol.to_mol_block()
           assert block is not None, "to_mol_block() returned None"
           assert " C " in block, "Carbon missing from MOL block"
-          assert " O " in block, "Oxygen missing from MOL block"
 
-          print("E2E OK — MOL block roundtrip passed")
+          # --- RDKit roundtrip ---
+          rdmol = Chem.MolFromMolBlock(block, removeHs=False)
+          assert rdmol is not None, "RDKit could not parse the MOL block"
+          carbons = [a for a in rdmol.GetAtoms() if a.GetSymbol() == "C"]
+          assert len(carbons) == 2, f"Expected 2 carbons, got {len(carbons)}"
+
+          # --- 3D embedding (mirrors CalculationWorker rdkit mode) ---
+          rdmol3d = Chem.AddHs(rdmol)
+          params = AllChem.ETKDGv2()
+          params.randomSeed = 42
+          result = AllChem.EmbedMolecule(rdmol3d, params)
+          assert result == 0, f"EmbedMolecule failed (returned {result})"
+          AllChem.MMFFOptimizeMolecule(rdmol3d)
+          assert rdmol3d.GetNumConformers() > 0, "No 3D conformer after embedding"
+
+          conf = rdmol3d.GetConformer()
+          c_idxs = [a.GetIdx() for a in rdmol3d.GetAtoms() if a.GetSymbol() == "C"]
+          p0 = np.array(conf.GetAtomPosition(c_idxs[0]))
+          p1 = np.array(conf.GetAtomPosition(c_idxs[1]))
+          cc_dist = float(np.linalg.norm(p1 - p0))
+          assert 1.3 < cc_dist < 1.7, f"C-C distance {cc_dist:.3f} Å outside valid range [1.3, 1.7]"
+
+          print(f"E2E OK — C-C: {cc_dist:.3f} Å")
