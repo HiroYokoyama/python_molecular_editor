@@ -29,37 +29,37 @@ jobs:
       matrix:
         include:
           # MoleditPy — Windows and macOS only (includes openbabel-wheel)
-          - { package: MoleditPy, dist_name: moleditpy, os: windows-latest, python-version: "3.9" }
-          - { package: MoleditPy, dist_name: moleditpy, os: windows-latest, python-version: "3.10" }
-          - { package: MoleditPy, dist_name: moleditpy, os: windows-latest, python-version: "3.11" }
-          - { package: MoleditPy, dist_name: moleditpy, os: windows-latest, python-version: "3.12" }
-          - { package: MoleditPy, dist_name: moleditpy, os: windows-latest, python-version: "3.13" }
-          - { package: MoleditPy, dist_name: moleditpy, os: windows-latest, python-version: "3.14" }
-          - { package: MoleditPy, dist_name: moleditpy, os: macos-latest,   python-version: "3.9" }
-          - { package: MoleditPy, dist_name: moleditpy, os: macos-latest,   python-version: "3.10" }
-          - { package: MoleditPy, dist_name: moleditpy, os: macos-latest,   python-version: "3.11" }
-          - { package: MoleditPy, dist_name: moleditpy, os: macos-latest,   python-version: "3.12" }
-          - { package: MoleditPy, dist_name: moleditpy, os: macos-latest,   python-version: "3.13" }
-          - { package: MoleditPy, dist_name: moleditpy, os: macos-latest,   python-version: "3.14" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: windows-latest, python-version: "3.9" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: windows-latest, python-version: "3.10" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: windows-latest, python-version: "3.11" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: windows-latest, python-version: "3.12" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: windows-latest, python-version: "3.13" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: windows-latest, python-version: "3.14" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: macos-latest,   python-version: "3.9" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: macos-latest,   python-version: "3.10" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: macos-latest,   python-version: "3.11" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: macos-latest,   python-version: "3.12" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: macos-latest,   python-version: "3.13" }
+          - { package: MoleditPy, dist_name: moleditpy, module_name: moleditpy, os: macos-latest,   python-version: "3.14" }
           # MoleditPy-linux — all platforms
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: ubuntu-latest,  python-version: "3.9" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: ubuntu-latest,  python-version: "3.10" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: ubuntu-latest,  python-version: "3.11" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: ubuntu-latest,  python-version: "3.12" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: ubuntu-latest,  python-version: "3.13" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: ubuntu-latest,  python-version: "3.14" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: windows-latest, python-version: "3.9" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: windows-latest, python-version: "3.10" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: windows-latest, python-version: "3.11" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: windows-latest, python-version: "3.12" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: windows-latest, python-version: "3.13" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: windows-latest, python-version: "3.14" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: macos-latest,   python-version: "3.9" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: macos-latest,   python-version: "3.10" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: macos-latest,   python-version: "3.11" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: macos-latest,   python-version: "3.12" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: macos-latest,   python-version: "3.13" }
-          - { package: MoleditPy-linux, dist_name: moleditpy-linux, os: macos-latest,   python-version: "3.14" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: ubuntu-latest,  python-version: "3.9" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: ubuntu-latest,  python-version: "3.10" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: ubuntu-latest,  python-version: "3.11" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: ubuntu-latest,  python-version: "3.12" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: ubuntu-latest,  python-version: "3.13" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: ubuntu-latest,  python-version: "3.14" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: windows-latest, python-version: "3.9" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: windows-latest, python-version: "3.10" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: windows-latest, python-version: "3.11" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: windows-latest, python-version: "3.12" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: windows-latest, python-version: "3.13" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: windows-latest, python-version: "3.14" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: macos-latest,   python-version: "3.9" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: macos-latest,   python-version: "3.10" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: macos-latest,   python-version: "3.11" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: macos-latest,   python-version: "3.12" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: macos-latest,   python-version: "3.13" }
+          - { package: MoleditPy-linux, dist_name: moleditpy-linux, module_name: moleditpy_linux, os: macos-latest,   python-version: "3.14" }
 
     steps:
       - name: Set up Python ${{ matrix.python-version }}
@@ -99,6 +99,28 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install ${{ steps.idx.outputs.flags }} "${{ steps.pkg.outputs.spec }}"
 
-      - name: Smoke test
+      - name: E2E test
+        shell: python
         run: |
-          python -c "from importlib.metadata import version; print('${{ matrix.package }}', version('${{ matrix.dist_name }}'))"
+          from importlib.metadata import version
+          from ${{ matrix.module_name }}.core.molecular_data import MolecularData
+
+          print("${{ matrix.package }}", version("${{ matrix.dist_name }}"))
+
+          # Build a C-C-O molecule using plain tuples (no Qt needed)
+          mol = MolecularData()
+          c1 = mol.add_atom("C", (0.0, 0.0))
+          c2 = mol.add_atom("C", (50.0, 0.0))
+          o  = mol.add_atom("O", (100.0, 0.0))
+          mol.add_bond(c1, c2, order=1)
+          mol.add_bond(c2, o, order=1)
+
+          assert len(mol.atoms) == 3, f"Expected 3 atoms, got {len(mol.atoms)}"
+          assert len(mol.bonds) == 2, f"Expected 2 bonds, got {len(mol.bonds)}"
+
+          block = mol.to_mol_block()
+          assert block is not None, "to_mol_block() returned None"
+          assert " C " in block, "Carbon missing from MOL block"
+          assert " O " in block, "Oxygen missing from MOL block"
+
+          print("E2E OK — MOL block roundtrip passed")
