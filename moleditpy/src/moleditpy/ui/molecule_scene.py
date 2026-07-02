@@ -187,15 +187,15 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
             # Update all bonds in this ring
             for bidx in b_ring:
-                bond_item = rdkit_bond_idx_to_item.get(bidx)
-                if bond_item:
-                    bond_item.is_in_ring = True
-                    item_id = id(bond_item)
+                ring_bond = rdkit_bond_idx_to_item.get(bidx)
+                if ring_bond:
+                    ring_bond.is_in_ring = True
+                    item_id = id(ring_bond)
                     if (
                         item_id not in bond_to_best_size
                         or ring_size < bond_to_best_size[item_id]
                     ):
-                        bond_item.ring_center = ring_center
+                        ring_bond.ring_center = ring_center
                         bond_to_best_size[item_id] = ring_size
 
     def update_all_items(self) -> None:

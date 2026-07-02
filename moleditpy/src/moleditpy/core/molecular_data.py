@@ -176,7 +176,7 @@ class MolecularData:
             atom_id_to_idx_map[atom_id] = idx
 
         # save bonds & stereo info (label info is kept here)
-        bond_stereo_info = {}  # bond_idx -> {'type': int, 'atom_ids': (id1,id2), 'bond_data': bond_data}
+        bond_stereo_info: Dict[int, Dict[str, Any]] = {}  # bond_idx -> {'type', 'atom_ids', 'bond_data'}
         for (id1, id2), bond_data in self.bonds.items():
             if id1 not in atom_id_to_idx_map or id2 not in atom_id_to_idx_map:
                 continue
@@ -284,7 +284,7 @@ class MolecularData:
                 begin_atom_idx = bond.GetBeginAtomIdx()
                 end_atom_idx = bond.GetEndAtomIdx()
 
-                label_bond_data: dict[str, Any] = info.get("bond_data") or {}
+                label_bond_data = info.get("bond_data") or {}
                 stereo_atoms_specified = label_bond_data.get("stereo_atoms")
 
                 if stereo_atoms_specified:

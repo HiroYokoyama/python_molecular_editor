@@ -275,7 +275,7 @@ class EditActionsManager:
 
             # Store atom data with relative positions and map IDs to new indices
             atom_id_to_idx_map = {}
-            fragment_atoms = []
+            fragment_atoms: List[Dict[str, Any]] = []
             for i, atom in enumerate(selected_atoms):
                 atom_id_to_idx_map[atom.atom_id] = i
                 fragment_atoms.append(
@@ -671,17 +671,17 @@ class EditActionsManager:
                         # Calculate gaps (including wrap-around)
                         gaps = []  # list of (gap_size, start_angle, end_angle)
                         for i in range(len(angs)):
-                            a1 = angs[i]
-                            a2 = angs[(i + 1) % len(angs)]
+                            ang_a = angs[i]
+                            ang_b = angs[(i + 1) % len(angs)]
                             if i == len(angs) - 1:
                                 # wrap-around gap
-                                gap = (a2 + 2.0 * math.pi) - a1
-                                start = a1
-                                end = a2 + 2.0 * math.pi
+                                gap = (ang_b + 2.0 * math.pi) - ang_a
+                                start = ang_a
+                                end = ang_b + 2.0 * math.pi
                             else:
-                                gap = a2 - a1
-                                start = a1
-                                end = a2
+                                gap = ang_b - ang_a
+                                start = ang_a
+                                end = ang_b
                             gaps.append((gap, start, end))
 
                         # Select largest gap and space hydrogens evenly

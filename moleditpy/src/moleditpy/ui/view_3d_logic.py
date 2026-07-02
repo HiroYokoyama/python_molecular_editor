@@ -40,8 +40,8 @@ class View3DManager:
     """Independent manager for 3D rendering logic, ported from MainWindowView3d mixin."""
 
     def __init__(self, host: MainWindow) -> None:
-        self._plugin_bond_color_overrides = {}
-        self._plugin_color_overrides = {}
+        self._plugin_bond_color_overrides: Dict[int, Any] = {}
+        self._plugin_color_overrides: Dict[int, Any] = {}
         self.host = host
         # State variables previously held by mixin
         self._drawing_3d: bool = False
@@ -72,9 +72,9 @@ class View3DManager:
         ``self.plotter`` if the owning host carries a
         different (mock) ``view_3d_manager`` instance.
         """
-        val = getattr(self, "_plotter_val", None)
+        val: Optional[CustomQtInteractor] = getattr(self, "_plotter_val", None)
         if val is not None:
-            return val  # type: ignore[return-value]
+            return val
         return None
 
     @plotter.setter

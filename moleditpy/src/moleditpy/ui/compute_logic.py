@@ -37,8 +37,8 @@ class ComputeManager:
     """Independent manager for molecular computations, ported from MainWindowCompute mixin."""
 
     def __init__(self, host: MainWindow) -> None:
-        self._calculating_text_actor = None
-        self.original_atom_properties = {}
+        self._calculating_text_actor: Any = None
+        self.original_atom_properties: Dict[int, int] = {}
         self.host = host
         self.last_successful_optimization_method: Optional[str] = None
         self._active_calc_threads: List[QThread] = []

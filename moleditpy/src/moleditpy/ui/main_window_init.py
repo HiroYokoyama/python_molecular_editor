@@ -92,8 +92,8 @@ class MainInitManager:
         self.cut_action: Optional[QAction] = None
         self.copy_action: Optional[QAction] = None
         self.import_menu: Optional[QMenu] = None
-        self.toolbar: Optional[QToolBar] = None
-        self.toolbar_bottom: Optional[QToolBar] = None
+        self.toolbar: Any = None
+        self.toolbar_bottom: Any = None
         self.plugin_toolbar: Optional[QToolBar] = None
         self.tool_group: Optional[QActionGroup] = None
         self.other_atom_action: Optional[QAction] = None
@@ -383,14 +383,9 @@ class MainInitManager:
                         modules_to_update.append(mod)
 
             if not modules_to_update:
-                try:
-                    from . import constants as constants_mod
+                from ..utils import constants as constants_mod
 
-                    modules_to_update.append(constants_mod)
-                except ImportError:
-                    import moleditpy.utils.constants as constants_mod
-
-                    modules_to_update.append(constants_mod)
+                modules_to_update.append(constants_mod)
 
             for mod in modules_to_update:
                 mod.CPK_COLORS.clear()
