@@ -769,10 +769,10 @@ def test_show_atom_labels_camera_restore(qapp):
 def test_box_selection_toggle_button(qapp):
     """Test that the Box Selection toggle enables/disables rectangle picking."""
     from moleditpy.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
-    
+
     mol = _ethane()
     mw = _make_main_window(mol)
-    
+
     with (
         patch.object(MoveSelectedAtomsDialog, "show_atom_labels"),
         patch.object(MoveSelectedAtomsDialog, "clear_atom_labels"),
@@ -783,15 +783,15 @@ def test_box_selection_toggle_button(qapp):
         plotter.disable_picking = MagicMock()
         plotter.interactor = MagicMock()
         plotter.interactor.GetInteractorStyle.return_value = "mock_style"
-        
+
         btn = dlg.widgets["box_select_btn"]
-        
+
         # Turn ON
         btn.setChecked(True)
         dlg.toggle_box_selection(True)
         plotter.enable_rectangle_picking.assert_called_once()
         assert dlg.original_style == "mock_style"
-        
+
         # Turn OFF
         btn.setChecked(False)
         dlg.toggle_box_selection(False)
@@ -803,37 +803,39 @@ def test_box_selection_click_to_reset(qapp):
     from moleditpy.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
     from PyQt6.QtCore import QEvent, QPoint, Qt
     from PyQt6.QtGui import QMouseEvent
-    
+
     mol = _ethane()
     mw = _make_main_window(mol)
-    
+
     with (
         patch.object(MoveSelectedAtomsDialog, "show_atom_labels"),
         patch.object(MoveSelectedAtomsDialog, "clear_atom_labels"),
     ):
         dlg = MoveSelectedAtomsDialog(mol, mw)
         dlg.selected_atoms.add(0)
-        
+
         btn = dlg.widgets["box_select_btn"]
         btn.setChecked(True)
-        # We don't actually need to call toggle_box_selection(True) 
+        # We don't actually need to call toggle_box_selection(True)
         # since we are manually passing the event to eventFilter.
-        
+
         class MockEvent:
             def __init__(self, t, p):
                 self._t = t
                 self._p = p
+
             def type(self):
                 return self._t
+
             def pos(self):
                 return self._p
-        
+
         press_ev = MockEvent(QEvent.Type.MouseButtonPress, QPoint(100, 100))
         release_ev = MockEvent(QEvent.Type.MouseButtonRelease, QPoint(100, 100))
-        
+
         # interactor must match the one checked inside eventFilter
         interactor = mw.view_3d_manager.plotter.interactor
-        
+
         with patch.object(dlg, "clear_selection") as mock_clear:
             dlg.eventFilter(interactor, press_ev)
             dlg.eventFilter(interactor, release_ev)

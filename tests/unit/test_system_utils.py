@@ -101,15 +101,17 @@ class TestMacOSTheme:
 
     def test_macos_dark_mode(self):
         """AppleInterfaceStyle == Dark -> dark theme."""
-        with patch("platform.system", return_value="Darwin"), patch(
-            "subprocess.run", return_value=self._proc(0, "Dark\n")
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.run", return_value=self._proc(0, "Dark\n")),
         ):
             assert detect_system_theme() == "dark"
 
     def test_macos_light_mode(self):
         """Missing AppleInterfaceStyle key (non-zero exit) -> light theme."""
-        with patch("platform.system", return_value="Darwin"), patch(
-            "subprocess.run", return_value=self._proc(1, "")
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.run", return_value=self._proc(1, "")),
         ):
             assert detect_system_theme() == "light"
 

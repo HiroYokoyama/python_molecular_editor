@@ -400,12 +400,12 @@ class MolecularData:
             elif bond_stereo == 2:
                 stereo_code = 6
 
-            bond_lines.append(f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n")
+            bond_lines.append(
+                f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n"
+            )
 
         mol_block = "\n  MoleditPy\n\n"
-        mol_block += (
-            f"{len(atom_lines):3d}{len(bond_lines):3d}  0  0  0  0  0  0  0  0999 V2000\n"
-        )
+        mol_block += f"{len(atom_lines):3d}{len(bond_lines):3d}  0  0  0  0  0  0  0  0999 V2000\n"
         mol_block += "".join(atom_lines)
         mol_block += "".join(bond_lines)
         mol_block += "M  END\n"
