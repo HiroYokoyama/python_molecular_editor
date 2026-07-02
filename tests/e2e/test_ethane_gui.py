@@ -10,7 +10,6 @@ operation) and interact with it the same way a user would:
 The conversion uses real RDKit embedding + MMFF optimisation — no mocked results.
 """
 
-import sys
 import platform
 import pytest
 import numpy as np

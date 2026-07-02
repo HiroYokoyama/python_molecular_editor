@@ -195,7 +195,7 @@ pyv.Box = _mock.MagicMock
 pvqt.BackgroundPlotter = _DummyPlotterBase
 
 # QtInteractor must be a QWidget subclass so it can be embedded in the splitter
-from PyQt6.QtWidgets import QWidget as _QWidget
+from PyQt6.QtWidgets import QWidget as _QWidget  # noqa: E402
 
 
 class _DummyQtInteractor(_QWidget):
