@@ -174,3 +174,33 @@ class TestApplyPlanarizeGeometry:
         with patch("moleditpy.ui.planarize_dialog.QMessageBox"):
             dlg.apply_planarize()
         mw.view_3d_manager.draw_molecule_3d.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# Regression: picking an atom must refresh the 3D selection labels
+# ---------------------------------------------------------------------------
+
+
+def test_on_atom_picked_refreshes_labels(qapp):
+    """Clicking an atom in the 3D view shows/updates the numbered labels."""
+    from unittest.mock import patch
+    from moleditpy.ui.planarize_dialog import PlanarizeDialog
+
+    mol = make_ethane()
+    mw = make_mock_mw(mol)
+    with (
+        patch.object(PlanarizeDialog, "show_atom_labels") as mock_labels,
+        patch.object(PlanarizeDialog, "clear_atom_labels"),
+        patch.object(PlanarizeDialog, "enable_picking"),
+        patch.object(PlanarizeDialog, "disable_picking"),
+    ):
+        dlg = PlanarizeDialog(mol, mw)
+        mock_labels.reset_mock()
+
+        dlg.on_atom_picked(0)
+        assert 0 in dlg.selected_atoms
+        mock_labels.assert_called_once()
+
+        dlg.on_atom_picked(0)  # toggle off also refreshes labels
+        assert 0 not in dlg.selected_atoms
+        assert mock_labels.call_count == 2

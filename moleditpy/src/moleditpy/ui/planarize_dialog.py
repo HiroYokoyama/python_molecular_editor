@@ -103,10 +103,12 @@ class PlanarizeDialog(BasePickingDialog):
         self.enable_picking()
 
     def on_atom_picked(self, atom_idx: int) -> None:
+        """Toggle atom selection and refresh 3D labels and the count display."""
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
             self.selected_atoms.add(atom_idx)
+        self.show_atom_labels()
         self.update_display()
 
     def clear_selection(self) -> None:
