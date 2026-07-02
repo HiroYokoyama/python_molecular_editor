@@ -292,6 +292,9 @@ class IOManager:
         layout = QVBoxLayout(dialog)
         line_edit = QLineEdit(dialog)
         line_edit.setText("0")
+        error_label = QLabel("", dialog)
+        error_label.setStyleSheet("color: red;")
+        error_label.setVisible(False)
         btn_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
             parent=dialog,
@@ -302,9 +305,24 @@ class IOManager:
         hl.addWidget(skip_btn)
         layout.addWidget(QLabel("Enter total molecular charge:"))
         layout.addWidget(line_edit)
+        layout.addWidget(error_label)
         layout.addLayout(hl)
         result = {"accepted": False, "skip": False}
-        btn_box.accepted.connect(dialog.accept)
+
+        def _accept_if_valid() -> None:
+            # Validate inline: keep the dialog open and show the error in place
+            # instead of silently falling back to charge 0.
+            try:
+                int(float(line_edit.text().strip() or "0"))
+            except ValueError:
+                error_label.setText("Invalid charge: enter an integer (e.g. 0, -1, 2).")
+                error_label.setVisible(True)
+                line_edit.selectAll()
+                line_edit.setFocus()
+                return
+            dialog.accept()
+
+        btn_box.accepted.connect(_accept_if_valid)
         btn_box.rejected.connect(dialog.reject)
         skip_btn.clicked.connect(
             lambda: (result.update({"skip": True}), dialog.accept())  # type: ignore[func-returns-value]
@@ -317,6 +335,7 @@ class IOManager:
             val = int(float(line_edit.text().strip() or "0"))
             return val, True, False
         except ValueError:
+            # Unreachable via OK (validated inline); safe default for Skip path
             return 0, True, False
 
     def estimate_bonds_from_distances(self, mol: Chem.RWMol) -> int:
@@ -438,10 +457,12 @@ class IOManager:
         self.open_project_file()
 
     def open_project_file(self, file_path: Optional[str] = None) -> None:
-        """Open project file (.pmeprj or .pmeraw)."""
-        if not self.host.state_manager.check_unsaved_changes():
-            return None
+        """Open project file (.pmeprj or .pmeraw).
 
+        The unsaved-changes check happens in load_json_data / load_raw_data
+        so that direct calls to those methods (e.g. from plugins) are also
+        protected without double-prompting.
+        """
         if not file_path:
             default_dir = (
                 os.path.dirname(self.host.init_manager.current_file_path)
@@ -505,6 +526,9 @@ class IOManager:
 
     def load_json_data(self, file_path: Optional[str] = None) -> None:
         """Load PME Project (.pmeprj) file."""
+        if not self.host.state_manager.check_unsaved_changes():
+            return
+
         if not file_path:
             default_dir = (
                 os.path.dirname(self.host.init_manager.current_file_path)
@@ -967,6 +991,9 @@ class IOManager:
 
     def load_raw_data(self, file_path: Optional[str] = None) -> None:
         """Open a .pmeraw pickle project file."""
+        if not self.host.state_manager.check_unsaved_changes():
+            return
+
         if not file_path:
             default_dir = (
                 os.path.dirname(self.host.init_manager.current_file_path)
