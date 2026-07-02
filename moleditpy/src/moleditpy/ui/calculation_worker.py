@@ -626,9 +626,6 @@ def _perform_obabel_conversion(
         script = """
 import sys, contextlib
 from openbabel import pybel
-import os
-# Inherit babel variables if any
-if "BABEL_DATADIR" in os.environ: os.environ["BABEL_DATADIR"] = os.environ["BABEL_DATADIR"]
 mol_block = sys.stdin.read()
 ob_mol = pybel.readstring("mol", mol_block)
 with contextlib.suppress(Exception): ob_mol.addh()
@@ -654,9 +651,10 @@ print(ob_mol.write("mol"))
         except Exception as e:
             raise RuntimeError(f"Open Babel isolated execution failed: {e}")
 
-        rd_mol = Chem.AddHs(Chem.MolFromMolBlock(out_mol_block, removeHs=False))
+        rd_mol = Chem.MolFromMolBlock(out_mol_block, removeHs=False)
         if not rd_mol:
             raise ValueError("Open Babel produced invalid MOL.")
+        rd_mol = Chem.AddHs(rd_mol)
 
         _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
         opt_method = opt_method or "MMFF94s_RDKIT"
