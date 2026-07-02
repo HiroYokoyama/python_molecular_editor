@@ -61,13 +61,12 @@ class ComputeManager:
     def _remove_calculating_text(self) -> None:
         """Safely remove the 'Calculating...' text actor from the plotter."""
         actor = getattr(self, "_calculating_text_actor", None)
-        if (
-            actor
-            and self.host.view_3d_manager.plotter.renderer
-            and self.host.view_3d_manager.plotter.renderer
-        ):
+        plotter = self.host.view_3d_manager.plotter
+        if actor and plotter is not None and getattr(plotter, "renderer", None):
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                self.host.view_3d_manager.plotter.renderer.RemoveActor(actor)
+                plotter.renderer.RemoveActor(actor)
+        self._calculating_text_actor = None
+        # Legacy cleanup: older versions stored the actor on the host
         with contextlib.suppress(AttributeError):
             if "_calculating_text_actor" in self.host.__dict__:
                 delattr(self.host, "_calculating_text_actor")
@@ -265,14 +264,15 @@ class ComputeManager:
             if (bg_qcolor.isValid() and bg_qcolor.toHsl().lightness() > 128)
             else "white"
         )
-        self._calculating_text_actor = self.host.view_3d_manager.plotter.add_text(
-            "Calculating...",
-            position="lower_right",
-            font_size=15,
-            color=text_color,
-            name="calculating_text",
-        )
-        self.host.view_3d_manager.plotter.render()
+        if self.host.view_3d_manager.plotter:
+            self._calculating_text_actor = self.host.view_3d_manager.plotter.add_text(
+                "Calculating...",
+                position="lower_right",
+                font_size=15,
+                color=text_color,
+                name="calculating_text",
+            )
+            self.host.view_3d_manager.plotter.render()
 
         options = {
             "conversion_mode": conversion_mode
@@ -391,7 +391,7 @@ class ComputeManager:
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
         self.host.statusBar().showMessage(msg)
 
-        with contextlib.suppress(RuntimeError):
+        with contextlib.suppress(TypeError, RuntimeError):
             QMessageBox.critical(self.host, "Chemistry Problem", msg)
 
         for prob in problems:
@@ -477,7 +477,8 @@ class ComputeManager:
         self._remove_calculating_text()
         self._refresh_ui_state()
         self.host.edit_actions_manager.push_undo_state()
-        self.host.view_3d_manager.plotter.reset_camera()
+        if self.host.view_3d_manager.plotter:
+            self.host.view_3d_manager.plotter.reset_camera()
 
         # Record the successful optimization method from mol property or current setting
         try:

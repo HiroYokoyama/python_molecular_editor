@@ -69,6 +69,19 @@ class IOManager:
             pass
         return basename
 
+
+    def _plotter_view_isometric(self) -> None:
+        """Deferred camera reset; the plotter may be gone by the time it fires."""
+        plotter = self.host.view_3d_manager.plotter
+        if plotter:
+            plotter.view_isometric()
+
+    def _plotter_render(self) -> None:
+        """Deferred render; the plotter may be gone by the time it fires."""
+        plotter = self.host.view_3d_manager.plotter
+        if plotter:
+            plotter.render()
+
     def fix_mol_counts_line(self, line: str) -> str:
         """Ensure the MOL file counts line ends with a valid V2000 tag."""
         if "V3000" in line or "V2000" in line:
@@ -577,10 +590,8 @@ class IOManager:
             self.host.statusBar().showMessage(f"PME Project loaded from {file_path}")
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(
-                50, lambda: self.host.view_3d_manager.plotter.view_isometric()
-            )
-            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            QTimer.singleShot(50, self._plotter_view_isometric)
+            QTimer.singleShot(100, self._plotter_render)
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
 
         except FileNotFoundError:
@@ -817,10 +828,8 @@ class IOManager:
             self.host.view_3d_manager.draw_molecule_3d(mol)
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(
-                50, lambda: self.host.view_3d_manager.plotter.view_isometric()
-            )
-            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            QTimer.singleShot(50, self._plotter_view_isometric)
+            QTimer.singleShot(100, self._plotter_render)
 
             self.host.ui_manager.enter_3d_viewer_mode()
 
@@ -880,10 +889,8 @@ class IOManager:
             self.host.view_3d_manager.draw_molecule_3d(mol)
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(
-                50, lambda: self.host.view_3d_manager.plotter.view_isometric()
-            )
-            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            QTimer.singleShot(50, self._plotter_view_isometric)
+            QTimer.singleShot(100, self._plotter_render)
 
             self.host.ui_manager.enter_3d_viewer_mode()
             self.host.ui_manager.enable_3d_features(True)
@@ -1024,10 +1031,8 @@ class IOManager:
             self.host.statusBar().showMessage(f"Project loaded from {file_path}")
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(
-                50, lambda: self.host.view_3d_manager.plotter.view_isometric()
-            )
-            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            QTimer.singleShot(50, self._plotter_view_isometric)
+            QTimer.singleShot(100, self._plotter_render)
 
         except FileNotFoundError:
             self.host.statusBar().showMessage(f"File not found: {file_path}")
