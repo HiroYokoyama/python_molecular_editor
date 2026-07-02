@@ -52,6 +52,11 @@ if TYPE_CHECKING:
 class BondItem(QGraphicsItem):
     """Visual representation of a molecular bond in the 2D scene."""
 
+    atom1: "AtomItem"
+    atom2: "AtomItem"
+    order: int
+    stereo: int
+
     def get_ez_label_rect(self) -> Optional[QRectF]:
         """Returns the drawing range for E/Z labels (scene coords). Returns None if no label."""
         if self.order != 2 or self.stereo not in [3, 4]:
@@ -157,10 +162,10 @@ class BondItem(QGraphicsItem):
         # Validate input parameters
         if atom1_item is None or atom2_item is None:
             raise ValueError("BondItem requires non-None atom items")
-        self.atom1: Optional[AtomItem] = atom1_item
-        self.atom2: Optional[AtomItem] = atom2_item
-        self.order: int = order
-        self.stereo: int = stereo
+        self.atom1 = atom1_item
+        self.atom2 = atom2_item
+        self.order = order
+        self.stereo = stereo
 
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.pen: QPen = QPen(Qt.GlobalColor.black, 2)
