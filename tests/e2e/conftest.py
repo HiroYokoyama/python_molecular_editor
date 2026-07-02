@@ -233,9 +233,17 @@ def app():
 
 
 @pytest.fixture
-def window(app, qtbot, monkeypatch):
+def window(app, qtbot, monkeypatch, tmp_path):
     """Real MainWindow, headless, using the platform-appropriate package."""
     from PyQt6.QtWidgets import QWidget, QMessageBox, QFileDialog
+
+    # Sandbox the home dir so tests never read/write the real ~/.moleditpy
+    # (settings.json, plugins). MainInitManager and PluginManager both build
+    # their paths from expanduser("~").
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setenv("USERPROFILE", str(fake_home))
 
     monkeypatch.setattr(
         f"{_PKG}.ui.main_window_init.MainInitManager.init_worker_thread",
