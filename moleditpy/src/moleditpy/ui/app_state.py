@@ -18,7 +18,7 @@ import binascii
 import copy
 import logging
 import os
-import contextlib
+from ..utils.suppress_log import suppress_log
 from typing import Any, Dict, Optional, Tuple
 
 
@@ -203,7 +203,7 @@ class StateManager:
                                         )
                                     except (RuntimeError, ValueError, TypeError):
                                         # Safe defensive fallback catching RuntimeError, ValueError, TypeError
-                                        pass
+                                        logging.debug("Suppressed non-critical error", exc_info=True)
 
                     # Sync 2D atoms with 3D actors
                     if self.host.compute_manager:
@@ -489,7 +489,7 @@ class StateManager:
                     except (AttributeError, RuntimeError, TypeError, ValueError):
                         # Suppress InChI generation errors during project save if RDKit lacks InChI support
                         # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
-                        pass
+                        logging.debug("Suppressed non-critical error", exc_info=True)
 
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                     logging.warning("Could not generate molecular identifiers: %s", e)
@@ -543,7 +543,7 @@ class StateManager:
         is_3d_mode = json_data.get("is_3d_viewer_mode", False)
         # Restore last successful optimization method if present in file
         method = json_data.get("last_successful_optimization_method", None)
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+        with suppress_log(AttributeError, RuntimeError, TypeError):
             self.host.set_last_successful_optimization_method(method)
 
         # Plugin State Restoration (Phase 3)
@@ -627,7 +627,7 @@ class StateManager:
                                                 TypeError,
                                                 IndexError,
                                             ):  # [RDKIT GUARD] RDKit atom property assignment may fail on invalid ids; skip silently.
-                                                pass
+                                                logging.debug("Suppressed non-critical error", exc_info=True)
                                 self.host.set_3d_atom_positions(positions_3d)
 
                             # Build mapping
@@ -637,7 +637,7 @@ class StateManager:
                                 self.host.view_3d_manager.update_atom_id_menu_state()
                             except (RuntimeError, TypeError, AttributeError):
                                 # Safe defensive fallback catching RuntimeError, TypeError, AttributeError
-                                pass
+                                logging.debug("Suppressed non-critical error", exc_info=True)
 
                         # Always show 3D if 3D molecule exists
                         self.host.view_3d_manager.draw_molecule_3d(
@@ -659,7 +659,7 @@ class StateManager:
                             self.host.ui_manager.enable_3d_features(True)
                         except (RuntimeError, TypeError, AttributeError):
                             # Safe defensive fallback catching RuntimeError, TypeError, AttributeError
-                            pass
+                            logging.debug("Suppressed non-critical error", exc_info=True)
             except (RuntimeError, ValueError, TypeError, binascii.Error) as e:
                 logging.error(f"Could not restore 3D molecular data: {e}")
                 self.host.set_current_molecule(None)

@@ -538,7 +538,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                 plotter.camera_position = cam
             except (AttributeError, RuntimeError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         plotter.render()
 
@@ -552,7 +552,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                 plotter.remove_actor("move_selected_atoms_highlight")
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         if self.highlight_actor:
             if plotter is not None:
@@ -560,7 +560,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                     plotter.remove_actor(self.highlight_actor)
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
             self.highlight_actor = None
 
         if plotter is not None:
@@ -568,7 +568,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                 plotter.render()
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
     def reset_translation_inputs(self) -> None:
         """Reset translation entry fields to 0.0."""

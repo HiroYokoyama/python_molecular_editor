@@ -204,6 +204,6 @@ def main() -> None:
         except (
             Exception
         ):  # [COSMETIC] Icon refresh is best-effort; Qt timing errors are non-fatal.
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
     sys.exit(app.exec())

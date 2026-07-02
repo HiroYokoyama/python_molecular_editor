@@ -52,7 +52,7 @@ class PluginMenuManager:
                         f"An error occurred in plugin '{plugin_name}':\n{exc}",
                     )
                 except Exception:
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
 
         return _safe
 

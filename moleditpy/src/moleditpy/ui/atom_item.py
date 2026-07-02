@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
+import logging
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
@@ -385,7 +386,7 @@ class AtomItem(QGraphicsItem):
                             # If sip check fails, continue defensively.
                             # This usually means the object is in an inconsistent state.
                             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError  # Silent failure for non-critical partner state check
-                            pass
+                            logging.debug("Suppressed non-critical error", exc_info=True)
 
                         other_pos = None
                         try:

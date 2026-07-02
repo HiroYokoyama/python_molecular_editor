@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import logging
-import contextlib
+from ..utils.suppress_log import suppress_log
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
@@ -84,7 +84,7 @@ class View3DManager:
     def cleanup(self) -> None:
         """Cleanup resources used by the 3D manager."""
         if self.plotter:
-            with contextlib.suppress(RuntimeError, OSError):
+            with suppress_log(RuntimeError, OSError):
                 self.plotter.clear()
                 self.plotter.close()
         self.current_mol = None
@@ -163,7 +163,7 @@ class View3DManager:
                 return mol_to_draw
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 # Kekulize failed; keep original and warn user
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                with suppress_log(AttributeError, RuntimeError, TypeError):
                     self.host.statusBar().showMessage(f"Kekulize failed: {e}")  # type: ignore[union-attr]
         return mol
 
@@ -184,7 +184,7 @@ class View3DManager:
         # Force removal to prevent ghost actor residues
         old_axes_actor = getattr(self, "axes_actor", None)
         if old_axes_actor is not None:
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, RuntimeError, TypeError):
                 self.plotter.remove_actor(old_axes_actor)  # type: ignore[union-attr]
             self.axes_actor = None
 
@@ -233,7 +233,7 @@ class View3DManager:
                 Chem.Kekulize(mol_to_draw, clearAromaticFlags=True)
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 # Kekulize failed; keep original and warn user
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                with suppress_log(AttributeError, RuntimeError, TypeError):
                     self.host.statusBar().showMessage(f"Kekulize failed: {e}")  # type: ignore[union-attr]
                 mol_to_draw = mol
 
@@ -264,7 +264,7 @@ class View3DManager:
                         ValueError,
                         KeyError,
                     ):  # [COLOR] QColor parse may fail on invalid hex; skip atom color override silently.
-                        pass
+                        logging.debug("Suppressed non-critical error", exc_info=True)
 
         # Define common mesh properties
         mesh_props = dict(
@@ -635,7 +635,7 @@ class View3DManager:
                         ValueError,
                         KeyError,
                     ):  # [COLOR] QColor parse may fail on invalid hex; skip bond color override silently.
-                        pass
+                        logging.debug("Suppressed non-critical error", exc_info=True)
 
                 # Determine effective uniform color for this bond
                 local_bs_bond_rgb = (
@@ -1261,7 +1261,7 @@ class View3DManager:
                                     label = "?"
                         except (KeyError, RuntimeError, TypeError):
                             # Safe defensive fallback catching KeyError, RuntimeError, TypeError
-                            pass
+                            logging.debug("Suppressed non-critical error", exc_info=True)
 
                     pts.append(center_pos)
                     labels.append(label)
@@ -1884,7 +1884,7 @@ class View3DManager:
                     self.axes_widget = None
                 except (AttributeError, RuntimeError):
                     # Safe defensive fallback catching AttributeError, RuntimeError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
 
             if show_axes:
                 # Calculate contrast color from background for labels

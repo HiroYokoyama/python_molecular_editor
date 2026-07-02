@@ -83,7 +83,7 @@ class Dialog3DPickingMixin:
                                 self.on_atom_picked(int(closest_atom_idx))
                             except (AttributeError, RuntimeError):
                                 # Safe defensive fallback catching AttributeError, RuntimeError
-                                pass
+                                logging.debug("Suppressed non-critical error", exc_info=True)
 
                         from PyQt6.QtCore import QTimer
 
@@ -136,7 +136,7 @@ class Dialog3DPickingMixin:
                                 self.clear_selection()
                             except (AttributeError, RuntimeError):
                                 # Safe defensive fallback catching AttributeError, RuntimeError
-                                pass
+                                logging.debug("Suppressed non-critical error", exc_info=True)
 
                         from PyQt6.QtCore import QTimer
 
@@ -182,7 +182,7 @@ class Dialog3DPickingMixin:
                         plotter.remove_actor(label_actor)
                 except (AttributeError, RuntimeError, TypeError):
                     # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
         self.selection_labels = []
 
     clear_selection_labels = clear_atom_labels
@@ -221,7 +221,7 @@ class Dialog3DPickingMixin:
                     plotter.camera_position = cam
                 except (AttributeError, RuntimeError, TypeError):
                     # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
 
     def show_atom_labels_for(
         self, atoms_and_labels: list[tuple[int, str]], color: str = "yellow"
@@ -260,4 +260,4 @@ class Dialog3DPickingMixin:
                 plotter.camera_position = cam
             except (AttributeError, RuntimeError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)

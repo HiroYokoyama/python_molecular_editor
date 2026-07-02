@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
@@ -129,7 +130,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         except (AttributeError, ValueError, TypeError, IndexError):
             # If for some reason the cache is incompatible, draw_molecule_3d below will rebuild it
             # Safe defensive fallback catching AttributeError, ValueError, TypeError, IndexError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         # 3. Redraw molecule
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)

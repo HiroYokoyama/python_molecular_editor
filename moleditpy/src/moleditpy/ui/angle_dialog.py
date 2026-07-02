@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
+import logging
 
 from typing import Any, TYPE_CHECKING, Optional, Sequence
 
@@ -249,7 +250,7 @@ class AngleDialog(GeometryBaseDialog):
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
         elif self.atom2_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             self.selection_label.setText(
@@ -271,7 +272,7 @@ class AngleDialog(GeometryBaseDialog):
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
         elif self.atom3_idx is None:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -295,7 +296,7 @@ class AngleDialog(GeometryBaseDialog):
                 self.angle_slider.blockSignals(False)
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
         else:
             symbol1 = self.mol.GetAtomWithIdx(self.atom1_idx).GetSymbol()
             symbol2 = self.mol.GetAtomWithIdx(self.atom2_idx).GetSymbol()
@@ -333,7 +334,7 @@ class AngleDialog(GeometryBaseDialog):
                     self.angle_slider.setEnabled(True)
             except (AttributeError, RuntimeError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
             # Add labels
             self.add_selection_label(self.atom1_idx, "1")

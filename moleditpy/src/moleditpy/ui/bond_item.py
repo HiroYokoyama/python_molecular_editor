@@ -591,7 +591,7 @@ class BondItem(QGraphicsItem):
                 # Silent failure for non-critical hover highlight drawing.
                 # If highlight fails, it's just a visual artifact.
                 # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         painter.restore()
 

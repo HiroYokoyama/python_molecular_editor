@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 from typing import Any, Dict, Optional
 
 from PyQt6.QtGui import QColor
@@ -299,7 +300,7 @@ class ColorSettingsDialog(QDialog):
                 except KeyError:
                     # Suppress if cpk_colors key is already missing or removed during reset.
                     # Safe defensive fallback catching KeyError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
         if self.changed_cpk:
             cdict = settings.get("cpk_colors", {}).copy()
             cdict.update(self.changed_cpk)
@@ -326,12 +327,12 @@ class ColorSettingsDialog(QDialog):
                     try:
                         it.update_style()
                     except (AttributeError, RuntimeError, TypeError):
-                        pass
+                        logging.debug("Suppressed non-critical error", exc_info=True)
                 else:
                     try:
                         it.update()
                     except (AttributeError, RuntimeError, TypeError):
-                        pass
+                        logging.debug("Suppressed non-critical error", exc_info=True)
 
         # Update button styles
         for s, btn in self.element_buttons.items():

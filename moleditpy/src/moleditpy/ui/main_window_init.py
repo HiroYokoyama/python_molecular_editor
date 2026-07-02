@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import logging
-import contextlib
+from ..utils.suppress_log import suppress_log
 import json
 import math
 import os
@@ -303,13 +303,11 @@ class MainInitManager:
                     self.current_file_path = file_path
                     self.host.state_manager.update_window_title()
                     return  # Success
-                except (RuntimeError, TypeError, ValueError, AttributeError) as e:
-                    logging.warning(
-                        "Plugin opener failed for '%s': %s",
+                except Exception:  # plugins have full app access; any failure falls through to the next opener
+                    logging.exception(
+                        "Plugin opener failed for '%s'",
                         opener_info.get("plugin", "Unknown"),
-                        e,
                     )
-                    # If this opener fails, try the next one or fall through to default
                     continue
 
         if file_ext in ["mol", "sdf"]:
@@ -453,7 +451,7 @@ class MainInitManager:
         """Update all UI components to reflect the reset settings."""
         # 1. Refresh related dialogs if open
         for w in QApplication.topLevelWidgets():
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, RuntimeError, TypeError):
                 # ColorSettingsDialog has no refresh method; reopening reflects the reset
                 if isinstance(w, SettingsDialog):
                     w.update_ui_from_settings(self.settings)
@@ -475,7 +473,7 @@ class MainInitManager:
 
     def _sync_settings_to_menu_actions(self) -> None:
         """Synchronize menu action checked states with current settings."""
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+        with suppress_log(AttributeError, RuntimeError, TypeError):
             # Optimization actions
             if hasattr(self, "opt3d_actions"):
                 current_method = (
@@ -516,7 +514,7 @@ class MainInitManager:
                 bg_c = self.settings.get("background_color_2d", "#FFFFFF")
                 self.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
                 for item in self.scene.items():
-                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    with suppress_log(AttributeError, RuntimeError, TypeError):
                         if type(item).__name__ not in ("AtomItem", "BondItem"):
                             continue
                         if hasattr(item, "update_style"):
@@ -546,7 +544,7 @@ class MainInitManager:
         except (AttributeError, RuntimeError, ValueError, TypeError, IOError):
             # Use defaults on any error
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError, IOError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         # 4.5 Save initial settings copy for change detection
         self.host.initial_settings = self.settings.copy()
@@ -773,13 +771,13 @@ class MainInitManager:
         self.host.addToolBar(self.toolbar)
 
         # Row 2: Templates
-        with contextlib.suppress(AttributeError):
+        with suppress_log(AttributeError):
             self.host.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         self.toolbar_bottom = QToolBar("Templates Toolbar")
         self.host.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar_bottom)
 
         # Row 3: Plugins
-        with contextlib.suppress(AttributeError):
+        with suppress_log(AttributeError):
             self.host.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         self.plugin_toolbar = QToolBar("Plugin Toolbar")
         self.host.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.plugin_toolbar)
@@ -1070,17 +1068,17 @@ class MainInitManager:
 
     def _get_icon_foreground_color(self) -> QColor:
         """Determine appropriate icon foreground color based on theme/settings."""
-        with contextlib.suppress(Exception):
+        with suppress_log(Exception):
             fg = self.settings.get("icon_foreground")
             if fg and QColor(fg).isValid():
                 return QColor(fg)
 
-        with contextlib.suppress(Exception):
+        with suppress_log(Exception):
             os_pref = detect_system_dark_mode()
             if os_pref is not None:
                 return QColor("#FFFFFF") if os_pref else QColor("#000000")
 
-        with contextlib.suppress(Exception):
+        with suppress_log(Exception):
             bg = QColor(self.settings.get("background_color", "#919191"))
             if bg.isValid():
                 lum = 0.2126 * bg.redF() + 0.7152 * bg.greenF() + 0.0722 * bg.blueF()

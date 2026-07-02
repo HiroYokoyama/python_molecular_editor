@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
+import logging
 
 # main_window_edit_3d.py
 # Mixin class separated from main_window.py
@@ -75,7 +76,7 @@ class Edit3DManager:
                     interactor_style.reset_interactor_state()
             except (AttributeError, RuntimeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         # Update status message
         if checked:
@@ -95,7 +96,7 @@ class Edit3DManager:
                 # Suppress non-critical 3D edit/UI sync errors during bulk dialog teardown.
                 # If a dialog is already closed or its C++ object is gone, we ignore it.
                 # Safe defensive fallback catching AttributeError, RuntimeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         self.active_3d_dialogs.clear()
 
@@ -129,7 +130,7 @@ class Edit3DManager:
         except (AttributeError, RuntimeError):
             # Suppress if the actor is already destroyed or not found.
             # Safe defensive fallback catching AttributeError, RuntimeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         if not self.measurement_labels or not self.host.view_3d_manager.current_mol:
             return
@@ -176,7 +177,7 @@ class Edit3DManager:
         except (AttributeError, RuntimeError):
             # Suppress if the actor is already destroyed or not found.
             # Safe defensive fallback catching AttributeError, RuntimeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         # Remove 2D labels
         self.clear_2d_measurement_labels()
@@ -191,7 +192,7 @@ class Edit3DManager:
             except (AttributeError, RuntimeError):
                 # Suppress if the actor is already destroyed or not found.
                 # Safe defensive fallback catching AttributeError, RuntimeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         self.host.view_3d_manager.plotter.render()
 
@@ -265,7 +266,7 @@ class Edit3DManager:
                 except (AttributeError, RuntimeError):
                     # Scene access or removal failed; skip this item.
                     # Safe defensive fallback catching AttributeError, RuntimeError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
             except (AttributeError, RuntimeError):
                 # If sip check itself fails, fall back to best-effort removal
                 try:
@@ -372,7 +373,7 @@ class Edit3DManager:
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Suppress non-critical 3D edit/UI sync errors if the plotter or actor is already destroyed
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         if not measurement_lines:
             self.measurement_text_actor = None
@@ -431,7 +432,7 @@ class Edit3DManager:
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Suppress non-critical UI/rendering/measurement noise if the plotter or actor is already destroyed.
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         if not self.selected_atoms_3d or not self.host.view_3d_manager.current_mol:
             self.host.view_3d_manager.plotter.render()

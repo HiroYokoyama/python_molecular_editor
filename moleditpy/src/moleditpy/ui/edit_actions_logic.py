@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-import contextlib
+from ..utils.suppress_log import suppress_log
 import json
 import copy
 import logging
@@ -541,7 +541,7 @@ class EditActionsManager:
 
         except (AttributeError, RuntimeError, ValueError, TypeError):
             logging.exception("Error during hydrogen removal")
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, RuntimeError, TypeError):
                 # Suppress transient errors during UI status reporting.
                 self.host.statusBar().showMessage("Error removing hydrogen atoms.")  # type: ignore[union-attr]
 
@@ -725,7 +725,7 @@ class EditActionsManager:
                 self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     f"Added {added_count} hydrogen atoms.", 2000
                 )
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                with suppress_log(AttributeError, RuntimeError, TypeError):
                     # Suppress selection errors if the scene is being cleared or items are invalid.
                     self.host.init_manager.scene.clearSelection()
                     for it in added_items:
@@ -757,7 +757,7 @@ class EditActionsManager:
         except RuntimeError:
             # Suppress non-critical error
             # Safe defensive fallback catching RuntimeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
     def open_rotate_2d_dialog(self) -> None:
         """Open 2D rotation dialog"""
@@ -1013,7 +1013,7 @@ class EditActionsManager:
                     continue
 
                 # Suppress potential errors if the item is already destroyed by SIP during iteration
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                with suppress_log(AttributeError, RuntimeError, TypeError):
                     if is_deleted_func is not None and is_deleted_func(item):
                         continue
 
@@ -1060,7 +1060,7 @@ class EditActionsManager:
                     continue
                 seen.add(oid)
                 if hasattr(it, "update"):
-                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    with suppress_log(AttributeError, RuntimeError, TypeError):
                         # Suppress transient errors during item update.
                         it.update()
                 else:
@@ -1101,7 +1101,7 @@ class EditActionsManager:
                 QTimer.singleShot(0, _ui_closure)
             except (RuntimeError, TypeError):
                 # Fallback if QTimer fails (e.g. during app shutdown)
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                with suppress_log(AttributeError, RuntimeError, TypeError):
                     _ui_closure()
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
             logging.exception(f"Unexpected error in update_implicit_hydrogens: {e}")
@@ -1168,7 +1168,7 @@ class EditActionsManager:
                     continue
                 if bond_item.scene():
                     # Suppress potential errors if the item is already destroyed during coordinate adjustment
-                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    with suppress_log(AttributeError, RuntimeError, TypeError):
                         bond_item.update_position()
 
             # Run overlap resolution
@@ -1257,7 +1257,7 @@ class EditActionsManager:
                 if sip_isdeleted_safe(item):
                     continue
                 if item.scene():
-                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    with suppress_log(AttributeError, RuntimeError, TypeError):
                         item.update_position()
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(f"Bond position update suppressed: {e}")
@@ -1448,12 +1448,12 @@ class EditActionsManager:
             self.host.chem_check_failed = True
             desc = f" ({source_desc})" if source_desc else ""
             # Suppress potential status bar or button state errors if the window is being closed or destroyed
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, RuntimeError, TypeError):
                 self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
             # Disable 3D optimization UI to prevent running on invalid molecules
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, RuntimeError, TypeError):
                 self.host.init_manager.optimize_3d_button.setEnabled(False)  # type: ignore[union-attr]
 
     def _clear_xyz_flags(self, mol: Optional[Any] = None) -> None:
@@ -1470,22 +1470,22 @@ class EditActionsManager:
         target = mol if mol is not None else self.host.view_3d_manager.current_mol
         if target is not None:
             # Remove RDKit property _xyz_skip_checks
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, RuntimeError, TypeError):
                 # Suppress error if HasProp or ClearProp is unavailable.
                 if hasattr(target, "HasProp") and target.HasProp("_xyz_skip_checks"):
-                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    with suppress_log(AttributeError, RuntimeError, TypeError):
                         target.ClearProp("_xyz_skip_checks")
             # Remove attribute-style markers
             target.__dict__.pop("_xyz_skip_checks", None)
             target.__dict__.pop("xyz_atom_data", None)
 
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+        with suppress_log(AttributeError, RuntimeError, TypeError):
             self.host.view_3d_manager.reset_zoom()
 
         self.host.is_xyz_derived = False
 
         # Enable Optimize 3D unless sanitization failed
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+        with suppress_log(AttributeError, RuntimeError, TypeError):
             # Suppress error if optimize_3d_button is partially destroyed.
             self.host.init_manager.optimize_3d_button.setEnabled(  # type: ignore[union-attr]
                 not getattr(self.host, "chem_check_failed", False)

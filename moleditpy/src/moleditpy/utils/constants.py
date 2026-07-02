@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 # --- Constants ---
 
+import logging
 import os
 from PyQt6.QtGui import QColor, QFont
 from rdkit import Chem
@@ -24,9 +25,9 @@ def _get_version() -> str:
         try:
             return version("MoleditPy")
         except PackageNotFoundError:  # [OPTIONAL] Package not installed in editable mode; fall through to pyproject.toml.
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
     except ImportError:
-        pass
+        logging.debug("Suppressed non-critical error", exc_info=True)
 
     try:
         # Fallback: Parse pyproject.toml directly
@@ -42,7 +43,7 @@ def _get_version() -> str:
     except (
         Exception
     ):  # [FALLBACK] pyproject.toml may not exist in installed wheels; return "Unknown".
-        pass
+        logging.debug("Suppressed non-critical error", exc_info=True)
 
     return "Unknown"
 

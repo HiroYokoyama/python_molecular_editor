@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import logging
-import contextlib
+from ..utils.suppress_log import suppress_log
 from typing import Any, Dict, List, Optional, Set, Tuple, Union, TYPE_CHECKING
 
 from PyQt6.QtCore import QThread, QTimer, QPoint
@@ -56,18 +56,18 @@ class ComputeManager:
             signal.disconnect()
         except RuntimeError:
             # Safe defensive fallback catching RuntimeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
     def _remove_calculating_text(self) -> None:
         """Safely remove the 'Calculating...' text actor from the plotter."""
         actor = getattr(self, "_calculating_text_actor", None)
         plotter = self.host.view_3d_manager.plotter
         if actor and plotter is not None and getattr(plotter, "renderer", None):
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, RuntimeError, TypeError):
                 plotter.renderer.RemoveActor(actor)
         self._calculating_text_actor = None
         # Legacy: older versions stored the actor on the host
-        with contextlib.suppress(AttributeError):
+        with suppress_log(AttributeError):
             if "_calculating_text_actor" in self.host.__dict__:
                 delattr(self.host, "_calculating_text_actor")
 
@@ -369,7 +369,7 @@ class ComputeManager:
         self.original_atom_properties = {}
         for i in range(mol.GetNumAtoms()):
             atom = mol.GetAtomWithIdx(i)
-            with contextlib.suppress(KeyError):
+            with suppress_log(KeyError):
                 self.original_atom_properties[i] = atom.GetIntProp("_original_atom_id")
 
         problems = Chem.DetectChemistryProblems(mol)
@@ -391,11 +391,11 @@ class ComputeManager:
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
         self.host.statusBar().showMessage(msg)  # type: ignore[union-attr]
 
-        with contextlib.suppress(RuntimeError):
+        with suppress_log(RuntimeError):
             QMessageBox.critical(self.host, "Chemistry Problem", msg)
 
         for prob in problems:
-            with contextlib.suppress(AttributeError, KeyError, RuntimeError):
+            with suppress_log(AttributeError, KeyError, RuntimeError):
                 atom_idx = prob.GetAtomIdx()
                 rd_atom = mol.GetAtomWithIdx(atom_idx)
                 orig_id = rd_atom.GetIntProp("_original_atom_id")
@@ -426,7 +426,7 @@ class ComputeManager:
             thread.quit()
             thread.finished.connect(thread.deleteLater)
             worker.deleteLater()
-            with contextlib.suppress(ValueError, AttributeError):
+            with suppress_log(ValueError, AttributeError):
                 self._active_calc_threads.remove(thread)
 
         def _on_finished(result: Any) -> None:
@@ -494,7 +494,7 @@ class ComputeManager:
                 self.last_successful_optimization_method = "Unoptimized"
         except (AttributeError, TypeError):
             # Safe defensive fallback catching AttributeError, TypeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         # Update 3D interactive features (hovers, menus)
         self.host.view_3d_manager.setup_3d_hover()
@@ -547,9 +547,9 @@ class ComputeManager:
                     return
             except (TypeError, RuntimeError):
                 # Safe defensive fallback catching TypeError, RuntimeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
-        with contextlib.suppress(TypeError, RuntimeError):
+        with suppress_log(TypeError, RuntimeError):
             QMessageBox.critical(self.host, "Calculation Error", msg)
 
     def create_atom_id_mapping(self) -> None:

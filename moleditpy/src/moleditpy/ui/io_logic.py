@@ -16,6 +16,7 @@ import logging
 import os
 import json
 import pickle
+from ..utils.suppress_log import suppress_log
 from typing import Any, Optional, Tuple
 
 from PyQt6.QtCore import QPointF, QTimer
@@ -54,7 +55,7 @@ class IOManager:
                     return str(name)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
         return "untitled"
 
     def _get_default_path(self, suffix: str = "") -> str:
@@ -66,7 +67,7 @@ class IOManager:
                 return os.path.join(os.path.dirname(cur_path), basename)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
         return basename
 
     def _plotter_view_isometric(self) -> None:
@@ -177,7 +178,7 @@ class IOManager:
                     m.SetDoubleProp(key, val)
             except (RuntimeError, TypeError, ValueError):
                 # Safe defensive fallback catching RuntimeError, TypeError, ValueError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         def _process(charge_val: int, use_rd_determine: bool = True) -> Any:
             if use_rd_determine:
@@ -381,7 +382,7 @@ class IOManager:
                             bonds_added.append((i, j, distance))
                         except (RuntimeError, ValueError, TypeError):
                             # Safe defensive fallback catching RuntimeError, ValueError, TypeError
-                            pass
+                            logging.debug("Suppressed non-critical error", exc_info=True)
 
         return len(bonds_added)
 
@@ -812,10 +813,9 @@ class IOManager:
             self.host.set_atom_id_to_rdkit_idx_map({})
 
             # Determine is_xyz_derived: True only when bond estimation was skipped
-            import contextlib
 
             skip_flag = False
-            with contextlib.suppress(AttributeError, KeyError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, KeyError, RuntimeError, TypeError):
                 if mol.HasProp("_xyz_skip_checks"):
                     skip_flag = bool(mol.GetIntProp("_xyz_skip_checks"))
             self.host.is_xyz_derived = skip_flag or (mol.GetNumBonds() == 0)
@@ -1048,7 +1048,7 @@ class IOManager:
             else:
                 mol.SetProp(prop_name, str(value))
         except (RuntimeError, ValueError, AttributeError, TypeError):
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
     def _get_mol_prop(self, mol: Chem.Mol, prop_name: str, default: Any = None) -> Any:
         """Get an RDKit molecule property safely, trying int/float/str in order."""
@@ -1067,9 +1067,8 @@ class IOManager:
 
 def _set_mol_prop_safe(mol: Chem.Mol, key: str, val: Any) -> None:
     """Module-level helper: set an int or float property on an RDKit mol silently."""
-    import contextlib
 
-    with contextlib.suppress(RuntimeError, TypeError, ValueError, AttributeError):
+    with suppress_log(RuntimeError, TypeError, ValueError, AttributeError):
         if isinstance(val, int):
             mol.SetIntProp(key, val)
         elif isinstance(val, float):

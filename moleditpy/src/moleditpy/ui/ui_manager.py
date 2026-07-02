@@ -225,7 +225,7 @@ class UIManager(QObject):
                 self.host.set_settings_dirty(False)
         except (AttributeError, RuntimeError, TypeError, ValueError, OSError):
             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError, OSError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         # 2. Handle unsaved changes
         if self.host.state_manager.has_unsaved_changes:
@@ -258,7 +258,7 @@ class UIManager(QObject):
                         widget.close()
                     except (RuntimeError, TypeError):
                         # Safe defensive fallback catching RuntimeError, TypeError
-                        pass
+                        logging.debug("Suppressed non-critical error", exc_info=True)
 
             # Stop calculation threads
             active_threads = list(
@@ -270,10 +270,10 @@ class UIManager(QObject):
                     thr.wait(200)
                 except (RuntimeError, TypeError):
                     # Safe defensive fallback catching RuntimeError, TypeError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         return True
 
@@ -306,7 +306,7 @@ class UIManager(QObject):
                     interactor_style.reset_interactor_state()
             except (AttributeError, RuntimeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
         self.host.init_manager.view_2d.setFocus()
 
     def _setup_3d_picker(self) -> None:
@@ -467,7 +467,7 @@ class UIManager(QObject):
             except (AttributeError, RuntimeError, TypeError, ValueError):
                 # Suppress non-critical 3D feature state update errors if widgets are not fully initialized
                 # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         # Always enable these core 3D interactors
         for core_act in ["measurement_action", "edit_3d_action"]:
