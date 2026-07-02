@@ -285,7 +285,8 @@ class View3DManager:
         # Update projection mode and force render
         proj_mode = self.host.get_settings().get("projection_mode", "Perspective")
         if hasattr(self.plotter, "renderer") and hasattr(
-            self.plotter.renderer, "GetActiveCamera"  # type: ignore[union-attr]
+            self.plotter.renderer,
+            "GetActiveCamera",  # type: ignore[union-attr]
         ):
             vcam = self.plotter.renderer.GetActiveCamera()  # type: ignore[union-attr]
             if vcam:
@@ -1846,7 +1847,8 @@ class View3DManager:
             "projection_mode", "Perspective"
         )
         if hasattr(self.plotter, "renderer") and hasattr(
-            self.plotter.renderer, "GetActiveCamera"  # type: ignore[union-attr]
+            self.plotter.renderer,
+            "GetActiveCamera",  # type: ignore[union-attr]
         ):
             cam = self.plotter.renderer.GetActiveCamera()  # type: ignore[union-attr]
             if cam:

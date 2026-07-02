@@ -2204,6 +2204,13 @@ __clear_xyz_flags(mol=None) uses the current_mol from the view manager._
 __clear_xyz_flags does not raise when reset_zoom is absent._
 
 
+### test_push_undo_state_caps_stack_depth
+_The undo stack drops its oldest entries beyond UNDO_STACK_MAX_DEPTH._
+
+- assert len(mgr.undo_stack) == UNDO_STACK_MAX_DEPTH
+- assert mgr.undo_stack[-1]['_next_atom_id'] == UNDO_STACK_MAX_DEPTH + 24
+- assert mgr.undo_stack[0]['_next_atom_id'] == 25
+
 ## tests/unit/test_export_logic.py
 
 ### test_create_multi_material_obj_advanced
