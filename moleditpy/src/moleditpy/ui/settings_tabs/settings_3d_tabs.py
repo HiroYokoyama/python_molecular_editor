@@ -33,10 +33,10 @@ class Settings3DSceneTab(SettingsTabBase):
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:
         super().__init__(default_settings, parent)
-        self.axes_checkbox = None
-        self.bg_button = None
-        self.light_checkbox = None
-        self.projection_combo = None
+        self.axes_checkbox: Any = None
+        self.bg_button: Any = None
+        self.light_checkbox: Any = None
+        self.projection_combo: Any = None
         self.current_bg_color = default_settings["background_color"]
         self._setup_ui()
 
@@ -136,9 +136,9 @@ class SettingsModelTab(SettingsTabBase):
         self.prefix = model_prefix
         self.info_text = info_text
         super().__init__(default_settings, parent)
-        self.bond_color_button = None
+        self.bond_color_button: Any = None
         self.current_bond_color = None
-        self.use_cpk_checkbox = None
+        self.use_cpk_checkbox: Any = None
         self._setup_ui()
 
     def _setup_ui(self) -> None:

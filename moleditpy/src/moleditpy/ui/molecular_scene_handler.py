@@ -35,7 +35,7 @@ class TemplateMixin:
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.template_context = {}
-        self.template_preview = None
+        self.template_preview: Any = None
         self.template_preview_points = []
         super().__init__(*args, **kwargs)
 

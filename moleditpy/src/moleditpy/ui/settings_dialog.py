@@ -41,7 +41,7 @@ class SettingsDialog(QDialog):
         self.tab_scene = None
         self.tab_stick = None
         self.tab_wf = None
-        self.tab_widget = None
+        self.tab_widget: Any = None
         self.setWindowTitle("Settings")
         self.setMinimumSize(650, 750)
         self.parent_window = parent

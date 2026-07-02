@@ -41,9 +41,9 @@ class UserTemplateDialog(QDialog):
 
     def __init__(self, main_window: Any, parent: Any = None) -> None:
         super().__init__(parent)
-        self.delete_button = None
-        self.save_current_button = None
-        self.template_layout = None
+        self.delete_button: Any = None
+        self.save_current_button: Any = None
+        self.template_layout: Any = None
         self.template_widget = None
         self.main_window = main_window
         self.user_templates: List[Any] = []

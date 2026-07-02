@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import numpy as np
-from typing import TYPE_CHECKING, Optional, Sequence
+from typing import Any, TYPE_CHECKING, Optional, Sequence
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -47,18 +47,18 @@ class BondLengthDialog(GeometryBaseDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
-        self._baseline_positions = None
+        self._baseline_positions: Any = None
         self._snapshot_positions = None
-        self.apply_button = None
-        self.atom1_fix_group_radio = None
-        self.atom1_fix_radio = None
-        self.both_groups_radio = None
-        self.clear_button = None
-        self.distance_input = None
-        self.distance_label = None
-        self.distance_slider = None
+        self.apply_button: Any = None
+        self.atom1_fix_group_radio: Any = None
+        self.atom1_fix_radio: Any = None
+        self.both_groups_radio: Any = None
+        self.clear_button: Any = None
+        self.distance_input: Any = None
+        self.distance_label: Any = None
+        self.distance_slider: Any = None
         self.picker_connection = None
-        self.selection_label = None
+        self.selection_label: Any = None
         self.atom1_idx: Optional[int] = None
         self.atom2_idx: Optional[int] = None
 

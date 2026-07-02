@@ -49,7 +49,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self._deleted_items = []
         self.initial_positions_in_event = {}
         self.template_context = {}
-        self.template_preview = None
+        self.template_preview: Any = None
         self.template_preview_points = []
         self.was_selected_on_press = False
         self.mode: str = "select"

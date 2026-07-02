@@ -154,26 +154,26 @@ class MainInitManager:
         self.plugin_menubar_separator_added = False
         self.plugin_menu_manager = PluginMenuManager(self)
         self.active_worker_ids = set()
-        self.analysis_action = None
-        self.atom_index_base_0_action = None
-        self.atom_index_base_1_action = None
-        self.atom_index_base_menu = None
+        self.analysis_action: Any = None
+        self.atom_index_base_0_action: Any = None
+        self.atom_index_base_1_action: Any = None
+        self.atom_index_base_menu: Any = None
         self.conv_actions = None
-        self.edit_3d_action = None
+        self.edit_3d_action: Any = None
         self.halt_ids = set()
-        self.measurement_action = None
+        self.measurement_action: Any = None
         self.next_conversion_id = 1
-        self.opt3d_actions = None
+        self.opt3d_actions: Any = None
         self.opt3d_method_labels: dict = {}
-        self.paste_action = None
-        self.plugin_menu = None
-        self.show_atom_coords_action = None
-        self.show_atom_symbol_action = None
-        self.show_index_action = None
-        self.show_original_id_action = None
-        self.show_xyz_index_action = None
-        self.toggle_chiral_action = None
-        self.view_2d = None
+        self.paste_action: Any = None
+        self.plugin_menu: Any = None
+        self.show_atom_coords_action: Any = None
+        self.show_atom_symbol_action: Any = None
+        self.show_index_action: Any = None
+        self.show_original_id_action: Any = None
+        self.show_xyz_index_action: Any = None
+        self.toggle_chiral_action: Any = None
+        self.view_2d: Any = None
         self.init_ui()
         self.init_worker_thread()
         self.host.ui_manager.setup_3d_picker()

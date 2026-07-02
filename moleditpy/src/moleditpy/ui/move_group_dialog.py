@@ -42,14 +42,14 @@ class MoveGroupDialog(BasePickingDialog):
         parent: Any = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
-        self.clear_button = None
-        self.selection_label = None
-        self.x_rot_input = None
-        self.x_trans_input = None
-        self.y_rot_input = None
-        self.y_trans_input = None
-        self.z_rot_input = None
-        self.z_trans_input = None
+        self.clear_button: Any = None
+        self.selection_label: Any = None
+        self.x_rot_input: Any = None
+        self.x_trans_input: Any = None
+        self.y_rot_input: Any = None
+        self.y_trans_input: Any = None
+        self.z_rot_input: Any = None
+        self.z_trans_input: Any = None
         self.selected_atoms: set[int] = set()
         self.group_atoms: set[int] = set()  # All atoms connected to selected atoms
 
