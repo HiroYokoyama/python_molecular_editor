@@ -820,9 +820,11 @@ def test_check_chemistry_problems_fallback(mock_parser_host):
 
     compute = DummyCompute(mock_parser_host)
 
-    # Setup a problematic atom: Carbon with 5 bonds
+    # Setup a problematic atom: Carbon with total bond order 5
     pos = QPointF(0, 0)
     compute.data.add_atom("C", pos)
+    for i in range(4):
+        compute.data.add_atom("C", QPointF(50.0 * (i + 1), 0))
 
     # Use Mock item to avoid Qt crash
     mock_item = MagicMock()
@@ -830,14 +832,13 @@ def test_check_chemistry_problems_fallback(mock_parser_host):
     mock_item.pos.return_value = pos
     compute.host.init_manager.scene.atom_items[0] = mock_item
 
-    # Mock bonds to have count 5
+    # Bonds sum to order 5 on atom 0 (2+1+1+1)
     compute.data.bonds = {
         (0, 1): {"order": 2},
         (0, 2): {"order": 1},
         (0, 3): {"order": 1},
         (0, 4): {"order": 1},
     }
-    # Total bond count = 2+1+1+1 = 5
 
     compute.check_chemistry_problems_fallback()
     assert mock_item.has_problem == True
