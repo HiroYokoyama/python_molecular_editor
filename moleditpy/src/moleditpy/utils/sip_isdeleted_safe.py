@@ -16,7 +16,7 @@ try:
     _sip_isdeleted = getattr(_sip, "isdeleted", None)
 except ImportError:
     try:
-        import sip as _sip
+        import sip as _sip  # type: ignore[no-redef]
 
         _sip_isdeleted = getattr(_sip, "isdeleted", None)
     except ImportError:

@@ -524,3 +524,32 @@ class TestEditActionsExtended:
 
         mol = Chem.MolFromSmiles("C")
         manager._clear_xyz_flags(mol)
+
+
+def test_push_undo_state_caps_stack_depth(monkeypatch):
+    """The undo stack drops its oldest entries beyond UNDO_STACK_MAX_DEPTH."""
+    from moleditpy.utils.constants import UNDO_STACK_MAX_DEPTH
+
+    host = MagicMock()
+    host.is_restoring_state = False
+    host.view_3d_manager.current_mol = None
+    host.state_manager.data.atoms = {}
+    host.state_manager.data.bonds = {}
+
+    mgr = EditActionsManager(host)
+    monkeypatch.setattr(mgr, "update_implicit_hydrogens", lambda: None)
+    monkeypatch.setattr(mgr, "update_undo_redo_actions", lambda: None)
+
+    for i in range(UNDO_STACK_MAX_DEPTH + 25):
+        host.state_manager.data.next_atom_id = i
+        host.state_manager.get_current_state.return_value = {
+            "atoms": {},
+            "bonds": {},
+            "_next_atom_id": i,
+        }
+        mgr.push_undo_state()
+
+    assert len(mgr.undo_stack) == UNDO_STACK_MAX_DEPTH
+    # Newest state kept, oldest dropped
+    assert mgr.undo_stack[-1]["_next_atom_id"] == UNDO_STACK_MAX_DEPTH + 24
+    assert mgr.undo_stack[0]["_next_atom_id"] == 25

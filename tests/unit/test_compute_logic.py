@@ -308,6 +308,9 @@ def test_trigger_conversion_chemistry_problems(mock_parser_host):
     with (
         patch("rdkit.Chem.DetectChemistryProblems", return_value=[problem]),
         patch.object(compute.data, "to_rdkit_mol", return_value=mol),
+        # Patch the modal dialog: the MagicMock host is not a valid QWidget
+        # parent, so the real QMessageBox.critical would raise TypeError.
+        patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
     ):
         compute.trigger_conversion()
         all_messages = [
@@ -817,9 +820,11 @@ def test_check_chemistry_problems_fallback(mock_parser_host):
 
     compute = DummyCompute(mock_parser_host)
 
-    # Setup a problematic atom: Carbon with 5 bonds
+    # Setup a problematic atom: Carbon with total bond order 5
     pos = QPointF(0, 0)
     compute.data.add_atom("C", pos)
+    for i in range(4):
+        compute.data.add_atom("C", QPointF(50.0 * (i + 1), 0))
 
     # Use Mock item to avoid Qt crash
     mock_item = MagicMock()
@@ -827,14 +832,13 @@ def test_check_chemistry_problems_fallback(mock_parser_host):
     mock_item.pos.return_value = pos
     compute.host.init_manager.scene.atom_items[0] = mock_item
 
-    # Mock bonds to have count 5
+    # Bonds sum to order 5 on atom 0 (2+1+1+1)
     compute.data.bonds = {
         (0, 1): {"order": 2},
         (0, 2): {"order": 1},
         (0, 3): {"order": 1},
         (0, 4): {"order": 1},
     }
-    # Total bond count = 2+1+1+1 = 5
 
     compute.check_chemistry_problems_fallback()
     assert mock_item.has_problem == True
@@ -1141,3 +1145,65 @@ def test_on_calculation_error_uff_fallback_temporary(mock_parser_host):
             mock_optimize.assert_called_once_with("UFF_RDKIT")
             # Check if persistent method remains unchanged
             assert compute.optimization_method == "MMFF_RDKIT"
+
+
+# =============================================================================
+# Plugin-registered optimization methods (register_optimization_method)
+# =============================================================================
+
+
+def _mol_with_conformer():
+    mol = Chem.AddHs(Chem.MolFromSmiles("C"))
+    AllChem.EmbedMolecule(mol)
+    return mol
+
+
+def _compute_with_plugin_method(mock_parser_host, callback):
+    compute = DummyCompute(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = _mol_with_conformer()
+    mock_parser_host.plugin_manager.optimization_methods = {
+        "MYOPT": {"plugin": "P", "callback": callback, "label": "My Optimizer"}
+    }
+    return compute
+
+
+def test_plugin_optimization_method_invoked(mock_parser_host):
+    """A plugin-registered method is dispatched with the current mol."""
+    calls = []
+    compute = _compute_with_plugin_method(
+        mock_parser_host, lambda mol: calls.append(mol) or True
+    )
+
+    compute.optimize_3d_structure("MYOPT")
+
+    assert calls == [mock_parser_host.view_3d_manager.current_mol]
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+    assert compute.last_successful_optimization_method == "My Optimizer"
+
+
+def test_plugin_optimization_failure_is_isolated(mock_parser_host):
+    """A raising plugin callback is caught, logged, and reported via status."""
+
+    def _boom(mol):
+        raise RuntimeError("plugin exploded")
+
+    compute = _compute_with_plugin_method(mock_parser_host, _boom)
+    compute.optimize_3d_structure("MYOPT")  # must not raise
+
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+    messages = [
+        str(c[0][0])
+        for c in mock_parser_host.update_status_message.call_args_list
+        if c[0]
+    ]
+    assert any("failed" in m for m in messages)
+
+
+def test_plugin_optimization_false_return_reports_failure(mock_parser_host):
+    """A callback returning False reports failure without redrawing."""
+    compute = _compute_with_plugin_method(mock_parser_host, lambda mol: False)
+    compute.optimize_3d_structure("MYOPT")
+
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+    assert compute.last_successful_optimization_method is None

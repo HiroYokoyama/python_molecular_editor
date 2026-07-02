@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MoleditPy is a Python-based molecular editor (v3.6.0) built with PyQt6, RDKit, and PyVista. It provides 2D editing + 3D visualization of molecules with a plugin system.
+MoleditPy is a Python-based molecular editor (v4.x — see moleditpy/pyproject.toml for the current version) built with PyQt6, RDKit, and PyVista. It provides 2D editing + 3D visualization of molecules with a plugin system.
 
 ## Development Setup
 

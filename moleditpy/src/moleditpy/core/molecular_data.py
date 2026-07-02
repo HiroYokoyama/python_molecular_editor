@@ -101,9 +101,14 @@ class MolecularData:
         if (id1, id2) in self.bonds:
             self.bonds[(id1, id2)].update(bond_data)
             return (id1, id2), "updated"
-        else:
-            self.bonds[(id1, id2)] = bond_data
-            return (id1, id2), "created"
+        if (id2, id1) in self.bonds:
+            # Re-key reversed entry (stereo direction changed) to avoid duplicates
+            existing = self.bonds.pop((id2, id1))
+            existing.update(bond_data)
+            self.bonds[(id1, id2)] = existing
+            return (id1, id2), "updated"
+        self.bonds[(id1, id2)] = bond_data
+        return (id1, id2), "created"
 
     def remove_atom(self, atom_id: int) -> None:
         """Remove an atom and all bonds involving it from the data model."""
@@ -171,7 +176,9 @@ class MolecularData:
             atom_id_to_idx_map[atom_id] = idx
 
         # save bonds & stereo info (label info is kept here)
-        bond_stereo_info = {}  # bond_idx -> {'type': int, 'atom_ids': (id1,id2), 'bond_data': bond_data}
+        bond_stereo_info: Dict[
+            int, Dict[str, Any]
+        ] = {}  # bond_idx -> {'type', 'atom_ids', 'bond_data'}
         for (id1, id2), bond_data in self.bonds.items():
             if id1 not in atom_id_to_idx_map or id2 not in atom_id_to_idx_map:
                 continue
@@ -279,8 +286,8 @@ class MolecularData:
                 begin_atom_idx = bond.GetBeginAtomIdx()
                 end_atom_idx = bond.GetEndAtomIdx()
 
-                bond_data: dict[str, Any] = info.get("bond_data") or {}  # type: ignore[assignment]
-                stereo_atoms_specified = bond_data.get("stereo_atoms")
+                label_bond_data = info.get("bond_data") or {}
+                stereo_atoms_specified = label_bond_data.get("stereo_atoms")
 
                 if stereo_atoms_specified:
                     try:
@@ -338,10 +345,10 @@ class MolecularData:
 
         if not self.atoms:
             return None
-        atom_map = {old_id: new_id for new_id, old_id in enumerate(self.atoms.keys())}
-        num_atoms, num_bonds = len(self.atoms), len(self.bonds)
-        mol_block = "\n  MoleditPy\n\n"
-        mol_block += f"{num_atoms:3d}{num_bonds:3d}  0  0  0  0  0  0  0  0999 V2000\n"
+
+        # Counts line and bond indices must only reflect atoms actually written
+        atom_map: Dict[int, int] = {}
+        atom_lines: List[str] = []
         for old_id, atom in self.atoms.items():
             # Convert scene pixel coordinates to angstroms when emitting MOL block
             pos = atom.get("pos")
@@ -373,10 +380,19 @@ class MolecularData:
             elif charge == -3:
                 chg_code = 7
 
-            mol_block += f"{x:10.4f}{y:10.4f}{z:10.4f} {symbol:<3} 0  0  0{chg_code:3d}  0  0  0  0  0  0  0\n"
+            atom_map[old_id] = len(atom_lines)
+            atom_lines.append(
+                f"{x:10.4f}{y:10.4f}{z:10.4f} {symbol:<3} 0  0  0{chg_code:3d}  0  0  0  0  0  0  0\n"
+            )
 
+        bond_lines = []
         for (id1, id2), bond in self.bonds.items():
-            idx1, idx2, order = atom_map[id1] + 1, atom_map[id2] + 1, bond["order"]
+            if id1 not in atom_map or id2 not in atom_map:
+                continue
+            idx1, idx2 = atom_map[id1] + 1, atom_map[id2] + 1
+            # Bond order may be a float (1.5 = aromatic); V2000 uses code 4.
+            order_val = float(bond["order"])
+            order = 4 if order_val == 1.5 else int(order_val)
             stereo_code = 0
             bond_stereo = bond.get("stereo", 0)
             if bond_stereo == 1:
@@ -384,8 +400,14 @@ class MolecularData:
             elif bond_stereo == 2:
                 stereo_code = 6
 
-            mol_block += f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n"
+            bond_lines.append(
+                f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n"
+            )
 
+        mol_block = "\n  MoleditPy\n\n"
+        mol_block += f"{len(atom_lines):3d}{len(bond_lines):3d}  0  0  0  0  0  0  0  0999 V2000\n"
+        mol_block += "".join(atom_lines)
+        mol_block += "".join(bond_lines)
         mol_block += "M  END\n"
         return mol_block
 

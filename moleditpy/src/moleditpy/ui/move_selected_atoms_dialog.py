@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Optional, Any
+from typing import Optional, Any, cast
 import logging
 import numpy as np
 import pyvista as pv
@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 
 from .atom_picking import pick_atom_index_from_screen
 from .base_picking_dialog import BasePickingDialog
-from ..utils.constants import VDW_RADII
+from ..utils.constants import VDW_DISPLAY_RADII
 
 
 class MoveSelectedAtomsDialog(BasePickingDialog):
@@ -78,32 +78,32 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
     @property
     def x_trans_input(self) -> QLineEdit:
         """Expose x_trans_input widget."""
-        return self.widgets["x_trans_input"]
+        return cast(QLineEdit, self.widgets["x_trans_input"])
 
     @property
     def y_trans_input(self) -> QLineEdit:
         """Expose y_trans_input widget."""
-        return self.widgets["y_trans_input"]
+        return cast(QLineEdit, self.widgets["y_trans_input"])
 
     @property
     def z_trans_input(self) -> QLineEdit:
         """Expose z_trans_input widget."""
-        return self.widgets["z_trans_input"]
+        return cast(QLineEdit, self.widgets["z_trans_input"])
 
     @property
     def x_rot_input(self) -> QLineEdit:
         """Expose x_rot_input widget."""
-        return self.widgets["x_rot_input"]
+        return cast(QLineEdit, self.widgets["x_rot_input"])
 
     @property
     def y_rot_input(self) -> QLineEdit:
         """Expose y_rot_input widget."""
-        return self.widgets["y_rot_input"]
+        return cast(QLineEdit, self.widgets["y_rot_input"])
 
     @property
     def z_rot_input(self) -> QLineEdit:
         """Expose z_rot_input widget."""
-        return self.widgets["z_rot_input"]
+        return cast(QLineEdit, self.widgets["z_rot_input"])
 
     def init_ui(self) -> None:
         """Initialize UI widgets and layout."""
@@ -509,7 +509,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         ]
         selected_radii = np.array(
             [
-                VDW_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
+                VDW_DISPLAY_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
                 for i in selected_indices
             ]
         )
@@ -538,7 +538,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                 plotter.camera_position = cam
             except (AttributeError, RuntimeError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         plotter.render()
 
@@ -552,7 +552,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                 plotter.remove_actor("move_selected_atoms_highlight")
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         if self.highlight_actor:
             if plotter is not None:
@@ -560,7 +560,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                     plotter.remove_actor(self.highlight_actor)
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
             self.highlight_actor = None
 
         if plotter is not None:
@@ -568,7 +568,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                 plotter.render()
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
     def reset_translation_inputs(self) -> None:
         """Reset translation entry fields to 0.0."""

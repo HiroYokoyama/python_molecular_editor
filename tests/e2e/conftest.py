@@ -150,6 +150,9 @@ class _DummyPlotterBase:
     def reset_camera(self):
         pass
 
+    def view_isometric(self):
+        pass
+
     def add_light(self, *a, **k):
         return _mock.MagicMock()
 
@@ -192,7 +195,7 @@ pyv.Box = _mock.MagicMock
 pvqt.BackgroundPlotter = _DummyPlotterBase
 
 # QtInteractor must be a QWidget subclass so it can be embedded in the splitter
-from PyQt6.QtWidgets import QWidget as _QWidget
+from PyQt6.QtWidgets import QWidget as _QWidget  # noqa: E402
 
 
 class _DummyQtInteractor(_QWidget):
@@ -230,9 +233,17 @@ def app():
 
 
 @pytest.fixture
-def window(app, qtbot, monkeypatch):
+def window(app, qtbot, monkeypatch, tmp_path):
     """Real MainWindow, headless, using the platform-appropriate package."""
     from PyQt6.QtWidgets import QWidget, QMessageBox, QFileDialog
+
+    # Sandbox the home dir so tests never read/write the real ~/.moleditpy
+    # (settings.json, plugins). MainInitManager and PluginManager both build
+    # their paths from expanduser("~").
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.setenv("USERPROFILE", str(fake_home))
 
     monkeypatch.setattr(
         f"{_PKG}.ui.main_window_init.MainInitManager.init_worker_thread",
@@ -254,6 +265,9 @@ def window(app, qtbot, monkeypatch):
             self.load_handlers = {}
             self.custom_3d_styles = {}
             self.document_reset_handlers = []
+
+        def invoke_document_reset_handlers(self):
+            pass
 
         def discover_plugins(self, parent=None):
             return []
@@ -283,6 +297,7 @@ def window(app, qtbot, monkeypatch):
             self.add_point_labels = _mock.MagicMock(return_value=["labels"])
             self.clear = _mock.MagicMock()
             self.reset_camera = _mock.MagicMock()
+            self.view_isometric = _mock.MagicMock()
             self.render = _mock.MagicMock()
             self.set_background = _mock.MagicMock()
             self.setAcceptDrops = _mock.MagicMock()

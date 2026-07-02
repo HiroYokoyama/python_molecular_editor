@@ -58,7 +58,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             self.StopState()
         except (AttributeError, RuntimeError):
             # Safe defensive fallback catching AttributeError, RuntimeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         # Reset all custom flags
         self._is_dragging_atom = False
@@ -74,12 +74,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 mw.dragged_atom_info = None
             except (AttributeError, RuntimeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
             try:
                 mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ArrowCursor)
             except (AttributeError, RuntimeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
     def _stop_vtk_left_button_state(self) -> None:
         """Clear VTK's button/drag state after a custom-handled left click."""
@@ -87,7 +87,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             self.StopState()
         except (AttributeError, RuntimeError):
             # Safe defensive fallback catching AttributeError, RuntimeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
     def on_left_button_down(self, obj: Any, event: Any) -> None:
         """
@@ -109,7 +109,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         # Check Move Group dialog
         # Check Move Group or Move Selected Atoms dialog
-        move_group_dialog = None
+        move_group_dialog: Any = None
         for widget in QApplication.topLevelWidgets():
             try:
                 if (
@@ -160,7 +160,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 move_group_dialog.on_atom_picked(clicked_atom_idx)
                             except (AttributeError, RuntimeError):
                                 # Safe defensive fallback catching AttributeError, RuntimeError
-                                pass
+                                logging.debug(
+                                    "Suppressed non-critical error", exc_info=True
+                                )
 
                         QTimer.singleShot(0, _deferred_toggle)
                         self._suppress_next_left_button_up = True
@@ -221,7 +223,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             move_group_dialog.update_display()
                         except (AttributeError, RuntimeError):
                             # Safe defensive fallback catching AttributeError, RuntimeError
-                            pass
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
                     QTimer.singleShot(0, _deferred_move_group_update)
                     return
@@ -270,7 +274,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                     )
                                 except (AttributeError, RuntimeError):
                                     # Safe defensive fallback catching AttributeError, RuntimeError
-                                    pass
+                                    logging.debug(
+                                        "Suppressed non-critical error", exc_info=True
+                                    )
 
                             QTimer.singleShot(0, _deferred_measure)
                             self._suppress_next_left_button_up = True
@@ -323,7 +329,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         mw = self.main_window
 
         # Check if Move Group dialog or Move Selected Atoms dialog is open
-        move_group_dialog = None
+        move_group_dialog: Any = None
         try:
             for widget in QApplication.topLevelWidgets():
                 if (
@@ -384,7 +390,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         mw = self.main_window
 
         # Move Group / Selected Atoms drag handling
-        move_group_dialog = None
+        move_group_dialog: Any = None
         try:
             for widget in QApplication.topLevelWidgets():
                 if (
@@ -480,7 +486,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         mw = self.main_window
 
         # Finalize Move Group / Selected Atoms drag
-        move_group_dialog = None
+        move_group_dialog: Any = None
         try:
             for widget in QApplication.topLevelWidgets():
                 if (
@@ -607,7 +613,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         move_group_dialog.update_display()
                     except (AttributeError, RuntimeError):
                         # Safe defensive fallback catching AttributeError, RuntimeError
-                        pass
+                        logging.debug("Suppressed non-critical error", exc_info=True)
 
                 QTimer.singleShot(0, _deferred_clear_move_group)
 
@@ -623,7 +629,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     mw.edit_3d_manager.clear_measurement_selection()
                 except (AttributeError, RuntimeError):
                     # Safe defensive fallback catching AttributeError, RuntimeError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
 
             QTimer.singleShot(0, _deferred_clear_measurement)
 
@@ -687,14 +693,19 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         ValueError,
                                         TypeError,
                                     ):  # [VTK SYNC] atom_positions_3d update may race with VTK teardown; skip safely.
-                                        pass
+                                        logging.debug(
+                                            "Suppressed non-critical error",
+                                            exc_info=True,
+                                        )
                             except (
                                 AttributeError,
                                 RuntimeError,
                                 TypeError,
                                 ValueError,
                             ):  # [VTK SYNC] Outer drag-loop coordinate sync may race with VTK teardown; skip safely.
-                                pass
+                                logging.debug(
+                                    "Suppressed non-critical error", exc_info=True
+                                )
                         conf = mw.view_3d_manager.current_mol.GetConformer()
                         pos_count = (
                             len(mw.view_3d_manager.atom_positions_3d)
@@ -798,7 +809,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         mw = self.main_window
 
         # Finalize Move Group / Selected Atoms rotation
-        move_group_dialog = None
+        move_group_dialog: Any = None
         try:
             for widget in QApplication.topLevelWidgets():
                 if (

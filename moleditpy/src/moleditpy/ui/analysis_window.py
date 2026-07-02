@@ -235,8 +235,8 @@ class AnalysisWindow(QDialog):
     def copy_to_clipboard(self, text: str) -> None:
         """Copy text to the system clipboard and show a status bar message."""
         clipboard = QApplication.clipboard()
-        clipboard.setText(text)
+        clipboard.setText(text)  # type: ignore[union-attr]
         if self.parent() and hasattr(self.parent(), "statusBar"):
-            self.parent().statusBar().showMessage(
+            self.parent().statusBar().showMessage(  # type: ignore[union-attr]
                 f"Copied '{text}' to clipboard.", 2000
             )

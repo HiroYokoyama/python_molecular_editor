@@ -483,3 +483,72 @@ class TestSave3DAsMol:
         host.statusBar_mock.showMessage.assert_called()
         msg = host.statusBar_mock.showMessage.call_args[0][0]
         assert "error" in msg.lower()
+
+
+# ===========================================================================
+# Regression tests for code-review fixes
+# ===========================================================================
+
+
+class TestSave3DAsMolExtension:
+    """save_3d_as_mol must append .mol when the user omits the extension."""
+
+    def test_missing_extension_is_appended(self, qapp, tmp_path):
+        host = DummyHost()
+        io = IOManager(host)
+        mol = Chem.MolFromSmiles("CCO")
+        AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
+        host.view_3d_manager.current_mol = mol
+
+        out_no_ext = tmp_path / "bare_name"
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
+            return_value=(str(out_no_ext), None),
+        ):
+            io.save_3d_as_mol()
+
+        assert not out_no_ext.exists()
+        assert (tmp_path / "bare_name.mol").exists()
+
+
+class TestPromptForChargeInlineValidation:
+    """Invalid input must keep the dialog open with an inline error message,
+    not silently fall back to charge 0."""
+
+    def test_invalid_charge_blocks_accept_and_shows_error(self, qapp):
+        io = IOManager(DummyHost())
+        le = MagicMock()
+        le.text.return_value = "abc"
+        with (
+            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
+            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
+            patch("moleditpy.ui.io_logic.QVBoxLayout"),
+            patch("moleditpy.ui.io_logic.QHBoxLayout"),
+            patch("moleditpy.ui.io_logic.QLabel") as MockLabel,
+            patch("moleditpy.ui.io_logic.QDialogButtonBox") as MockBox,
+            patch("moleditpy.ui.io_logic.QPushButton"),
+        ):
+            dlg = MockDlg.return_value
+            dlg.exec.return_value = MockDlg.DialogCode.Rejected
+            io.prompt_for_charge()
+
+            # The OK handler was connected to the inline validator
+            validator = MockBox.return_value.accepted.connect.call_args[0][0]
+
+            dlg.accept.reset_mock()
+            MockLabel.return_value.setText.reset_mock()
+
+            # Invalid text: dialog stays open, error message set inline
+            validator()
+            dlg.accept.assert_not_called()
+            msgs = [
+                str(c[0][0])
+                for c in MockLabel.return_value.setText.call_args_list
+                if c[0]
+            ]
+            assert any("Invalid charge" in m for m in msgs)
+
+            # Valid text: dialog accepts
+            le.text.return_value = "-2"
+            validator()
+            dlg.accept.assert_called_once()

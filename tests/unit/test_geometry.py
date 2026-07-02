@@ -332,3 +332,58 @@ def test_resolve_2d_overlaps():
     assert len(moves) > 0
     # One fragment should be planned to move
     assert len(moves[0][0]) == 1
+
+
+# =============================================================================
+# identify_valence_problems — RDKit-backed detection (red-box flagging)
+# =============================================================================
+
+
+def _data_with_center(sym, nbonds, charge=0, radical=0, order=1):
+    from moleditpy.core.molecular_data import MolecularData
+
+    d = MolecularData()
+    center = d.add_atom(sym, (0, 0), charge=charge, radical=radical)
+    for i in range(nbonds):
+        c = d.add_atom("C", (50 * (i + 1), 0))
+        d.add_bond(center, c, order=order)
+    return d, center
+
+
+@pytest.mark.parametrize(
+    "sym,nbonds,charge,radical",
+    [
+        ("N", 3, 0, 1),  # trimethylamine radical (reported bug)
+        ("N", 5, 1, 0),  # charged hypervalent N+
+        ("S", 7, 0, 0),  # beyond expanded octet
+        ("B", 5, 0, 0),
+        ("O", 2, 0, 1),  # oxygen radical with full valence
+        ("C", 4, 0, 1),  # carbon radical with full valence
+        ("C", 5, 0, 0),
+        ("O", 3, 0, 0),
+    ],
+)
+def test_identify_valence_problems_flags_invalid(sym, nbonds, charge, radical):
+    """Hypervalent/radical-overloaded atoms are flagged for any element."""
+    from moleditpy.core.mol_geometry import identify_valence_problems
+
+    d, center = _data_with_center(sym, nbonds, charge=charge, radical=radical)
+    assert center in identify_valence_problems(d.atoms, d.bonds)
+
+
+@pytest.mark.parametrize(
+    "sym,nbonds,charge,radical",
+    [
+        ("N", 3, 0, 0),  # trimethylamine
+        ("N", 4, 1, 0),  # ammonium-like
+        ("S", 6, 0, 0),  # valid expanded octet
+        ("C", 3, 0, 1),  # methyl-like radical
+        ("O", 2, 0, 0),
+    ],
+)
+def test_identify_valence_problems_accepts_valid(sym, nbonds, charge, radical):
+    """Chemically valid atoms (incl. charges/radicals) are not flagged."""
+    from moleditpy.core.mol_geometry import identify_valence_problems
+
+    d, center = _data_with_center(sym, nbonds, charge=charge, radical=radical)
+    assert center not in identify_valence_problems(d.atoms, d.bonds)

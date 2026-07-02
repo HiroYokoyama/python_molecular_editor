@@ -11,6 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
+import logging
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from PyQt6.QtCore import QPointF, QRectF, Qt
@@ -323,7 +324,7 @@ class AtomItem(QGraphicsItem):
     def paint(
         self,
         painter: Optional[QPainter],
-        option: QStyleOptionGraphicsItem,
+        option: QStyleOptionGraphicsItem,  # type: ignore[override]
         widget: Optional[QWidget] = None,
     ) -> None:
         """Paint the atom symbol and its associated labels (charge, radical)."""
@@ -334,9 +335,9 @@ class AtomItem(QGraphicsItem):
         # Use bond color if specified in settings
         scene = self.scene()
         if hasattr(scene, "get_setting") and (
-            self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)
+            self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)  # type: ignore[union-attr]
         ):
-            custom_color = scene.get_setting("bond_color_2d", "#222222")
+            custom_color = scene.get_setting("bond_color_2d", "#222222")  # type: ignore[union-attr]
             if isinstance(custom_color, str):
                 color = QColor(custom_color)
 
@@ -385,7 +386,9 @@ class AtomItem(QGraphicsItem):
                             # If sip check fails, continue defensively.
                             # This usually means the object is in an inconsistent state.
                             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError  # Silent failure for non-critical partner state check
-                            pass
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
                         other_pos = None
                         try:
@@ -515,14 +518,14 @@ class AtomItem(QGraphicsItem):
                 self.update_style()
         return res
 
-    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:  # type: ignore[override]
         """Highlight the atom on mouse hover."""
         # Enable highlight on hover regardless of scene mode
         self.hovered = True
         self.update()
         super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:  # type: ignore[override]
         """Remove hover highlight when the mouse leaves."""
         if self.hovered:
             self.hovered = False

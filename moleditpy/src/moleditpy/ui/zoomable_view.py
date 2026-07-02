@@ -12,10 +12,10 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, cast
 
 from PyQt6.QtCore import QEvent, QPointF, Qt
-from PyQt6.QtGui import QMouseEvent, QWheelEvent
+from PyQt6.QtGui import QMouseEvent, QWheelEvent, QNativeGestureEvent
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QWidget
 
 
@@ -77,8 +77,8 @@ class ZoomableView(QGraphicsView):
                 event.pos()
             )  # Record start point in viewport coordinates
             # Record current scrollbar values
-            self._pan_start_scroll_h = self.horizontalScrollBar().value()
-            self._pan_start_scroll_v = self.verticalScrollBar().value()
+            self._pan_start_scroll_h = self.horizontalScrollBar().value()  # type: ignore[union-attr]
+            self._pan_start_scroll_v = self.verticalScrollBar().value()  # type: ignore[union-attr]
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             event.accept()
         else:
@@ -93,10 +93,10 @@ class ZoomableView(QGraphicsView):
                 QPointF(event.pos()) - self._pan_start_pos
             )  # Calculate mouse movement delta
             # Update scroll position by subtracting movement delta from start position
-            self.horizontalScrollBar().setValue(
+            self.horizontalScrollBar().setValue(  # type: ignore[union-attr]
                 int(self._pan_start_scroll_h - delta.x())
             )
-            self.verticalScrollBar().setValue(int(self._pan_start_scroll_v - delta.y()))
+            self.verticalScrollBar().setValue(int(self._pan_start_scroll_v - delta.y()))  # type: ignore[union-attr]
             event.accept()
         else:
             super().mouseMoveEvent(event)
@@ -104,13 +104,13 @@ class ZoomableView(QGraphicsView):
     def mouseReleaseEvent(self, event: Optional[QMouseEvent]) -> None:
         """End panning mode and restore cursor when the relevant button is released"""
         # Check if the middle or left button used for panning was released
-        is_middle_button_release = event.button() == Qt.MouseButton.MiddleButton
-        is_left_button_release = event.button() == Qt.MouseButton.LeftButton
+        is_middle_button_release = event.button() == Qt.MouseButton.MiddleButton  # type: ignore[union-attr]
+        is_left_button_release = event.button() == Qt.MouseButton.LeftButton  # type: ignore[union-attr]
 
         if self._is_panning and (is_middle_button_release or is_left_button_release):
             self._is_panning = False
             # Restore cursor based on the current scene mode
-            current_mode = self.scene().mode if self.scene() else "select"
+            current_mode = self.scene().mode if self.scene() else "select"  # type: ignore[union-attr]
             if current_mode == "select":
                 self.setCursor(Qt.CursorShape.ArrowCursor)
             elif current_mode.startswith(("atom", "bond", "template")):
@@ -119,7 +119,7 @@ class ZoomableView(QGraphicsView):
                 self.setCursor(Qt.CursorShape.CrossCursor)
             else:
                 self.setCursor(Qt.CursorShape.ArrowCursor)
-            event.accept()
+            event.accept()  # type: ignore[union-attr]
         else:
             super().mouseReleaseEvent(event)
 
@@ -128,11 +128,12 @@ class ZoomableView(QGraphicsView):
         if event is None:
             return super().viewportEvent(event)
         if event.type() == QEvent.Type.NativeGesture:
+            gesture = cast(QNativeGestureEvent, event)
             # Detect pinch zoom gestures
-            if event.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:
-                # event.value() returns the scale factor delta
+            if gesture.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:
+                # gesture.value() returns the scale factor delta
                 # (positive for zoom-in, negative for zoom-out)
-                factor = 1.0 + event.value()
+                factor = 1.0 + gesture.value()
 
                 # Apply scaling if within limits
                 self.scale(factor, factor)

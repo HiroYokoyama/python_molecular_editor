@@ -34,14 +34,14 @@ class SettingsOtherTab(SettingsTabBase):
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:
         super().__init__(default_settings, parent)
-        self.always_ask_charge_checkbox = None
-        self.aromatic_circle_checkbox = None
-        self.aromatic_torus_thickness_label = None
-        self.aromatic_torus_thickness_slider = None
-        self.kekule_3d_checkbox = None
-        self.skip_chem_checks_checkbox = None
-        self.log_to_file_checkbox = None
-        self.log_level_debug_checkbox = None
+        self.always_ask_charge_checkbox: Any = None
+        self.aromatic_circle_checkbox: Any = None
+        self.aromatic_torus_thickness_label: Any = None
+        self.aromatic_torus_thickness_slider: Any = None
+        self.kekule_3d_checkbox: Any = None
+        self.skip_chem_checks_checkbox: Any = None
+        self.log_to_file_checkbox: Any = None
+        self.log_level_debug_checkbox: Any = None
         self._setup_ui()
 
     def _setup_ui(self) -> None:

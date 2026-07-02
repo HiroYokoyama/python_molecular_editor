@@ -70,7 +70,7 @@ This application combines a modern GUI built with **PyQt6**, powerful cheminform
       * Import structures from **MOL/SDF** files or **SMILES** strings.
       * Export 3D structures to **MOL** or **XYZ** formats, which are compatible with most DFT calculation software.
       * Export 2D and 3D views as high-resolution PNG images.
-      * Export 2D and 3D views as high-resolution PNG images.
+      * **Security note on `.pmeraw`:** the legacy `.pmeraw` project format uses Python pickle, which can execute arbitrary code when loaded. Only open `.pmeraw` files that you created yourself; prefer the JSON-based `.pmeprj` format for sharing.
 
 ### 4. Programmable & Extensible
 
@@ -205,7 +205,7 @@ Additionally, please cite the plugins you used.
       * **MOL/SDF**ファイルや**SMILES**文字列から構造をインポートできます。
       * 3D構造を**MOL**または**XYZ**形式でエクスポートでき、これらは多くのDFT計算ソフトウェアと互換性があります。
       * 2Dおよび3Dビューを高解像度のPNG画像としてエクスポートできます。
-      * 2Dおよび3Dビューを高解像度のPNG画像としてエクスポートできます。
+      * **`.pmeraw` に関するセキュリティ上の注意:** 旧形式の `.pmeraw` プロジェクトは Python の pickle を使用しており、読み込み時に任意のコードが実行される可能性があります。自分で作成した `.pmeraw` ファイルのみを開き、共有には JSON ベースの `.pmeprj` 形式を使用してください。
 
 ### 4. プログラマブルで拡張可能
 

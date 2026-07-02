@@ -35,7 +35,6 @@ from .main_window_init import MainInitManager
 from .string_importers import StringImporterManager
 from .ui_manager import UIManager
 from .view_3d_logic import View3DManager
-from .molecule_scene import MoleculeScene
 from ..core.molecular_data import MolecularData
 from .custom_qt_interactor import CustomQtInteractor
 
@@ -229,7 +228,7 @@ class MainWindow(QMainWindow):
     def update_status_message(self, message: str, timeout: int = 0) -> None:
         """Show a message in the main window's status bar."""
         if self.statusBar():
-            self.statusBar().showMessage(message, timeout)
+            self.statusBar().showMessage(message, timeout)  # type: ignore[union-attr]
 
     def warning_message_box(self, title: str, message: str) -> None:
         """Show a modal warning dialog."""
@@ -251,7 +250,8 @@ class MainWindow(QMainWindow):
 
     def set_atom_id_to_rdkit_idx_map(self, mapping: Dict[int, int]) -> None:
         """Set 2D-to-3D atom ID mapping."""
-        self.view_3d_manager.atom_id_to_rdkit_idx_map = mapping
+        # Must live on MainWindow: compute_logic writes it, edit_3d_logic reads it
+        self.atom_id_to_rdkit_idx_map = mapping
 
     def save_state_snapshot(self) -> None:
         """Create a deep copy snapshot of the current state for undo/redo comparison."""
@@ -304,8 +304,8 @@ class MainWindow(QMainWindow):
         return self.state_manager.data  # type: ignore[return-value, no-any-return]
 
     @property
-    def scene(self) -> Optional[MoleculeScene]:
-        """Proxy for 2D scene (read)."""
+    def scene(self) -> Any:
+        """Proxy for 2D scene (read). A MoleculeScene once init completes."""
         return self.init_manager.scene
 
     @property

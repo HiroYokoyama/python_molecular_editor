@@ -91,7 +91,9 @@ def sync_linux_for_e2e(base_dir):
     """Sync moleditpy → moleditpy-linux before running e2e tests on Linux."""
     sync_script = os.path.join(base_dir, "scripts", "sync_linux_version.py")
     if not os.path.exists(sync_script):
-        print("  [SKIP] sync_linux_version.py not found — skipping Linux sync", flush=True)
+        print(
+            "  [SKIP] sync_linux_version.py not found — skipping Linux sync", flush=True
+        )
         return
     print("\n>>> Syncing Linux version before E2E tests...", flush=True)
     result = subprocess.run(
@@ -102,12 +104,19 @@ def sync_linux_for_e2e(base_dir):
     )
     print(result.stdout, end="", flush=True)
     if result.returncode != 0:
-        print(f"  Warning: sync_linux_version.py exited {result.returncode}", flush=True)
+        print(
+            f"  Warning: sync_linux_version.py exited {result.returncode}", flush=True
+        )
         print(result.stderr, end="", flush=True)
 
 
 def run_suite(
-    name, path, env_vars=None, extra_args=None, enable_cov=True, exitfirst=False,
+    name,
+    path,
+    env_vars=None,
+    extra_args=None,
+    enable_cov=True,
+    exitfirst=False,
     cov_source=None,
 ):
     """Run a test suite in a separate process for isolation."""
@@ -363,7 +372,8 @@ if __name__ == "__main__":
         try:
             # E2E uses moleditpy_linux on Linux, moleditpy elsewhere
             e2e_cov = (
-                "moleditpy_linux" if name == "E2E" and platform.system() == "Linux"
+                "moleditpy_linux"
+                if name == "E2E" and platform.system() == "Linux"
                 else None
             )
             ret_code = run_suite(

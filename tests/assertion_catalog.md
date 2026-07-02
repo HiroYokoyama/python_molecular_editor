@@ -2204,6 +2204,13 @@ __clear_xyz_flags(mol=None) uses the current_mol from the view manager._
 __clear_xyz_flags does not raise when reset_zoom is absent._
 
 
+### test_push_undo_state_caps_stack_depth
+_The undo stack drops its oldest entries beyond UNDO_STACK_MAX_DEPTH._
+
+- assert len(mgr.undo_stack) == UNDO_STACK_MAX_DEPTH
+- assert mgr.undo_stack[-1]['_next_atom_id'] == UNDO_STACK_MAX_DEPTH + 24
+- assert mgr.undo_stack[0]['_next_atom_id'] == 25
+
 ## tests/unit/test_export_logic.py
 
 ### test_create_multi_material_obj_advanced
@@ -2852,6 +2859,19 @@ _RuntimeError during MolToMolBlock shows error on status bar._
 - host.statusBar_mock.showMessage.assert_called()
 - assert 'error' in msg.lower()
 
+### TestSave3DAsMolExtension.test_missing_extension_is_appended
+_No description provided._
+
+- assert not out_no_ext.exists()
+- assert (tmp_path / 'bare_name.mol').exists()
+
+### TestPromptForChargeInlineValidation.test_invalid_charge_blocks_accept_and_shows_error
+_No description provided._
+
+- dlg.accept.assert_not_called()
+- MockLabel.return_value.setVisible.assert_called_with(True)
+- dlg.accept.assert_called_once()
+
 ## tests/unit/test_items_visual.py
 
 ### test_atom_item_visual_states
@@ -3373,6 +3393,41 @@ _Verify E/Z stereo double bond maps to STEREOZ in RDKit._
 - assert mol is not None
 - assert double_bond.GetBondType() == Chem.BondType.DOUBLE
 - assert double_bond.GetStereo() == Chem.BondStereo.STEREOZ
+
+### test_add_bond_stereo_over_existing_reversed_key_updates_in_place
+_Adding a directional stereo bond over an existing sorted-key bond_
+
+- assert (key1, status1) == ((a, b), 'created')
+- assert status2 == 'updated'
+- assert key2 == (b, a)
+- assert len(data.bonds) == 1
+- assert data.bonds[b, a]['stereo'] == 1
+- assert data.adjacency_list[a].count(b) == 1
+- assert data.adjacency_list[b].count(a) == 1
+
+### test_add_bond_plain_over_existing_stereo_reversed_key_updates_in_place
+_Demoting a directional stereo bond back to a plain bond (sorted key)_
+
+- assert key1 == (b, a)
+- assert status2 == 'updated'
+- assert key2 == (a, b)
+- assert len(data.bonds) == 1
+- assert data.bonds[a, b]['order'] == 2
+- assert data.bonds[a, b]['stereo'] == 0
+
+### test_to_mol_block_fallback_handles_float_bond_order
+_Aromatic 1.5 bond order must map to V2000 code 4, not crash on '{:d}'._
+
+- assert mol_block is not None
+- assert bond_line[:12] == f'{1:3d}{2:3d}{4:3d}{0:3d}'
+
+### test_to_mol_block_fallback_skips_positionless_atoms_consistently
+_Atoms without a position are excluded from counts and bond indices._
+
+- assert mol_block is not None
+- assert counts[:6] == f'{2:3d}{1:3d}'
+- assert 'O' in atom_lines[0] and 'N' in atom_lines[1]
+- assert bond_line[:6] == f'{1:3d}{2:3d}'
 
 ## tests/unit/test_molecule_scene_behavior.py
 
@@ -4751,6 +4806,24 @@ _invoke_document_reset_handlers logs an error when a handler raises._
 _get_plugin_info_safe returns Unknown version for non-constant AST nodes and OSError._
 
 - assert info['version'] == 'Unknown'
+
+### test_install_zip_single_file_gets_wrapper_folder
+_A ZIP whose only entry is one top-level .py file is a flat ZIP:_
+
+- assert success
+- assert (plugin_dir / 'solo' / 'myplugin.py').exists()
+- assert not (plugin_dir / 'myplugin.py').exists()
+
+### test_install_zip_single_folder_stays_nested
+_A ZIP with one top-level folder still extracts directly (Case A)._
+
+- assert success
+- assert (plugin_dir / 'MyPlugin' / '__init__.py').exists()
+
+### test_discover_plugins_skips_dot_directories
+_Plugins inside hidden directories like .git must not be loaded._
+
+- assert all((p['name'] != 'Sneaky' for p in plugins))
 
 ## tests/unit/test_plugin_manager_window.py
 
@@ -6154,8 +6227,13 @@ _OSError in winreg must be suppressed and return None._
 
 - assert detect_system_theme() is None
 
-### TestMacOSTheme.test_macos_always_light
-_macOS always returns light theme._
+### TestMacOSTheme.test_macos_dark_mode
+_AppleInterfaceStyle == Dark -> dark theme._
+
+- assert detect_system_theme() == 'dark'
+
+### TestMacOSTheme.test_macos_light_mode
+_Missing AppleInterfaceStyle key (non-zero exit) -> light theme._
 
 - assert detect_system_theme() == 'light'
 

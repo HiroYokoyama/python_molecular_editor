@@ -418,3 +418,95 @@ def test_to_rdkit_mol_ez_stereo():
 
     assert double_bond.GetBondType() == Chem.BondType.DOUBLE
     assert double_bond.GetStereo() == Chem.BondStereo.STEREOZ
+
+
+# =============================================================================
+# Reversed-key bond handling (stereo direction vs. sorted non-stereo keys)
+# =============================================================================
+
+
+def test_add_bond_stereo_over_existing_reversed_key_updates_in_place():
+    """Adding a directional stereo bond over an existing sorted-key bond
+    must re-key the entry, not create a duplicate for the same atom pair."""
+    data = MolecularData()
+    a = data.add_atom("C", QPointF(0, 0))
+    b = data.add_atom("C", QPointF(10, 0))
+
+    key1, status1 = data.add_bond(a, b, order=1, stereo=0)  # stored as (a, b)
+    assert (key1, status1) == ((a, b), "created")
+
+    # Wedge drawn from b to a: directional key (b, a)
+    key2, status2 = data.add_bond(b, a, order=1, stereo=1)
+    assert status2 == "updated"
+    assert key2 == (b, a)
+    assert len(data.bonds) == 1
+    assert data.bonds[(b, a)]["stereo"] == 1
+    # Adjacency must not be duplicated either
+    assert data.adjacency_list[a].count(b) == 1
+    assert data.adjacency_list[b].count(a) == 1
+
+
+def test_add_bond_plain_over_existing_stereo_reversed_key_updates_in_place():
+    """Demoting a directional stereo bond back to a plain bond (sorted key)
+    must also re-key instead of duplicating."""
+    data = MolecularData()
+    a = data.add_atom("C", QPointF(0, 0))
+    b = data.add_atom("C", QPointF(10, 0))
+
+    key1, _ = data.add_bond(b, a, order=1, stereo=1)  # directional (b, a)
+    assert key1 == (b, a)
+
+    key2, status2 = data.add_bond(a, b, order=2, stereo=0)  # sorted (a, b)
+    assert status2 == "updated"
+    assert key2 == (a, b)
+    assert len(data.bonds) == 1
+    assert data.bonds[(a, b)]["order"] == 2
+    assert data.bonds[(a, b)]["stereo"] == 0
+
+
+# =============================================================================
+# Manual MOL block fallback robustness
+# =============================================================================
+
+
+def _force_manual_fallback(monkeypatch, data):
+    """Make to_rdkit_mol fail so to_mol_block uses the manual writer."""
+    monkeypatch.setattr(
+        type(data), "to_rdkit_mol", lambda self, use_2d_stereo=True: None
+    )
+
+
+def test_to_mol_block_fallback_handles_float_bond_order(monkeypatch):
+    """Aromatic 1.5 bond order must map to V2000 code 4, not crash on '{:d}'."""
+    data = MolecularData()
+    a = data.add_atom("C", QPointF(0, 0))
+    b = data.add_atom("C", QPointF(75, 0))
+    data.add_bond(a, b, order=1.5)
+    _force_manual_fallback(monkeypatch, data)
+
+    mol_block = data.to_mol_block()
+    assert mol_block is not None
+    bond_line = mol_block.splitlines()[4 + 2]  # header(3) + counts + 2 atoms
+    assert bond_line[:12] == f"{1:3d}{2:3d}{4:3d}{0:3d}"
+
+
+def test_to_mol_block_fallback_skips_positionless_atoms_consistently(monkeypatch):
+    """Atoms without a position are excluded from counts and bond indices."""
+    data = MolecularData()
+    a = data.add_atom("C", QPointF(0, 0))
+    b = data.add_atom("O", QPointF(75, 0))
+    c = data.add_atom("N", QPointF(150, 0))
+    data.atoms[a]["pos"] = None  # simulate corrupted/missing position
+    data.add_bond(b, c, order=1)
+    _force_manual_fallback(monkeypatch, data)
+
+    mol_block = data.to_mol_block()
+    assert mol_block is not None
+    lines = mol_block.splitlines()
+    counts = lines[3]
+    assert counts[:6] == f"{2:3d}{1:3d}"  # 2 atoms written, 1 bond
+    atom_lines = lines[4:6]
+    assert "O" in atom_lines[0] and "N" in atom_lines[1]
+    bond_line = lines[6]
+    # Bond must reference the re-numbered atoms 1-2, not the original 2-3
+    assert bond_line[:6] == f"{1:3d}{2:3d}"

@@ -64,7 +64,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.selected_atoms: list[int] = []  # Using a list because order matters
         self.constraints: list[Any] = []  # (type, atoms_indices, value)
         self.constraint_labels: list[Any] = []  # 3D label actors
-        self._opt_thread = None
+        self._opt_thread: Any = None
         self.init_ui()
         self.enable_picking()
 

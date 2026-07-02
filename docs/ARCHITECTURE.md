@@ -19,7 +19,7 @@ The `MainWindow` (the application's heartbeat) is no longer a collection of inhe
 ### 2. "Never Hide Errors" Diagnostic Strategy
 To ensure stability in the hybrid Python/C++ environment (PyQt6/VTK), the application employs a **Diagnostic Hardening** strategy:
 
-- **Visible Failures**: We prioritize "loud" failures over silent inconsistencies. Every `hasattr()` check or `try-except` block used for architectural routing must include a diagnostic `logging.error()` or re-raise.
+- **Visible Failures**: We prioritize "loud" failures over silent inconsistencies. Every `hasattr()` check or `try-except` block used for architectural routing should include a diagnostic log (`logging.error()` for routing failures, `logging.debug(..., exc_info=True)` for best-effort suppression) or re-raise.
 - **Active Hardening**: The codebase is instrumented with defensive `else: logging.error()` branches for missing attributes, providing high-fidelity tracebacks directly from the architectural surface.
 - **Global Error Capture**: A custom `sys.excepthook` in `main.py` catches unhandled exceptions, ensuring that even unpredicted GUI crashes leave a clear audit trail.
 - **Path-Aware Logging**: Logs include absolute system paths (`%(pathname)s`) for immediate navigation to failing architectural disconnections.

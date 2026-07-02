@@ -2,8 +2,9 @@
 Unit tests for utils/system_utils.py.
 
 Covers:
-  - detect_system_theme: Windows dark/light via winreg, macOS always light,
-    Linux via gsettings color-scheme and gtk-theme, unknown platform → None
+  - detect_system_theme: Windows dark/light via winreg, macOS via
+    AppleInterfaceStyle, Linux via gsettings color-scheme and gtk-theme,
+    unknown platform → None
   - Exception suppression (contextlib.suppress)
   - detect_system_dark_mode: wraps detect_system_theme correctly
 """
@@ -91,9 +92,27 @@ class TestWindowsTheme:
 
 
 class TestMacOSTheme:
-    def test_macos_always_light(self):
-        """macOS always returns light theme."""
-        with patch("platform.system", return_value="Darwin"):
+    @staticmethod
+    def _proc(returncode, stdout):
+        p = MagicMock()
+        p.returncode = returncode
+        p.stdout = stdout
+        return p
+
+    def test_macos_dark_mode(self):
+        """AppleInterfaceStyle == Dark -> dark theme."""
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.run", return_value=self._proc(0, "Dark\n")),
+        ):
+            assert detect_system_theme() == "dark"
+
+    def test_macos_light_mode(self):
+        """Missing AppleInterfaceStyle key (non-zero exit) -> light theme."""
+        with (
+            patch("platform.system", return_value="Darwin"),
+            patch("subprocess.run", return_value=self._proc(1, "")),
+        ):
             assert detect_system_theme() == "light"
 
 

@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 from typing import Any, Dict, Optional
 
 from PyQt6.QtGui import QColor
@@ -38,7 +39,7 @@ class ColorSettingsDialog(QDialog):
     def __init__(self, current_settings: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("CPK Colors")
-        self.parent_window = parent
+        self.parent_window: Any = parent
         self.current_settings = current_settings or {}
 
         self.changed_cpk: Dict[str, str] = {}  # symbol -> hex
@@ -242,7 +243,7 @@ class ColorSettingsDialog(QDialog):
     def on_element_clicked(self) -> None:
         """Open a color picker for the clicked element button and update its swatch."""
         btn = self.sender()
-        symbol = btn.text()
+        symbol = btn.text()  # type: ignore[union-attr]
         cur = self.current_settings.get("cpk_colors", {}).get(symbol)
         if not cur:
             cur = CPK_COLORS.get(symbol, CPK_COLORS["DEFAULT"]).name()
@@ -253,7 +254,7 @@ class ColorSettingsDialog(QDialog):
                 color.red() * 299 + color.green() * 587 + color.blue() * 114
             ) / 1000
             text_color = "white" if brightness < 128 else "black"
-            btn.setStyleSheet(
+            btn.setStyleSheet(  # type: ignore[union-attr]
                 f"background-color: {color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
             )
 
@@ -299,7 +300,7 @@ class ColorSettingsDialog(QDialog):
                 except KeyError:
                     # Suppress if cpk_colors key is already missing or removed during reset.
                     # Safe defensive fallback catching KeyError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
         if self.changed_cpk:
             cdict = settings.get("cpk_colors", {}).copy()
             cdict.update(self.changed_cpk)
@@ -326,12 +327,12 @@ class ColorSettingsDialog(QDialog):
                     try:
                         it.update_style()
                     except (AttributeError, RuntimeError, TypeError):
-                        pass
+                        logging.debug("Suppressed non-critical error", exc_info=True)
                 else:
                     try:
                         it.update()
                     except (AttributeError, RuntimeError, TypeError):
-                        pass
+                        logging.debug("Suppressed non-critical error", exc_info=True)
 
         # Update button styles
         for s, btn in self.element_buttons.items():
@@ -348,12 +349,11 @@ class ColorSettingsDialog(QDialog):
             )
 
         # Refresh SettingsDialog
-        from .settings_dialog import SettingsDialog  # type: ignore[assignment]
+        from .settings_dialog import SettingsDialog
 
-        if SettingsDialog:
-            for w in QApplication.topLevelWidgets():
-                if isinstance(w, SettingsDialog):
-                    w.update_ui_from_settings(settings)
+        for w in QApplication.topLevelWidgets():
+            if isinstance(w, SettingsDialog):
+                w.update_ui_from_settings(settings)
 
         # Persist B&S color
         if getattr(self, "changed_bs_color", None):

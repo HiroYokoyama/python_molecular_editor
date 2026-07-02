@@ -35,15 +35,15 @@ class Settings2DTab(SettingsTabBase):
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:
         super().__init__(default_settings, parent)
-        self.atom_font_family_2d_combo = None
-        self.atom_font_bold_2d_btn = None
-        self.atom_font_italic_2d_btn = None
-        self.atom_font_underline_2d_btn = None
-        self.atom_use_bond_color_2d_checkbox = None
-        self.bg_color_2d_button = None
-        self.bond_cap_style_2d_combo = None
-        self.bond_color_2d_button = None
-        self.template_fusing_enabled_2d_checkbox = None
+        self.atom_font_family_2d_combo: Any = None
+        self.atom_font_bold_2d_btn: Any = None
+        self.atom_font_italic_2d_btn: Any = None
+        self.atom_font_underline_2d_btn: Any = None
+        self.atom_use_bond_color_2d_checkbox: Any = None
+        self.bg_color_2d_button: Any = None
+        self.bond_cap_style_2d_combo: Any = None
+        self.bond_color_2d_button: Any = None
+        self.template_fusing_enabled_2d_checkbox: Any = None
         self.current_bg_color_2d = default_settings["background_color_2d"]
         self.current_bond_color_2d = default_settings["bond_color_2d"]
         self._setup_ui()

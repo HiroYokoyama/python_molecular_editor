@@ -49,7 +49,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         self._deleted_items = []
         self.initial_positions_in_event = {}
         self.template_context = {}
-        self.template_preview = None
+        self.template_preview: Any = None
         self.template_preview_points = []
         self.was_selected_on_press = False
         self.mode: str = "select"
@@ -187,15 +187,15 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
             # Update all bonds in this ring
             for bidx in b_ring:
-                bond_item = rdkit_bond_idx_to_item.get(bidx)
-                if bond_item:
-                    bond_item.is_in_ring = True
-                    item_id = id(bond_item)
+                ring_bond = rdkit_bond_idx_to_item.get(bidx)
+                if ring_bond:
+                    ring_bond.is_in_ring = True
+                    item_id = id(ring_bond)
                     if (
                         item_id not in bond_to_best_size
                         or ring_size < bond_to_best_size[item_id]
                     ):
-                        bond_item.ring_center = ring_center
+                        ring_bond.ring_center = ring_center
                         bond_to_best_size[item_id] = ring_size
 
     def update_all_items(self) -> None:
@@ -316,7 +316,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 needs_update = True
         return needs_update
 
-    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:  # type: ignore[override]
         """Handle mouse press to begin atom/bond creation or selection."""
         self.press_pos = event.scenePos()
         self.was_selected_on_press = False
@@ -341,9 +341,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             return
 
         if event.button() == Qt.MouseButton.RightButton:
-            item: Optional[QGraphicsItem] = self.itemAt(
-                event.scenePos(), self.views()[0].transform()
-            )
+            item = self.itemAt(event.scenePos(), self.views()[0].transform())
             if not isinstance(item, (AtomItem, BondItem)):
                 return  # Do nothing if something other than the target is clicked
             data_changed = False
@@ -481,7 +479,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         else:
             super().mousePressEvent(event)
 
-    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:  # type: ignore[override]
         """Update the bond preview line or template ghost during mouse drag."""
         if not self.window.ui_manager.is_2d_editable:
             return
@@ -514,14 +512,14 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             )
 
             if is_valid_snap_target:
-                end_point = target_atom.pos()
+                end_point = target_atom.pos()  # type: ignore[union-attr]
 
             self.temp_line.setLine(QLineF(start_point, end_point))
         else:
             # Even in template mode, hover events are propagated here
             super().mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:  # type: ignore[override]
         """Finalize atom/bond creation or selection on mouse release."""
         if not self.window.ui_manager.is_2d_editable:
             return
@@ -820,7 +818,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
         # Clear template context but NOT the template data itself to allow multiple placements
         self.template_context = {}
 
-    def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+    def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:  # type: ignore[override]
         """Handle double click events."""
         item = self.itemAt(event.scenePos(), self.views()[0].transform())
 

@@ -80,3 +80,13 @@ Ethane (2 C, 1 bond) is the minimal molecule that exercises the full
 - **pytest-qt** — `qtbot` fixture (used to satisfy the `app` fixture dependency)
 - **Open Babel** *(optional)* — required only for `test_ethane_conversion_obabel`;
   the test is automatically skipped when absent
+
+## Workflow Test Files (added 2026-07)
+
+| File | Covers |
+|---|---|
+| `test_project_roundtrip.py` | .pmeprj / .pmeraw save→clear→load round-trips, Save-As extension, unsaved-changes prompt |
+| `test_export_files.py` | 2D MOL, 3D MOL, XYZ export — extension appending + RDKit re-parse validation |
+| `test_import_workflows.py` | SMILES / MOL-file / XYZ import, invalid-input safety, 3D viewer mode switch |
+| `test_undo_redo_workflow.py` | draw→undo→redo cycles, bond-data restoration, undo history depth cap |
+| `test_plugin_workflow.py` | real PluginManager install/discover (.py and single-file ZIP), plugin state persistence through project save/load |
