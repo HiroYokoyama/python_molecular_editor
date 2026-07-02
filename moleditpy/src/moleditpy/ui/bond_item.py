@@ -80,7 +80,7 @@ class BondItem(QGraphicsItem):
             # Invalidate scene area when removing label
             if new_stereo == 0 and self.stereo in [3, 4] and self.scene():
                 rect = self.mapToScene(self.boundingRect()).boundingRect()
-                self.scene().invalidate(
+                self.scene().invalidate(  # type: ignore[union-attr]
                     rect,
                     QGraphicsScene.SceneLayer.BackgroundLayer
                     | QGraphicsScene.SceneLayer.ForegroundLayer,
@@ -90,10 +90,10 @@ class BondItem(QGraphicsItem):
             self.stereo = new_stereo
             self.update()
 
-            if self.scene() and self.scene().views():
-                view = self.scene().views()[0]
+            if self.scene() and self.scene().views():  # type: ignore[union-attr]
+                view = self.scene().views()[0]  # type: ignore[union-attr]
                 if view and view.viewport():
-                    view.viewport().update()
+                    view.viewport().update()  # type: ignore[union-attr]
 
         except (AttributeError, RuntimeError, TypeError):
             logging.exception("Error in BondItem.set_stereo")
@@ -105,8 +105,8 @@ class BondItem(QGraphicsItem):
         self.prepareGeometryChange()
         self.order = new_order
         self.update()
-        if self.scene() and self.scene().views():
-            self.scene().views()[0].viewport().update()
+        if self.scene() and self.scene().views():  # type: ignore[union-attr]
+            self.scene().views()[0].viewport().update()  # type: ignore[union-attr]
 
     def update_style(self) -> None:
         """Force internal state refresh and redraw (primarily from settings)."""
@@ -332,7 +332,7 @@ class BondItem(QGraphicsItem):
     def paint(
         self,
         painter: Optional[QPainter],
-        option: QStyleOptionGraphicsItem,
+        option: QStyleOptionGraphicsItem,  # type: ignore[override]
         widget: Optional[QWidget] = None,
     ) -> None:
         """Render the bond as single, double, triple, wedge, or dashed line."""
@@ -461,7 +461,7 @@ class BondItem(QGraphicsItem):
                         if self.order == 3
                         else "bond_spacing_double_2d"
                     )
-                    bond_offset = scene.get_setting(key, 3.5)
+                    bond_offset = scene.get_setting(key, 3.5)  # type: ignore[attr-defined]
 
                 offset = QPointF(v.dx(), v.dy()) * bond_offset
 
@@ -607,19 +607,19 @@ class BondItem(QGraphicsItem):
             logging.exception("Error updating bond position")
             # Continue without crashing
 
-    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:  # type: ignore[override]
         """Highlight the bond on mouse hover."""
         self.hovered = True
         self.update()
         if self.scene():
-            self.scene().set_hovered_item(self)
+            self.scene().set_hovered_item(self)  # type: ignore[union-attr]
         super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:  # type: ignore[override]
         """Remove hover highlight when the mouse leaves."""
         if self.hovered:
             self.hovered = False
             self.update()
         if self.scene():
-            self.scene().set_hovered_item(None)
+            self.scene().set_hovered_item(None)  # type: ignore[union-attr]
         super().hoverLeaveEvent(event)

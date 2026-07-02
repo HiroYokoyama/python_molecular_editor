@@ -229,7 +229,7 @@ class MainWindow(QMainWindow):
     def update_status_message(self, message: str, timeout: int = 0) -> None:
         """Show a message in the main window's status bar."""
         if self.statusBar():
-            self.statusBar().showMessage(message, timeout)
+            self.statusBar().showMessage(message, timeout)  # type: ignore[union-attr]
 
     def warning_message_box(self, title: str, message: str) -> None:
         """Show a modal warning dialog."""

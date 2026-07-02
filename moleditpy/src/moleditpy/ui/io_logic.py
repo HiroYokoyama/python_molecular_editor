@@ -69,7 +69,6 @@ class IOManager:
             pass
         return basename
 
-
     def _plotter_view_isometric(self) -> None:
         """Deferred camera reset (plotter may be gone when this fires)."""
         plotter = self.host.view_3d_manager.plotter

@@ -323,7 +323,7 @@ class AtomItem(QGraphicsItem):
     def paint(
         self,
         painter: Optional[QPainter],
-        option: QStyleOptionGraphicsItem,
+        option: QStyleOptionGraphicsItem,  # type: ignore[override]
         widget: Optional[QWidget] = None,
     ) -> None:
         """Paint the atom symbol and its associated labels (charge, radical)."""
@@ -334,9 +334,9 @@ class AtomItem(QGraphicsItem):
         # Use bond color if specified in settings
         scene = self.scene()
         if hasattr(scene, "get_setting") and (
-            self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)
+            self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)  # type: ignore[union-attr]
         ):
-            custom_color = scene.get_setting("bond_color_2d", "#222222")
+            custom_color = scene.get_setting("bond_color_2d", "#222222")  # type: ignore[union-attr]
             if isinstance(custom_color, str):
                 color = QColor(custom_color)
 
@@ -515,14 +515,14 @@ class AtomItem(QGraphicsItem):
                 self.update_style()
         return res
 
-    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+    def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:  # type: ignore[override]
         """Highlight the atom on mouse hover."""
         # Enable highlight on hover regardless of scene mode
         self.hovered = True
         self.update()
         super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:
+    def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:  # type: ignore[override]
         """Remove hover highlight when the mouse leaves."""
         if self.hovered:
             self.hovered = False

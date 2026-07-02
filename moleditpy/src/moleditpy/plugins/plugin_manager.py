@@ -338,7 +338,7 @@ class PluginManager:
                 sys.modules[spec.name] = module
 
                 # Inject category info
-                module.PLUGIN_CATEGORY = category
+                module.PLUGIN_CATEGORY = category  # type: ignore[attr-defined]
 
                 spec.loader.exec_module(module)
 
@@ -661,15 +661,15 @@ class PluginManager:
                     if isinstance(target, ast.Name):
                         # Helper to extract value
                         val = None
-                        if node.value:  # AnnAssign might presumably not have value? (though usually does for module globals)
-                            if isinstance(node.value, ast.Constant):  # Py3.8+
-                                val = node.value.value
-                            elif isinstance(node.value, ast.Tuple):
+                        if node.value:  # type: ignore[attr-defined]  # AnnAssign might presumably not have value? (though usually does for module globals)
+                            if isinstance(node.value, ast.Constant):  # type: ignore[attr-defined]  # Py3.8+
+                                val = node.value.value  # type: ignore[attr-defined]
+                            elif isinstance(node.value, ast.Tuple):  # type: ignore[attr-defined]
                                 # Handle version tuples e.g. (1, 0, 0)
                                 try:
                                     # Extract simple constants from tuple
                                     elts = []
-                                    for elt in node.value.elts:
+                                    for elt in node.value.elts:  # type: ignore[attr-defined]
                                         if isinstance(elt, ast.Constant):
                                             elts.append(elt.value)
                                     val = ".".join(map(str, elts))
@@ -713,7 +713,7 @@ class PluginManager:
                     elif hasattr(ast, "Str") and isinstance(
                         node.value, getattr(ast, "Str", type(None))
                     ):
-                        val = node.value.s
+                        val = node.value.s  # type: ignore[attr-defined]
 
                     if val and not info["description"]:
                         info["description"] = val.strip().split("\n")[0]

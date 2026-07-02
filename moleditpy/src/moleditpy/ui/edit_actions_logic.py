@@ -326,13 +326,13 @@ class EditActionsManager:
             cb = QApplication.clipboard()
             if cb is not None:
                 cb.setMimeData(mime_data)
-            self.host.statusBar().showMessage(
+            self.host.statusBar().showMessage(  # type: ignore[union-attr]
                 f"Copied {len(fragment_atoms)} atoms and {len(fragment_bonds)} bonds."
             )
 
         except (AttributeError, RuntimeError, ValueError, TypeError):
             logging.exception("Error during copy operation")
-            self.host.statusBar().showMessage("Error during copy operation.")
+            self.host.statusBar().showMessage("Error during copy operation.")  # type: ignore[union-attr]
 
     def cut_selection(self) -> None:
         """Cut selected items (copy then delete)"""
@@ -346,11 +346,11 @@ class EditActionsManager:
 
             if self.host.init_manager.scene.delete_items(set(selected_items)):
                 self.host.edit_actions_manager.push_undo_state()
-                self.host.statusBar().showMessage("Cut selection.", 2000)
+                self.host.statusBar().showMessage("Cut selection.", 2000)  # type: ignore[union-attr]
 
         except (AttributeError, RuntimeError, ValueError, TypeError):
             logging.exception("Error during cut operation")
-            self.host.statusBar().showMessage("Error during cut operation.")
+            self.host.statusBar().showMessage("Error during cut operation.")  # type: ignore[union-attr]
 
     def paste_from_clipboard(self) -> None:
         """Paste molecular fragment from clipboard"""
@@ -366,7 +366,7 @@ class EditActionsManager:
             try:
                 fragment_data = json.loads(bytes(byte_array.data()).decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError, KeyError):
-                self.host.statusBar().showMessage(
+                self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     "Error: Invalid clipboard data format"
                 )
                 return
@@ -404,14 +404,14 @@ class EditActionsManager:
                 )
 
             self.host.edit_actions_manager.push_undo_state()
-            self.host.statusBar().showMessage(
+            self.host.statusBar().showMessage(  # type: ignore[union-attr]
                 f"Pasted {len(fragment_data['atoms'])} atoms and {len(fragment_data['bonds'])} bonds.",
                 2000,
             )
 
         except (AttributeError, RuntimeError, ValueError, TypeError):
             logging.exception("Error during paste operation")
-            self.host.statusBar().showMessage("Error during paste operation.")
+            self.host.statusBar().showMessage("Error during paste operation.")  # type: ignore[union-attr]
         self.host.ui_manager.activate_select_mode()
         self.host.init_manager.scene.update_all_items()
 
@@ -441,7 +441,7 @@ class EditActionsManager:
                     continue
 
             if not hydrogen_map:
-                self.host.statusBar().showMessage(
+                self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     "No hydrogen atoms found to remove.", 2000
                 )
                 return
@@ -524,18 +524,18 @@ class EditActionsManager:
             if removed_count > 0:
                 # Only push a single undo state once for the whole operation
                 self.host.edit_actions_manager.push_undo_state()
-                self.host.statusBar().showMessage(
+                self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     f"Removed {removed_count} hydrogen atoms.", 2000
                 )
             else:
                 # If nothing removed but we attempted, show an informative message
                 if deleted_any:
                     # Deleted something but couldn't determine count reliably
-                    self.host.statusBar().showMessage(
+                    self.host.statusBar().showMessage(  # type: ignore[union-attr]
                         "Removed hydrogen atoms (count unknown).", 2000
                     )
                 else:
-                    self.host.statusBar().showMessage(
+                    self.host.statusBar().showMessage(  # type: ignore[union-attr]
                         "Failed to remove hydrogen atoms or none found."
                     )
 
@@ -543,7 +543,7 @@ class EditActionsManager:
             logging.exception("Error during hydrogen removal")
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 # Suppress transient errors during UI status reporting.
-                self.host.statusBar().showMessage("Error removing hydrogen atoms.")
+                self.host.statusBar().showMessage("Error removing hydrogen atoms.")  # type: ignore[union-attr]
 
     def add_hydrogen_atoms(self) -> None:
         """Compute and add explicit hydrogens in 2D view using RDKit."""
@@ -551,7 +551,7 @@ class EditActionsManager:
         try:
             mol = self.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
             if not mol or mol.GetNumAtoms() == 0:
-                self.host.statusBar().showMessage(
+                self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     "No molecule available to compute hydrogens.", 2000
                 )
                 return
@@ -722,7 +722,7 @@ class EditActionsManager:
             if added_count > 0:
                 self.host.init_manager.scene.update_all_items()
                 self.host.edit_actions_manager.push_undo_state()
-                self.host.statusBar().showMessage(
+                self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     f"Added {added_count} hydrogen atoms.", 2000
                 )
                 with contextlib.suppress(AttributeError, RuntimeError, TypeError):
@@ -731,20 +731,20 @@ class EditActionsManager:
                     for it in added_items:
                         it.setSelected(True)
             else:
-                self.host.statusBar().showMessage(
+                self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     "No implicit hydrogens found to add.", 2000
                 )
 
         except (AttributeError, RuntimeError, ValueError, TypeError):
             logging.exception("Error during hydrogen addition")
-            self.host.statusBar().showMessage("Error adding hydrogen atoms.")
+            self.host.statusBar().showMessage("Error adding hydrogen atoms.")  # type: ignore[union-attr]
 
     def update_edit_menu_actions(self) -> None:
         """Update edit menu based on selection and clipboard"""
         try:
             has_selection = len(self.host.init_manager.scene.selectedItems()) > 0
-            self.host.init_manager.cut_action.setEnabled(has_selection)
-            self.host.init_manager.copy_action.setEnabled(has_selection)
+            self.host.init_manager.cut_action.setEnabled(has_selection)  # type: ignore[union-attr]
+            self.host.init_manager.copy_action.setEnabled(has_selection)  # type: ignore[union-attr]
 
             clipboard = QApplication.clipboard()
             if clipboard is not None:
@@ -789,7 +789,7 @@ class EditActionsManager:
                 ]
 
             if not target_atoms:
-                self.host.statusBar().showMessage("No atoms to rotate.")
+                self.host.statusBar().showMessage("No atoms to rotate.")  # type: ignore[union-attr]
                 return
 
             # Calculate Center
@@ -824,13 +824,13 @@ class EditActionsManager:
             self.host.init_manager.scene.update_all_items()
 
             self.host.edit_actions_manager.push_undo_state()
-            self.host.statusBar().showMessage(
+            self.host.statusBar().showMessage(  # type: ignore[union-attr]
                 f"Rotated {len(target_atoms)} atoms by {angle_degrees} degrees."
             )
 
         except (AttributeError, RuntimeError, ValueError, TypeError):
             logging.exception("Error rotating molecule")
-            self.host.statusBar().showMessage("Error rotating molecule.")
+            self.host.statusBar().showMessage("Error rotating molecule.")  # type: ignore[union-attr]
 
     def select_all(self) -> None:
         """Select all atoms and bonds in the 2D scene."""
@@ -893,7 +893,7 @@ class EditActionsManager:
         self.host.ui_manager.enable_3d_features(False)
 
         # Redraw 3D plotter
-        self.host.view_3d_manager.plotter.render()
+        self.host.view_3d_manager.plotter.render()  # type: ignore[union-attr]
 
         # Update menu text and state
         self.host.view_3d_manager.update_atom_id_menu_text()
@@ -1108,14 +1108,14 @@ class EditActionsManager:
 
     def clean_up_2d_structure(self) -> None:
         """Run RDKit 2D coordinate cleanup and re-layout."""
-        self.host.statusBar().showMessage("Optimizing 2D structure...")
+        self.host.statusBar().showMessage("Optimizing 2D structure...")  # type: ignore[union-attr]
 
         # Clear existing problem flags
         self.host.init_manager.scene.clear_all_problem_flags()
 
         # Case: no atoms in 2D editor
         if not self.host.state_manager.data.atoms:
-            self.host.statusBar().showMessage("Error: No atoms to optimize.")
+            self.host.statusBar().showMessage("Error: No atoms to optimize.")  # type: ignore[union-attr]
             return
 
         mol = self.host.state_manager.data.to_rdkit_mol()
@@ -1130,7 +1130,7 @@ class EditActionsManager:
             new_positions = optimize_2d_coords(mol)
 
             if not new_positions:
-                self.host.statusBar().showMessage(
+                self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     "Optimization failed to generate coordinates."
                 )
                 return
@@ -1180,11 +1180,11 @@ class EditActionsManager:
             # Request scene update and ring re-analysis
             self.host.init_manager.scene.update_all_items()
 
-            self.host.statusBar().showMessage("2D structure optimization successful.")
+            self.host.statusBar().showMessage("2D structure optimization successful.")  # type: ignore[union-attr]
             self.host.edit_actions_manager.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            self.host.statusBar().showMessage(f"Error during 2D optimization: {e}")
+            self.host.statusBar().showMessage(f"Error during 2D optimization: {e}")  # type: ignore[union-attr]
         finally:
             self.host.init_manager.view_2d.setFocus()
 
@@ -1194,9 +1194,9 @@ class EditActionsManager:
             self.host.view_3d_manager.draw_molecule_3d(
                 self.host.view_3d_manager.current_mol
             )
-            self.host.statusBar().showMessage("Redraw complete.", 2000)
+            self.host.statusBar().showMessage("Redraw complete.", 2000)  # type: ignore[union-attr]
         else:
-            self.host.statusBar().showMessage("No 3D molecule to redraw.")
+            self.host.statusBar().showMessage("No 3D molecule to redraw.")  # type: ignore[union-attr]
 
     def resolve_overlapping_groups(self) -> None:
         """Detect and resolve overlapping atom groups."""
@@ -1235,7 +1235,7 @@ class EditActionsManager:
         )
 
         if not move_operations:
-            self.host.statusBar().showMessage("No overlapping atoms found.", 2000)
+            self.host.statusBar().showMessage("No overlapping atoms found.", 2000)  # type: ignore[union-attr]
             return
 
         # Step 4: Execute translations
@@ -1267,7 +1267,7 @@ class EditActionsManager:
 
         self.host.init_manager.scene.update()
         self.host.edit_actions_manager.push_undo_state()
-        self.host.statusBar().showMessage("Resolved overlapping groups.", 2000)
+        self.host.statusBar().showMessage("Resolved overlapping groups.", 2000)  # type: ignore[union-attr]
 
     def adjust_molecule_positions_to_avoid_collisions(
         self, mol: Chem.Mol, frags: List[List[int]]
@@ -1449,12 +1449,12 @@ class EditActionsManager:
             desc = f" ({source_desc})" if source_desc else ""
             # Suppress potential status bar or button state errors if the window is being closed or destroyed
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                self.host.statusBar().showMessage(
+                self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     f"Molecule sanitization failed{desc}; file may be malformed."
                 )
             # Disable 3D optimization UI to prevent running on invalid molecules
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                self.host.init_manager.optimize_3d_button.setEnabled(False)
+                self.host.init_manager.optimize_3d_button.setEnabled(False)  # type: ignore[union-attr]
 
     def _clear_xyz_flags(self, mol: Optional[Any] = None) -> None:
         """Clear XYZ-derived markers from a molecule (or current_mol) and
@@ -1487,6 +1487,6 @@ class EditActionsManager:
         # Enable Optimize 3D unless sanitization failed
         with contextlib.suppress(AttributeError, RuntimeError, TypeError):
             # Suppress error if optimize_3d_button is partially destroyed.
-            self.host.init_manager.optimize_3d_button.setEnabled(
+            self.host.init_manager.optimize_3d_button.setEnabled(  # type: ignore[union-attr]
                 not getattr(self.host, "chem_check_failed", False)
             )

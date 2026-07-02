@@ -188,9 +188,9 @@ class PluginMenuManager:
         if not hasattr(self._im, "plugin_toolbar"):
             return
 
-        self._im.plugin_toolbar.clear()
+        self._im.plugin_toolbar.clear()  # type: ignore[union-attr]
         if self._im.host.plugin_manager.toolbar_actions:
-            self._im.plugin_toolbar.show()
+            self._im.plugin_toolbar.show()  # type: ignore[union-attr]
             for action_def in self._im.host.plugin_manager.toolbar_actions:
                 action = QAction(action_def["text"], self._im.host)
                 action.triggered.connect(
@@ -202,9 +202,9 @@ class PluginMenuManager:
                     action.setIcon(QIcon(action_def["icon"]))
                 if action_def["tooltip"]:
                     action.setToolTip(action_def["tooltip"])
-                self._im.plugin_toolbar.addAction(action)
+                self._im.plugin_toolbar.addAction(action)  # type: ignore[union-attr]
         else:
-            self._im.plugin_toolbar.hide()
+            self._im.plugin_toolbar.hide()  # type: ignore[union-attr]
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -459,5 +459,5 @@ class PluginMenuManager:
             if action.data() == "plugin_action":
                 plugin_menu.removeAction(action)
 
-        self._im.plugin_toolbar.clear()
-        self._im.plugin_toolbar.hide()
+        self._im.plugin_toolbar.clear()  # type: ignore[union-attr]
+        self._im.plugin_toolbar.hide()  # type: ignore[union-attr]

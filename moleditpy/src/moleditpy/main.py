@@ -39,9 +39,7 @@ _QT_LOG_LEVEL = {
 _DOWNGRADED_QT_PATTERNS = ("Retrying to obtain clipboard",)
 
 
-def _qt_message_handler(
-    mode: QtMsgType, _context: Any, message: Optional[str]
-) -> None:
+def _qt_message_handler(mode: QtMsgType, _context: Any, message: Optional[str]) -> None:
     """Route Qt log messages to Python logging, downgrading known noisy warnings."""
     message = message or ""
     for pattern in _DOWNGRADED_QT_PATTERNS:

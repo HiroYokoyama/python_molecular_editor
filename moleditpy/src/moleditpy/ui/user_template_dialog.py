@@ -59,7 +59,7 @@ class UserTemplateDialog(QDialog):
 
         # Position window to the top-right of the parent
         if self.parent():
-            parent_geometry = self.parent().geometry()
+            parent_geometry = self.parent().geometry()  # type: ignore[union-attr]
             x = parent_geometry.right() - self.width() - 20
             y = parent_geometry.top() + 50
             self.move(x, y)

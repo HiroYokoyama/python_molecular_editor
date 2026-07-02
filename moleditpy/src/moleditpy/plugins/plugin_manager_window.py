@@ -241,7 +241,7 @@ class PluginManagerWindow(QDialog):
         """Accept drag events carrying file URLs."""
         if event is None:
             return
-        if event.mimeData().hasUrls():
+        if event.mimeData().hasUrls():  # type: ignore[union-attr]
             event.accept()
         else:
             event.ignore()
@@ -252,7 +252,7 @@ class PluginManagerWindow(QDialog):
             return
         files_installed = []
         errors = []
-        for url in event.mimeData().urls():
+        for url in event.mimeData().urls():  # type: ignore[union-attr]
             file_path = url.toLocalFile()
 
             is_valid = False

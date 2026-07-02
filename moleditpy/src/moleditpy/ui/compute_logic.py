@@ -73,10 +73,10 @@ class ComputeManager:
 
     def _restore_button_ui(self) -> None:
         """Restore the Convert and Optimize buttons to their default state."""
-        self._safe_disconnect(self.host.init_manager.convert_button.clicked)
-        self.host.init_manager.convert_button.setText("Convert 2D to 3D")
-        self.host.init_manager.convert_button.clicked.connect(self.trigger_conversion)
-        self.host.init_manager.convert_button.setEnabled(True)
+        self._safe_disconnect(self.host.init_manager.convert_button.clicked)  # type: ignore[union-attr]
+        self.host.init_manager.convert_button.setText("Convert 2D to 3D")  # type: ignore[union-attr]
+        self.host.init_manager.convert_button.clicked.connect(self.trigger_conversion)  # type: ignore[union-attr]
+        self.host.init_manager.convert_button.setEnabled(True)  # type: ignore[union-attr]
 
         if self.host.init_manager.optimize_3d_button:
             self._safe_disconnect(self.host.init_manager.optimize_3d_button.clicked)
@@ -132,20 +132,20 @@ class ComputeManager:
                 act.setChecked(k.upper() == method)
 
         label = self.host.init_manager.opt3d_method_labels.get(method, method)
-        self.host.statusBar().showMessage(f"3D optimization method set to: {label}")
+        self.host.statusBar().showMessage(f"3D optimization method set to: {label}")  # type: ignore[union-attr]
 
     def toggle_intermolecular_interaction_rdkit(self, checked: bool) -> None:
         """Toggle intermolecular interactions for RDKit optimization."""
         self.host.get_settings()["optimize_intermolecular_interaction_rdkit"] = checked
         self.host.set_settings_dirty(True)
         state_str = "Enabled" if checked else "Disabled"
-        self.host.statusBar().showMessage(
+        self.host.statusBar().showMessage(  # type: ignore[union-attr]
             f"Intermolecular interaction for RDKit: {state_str}"
         )
 
     def show_convert_menu(self, pos: QPoint) -> None:
         """Temporary 3D conversion menu (right-click)."""
-        if not self.host.init_manager.convert_button.isEnabled():
+        if not self.host.init_manager.convert_button.isEnabled():  # type: ignore[union-attr]
             return
 
         menu = QMenu(self.host)
@@ -163,7 +163,7 @@ class ComputeManager:
                 lambda checked=False, k=key: self._trigger_conversion_with_temp_mode(k)
             )
             menu.addAction(a)
-        menu.exec(self.host.init_manager.convert_button.mapToGlobal(pos))
+        menu.exec(self.host.init_manager.convert_button.mapToGlobal(pos))  # type: ignore[union-attr]
 
     def _trigger_conversion_with_temp_mode(self, mode_key: str) -> None:
         # Store mode as instance attribute so it reaches trigger_conversion
@@ -174,7 +174,7 @@ class ComputeManager:
 
     def show_optimize_menu(self, pos: QPoint) -> None:
         """Temporary 3D optimization menu (right-click)."""
-        if not self.host.init_manager.optimize_3d_button.isEnabled():
+        if not self.host.init_manager.optimize_3d_button.isEnabled():  # type: ignore[union-attr]
             return
 
         menu = QMenu(self.host)
@@ -196,7 +196,7 @@ class ComputeManager:
                 lambda checked=False, k=key: self._trigger_optimize_with_temp_method(k)
             )
             menu.addAction(a)
-        menu.exec(self.host.init_manager.optimize_3d_button.mapToGlobal(pos))
+        menu.exec(self.host.init_manager.optimize_3d_button.mapToGlobal(pos))  # type: ignore[union-attr]
 
     def _trigger_optimize_with_temp_method(self, method_key: str) -> None:
         QTimer.singleShot(0, lambda: self.optimize_3d_structure(method_key))
@@ -231,17 +231,17 @@ class ComputeManager:
         mol = self._prepare_rdkit_mol_for_conversion()
         if not mol:
             self._restore_button_ui()
-            self.host.init_manager.cleanup_button.setEnabled(True)
+            self.host.init_manager.cleanup_button.setEnabled(True)  # type: ignore[union-attr]
             self._remove_calculating_text()
             return
 
         num_frags = len(Chem.GetMolFrags(mol))
         if num_frags > 1:
-            self.host.statusBar().showMessage(
+            self.host.statusBar().showMessage(  # type: ignore[union-attr]
                 f"Converting {num_frags} molecules to 3D with collision detection..."
             )
         else:
-            self.host.statusBar().showMessage("Calculating 3D structure...")
+            self.host.statusBar().showMessage("Calculating 3D structure...")  # type: ignore[union-attr]
 
         mol_block = self._setup_mol_block_for_worker(mol)
 
@@ -250,10 +250,10 @@ class ComputeManager:
         self.active_worker_ids.add(run_id)
 
         # UI Updates
-        self.host.init_manager.convert_button.setText("Halt conversion")
-        self._safe_disconnect(self.host.init_manager.convert_button.clicked)
-        self.host.init_manager.convert_button.clicked.connect(self.halt_conversion)
-        self.host.init_manager.cleanup_button.setEnabled(False)
+        self.host.init_manager.convert_button.setText("Halt conversion")  # type: ignore[union-attr]
+        self._safe_disconnect(self.host.init_manager.convert_button.clicked)  # type: ignore[union-attr]
+        self.host.init_manager.convert_button.clicked.connect(self.halt_conversion)  # type: ignore[union-attr]
+        self.host.init_manager.cleanup_button.setEnabled(False)  # type: ignore[union-attr]
         self.host.ui_manager.enable_3d_features(False)
         self.host.clear_3d_view()
 
@@ -297,18 +297,18 @@ class ComputeManager:
         self.active_worker_ids.clear()
 
         self._restore_button_ui()
-        self.host.init_manager.cleanup_button.setEnabled(True)
+        self.host.init_manager.cleanup_button.setEnabled(True)  # type: ignore[union-attr]
         self._remove_calculating_text()
-        self.host.statusBar().showMessage("Halted")
+        self.host.statusBar().showMessage("Halted")  # type: ignore[union-attr]
 
     def optimize_3d_structure(self, method_key: Optional[str] = None) -> None:
         """Optimize 3D structure."""
         if not self.host.view_3d_manager.current_mol:
-            self.host.statusBar().showMessage("No 3D molecule to optimize.")
+            self.host.statusBar().showMessage("No 3D molecule to optimize.")  # type: ignore[union-attr]
             return
 
         if self.host.view_3d_manager.current_mol.GetNumConformers() == 0:
-            self.host.statusBar().showMessage(
+            self.host.statusBar().showMessage(  # type: ignore[union-attr]
                 "No conformer found. Generate 3D structure first."
             )
             return
@@ -322,12 +322,12 @@ class ComputeManager:
         _plugin_methods = set(getattr(_plugin_mgr, "optimization_methods", {}) or {})
         _all_known = _init_methods | _plugin_methods | {"OPTIMIZE_ONLY"}
         if _all_known and method not in _all_known:
-            self.host.statusBar().showMessage(
+            self.host.statusBar().showMessage(  # type: ignore[union-attr]
                 f"Selected optimization method '{method}' is not available."
             )
             return
 
-        self.host.statusBar().showMessage(f"Optimizing 3D structure ({method})...")
+        self.host.statusBar().showMessage(f"Optimizing 3D structure ({method})...")  # type: ignore[union-attr]
 
         mol_block = Chem.MolToMolBlock(
             self.host.view_3d_manager.current_mol, includeStereo=True
@@ -382,14 +382,14 @@ class ComputeManager:
             Chem.SanitizeMol(mol)
         except (ValueError, RuntimeError) as e:
             logging.error(f"Sanitization failed: {e}")
-            self.host.statusBar().showMessage("Error: Invalid chemical structure.")
+            self.host.statusBar().showMessage("Error: Invalid chemical structure.")  # type: ignore[union-attr]
             return None
         return mol
 
     def _handle_chemistry_problems(self, mol: Chem.Mol, problems: List[Any]) -> None:
         self.host.init_manager.scene.clear_all_problem_flags()
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
-        self.host.statusBar().showMessage(msg)
+        self.host.statusBar().showMessage(msg)  # type: ignore[union-attr]
 
         with contextlib.suppress(RuntimeError):
             QMessageBox.critical(self.host, "Chemistry Problem", msg)
@@ -512,11 +512,11 @@ class ComputeManager:
                 self._restore_button_ui()
                 # If it was a halt or error from a stale worker, show with ID
                 if msg == "Halt" or msg == "Halted":
-                    self.host.statusBar().showMessage(
+                    self.host.statusBar().showMessage(  # type: ignore[union-attr]
                         f"Ignored halted worker (ID = {worker_id})"
                     )
                 else:
-                    self.host.statusBar().showMessage(
+                    self.host.statusBar().showMessage(  # type: ignore[union-attr]
                         f"Ignored stale worker error: {msg} (ID = {worker_id})"
                     )
                 return  # stale worker, ignore
@@ -528,9 +528,9 @@ class ComputeManager:
         self._restore_button_ui()
 
         if msg == "Halt" or msg == "Halted":
-            self.host.statusBar().showMessage("Halted")
+            self.host.statusBar().showMessage("Halted")  # type: ignore[union-attr]
         else:
-            self.host.statusBar().showMessage(f"Calculation Error: {msg}")
+            self.host.statusBar().showMessage(f"Calculation Error: {msg}")  # type: ignore[union-attr]
 
         # Offer UFF fallback when MMFF fails
         if "MMFF" in msg.upper() and "fail" in msg.lower():
@@ -580,7 +580,7 @@ class ComputeManager:
                 if item:
                     item.has_problem = True
                     item.update()
-            self.host.statusBar().showMessage(
+            self.host.statusBar().showMessage(  # type: ignore[union-attr]
                 f"Error: {len(problem_atom_ids)} chemistry problems found."
             )
         self.host.init_manager.view_2d.setFocus()

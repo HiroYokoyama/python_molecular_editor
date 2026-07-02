@@ -176,7 +176,9 @@ class MolecularData:
             atom_id_to_idx_map[atom_id] = idx
 
         # save bonds & stereo info (label info is kept here)
-        bond_stereo_info: Dict[int, Dict[str, Any]] = {}  # bond_idx -> {'type', 'atom_ids', 'bond_data'}
+        bond_stereo_info: Dict[
+            int, Dict[str, Any]
+        ] = {}  # bond_idx -> {'type', 'atom_ids', 'bond_data'}
         for (id1, id2), bond_data in self.bonds.items():
             if id1 not in atom_id_to_idx_map or id2 not in atom_id_to_idx_map:
                 continue

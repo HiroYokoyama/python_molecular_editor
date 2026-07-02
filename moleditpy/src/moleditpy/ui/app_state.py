@@ -237,7 +237,7 @@ class StateManager:
         else:
             self.host.clear_3d_view()
             self.host.init_manager.analysis_action.setEnabled(False)
-            self.host.init_manager.optimize_3d_button.setEnabled(False)
+            self.host.init_manager.optimize_3d_button.setEnabled(False)  # type: ignore[union-attr]
             # Disable 3D features
             self.host.ui_manager.enable_3d_features(False)
 
@@ -246,7 +246,7 @@ class StateManager:
 
         if loaded_data.get("is_3d_viewer_mode", False):
             self.host.ui_manager.enter_3d_viewer_mode()
-            self.host.statusBar().showMessage("Project loaded in 3D Viewer Mode.")
+            self.host.statusBar().showMessage("Project loaded in 3D Viewer Mode.")  # type: ignore[union-attr]
         else:
             self.host.ui_manager.restore_ui_for_editing()
             # Enable 3D edit features even in 2D editor mode if 3D molecule exists

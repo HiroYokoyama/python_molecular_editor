@@ -193,10 +193,10 @@ class MainInitManager:
             logging.error(f"RDKit warm-up failed: {e}")
 
         self.host.state_manager.reset_undo_stack()
-        self.scene.selectionChanged.connect(
+        self.scene.selectionChanged.connect(  # type: ignore[attr-defined]
             self.host.edit_actions_manager.update_edit_menu_actions
         )
-        QApplication.clipboard().dataChanged.connect(
+        QApplication.clipboard().dataChanged.connect(  # type: ignore[union-attr]
             self.host.edit_actions_manager.update_edit_menu_actions
         )
 
@@ -220,7 +220,7 @@ class MainInitManager:
         # when opening a file or starting the application. This avoids
         # accidental focus landing on toolbar/buttons (e.g. Optimize 2D).
         try:
-            QTimer.singleShot(0, self.view_2d.setFocus)
+            QTimer.singleShot(0, self.view_2d.setFocus)  # type: ignore[attr-defined]
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.debug(
                 f"Suppressed exception: {e}"
@@ -240,7 +240,7 @@ class MainInitManager:
 
             # Set the icon for both the window and the application
             self.host.setWindowIcon(app_icon)
-            QApplication.instance().setWindowIcon(app_icon)
+            QApplication.instance().setWindowIcon(app_icon)  # type: ignore[union-attr]
         else:
             logging.warning(f"Warning: Icon file not found: {icon_path}")
 
@@ -455,8 +455,7 @@ class MainInitManager:
         # 1. Refresh related dialogs if open
         for w in QApplication.topLevelWidgets():
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                if isinstance(w, ColorSettingsDialog):
-                    w.refresh_ui()
+                # ColorSettingsDialog has no refresh method; reopening reflects the reset
                 if isinstance(w, SettingsDialog):
                     w.update_ui_from_settings(self.settings)
 
@@ -649,8 +648,8 @@ class MainInitManager:
                 plugin_menu.removeAction(action)
 
         # 2. Clear plugin-specific toolbars or buttons
-        self.plugin_toolbar.clear()
-        self.plugin_toolbar.hide()
+        self.plugin_toolbar.clear()  # type: ignore[union-attr]
+        self.plugin_toolbar.hide()  # type: ignore[union-attr]
 
     def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""
@@ -841,7 +840,7 @@ class MainInitManager:
                     lambda c, m=mode: self.host.ui_manager.set_mode(m)
                 )
                 self.mode_actions[mode] = action
-                self.tool_group.addAction(action)
+                self.tool_group.addAction(action)  # type: ignore[union-attr]
             toolbar.addAction(action)
         toolbar.addSeparator()
 
@@ -866,7 +865,7 @@ class MainInitManager:
             )
             self.mode_actions[mode] = action
             toolbar.addAction(action)
-            self.tool_group.addAction(action)
+            self.tool_group.addAction(action)  # type: ignore[union-attr]
         toolbar.addSeparator()
 
     def _add_charge_radical_actions(self, toolbar: QToolBar) -> None:
@@ -884,7 +883,7 @@ class MainInitManager:
             action.triggered.connect(lambda c, m=mode: self.host.ui_manager.set_mode(m))
             self.mode_actions[mode] = action
             toolbar.addAction(action)
-            self.tool_group.addAction(action)
+            self.tool_group.addAction(action)  # type: ignore[union-attr]
 
     def _add_template_actions(self, toolbar_bottom: QToolBar) -> None:
         """Add structural template actions (rings, etc.) to the bottom toolbar."""
@@ -904,7 +903,7 @@ class MainInitManager:
             action.triggered.connect(lambda c, m=mode: self.host.ui_manager.set_mode(m))
             self.mode_actions[mode] = action
             toolbar_bottom.addAction(action)
-            self.tool_group.addAction(action)
+            self.tool_group.addAction(action)  # type: ignore[union-attr]
 
         user_action = QAction("USER", self.host)
         user_action.setCheckable(True)
@@ -914,7 +913,7 @@ class MainInitManager:
         )
         self.mode_actions["template_user"] = user_action
         toolbar_bottom.addAction(user_action)
-        self.tool_group.addAction(user_action)
+        self.tool_group.addAction(user_action)  # type: ignore[union-attr]
 
     def _add_3d_edit_actions(self, toolbar: QToolBar) -> None:
         """Add 3D-specific selection and manipulation actions."""

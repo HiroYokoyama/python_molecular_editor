@@ -77,8 +77,8 @@ class ZoomableView(QGraphicsView):
                 event.pos()
             )  # Record start point in viewport coordinates
             # Record current scrollbar values
-            self._pan_start_scroll_h = self.horizontalScrollBar().value()
-            self._pan_start_scroll_v = self.verticalScrollBar().value()
+            self._pan_start_scroll_h = self.horizontalScrollBar().value()  # type: ignore[union-attr]
+            self._pan_start_scroll_v = self.verticalScrollBar().value()  # type: ignore[union-attr]
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             event.accept()
         else:
@@ -93,10 +93,10 @@ class ZoomableView(QGraphicsView):
                 QPointF(event.pos()) - self._pan_start_pos
             )  # Calculate mouse movement delta
             # Update scroll position by subtracting movement delta from start position
-            self.horizontalScrollBar().setValue(
+            self.horizontalScrollBar().setValue(  # type: ignore[union-attr]
                 int(self._pan_start_scroll_h - delta.x())
             )
-            self.verticalScrollBar().setValue(int(self._pan_start_scroll_v - delta.y()))
+            self.verticalScrollBar().setValue(int(self._pan_start_scroll_v - delta.y()))  # type: ignore[union-attr]
             event.accept()
         else:
             super().mouseMoveEvent(event)
@@ -104,13 +104,13 @@ class ZoomableView(QGraphicsView):
     def mouseReleaseEvent(self, event: Optional[QMouseEvent]) -> None:
         """End panning mode and restore cursor when the relevant button is released"""
         # Check if the middle or left button used for panning was released
-        is_middle_button_release = event.button() == Qt.MouseButton.MiddleButton
-        is_left_button_release = event.button() == Qt.MouseButton.LeftButton
+        is_middle_button_release = event.button() == Qt.MouseButton.MiddleButton  # type: ignore[union-attr]
+        is_left_button_release = event.button() == Qt.MouseButton.LeftButton  # type: ignore[union-attr]
 
         if self._is_panning and (is_middle_button_release or is_left_button_release):
             self._is_panning = False
             # Restore cursor based on the current scene mode
-            current_mode = self.scene().mode if self.scene() else "select"
+            current_mode = self.scene().mode if self.scene() else "select"  # type: ignore[union-attr]
             if current_mode == "select":
                 self.setCursor(Qt.CursorShape.ArrowCursor)
             elif current_mode.startswith(("atom", "bond", "template")):
@@ -119,7 +119,7 @@ class ZoomableView(QGraphicsView):
                 self.setCursor(Qt.CursorShape.CrossCursor)
             else:
                 self.setCursor(Qt.CursorShape.ArrowCursor)
-            event.accept()
+            event.accept()  # type: ignore[union-attr]
         else:
             super().mouseReleaseEvent(event)
 

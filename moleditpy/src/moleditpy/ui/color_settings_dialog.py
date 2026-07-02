@@ -242,7 +242,7 @@ class ColorSettingsDialog(QDialog):
     def on_element_clicked(self) -> None:
         """Open a color picker for the clicked element button and update its swatch."""
         btn = self.sender()
-        symbol = btn.text()
+        symbol = btn.text()  # type: ignore[union-attr]
         cur = self.current_settings.get("cpk_colors", {}).get(symbol)
         if not cur:
             cur = CPK_COLORS.get(symbol, CPK_COLORS["DEFAULT"]).name()
@@ -253,7 +253,7 @@ class ColorSettingsDialog(QDialog):
                 color.red() * 299 + color.green() * 587 + color.blue() * 114
             ) / 1000
             text_color = "white" if brightness < 128 else "black"
-            btn.setStyleSheet(
+            btn.setStyleSheet(  # type: ignore[union-attr]
                 f"background-color: {color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
             )
 

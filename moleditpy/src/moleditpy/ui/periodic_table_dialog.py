@@ -196,5 +196,5 @@ class PeriodicTableDialog(QDialog):
     def on_button_clicked(self) -> None:
         """Emit element_selected with the button's symbol and accept the dialog."""
         b = self.sender()
-        self.element_selected.emit(b.text())
+        self.element_selected.emit(b.text())  # type: ignore[union-attr]
         self.accept()
