@@ -517,6 +517,14 @@ def identify_valence_problems(
     list
         IDs of atoms with problematic valence.
     """
+    # Preferred: RDKit's own detection on an unsanitized mol. Unlike the
+    # heuristic table below, it knows every element and accounts for formal
+    # charges and radical electrons (e.g. hypervalent N+, S, B, radicals).
+    rdkit_ids = _identify_problems_rdkit(atoms_data, bonds_data)
+    if rdkit_ids is not None:
+        return rdkit_ids
+
+    # Fallback heuristic when RDKit cannot even construct the atoms
     problem_atom_ids = []
 
     # Pre-calculate bond orders per atom
@@ -535,6 +543,52 @@ def identify_valence_problems(
             problem_atom_ids.append(atom_id)
 
     return problem_atom_ids
+
+
+def _identify_problems_rdkit(
+    atoms_data: Dict[int, Any], bonds_data: Dict[Tuple[int, int], Any]
+) -> Optional[List[int]]:
+    """Find problem atoms via Chem.DetectChemistryProblems (no sanitization).
+
+    Returns None when the molecule cannot be constructed at all (unknown
+    symbols etc.), signalling the caller to use the heuristic fallback.
+    """
+    try:
+        from rdkit import Chem as _Chem
+
+        mol = _Chem.RWMol()
+        id_to_idx = {}
+        for atom_id, data in atoms_data.items():
+            atom = _Chem.Atom(data["symbol"])
+            atom.SetFormalCharge(data.get("charge", 0))
+            atom.SetNumRadicalElectrons(data.get("radical", 0))
+            atom.SetNoImplicit(False)
+            id_to_idx[atom_id] = mol.AddAtom(atom)
+
+        bond_type_map = {
+            1.0: _Chem.BondType.SINGLE,
+            1.5: _Chem.BondType.AROMATIC,
+            2.0: _Chem.BondType.DOUBLE,
+            3.0: _Chem.BondType.TRIPLE,
+        }
+        for (id1, id2), bond in bonds_data.items():
+            if id1 not in id_to_idx or id2 not in id_to_idx:
+                continue
+            order = bond_type_map.get(
+                float(bond.get("order", 1)), _Chem.BondType.SINGLE
+            )
+            mol.AddBond(id_to_idx[id1], id_to_idx[id2], order)
+
+        idx_to_id = {v: k for k, v in id_to_idx.items()}
+        problem_ids = set()
+        for prob in _Chem.DetectChemistryProblems(mol.GetMol()):
+            if hasattr(prob, "GetAtomIdx"):
+                problem_ids.add(idx_to_id[prob.GetAtomIdx()])
+            elif hasattr(prob, "GetAtomIndices"):
+                problem_ids.update(idx_to_id[i] for i in prob.GetAtomIndices())
+        return sorted(problem_ids)
+    except (RuntimeError, ValueError, TypeError, KeyError):
+        return None
 
 
 def optimize_2d_coords(mol: Chem.Mol) -> Dict[int, Tuple[float, float]]:
@@ -618,10 +672,13 @@ def resolve_2d_overlaps(
     parent = {aid: aid for aid in atom_ids}
 
     def find_set(aid: int) -> int:
-        if parent[aid] == aid:
-            return aid
-        parent[aid] = find_set(parent[aid])
-        return parent[aid]
+        # Iterative path compression avoids recursion limits
+        root = aid
+        while parent[root] != root:
+            root = parent[root]
+        while parent[aid] != root:
+            parent[aid], aid = root, parent[aid]
+        return root
 
     def unite_sets(aid1: int, aid2: int) -> None:
         root1 = find_set(aid1)

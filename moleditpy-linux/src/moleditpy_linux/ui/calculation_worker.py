@@ -10,7 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import contextlib
+import logging
+from ..utils.suppress_log import suppress_log
 import math
 import re
 import numpy as np
@@ -30,7 +31,7 @@ from .. import OBABEL_AVAILABLE
 # Only import pybel on demand
 if OBABEL_AVAILABLE:
     # Suppress potential import errors if Open Babel is not correctly installed or configured
-    with contextlib.suppress(ImportError, OSError, RuntimeError):
+    with suppress_log(ImportError, OSError, RuntimeError):
         import os
         import glob
         import openbabel
@@ -212,7 +213,7 @@ def _adjust_collision_avoidance(
     except (AttributeError, RuntimeError, TypeError, ValueError):
         # Suppress non-critical errors during fragment collision resolution if state is inconsistent
         # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
-        pass
+        logging.debug("Suppressed non-critical error", exc_info=True)
 
 
 def _iterative_optimize(
@@ -377,7 +378,7 @@ def _perform_direct_conversion(
     parsed_coords, stereo_dirs = [], []
     # Best-effort attempt to parse 2D coordinates from MOL block for direct conversion.
     # We suppress AttributeError/RuntimeError if the block is malformed or RDKit fails internally.
-    with contextlib.suppress(AttributeError, RuntimeError, ValueError, TypeError):
+    with suppress_log(AttributeError, RuntimeError, ValueError, TypeError):
         base2d_all = Chem.MolFromMolBlock(
             mol_block, removeHs=False, sanitize=True
         ) or Chem.MolFromMolBlock(mol_block, removeHs=False, sanitize=False)
@@ -389,7 +390,7 @@ def _perform_direct_conversion(
 
     # Manual parse of bond stereo flags from MOL block text.
     # Suppress IndexError/ValueError if the block format is unexpected or lines are truncated.
-    with contextlib.suppress(IndexError, ValueError, AttributeError):
+    with suppress_log(IndexError, ValueError, AttributeError):
         lines = mol_block.splitlines()
         counts_idx = next(
             (i for i, ln in enumerate(lines[:40]) if re.match(r"^\s*\d+\s+\d+", ln)),
@@ -421,7 +422,7 @@ def _perform_direct_conversion(
     if not parsed_coords:
         # Fallback manual parse of atom coordinates from MOL block text.
         # Suppress IndexError/ValueError if the block format is unexpected.
-        with contextlib.suppress(IndexError, ValueError, AttributeError):
+        with suppress_log(IndexError, ValueError, AttributeError):
             lines = mol_block.splitlines()
             idx = next(
                 (
@@ -507,7 +508,7 @@ def _perform_direct_conversion(
                     conf.SetAtomPosition(i, rdGeometry.Point3D(0.0, 0.0, 0.1))
 
     # Best-effort application of stereo directions to Z-coordinates for direct conversion.
-    with contextlib.suppress(AttributeError, RuntimeError, TypeError, IndexError):
+    with suppress_log(AttributeError, RuntimeError, TypeError, IndexError):
         for b, e, flag in stereo_dirs:
             if b < num_existing and e < num_existing:
                 pos = conf.GetAtomPosition(e)
@@ -533,7 +534,7 @@ def _perform_direct_conversion(
         method_key = _resolve_method_key(opt_method)
 
         # Best-effort property assignment for UI feedback
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+        with suppress_log(AttributeError, RuntimeError, TypeError):
             mol.SetProp("_pme_optimization_method", opt_method)
             mol.SetProp("_pme_conversion_backend", "Direct")
         _safe_status(f"Optimizing ({method_key} / {backend})...")
@@ -555,14 +556,14 @@ def _perform_direct_conversion(
                     mol, "UFF", _check_halted, _safe_status, options=options
                 )
                 if fallback_success:
-                    with contextlib.suppress(Exception):
+                    with suppress_log(Exception):
                         mol.SetProp("_pme_optimization_method", "UFF_RDKIT")
 
             if not fallback_success:
                 _safe_status(
                     "Warning: Optimization failed. Using unoptimized structure."
                 )
-                with contextlib.suppress(Exception):
+                with suppress_log(Exception):
                     mol.ClearProp("_pme_optimization_method")
 
     if _check_halted():
@@ -585,7 +586,7 @@ def _perform_optimize_only(
     method_key = _resolve_method_key(opt_method)
 
     # Best-effort property assignment for UI feedback
-    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+    with suppress_log(AttributeError, RuntimeError, TypeError):
         mol.SetProp("_pme_optimization_method", opt_method)
 
     opt_func = (
@@ -626,9 +627,6 @@ def _perform_obabel_conversion(
         script = """
 import sys, contextlib
 from openbabel import pybel
-import os
-# Inherit babel variables if any
-if "BABEL_DATADIR" in os.environ: os.environ["BABEL_DATADIR"] = os.environ["BABEL_DATADIR"]
 mol_block = sys.stdin.read()
 ob_mol = pybel.readstring("mol", mol_block)
 with contextlib.suppress(Exception): ob_mol.addh()
@@ -654,9 +652,10 @@ print(ob_mol.write("mol"))
         except Exception as e:
             raise RuntimeError(f"Open Babel isolated execution failed: {e}")
 
-        rd_mol = Chem.AddHs(Chem.MolFromMolBlock(out_mol_block, removeHs=False))
+        rd_mol = Chem.MolFromMolBlock(out_mol_block, removeHs=False)
         if not rd_mol:
             raise ValueError("Open Babel produced invalid MOL.")
+        rd_mol = Chem.AddHs(rd_mol)
 
         _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
         opt_method = opt_method or "MMFF94s_RDKIT"
@@ -664,7 +663,7 @@ print(ob_mol.write("mol"))
         method_key = _resolve_method_key(opt_method)
 
         # Best-effort property assignment for UI feedback
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+        with suppress_log(AttributeError, RuntimeError, TypeError):
             rd_mol.SetProp("_pme_optimization_method", opt_method)
             rd_mol.SetProp("_pme_conversion_backend", "Open Babel")
         _safe_status(f"Optimizing ({method_key} / {backend})...")
@@ -686,14 +685,14 @@ print(ob_mol.write("mol"))
                     rd_mol, "UFF", _check_halted, _safe_status, options=options
                 )
                 if fallback_success:
-                    with contextlib.suppress(Exception):
+                    with suppress_log(Exception):
                         rd_mol.SetProp("_pme_optimization_method", "UFF_RDKIT")
 
             if not fallback_success:
                 _safe_status(
                     "Warning: Optimization failed. Using unoptimized structure."
                 )
-                with contextlib.suppress(Exception):
+                with suppress_log(Exception):
                     rd_mol.ClearProp("_pme_optimization_method")
 
         if _check_halted():
@@ -754,19 +753,19 @@ class CalculationWorker(QObject):
         def _safe_status(msg: str) -> None:
             if _check_halted():
                 raise WorkerHaltError("Halted")
-            with contextlib.suppress(AttributeError, RuntimeError):
+            with suppress_log(AttributeError, RuntimeError):
                 self.status_update.emit(msg)
 
         def _safe_finished(payload: Any) -> None:
             if _check_halted():
                 raise WorkerHaltError("Halted")
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, RuntimeError, TypeError):
                 self.finished.emit(payload)
 
         def _safe_error(msg: str) -> None:
             # If we're already halting, don't raise another error
             if msg == "Halted":
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                with suppress_log(AttributeError, RuntimeError, TypeError):
                     self.error.emit((w_id, "Halted"))
                 return
 
@@ -774,7 +773,7 @@ class CalculationWorker(QObject):
             if _check_halted():
                 raise WorkerHaltError("Halted")
 
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, RuntimeError, TypeError):
                 self.error.emit((w_id, msg))
 
         helpers = {
@@ -839,13 +838,13 @@ class CalculationWorker(QObject):
 
         except WorkerHaltError:
             # Swallow here; the loop has already been notified
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, RuntimeError, TypeError):
                 self.error.emit((w_id, "Halted"))
         except Exception as e:
             try:
                 _safe_error(str(e))
             except WorkerHaltError:
-                with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                with suppress_log(AttributeError, RuntimeError, TypeError):
                     self.error.emit((w_id, "Halted"))
 
     def _prepare_molecule_for_calc(
@@ -903,14 +902,12 @@ class CalculationWorker(QObject):
             raise WorkerHaltError("Halted")
 
         conf_id = -1
-        with contextlib.suppress(RuntimeError, ValueError):
+        with suppress_log(RuntimeError, ValueError):
             conf_id = AllChem.EmbedMolecule(mol, params)
 
         # Fallback embedding strategies
         if conf_id == -1:
-            with contextlib.suppress(
-                AttributeError, RuntimeError, ValueError, TypeError
-            ):
+            with suppress_log(AttributeError, RuntimeError, ValueError, TypeError):
                 bm = AllChem.GetMoleculeBoundsMatrix(mol)
                 for b_idx, s, satoms in orig_stereo:
                     if len(satoms) == 2:
@@ -920,9 +917,7 @@ class CalculationWorker(QObject):
                 conf_id = AllChem.EmbedMolecule(mol, bm, params)
 
         if conf_id == -1:
-            with contextlib.suppress(
-                AttributeError, RuntimeError, ValueError, TypeError
-            ):
+            with suppress_log(AttributeError, RuntimeError, ValueError, TypeError):
                 conf_id = AllChem.EmbedMolecule(mol, AllChem.ETKDGv2(randomSeed=42))
 
         if conf_id == -1:
@@ -940,7 +935,7 @@ class CalculationWorker(QObject):
         backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
         method_key = _resolve_method_key(opt_method)
 
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+        with suppress_log(AttributeError, RuntimeError, TypeError):
             mol.SetProp("_pme_optimization_method", opt_method)
             mol.SetProp("_pme_conversion_backend", "RDKit")
         _safe_status(f"Optimizing ({method_key} / {backend})...")
@@ -962,14 +957,14 @@ class CalculationWorker(QObject):
                     mol, "UFF", _check_halted, _safe_status, options=options
                 )
                 if fallback_success:
-                    with contextlib.suppress(Exception):
+                    with suppress_log(Exception):
                         mol.SetProp("_pme_optimization_method", "UFF_RDKIT")
 
             if not fallback_success:
                 _safe_status(
                     "Warning: Optimization failed. Using unoptimized structure."
                 )
-                with contextlib.suppress(Exception):
+                with suppress_log(Exception):
                     mol.ClearProp("_pme_optimization_method")
 
         # Final stereo restoration check

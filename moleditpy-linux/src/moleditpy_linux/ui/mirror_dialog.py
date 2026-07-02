@@ -93,7 +93,7 @@ class MirrorDialog(QDialog):
             return
 
         # Get the selected plane
-        plane_id = self.plane_group.checkedId()
+        plane_id = self.plane_group.checkedId()  # type: ignore[union-attr]
 
         try:
             conf = self.mol.GetConformer()

@@ -37,8 +37,8 @@ class PluginManagerWindow(QDialog):
 
     def __init__(self, plugin_manager: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self.btn_remove = None
-        self.table = None
+        self.btn_remove: Any = None
+        self.table: Any = None
         self.plugin_manager = plugin_manager
         self.setWindowTitle("Plugin Manager")
         self.resize(800, 500)
@@ -241,7 +241,7 @@ class PluginManagerWindow(QDialog):
         """Accept drag events carrying file URLs."""
         if event is None:
             return
-        if event.mimeData().hasUrls():
+        if event.mimeData().hasUrls():  # type: ignore[union-attr]
             event.accept()
         else:
             event.ignore()
@@ -252,7 +252,7 @@ class PluginManagerWindow(QDialog):
             return
         files_installed = []
         errors = []
-        for url in event.mimeData().urls():
+        for url in event.mimeData().urls():  # type: ignore[union-attr]
             file_path = url.toLocalFile()
 
             is_valid = False

@@ -151,21 +151,24 @@ class PluginManager:
                     # Smart Extraction: Check if ZIP has a single top-level folder
                     # Fix for paths with backslashes on Windows if zip was created on Windows
                     roots = set()
+                    root_is_dir = False
                     for name in zf.namelist():
                         # Normalize path separators to forward slash for consistent check
                         name = name.replace("\\", "/")
                         parts = name.split("/")
                         if parts[0]:
                             roots.add(parts[0])
+                            # Sub-entries prove the root is a folder
+                            if len(parts) > 1:
+                                root_is_dir = True
 
-                    is_nested = len(roots) == 1
+                    is_nested = len(roots) == 1 and root_is_dir
 
                     if is_nested:
                         # Case A: ZIP contains a single folder (e.g. MyPlugin/init.py)
                         top_folder = list(roots)[0]
 
-                        # Guard: If the single item is __init__.py, we MUST create a wrapper folder
-                        # otherwise we pollute the plugin_dir root.
+                        # A root named __init__.py always needs a wrapper folder
                         if top_folder == "__init__.py":
                             is_nested = False
 
@@ -249,8 +252,10 @@ class PluginManager:
             return []
 
         for root, dirs, files in os.walk(self.plugin_dir):
-            # Exclude hidden directories
-            dirs[:] = [d for d in dirs if not d.startswith("__") and d != "__pycache__"]
+            # Exclude hidden and dunder directories (e.g. .git, __pycache__)
+            dirs[:] = [
+                d for d in dirs if not d.startswith("__") and not d.startswith(".")
+            ]
 
             # [Check] Is current dir a package (plugin body)?
             if "__init__.py" in files:
@@ -333,7 +338,7 @@ class PluginManager:
                 sys.modules[spec.name] = module
 
                 # Inject category info
-                module.PLUGIN_CATEGORY = category
+                module.PLUGIN_CATEGORY = category  # type: ignore[attr-defined]
 
                 spec.loader.exec_module(module)
 
@@ -608,10 +613,6 @@ class PluginManager:
                                     selected_indices.append(i)
                             except (RuntimeError, ValueError, TypeError):
                                 continue
-        except (
-            ImportError
-        ):  # [OPTIONAL DEP] importlib.metadata unavailable (<3.8); silently skip.
-            pass
         except (RuntimeError, AttributeError) as e:
             logging.error(f"Error retrieving selected atom indices: {e}")
 
@@ -660,15 +661,15 @@ class PluginManager:
                     if isinstance(target, ast.Name):
                         # Helper to extract value
                         val = None
-                        if node.value:  # AnnAssign might presumably not have value? (though usually does for module globals)
-                            if isinstance(node.value, ast.Constant):  # Py3.8+
-                                val = node.value.value
-                            elif isinstance(node.value, ast.Tuple):
+                        if node.value:  # type: ignore[attr-defined]  # AnnAssign might presumably not have value? (though usually does for module globals)
+                            if isinstance(node.value, ast.Constant):  # type: ignore[attr-defined]  # Py3.8+
+                                val = node.value.value  # type: ignore[attr-defined]
+                            elif isinstance(node.value, ast.Tuple):  # type: ignore[attr-defined]
                                 # Handle version tuples e.g. (1, 0, 0)
                                 try:
                                     # Extract simple constants from tuple
                                     elts = []
-                                    for elt in node.value.elts:
+                                    for elt in node.value.elts:  # type: ignore[attr-defined]
                                         if isinstance(elt, ast.Constant):
                                             elts.append(elt.value)
                                     val = ".".join(map(str, elts))
@@ -678,7 +679,9 @@ class PluginManager:
                                     ValueError,
                                     TypeError,
                                 ):  # [AST PARSE] Complex/unexpected AST node shapes during metadata extraction; skip gracefully.
-                                    pass
+                                    logging.debug(
+                                        "Suppressed non-critical error", exc_info=True
+                                    )
 
                         if val is not None:
                             if target.id == "PLUGIN_NAME":
@@ -712,7 +715,7 @@ class PluginManager:
                     elif hasattr(ast, "Str") and isinstance(
                         node.value, getattr(ast, "Str", type(None))
                     ):
-                        val = node.value.s
+                        val = node.value.s  # type: ignore[attr-defined]
 
                     if val and not info["description"]:
                         info["description"] = val.strip().split("\n")[0]

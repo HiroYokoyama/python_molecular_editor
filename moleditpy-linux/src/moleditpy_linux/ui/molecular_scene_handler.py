@@ -33,10 +33,23 @@ class TemplateMixin:
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
 
+    # Provided by the composed MoleculeScene at runtime
+    atom_items: Any
+    create_atom: Any
+    create_bond: Any
+    data: Any
+    find_atom_near: Any
+    find_bond_between: Any
+    get_setting: Any
+    items: Any
+    mode: Any
+    removeItem: Any
+    views: Any
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.template_context = {}
-        self.template_preview = None
-        self.template_preview_points = []
+        self.template_context: Dict[str, Any] = {}
+        self.template_preview: Any = None
+        self.template_preview_points: List[Any] = []
         super().__init__(*args, **kwargs)
 
     def clear_template_preview(self) -> None:
@@ -55,7 +68,7 @@ class TemplateMixin:
                 except (RuntimeError, ValueError, TypeError) as e:
                     # Best-effort: ignore removal errors during teardown if underlying C++ object is already gone
                     logging.debug(f"Could not remove template preview item: {e}")
-        self.template_context: Dict[str, Any] = {}
+        self.template_context = {}
         self.template_preview.hide()
 
     def _calculate_6ring_rotation(
@@ -456,7 +469,7 @@ class TemplateMixin:
                             used_indices.add(best_idx)
                     except (AttributeError, TypeError, IndexError):
                         # Safe defensive fallback catching AttributeError, TypeError, IndexError
-                        pass
+                        logging.debug("Suppressed non-critical error", exc_info=True)
 
                 # Map unmapped points to other unmapped nearby atoms in the scene
                 if (
@@ -712,8 +725,34 @@ class KeyboardMixin:
     Because this is a Mixin, `self` refers directly to the MoleculeScene instance.
     """
 
+    # Provided by the composed MoleculeScene at runtime
+    _calculate_polygon_from_edge: Any
+    add_molecule_fragment: Any
+    atom_items: Any
+    clear: Any
+    create_atom: Any
+    create_bond: Any
+    data: Any
+    delete_items: Any
+    find_atom_near: Any
+    get_setting: Any
+    hovered_item: Any
+    key_to_bond_mode_map: Any
+    key_to_symbol_map: Any
+    key_to_symbol_map_shift: Any
+    mode: Any
+    reinitialize_items: Any
+    update_all_items: Any
+    update_bond_stereo: Any
+    views: Any
+    window: Any
+    itemAt: Any
+    selectedItems: Any
+    clearSelection: Any
+    removeItem: Any
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.initial_positions_in_event = {}
+        self.initial_positions_in_event: Dict[Any, QPointF] = {}
         self.placement_direction_clockwise = True
         self.start_atom = None
         self.start_pos = None
@@ -1244,7 +1283,7 @@ class KeyboardMixin:
                     self.temp_line = None
                     self.start_atom = None
                     self.start_pos = None
-                    self.initial_positions_in_event: Dict[Any, QPointF] = {}
+                    self.initial_positions_in_event = {}
                     event.accept()
                     return
 
@@ -1270,7 +1309,7 @@ class KeyboardMixin:
                     self.temp_line = None
                     self.start_atom = None
                     self.start_pos = None
-                    self.initial_positions_in_event: Dict[Any, QPointF] = {}
+                    self.initial_positions_in_event = {}
 
                     # Event handled
                     event.accept()
@@ -1341,8 +1380,20 @@ class SceneQueryMixin:
     Mixin class for spatial queries and basic item lifecycle.
     """
 
+    # Provided by the composed MoleculeScene at runtime
+    atom_items: Any
+    bond_items: Any
+    bond_order: Any
+    bond_stereo: Any
+    data: Any
+    items: Any
+    update_all_items: Any
+    window: Any
+    addItem: Any
+    removeItem: Any
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self._deleted_items = []
+        self._deleted_items: List[Any] = []
         self._ih_update_counter = 0
         self.data_changed_in_event = False
         super().__init__(*args, **kwargs)
@@ -1487,7 +1538,7 @@ class SceneQueryMixin:
                 # Suppress non-critical internal update counter increment errors.
                 # This counter is only used for UI throttling and is non-critical for data integrity.
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
             # 4. Remove graphic items from the scene
             current_scene_items = set(self.items())
 
@@ -1510,7 +1561,7 @@ class SceneQueryMixin:
                             not hasattr(self, "_deleted_items")
                             or self._deleted_items is None
                         ):
-                            self._deleted_items: List[Any] = []
+                            self._deleted_items = []
                         self._deleted_items.append(item)
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                         logging.debug(

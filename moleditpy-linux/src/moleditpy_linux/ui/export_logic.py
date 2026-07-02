@@ -47,7 +47,7 @@ class ExportManager:
                     return str(name)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
         return "untitled"
 
     def _get_default_path(self, suffix: str = "") -> str:
@@ -59,7 +59,7 @@ class ExportManager:
                 return os.path.join(os.path.dirname(cur_path), basename)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
         return basename
 
     def export_stl(self) -> None:
@@ -519,7 +519,9 @@ class ExportManager:
                         except (AttributeError, RuntimeError, TypeError):
                             # Use default color on failure to avoid console noise during complex mesh export
                             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-                            pass
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
                         # Create mesh copy
                         mesh_copy = mesh.copy()
@@ -565,7 +567,9 @@ class ExportManager:
                                     ValueError,
                                     TypeError,
                                 ):  # [PYVISTA] Mesh color extraction may fail on headless/incomplete meshes; fall through to default.
-                                    pass
+                                    logging.debug(
+                                        "Suppressed non-critical error", exc_info=True
+                                    )
                             if colors is not None and colors.size > 0:
                                 # Normalize float colors to 0-255
                                 colors_arr = np.asarray(colors)
@@ -659,7 +663,9 @@ class ExportManager:
                         except (AttributeError, RuntimeError, ValueError, TypeError):
                             # Fallback: add single mesh on failure
                             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                            pass
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
                         meshes_with_colors.append(
                             {
@@ -723,7 +729,7 @@ class ExportManager:
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Minimal risk; keep default brush
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         try:
             all_items = list(self.host.init_manager.scene.items())
@@ -887,7 +893,7 @@ class ExportManager:
             try:
                 dpi = int(self.host.logicalDpiX())
             except (AttributeError, RuntimeError, TypeError, ValueError):
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
             generator.setResolution(dpi)
 
             # 4. Render

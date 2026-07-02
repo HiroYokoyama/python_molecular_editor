@@ -16,6 +16,7 @@ import logging
 import os
 import json
 import pickle
+from ..utils.suppress_log import suppress_log
 from typing import Any, Optional, Tuple
 
 from PyQt6.QtCore import QPointF, QTimer
@@ -54,7 +55,7 @@ class IOManager:
                     return str(name)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
         return "untitled"
 
     def _get_default_path(self, suffix: str = "") -> str:
@@ -66,8 +67,20 @@ class IOManager:
                 return os.path.join(os.path.dirname(cur_path), basename)
         except (AttributeError, RuntimeError, ValueError, TypeError):
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
         return basename
+
+    def _plotter_view_isometric(self) -> None:
+        """Deferred camera reset (plotter may be gone when this fires)."""
+        plotter = self.host.view_3d_manager.plotter
+        if plotter:
+            plotter.view_isometric()
+
+    def _plotter_render(self) -> None:
+        """Deferred render (plotter may be gone when this fires)."""
+        plotter = self.host.view_3d_manager.plotter
+        if plotter:
+            plotter.render()
 
     def fix_mol_counts_line(self, line: str) -> str:
         """Ensure the MOL file counts line ends with a valid V2000 tag."""
@@ -165,20 +178,17 @@ class IOManager:
                     m.SetDoubleProp(key, val)
             except (RuntimeError, TypeError, ValueError):
                 # Safe defensive fallback catching RuntimeError, TypeError, ValueError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         def _process(charge_val: int, use_rd_determine: bool = True) -> Any:
             if use_rd_determine:
-                try:
-                    from rdkit.Chem import rdDetermineBonds
+                from rdkit.Chem import rdDetermineBonds
 
-                    mol_copy = Chem.RWMol(mol)
-                    rdDetermineBonds.DetermineBonds(mol_copy, charge=charge_val)
-                    candidate = mol_copy.GetMol()
-                    _set_prop(candidate, "_xyz_charge", charge_val)
-                    return candidate
-                except (RuntimeError, ValueError, TypeError):
-                    raise
+                mol_copy = Chem.RWMol(mol)
+                rdDetermineBonds.DetermineBonds(mol_copy, charge=charge_val)
+                candidate = mol_copy.GetMol()
+                _set_prop(candidate, "_xyz_charge", charge_val)
+                return candidate
             else:
                 self.estimate_bonds_from_distances(mol)
                 candidate = mol.GetMol()
@@ -295,6 +305,8 @@ class IOManager:
         layout = QVBoxLayout(dialog)
         line_edit = QLineEdit(dialog)
         line_edit.setText("0")
+        error_label = QLabel("", dialog)
+        error_label.setStyleSheet("color: red;")
         btn_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
             parent=dialog,
@@ -305,9 +317,23 @@ class IOManager:
         hl.addWidget(skip_btn)
         layout.addWidget(QLabel("Enter total molecular charge:"))
         layout.addWidget(line_edit)
+        layout.addWidget(error_label)
         layout.addLayout(hl)
         result = {"accepted": False, "skip": False}
-        btn_box.accepted.connect(dialog.accept)
+
+        def _accept_if_valid() -> None:
+            # Invalid input: show inline error and keep the dialog open
+            try:
+                int(float(line_edit.text().strip() or "0"))
+            except ValueError:
+                error_label.setText("Invalid charge: enter an integer (e.g. 0, -1, 2).")
+                dialog.adjustSize()
+                line_edit.selectAll()
+                line_edit.setFocus()
+                return
+            dialog.accept()
+
+        btn_box.accepted.connect(_accept_if_valid)
         btn_box.rejected.connect(dialog.reject)
         skip_btn.clicked.connect(
             lambda: (result.update({"skip": True}), dialog.accept())  # type: ignore[func-returns-value]
@@ -320,6 +346,7 @@ class IOManager:
             val = int(float(line_edit.text().strip() or "0"))
             return val, True, False
         except ValueError:
+            # Unreachable via OK (validated inline)
             return 0, True, False
 
     def estimate_bonds_from_distances(self, mol: Chem.RWMol) -> int:
@@ -354,7 +381,9 @@ class IOManager:
                             bonds_added.append((i, j, distance))
                         except (RuntimeError, ValueError, TypeError):
                             # Safe defensive fallback catching RuntimeError, ValueError, TypeError
-                            pass
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
         return len(bonds_added)
 
@@ -386,6 +415,7 @@ class IOManager:
 
                 self.host.set_has_unsaved_changes(False)
                 self.host.state_manager.update_window_title()
+                self.host.save_state_snapshot()
                 self.host.update_status_message(
                     f"Project saved to {self.host.get_current_file_path()}"
                 )
@@ -440,10 +470,9 @@ class IOManager:
         self.open_project_file()
 
     def open_project_file(self, file_path: Optional[str] = None) -> None:
-        """Open project file (.pmeprj or .pmeraw)."""
-        if not self.host.state_manager.check_unsaved_changes():
-            return None
+        """Open project file (.pmeprj or .pmeraw).
 
+        Unsaved-changes check is done in load_json_data / load_raw_data."""
         if not file_path:
             default_dir = (
                 os.path.dirname(self.host.init_manager.current_file_path)
@@ -507,6 +536,9 @@ class IOManager:
 
     def load_json_data(self, file_path: Optional[str] = None) -> None:
         """Load PME Project (.pmeprj) file."""
+        if not self.host.state_manager.check_unsaved_changes():
+            return
+
         if not file_path:
             default_dir = (
                 os.path.dirname(self.host.init_manager.current_file_path)
@@ -555,10 +587,8 @@ class IOManager:
             self.host.statusBar().showMessage(f"PME Project loaded from {file_path}")
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(
-                50, lambda: self.host.view_3d_manager.plotter.view_isometric()
-            )
-            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            QTimer.singleShot(50, self._plotter_view_isometric)
+            QTimer.singleShot(100, self._plotter_render)
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
 
         except FileNotFoundError:
@@ -784,10 +814,9 @@ class IOManager:
             self.host.set_atom_id_to_rdkit_idx_map({})
 
             # Determine is_xyz_derived: True only when bond estimation was skipped
-            import contextlib
 
             skip_flag = False
-            with contextlib.suppress(AttributeError, KeyError, RuntimeError, TypeError):
+            with suppress_log(AttributeError, KeyError, RuntimeError, TypeError):
                 if mol.HasProp("_xyz_skip_checks"):
                     skip_flag = bool(mol.GetIntProp("_xyz_skip_checks"))
             self.host.is_xyz_derived = skip_flag or (mol.GetNumBonds() == 0)
@@ -795,10 +824,8 @@ class IOManager:
             self.host.view_3d_manager.draw_molecule_3d(mol)
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(
-                50, lambda: self.host.view_3d_manager.plotter.view_isometric()
-            )
-            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            QTimer.singleShot(50, self._plotter_view_isometric)
+            QTimer.singleShot(100, self._plotter_render)
 
             self.host.ui_manager.enter_3d_viewer_mode()
 
@@ -858,10 +885,8 @@ class IOManager:
             self.host.view_3d_manager.draw_molecule_3d(mol)
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(
-                50, lambda: self.host.view_3d_manager.plotter.view_isometric()
-            )
-            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            QTimer.singleShot(50, self._plotter_view_isometric)
+            QTimer.singleShot(100, self._plotter_render)
 
             self.host.ui_manager.enter_3d_viewer_mode()
             self.host.ui_manager.enable_3d_features(True)
@@ -887,6 +912,8 @@ class IOManager:
             "MOL Files (*.mol);;All Files (*)",
         )
         if file_path:
+            if not file_path.lower().endswith(".mol"):
+                file_path += ".mol"
             try:
                 mol_block = Chem.MolToMolBlock(
                     self.host.view_3d_manager.current_mol, includeStereo=True
@@ -967,6 +994,9 @@ class IOManager:
 
     def load_raw_data(self, file_path: Optional[str] = None) -> None:
         """Open a .pmeraw pickle project file."""
+        if not self.host.state_manager.check_unsaved_changes():
+            return
+
         if not file_path:
             default_dir = (
                 os.path.dirname(self.host.init_manager.current_file_path)
@@ -997,10 +1027,8 @@ class IOManager:
             self.host.statusBar().showMessage(f"Project loaded from {file_path}")
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(
-                50, lambda: self.host.view_3d_manager.plotter.view_isometric()
-            )
-            QTimer.singleShot(100, lambda: self.host.view_3d_manager.plotter.render())
+            QTimer.singleShot(50, self._plotter_view_isometric)
+            QTimer.singleShot(100, self._plotter_render)
 
         except FileNotFoundError:
             self.host.statusBar().showMessage(f"File not found: {file_path}")
@@ -1021,7 +1049,7 @@ class IOManager:
             else:
                 mol.SetProp(prop_name, str(value))
         except (RuntimeError, ValueError, AttributeError, TypeError):
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
     def _get_mol_prop(self, mol: Chem.Mol, prop_name: str, default: Any = None) -> Any:
         """Get an RDKit molecule property safely, trying int/float/str in order."""
@@ -1040,9 +1068,8 @@ class IOManager:
 
 def _set_mol_prop_safe(mol: Chem.Mol, key: str, val: Any) -> None:
     """Module-level helper: set an int or float property on an RDKit mol silently."""
-    import contextlib
 
-    with contextlib.suppress(RuntimeError, TypeError, ValueError, AttributeError):
+    with suppress_log(RuntimeError, TypeError, ValueError, AttributeError):
         if isinstance(val, int):
             mol.SetIntProp(key, val)
         elif isinstance(val, float):

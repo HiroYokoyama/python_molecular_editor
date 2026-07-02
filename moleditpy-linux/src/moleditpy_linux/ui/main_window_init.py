@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import logging
-import contextlib
+from ..utils.suppress_log import suppress_log
 import json
 import math
 import os
@@ -65,7 +65,6 @@ except ImportError:
     winreg = None  # type: ignore[assignment]
 
 
-from .color_settings_dialog import ColorSettingsDialog
 from ..utils.constants import DEFAULT_CPK_COLORS, NUM_DASHES, VERSION
 from .custom_qt_interactor import CustomQtInteractor
 from ..core.molecular_data import MolecularData
@@ -83,7 +82,7 @@ class MainInitManager:
     ) -> None:
         self.host = host
         # Explicit declarations for Mypy
-        self.scene: Optional[MoleculeScene] = None
+        self.scene: Any = None  # MoleculeScene, created during init
         self.data: Optional[MolecularData] = None
         self.formula_label: Optional[QLabel] = None
         self.status_bar: Optional[Any] = None
@@ -92,8 +91,8 @@ class MainInitManager:
         self.cut_action: Optional[QAction] = None
         self.copy_action: Optional[QAction] = None
         self.import_menu: Optional[QMenu] = None
-        self.toolbar: Optional[QToolBar] = None
-        self.toolbar_bottom: Optional[QToolBar] = None
+        self.toolbar: Any = None
+        self.toolbar_bottom: Any = None
         self.plugin_toolbar: Optional[QToolBar] = None
         self.tool_group: Optional[QActionGroup] = None
         self.other_atom_action: Optional[QAction] = None
@@ -133,7 +132,7 @@ class MainInitManager:
         # Variable tracking the saved state
         self.host.set_has_unsaved_changes(False)
         self.settings_dirty = True
-        self.current_file_path = None
+        self.current_file_path: Optional[str] = None
         self.host.initialization_complete = False
         self.host.ih_update_counter = 0
 
@@ -153,27 +152,27 @@ class MainInitManager:
 
         self.plugin_menubar_separator_added = False
         self.plugin_menu_manager = PluginMenuManager(self)
-        self.active_worker_ids = set()
-        self.analysis_action = None
-        self.atom_index_base_0_action = None
-        self.atom_index_base_1_action = None
-        self.atom_index_base_menu = None
-        self.conv_actions = None
-        self.edit_3d_action = None
-        self.halt_ids = set()
-        self.measurement_action = None
+        self.active_worker_ids: set[int] = set()
+        self.analysis_action: Any = None
+        self.atom_index_base_0_action: Any = None
+        self.atom_index_base_1_action: Any = None
+        self.atom_index_base_menu: Any = None
+        self.conv_actions: Any = None
+        self.edit_3d_action: Any = None
+        self.halt_ids: set[Any] = set()
+        self.measurement_action: Any = None
         self.next_conversion_id = 1
-        self.opt3d_actions = None
+        self.opt3d_actions: Any = None
         self.opt3d_method_labels: dict = {}
-        self.paste_action = None
-        self.plugin_menu = None
-        self.show_atom_coords_action = None
-        self.show_atom_symbol_action = None
-        self.show_index_action = None
-        self.show_original_id_action = None
-        self.show_xyz_index_action = None
-        self.toggle_chiral_action = None
-        self.view_2d = None
+        self.paste_action: Any = None
+        self.plugin_menu: Any = None
+        self.show_atom_coords_action: Any = None
+        self.show_atom_symbol_action: Any = None
+        self.show_index_action: Any = None
+        self.show_original_id_action: Any = None
+        self.show_xyz_index_action: Any = None
+        self.toggle_chiral_action: Any = None
+        self.view_2d: Any = None
         self.init_ui()
         self.init_worker_thread()
         self.host.ui_manager.setup_3d_picker()
@@ -193,10 +192,10 @@ class MainInitManager:
             logging.error(f"RDKit warm-up failed: {e}")
 
         self.host.state_manager.reset_undo_stack()
-        self.scene.selectionChanged.connect(
+        self.scene.selectionChanged.connect(  # type: ignore[attr-defined]
             self.host.edit_actions_manager.update_edit_menu_actions
         )
-        QApplication.clipboard().dataChanged.connect(
+        QApplication.clipboard().dataChanged.connect(  # type: ignore[union-attr]
             self.host.edit_actions_manager.update_edit_menu_actions
         )
 
@@ -220,7 +219,7 @@ class MainInitManager:
         # when opening a file or starting the application. This avoids
         # accidental focus landing on toolbar/buttons (e.g. Optimize 2D).
         try:
-            QTimer.singleShot(0, self.view_2d.setFocus)
+            QTimer.singleShot(0, self.view_2d.setFocus)  # type: ignore[attr-defined]
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.debug(
                 f"Suppressed exception: {e}"
@@ -240,7 +239,7 @@ class MainInitManager:
 
             # Set the icon for both the window and the application
             self.host.setWindowIcon(app_icon)
-            QApplication.instance().setWindowIcon(app_icon)
+            QApplication.instance().setWindowIcon(app_icon)  # type: ignore[union-attr]
         else:
             logging.warning(f"Warning: Icon file not found: {icon_path}")
 
@@ -272,9 +271,9 @@ class MainInitManager:
     def init_worker_thread(self) -> None:
         """Initialize shared state for managing background calculation workers."""
         # Initialize shared state for calculation runs.
-        self.halt_ids: set[Any] = set()
+        self.halt_ids = set()
         self.next_conversion_id = 1
-        self.active_worker_ids: set[int] = set()
+        self.active_worker_ids = set()
         self.host.reset_active_calc_threads()
 
     def load_command_line_file(self, file_path: str) -> None:
@@ -304,13 +303,11 @@ class MainInitManager:
                     self.current_file_path = file_path
                     self.host.state_manager.update_window_title()
                     return  # Success
-                except (RuntimeError, TypeError, ValueError, AttributeError) as e:
-                    logging.warning(
-                        "Plugin opener failed for '%s': %s",
+                except Exception:  # plugins have full app access; any failure falls through to the next opener
+                    logging.exception(
+                        "Plugin opener failed for '%s'",
                         opener_info.get("plugin", "Unknown"),
-                        e,
                     )
-                    # If this opener fails, try the next one or fall through to default
                     continue
 
         if file_ext in ["mol", "sdf"]:
@@ -383,14 +380,9 @@ class MainInitManager:
                         modules_to_update.append(mod)
 
             if not modules_to_update:
-                try:
-                    from . import constants as constants_mod
+                from ..utils import constants as constants_mod
 
-                    modules_to_update.append(constants_mod)
-                except ImportError:
-                    import moleditpy_linux.utils.constants as constants_mod
-
-                    modules_to_update.append(constants_mod)
+                modules_to_update.append(constants_mod)
 
             for mod in modules_to_update:
                 mod.CPK_COLORS.clear()
@@ -459,9 +451,8 @@ class MainInitManager:
         """Update all UI components to reflect the reset settings."""
         # 1. Refresh related dialogs if open
         for w in QApplication.topLevelWidgets():
-            with contextlib.suppress(AttributeError, RuntimeError, TypeError):
-                if isinstance(w, ColorSettingsDialog):
-                    w.refresh_ui()
+            with suppress_log(AttributeError, RuntimeError, TypeError):
+                # ColorSettingsDialog has no refresh method; reopening reflects the reset
                 if isinstance(w, SettingsDialog):
                     w.update_ui_from_settings(self.settings)
 
@@ -482,7 +473,7 @@ class MainInitManager:
 
     def _sync_settings_to_menu_actions(self) -> None:
         """Synchronize menu action checked states with current settings."""
-        with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+        with suppress_log(AttributeError, RuntimeError, TypeError):
             # Optimization actions
             if hasattr(self, "opt3d_actions"):
                 current_method = (
@@ -523,7 +514,7 @@ class MainInitManager:
                 bg_c = self.settings.get("background_color_2d", "#FFFFFF")
                 self.scene.setBackgroundBrush(QBrush(QColor(bg_c)))
                 for item in self.scene.items():
-                    with contextlib.suppress(AttributeError, RuntimeError, TypeError):
+                    with suppress_log(AttributeError, RuntimeError, TypeError):
                         if type(item).__name__ not in ("AtomItem", "BondItem"):
                             continue
                         if hasattr(item, "update_style"):
@@ -553,7 +544,7 @@ class MainInitManager:
         except (AttributeError, RuntimeError, ValueError, TypeError, IOError):
             # Use defaults on any error
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError, IOError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
         # 4.5 Save initial settings copy for change detection
         self.host.initial_settings = self.settings.copy()
@@ -654,8 +645,8 @@ class MainInitManager:
                 plugin_menu.removeAction(action)
 
         # 2. Clear plugin-specific toolbars or buttons
-        self.plugin_toolbar.clear()
-        self.plugin_toolbar.hide()
+        self.plugin_toolbar.clear()  # type: ignore[union-attr]
+        self.plugin_toolbar.hide()  # type: ignore[union-attr]
 
     def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""
@@ -780,13 +771,13 @@ class MainInitManager:
         self.host.addToolBar(self.toolbar)
 
         # Row 2: Templates
-        with contextlib.suppress(AttributeError):
+        with suppress_log(AttributeError):
             self.host.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         self.toolbar_bottom = QToolBar("Templates Toolbar")
         self.host.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar_bottom)
 
         # Row 3: Plugins
-        with contextlib.suppress(AttributeError):
+        with suppress_log(AttributeError):
             self.host.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
         self.plugin_toolbar = QToolBar("Plugin Toolbar")
         self.host.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.plugin_toolbar)
@@ -846,7 +837,7 @@ class MainInitManager:
                     lambda c, m=mode: self.host.ui_manager.set_mode(m)
                 )
                 self.mode_actions[mode] = action
-                self.tool_group.addAction(action)
+                self.tool_group.addAction(action)  # type: ignore[union-attr]
             toolbar.addAction(action)
         toolbar.addSeparator()
 
@@ -871,7 +862,7 @@ class MainInitManager:
             )
             self.mode_actions[mode] = action
             toolbar.addAction(action)
-            self.tool_group.addAction(action)
+            self.tool_group.addAction(action)  # type: ignore[union-attr]
         toolbar.addSeparator()
 
     def _add_charge_radical_actions(self, toolbar: QToolBar) -> None:
@@ -889,7 +880,7 @@ class MainInitManager:
             action.triggered.connect(lambda c, m=mode: self.host.ui_manager.set_mode(m))
             self.mode_actions[mode] = action
             toolbar.addAction(action)
-            self.tool_group.addAction(action)
+            self.tool_group.addAction(action)  # type: ignore[union-attr]
 
     def _add_template_actions(self, toolbar_bottom: QToolBar) -> None:
         """Add structural template actions (rings, etc.) to the bottom toolbar."""
@@ -909,7 +900,7 @@ class MainInitManager:
             action.triggered.connect(lambda c, m=mode: self.host.ui_manager.set_mode(m))
             self.mode_actions[mode] = action
             toolbar_bottom.addAction(action)
-            self.tool_group.addAction(action)
+            self.tool_group.addAction(action)  # type: ignore[union-attr]
 
         user_action = QAction("USER", self.host)
         user_action.setCheckable(True)
@@ -919,7 +910,7 @@ class MainInitManager:
         )
         self.mode_actions["template_user"] = user_action
         toolbar_bottom.addAction(user_action)
-        self.tool_group.addAction(user_action)
+        self.tool_group.addAction(user_action)  # type: ignore[union-attr]
 
     def _add_3d_edit_actions(self, toolbar: QToolBar) -> None:
         """Add 3D-specific selection and manipulation actions."""
@@ -1077,17 +1068,17 @@ class MainInitManager:
 
     def _get_icon_foreground_color(self) -> QColor:
         """Determine appropriate icon foreground color based on theme/settings."""
-        with contextlib.suppress(Exception):
+        with suppress_log(Exception):
             fg = self.settings.get("icon_foreground")
             if fg and QColor(fg).isValid():
                 return QColor(fg)
 
-        with contextlib.suppress(Exception):
+        with suppress_log(Exception):
             os_pref = detect_system_dark_mode()
             if os_pref is not None:
                 return QColor("#FFFFFF") if os_pref else QColor("#000000")
 
-        with contextlib.suppress(Exception):
+        with suppress_log(Exception):
             bg = QColor(self.settings.get("background_color", "#919191"))
             if bg.isValid():
                 lum = 0.2126 * bg.redF() + 0.7152 * bg.greenF() + 0.0722 * bg.blueF()

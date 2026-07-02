@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 from typing import TYPE_CHECKING, Optional, Union
 
 from PyQt6.QtWidgets import QLineEdit, QSlider, QWidget
@@ -55,7 +56,7 @@ class GeometryBaseDialog(BasePickingDialog):
             slider.blockSignals(False)
         except (ValueError, TypeError):
             # Safe defensive fallback catching ValueError, TypeError
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
     def on_slider_pressed(self) -> None:
         """Prepare for a slider drag operation by saving a geometry snapshot."""

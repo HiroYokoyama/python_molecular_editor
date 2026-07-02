@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 import logging
 import numpy as np
-from typing import TYPE_CHECKING, Optional, Sequence
+from typing import Any, TYPE_CHECKING, Optional, Sequence
 
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -41,11 +41,11 @@ class PlanarizeDialog(BasePickingDialog):
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
-        self.apply_button = None
-        self.clear_button = None
+        self.apply_button: Any = None
+        self.clear_button: Any = None
         self.picker_connection = None
-        self.select_all_button = None
-        self.selection_label = None
+        self.select_all_button: Any = None
+        self.selection_label: Any = None
         self.selected_atoms: set[int] = set()
 
         if preselected_atoms:
@@ -103,10 +103,12 @@ class PlanarizeDialog(BasePickingDialog):
         self.enable_picking()
 
     def on_atom_picked(self, atom_idx: int) -> None:
+        """Toggle atom selection and refresh 3D labels and the count display."""
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
             self.selected_atoms.add(atom_idx)
+        self.show_atom_labels()
         self.update_display()
 
     def clear_selection(self) -> None:
@@ -177,9 +179,7 @@ class PlanarizeDialog(BasePickingDialog):
             centroid = np.mean(selected_positions, axis=0)
             centered_positions = selected_positions - centroid
 
-            from moleditpy_linux.core.mol_geometry import (
-                calculate_best_fit_plane_projection,
-            )
+            from moleditpy_linux.core.mol_geometry import calculate_best_fit_plane_projection
 
             # Get normal of the least-squares plane via SVD
             u, s, vh = np.linalg.svd(centered_positions, full_matrices=False)

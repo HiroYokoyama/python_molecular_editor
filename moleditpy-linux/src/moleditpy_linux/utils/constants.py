@@ -12,6 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 # --- Constants ---
 
+import logging
 import os
 from PyQt6.QtGui import QColor, QFont
 from rdkit import Chem
@@ -24,9 +25,9 @@ def _get_version() -> str:
         try:
             return version("MoleditPy-linux")
         except PackageNotFoundError:  # [OPTIONAL] Package not installed in editable mode; fall through to pyproject.toml.
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
     except ImportError:
-        pass
+        logging.debug("Suppressed non-critical error", exc_info=True)
 
     try:
         # Fallback: Parse pyproject.toml directly
@@ -42,7 +43,7 @@ def _get_version() -> str:
     except (
         Exception
     ):  # [FALLBACK] pyproject.toml may not exist in installed wheels; return "Unknown".
-        pass
+        logging.debug("Suppressed non-critical error", exc_info=True)
 
     return "Unknown"
 
@@ -85,6 +86,9 @@ EZ_LABEL_BOX_SIZE = 28
 # Interaction thresholds
 SNAP_DISTANCE = 14.0
 SUM_TOLERANCE = 0.1
+
+# Max undo entries; each holds a full state deep-copy, oldest are dropped
+UNDO_STACK_MAX_DEPTH = 100
 
 # Misc drawing
 NUM_DASHES = 8
@@ -205,7 +209,10 @@ DEFAULT_CPK_COLORS = {
 
 
 pt = Chem.GetPeriodicTable()
-VDW_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
+# 0.3-scaled vdW radii for 3D display only — not physical values
+VDW_DISPLAY_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
+# Deprecated alias kept for external plugins
+VDW_RADII = VDW_DISPLAY_RADII
 
 # Covalent radii (Angstrom) for bond estimation
 COVALENT_RADII = {

@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-from typing import TYPE_CHECKING, Literal, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence
 
 import numpy as np
 
@@ -74,9 +74,9 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         return self._selected_atoms
 
     @selected_atoms.setter
-    def selected_atoms(self, val: object) -> None:
+    def selected_atoms(self, val: Any) -> None:
         """Replace the selection with a new SelectionList built from val."""
-        self._selected_atoms = SelectionList(val)  # type: ignore[arg-type]
+        self._selected_atoms = SelectionList(val)
 
     def init_ui(self) -> None:
         """Build and lay out all widgets for the alignment dialog."""

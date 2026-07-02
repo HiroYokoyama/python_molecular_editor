@@ -11,8 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from __future__ import annotations
-
-import contextlib
+from .suppress_log import suppress_log
 import platform
 import subprocess
 from typing import Optional
@@ -35,7 +34,7 @@ def detect_system_dark_mode() -> Optional[bool]:
 
 def detect_system_theme() -> Optional[str]:
     """Return the OS's preferred theme setting as 'dark', 'light', or None."""
-    with contextlib.suppress(AttributeError, RuntimeError, OSError, FileNotFoundError):
+    with suppress_log(AttributeError, RuntimeError, OSError, FileNotFoundError):
         # Windows
         if platform.system() == "Windows" and winreg is not None:
             with winreg.OpenKey(
@@ -45,8 +44,15 @@ def detect_system_theme() -> Optional[str]:
                 val, _ = winreg.QueryValueEx(k, "AppsUseLightTheme")
                 return "dark" if int(val) == 0 else "light"
 
-        # macOS fallback
+        # macOS: AppleInterfaceStyle reads "Dark", or errors in light mode
         if platform.system() == "Darwin":
+            p = subprocess.run(
+                ["defaults", "read", "-g", "AppleInterfaceStyle"],
+                capture_output=True,
+                text=True,
+            )
+            if p.returncode == 0 and "dark" in p.stdout.strip().lower():
+                return "dark"
             return "light"
 
         # Linux / GNOME

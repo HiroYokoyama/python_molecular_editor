@@ -46,17 +46,17 @@ class TranslationDialog(BasePickingDialog):
         self.selected_atoms = set()
 
         # Predefine widgets to satisfy pylint W0201
-        self.abs_selection_label = None
-        self.abs_x_input = None
-        self.abs_y_input = None
-        self.abs_z_input = None
-        self.move_mol_checkbox = None
-        self.abs_apply_btn = None
-        self.delta_selection_label = None
-        self.dx_input = None
-        self.dy_input = None
-        self.dz_input = None
-        self.apply_button = None
+        self.abs_selection_label: Any = None
+        self.abs_x_input: Any = None
+        self.abs_y_input: Any = None
+        self.abs_z_input: Any = None
+        self.move_mol_checkbox: Any = None
+        self.abs_apply_btn: Any = None
+        self.delta_selection_label: Any = None
+        self.dx_input: Any = None
+        self.dy_input: Any = None
+        self.dz_input: Any = None
+        self.apply_button: Any = None
 
         if preselected_atoms:
             self.selected_atoms.update(preselected_atoms)

@@ -17,7 +17,7 @@ import logging.handlers
 import os
 import sys
 import argparse
-from typing import Any
+from typing import Any, Optional
 
 from .utils.constants import VERSION
 
@@ -39,8 +39,9 @@ _QT_LOG_LEVEL = {
 _DOWNGRADED_QT_PATTERNS = ("Retrying to obtain clipboard",)
 
 
-def _qt_message_handler(mode: QtMsgType, _context: Any, message: str) -> None:
+def _qt_message_handler(mode: QtMsgType, _context: Any, message: Optional[str]) -> None:
     """Route Qt log messages to Python logging, downgrading known noisy warnings."""
+    message = message or ""
     for pattern in _DOWNGRADED_QT_PATTERNS:
         if pattern in message:
             logging.debug("Qt: %s", message)
@@ -109,7 +110,9 @@ def main() -> None:
     setup_logging()
 
     if sys.platform == "win32":
-        myappid = "hyoko.moleditpy_linux.1.0"
+        # Taskbar grouping ID follows the major version
+        major = VERSION.split(".")[0] if VERSION and VERSION != "Unknown" else "0"
+        myappid = f"hyoko.moleditpy_linux.{major}"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     parser = argparse.ArgumentParser(
@@ -201,6 +204,6 @@ def main() -> None:
         except (
             Exception
         ):  # [COSMETIC] Icon refresh is best-effort; Qt timing errors are non-fatal.
-            pass
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
     sys.exit(app.exec())

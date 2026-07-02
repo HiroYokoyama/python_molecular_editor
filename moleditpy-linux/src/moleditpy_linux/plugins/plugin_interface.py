@@ -133,7 +133,7 @@ class PluginContext:
 
     def get_selected_atom_indices(self) -> List[int]:
         """
-        Returns a list of RDKit atom indices currently selected in the 2D or 3D view.
+        Returns a list of RDKit atom indices currently selected in the 2D view.
         Note: RDKit indices are returned, which map to the current_mol.
         """
         return self._manager.get_selected_atom_indices()  # type: ignore[no-any-return]
@@ -397,7 +397,7 @@ class PluginContext:
                 if fn:
                     fn()
             except Exception:
-                pass
+                logging.debug("mark_project_modified failed", exc_info=True)
 
     def refresh_ui(self) -> None:
         """Refresh all UI state after modifying the molecule.

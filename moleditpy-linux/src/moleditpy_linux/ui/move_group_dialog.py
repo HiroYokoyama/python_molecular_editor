@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 
 from .atom_picking import pick_atom_index_from_screen
 from .base_picking_dialog import BasePickingDialog
-from ..utils.constants import VDW_RADII
+from ..utils.constants import VDW_DISPLAY_RADII
 
 
 class MoveGroupDialog(BasePickingDialog):
@@ -42,14 +42,14 @@ class MoveGroupDialog(BasePickingDialog):
         parent: Any = None,
     ) -> None:
         super().__init__(mol, main_window, parent)
-        self.clear_button = None
-        self.selection_label = None
-        self.x_rot_input = None
-        self.x_trans_input = None
-        self.y_rot_input = None
-        self.y_trans_input = None
-        self.z_rot_input = None
-        self.z_trans_input = None
+        self.clear_button: Any = None
+        self.selection_label: Any = None
+        self.x_rot_input: Any = None
+        self.x_trans_input: Any = None
+        self.y_rot_input: Any = None
+        self.y_trans_input: Any = None
+        self.z_rot_input: Any = None
+        self.z_trans_input: Any = None
         self.selected_atoms: set[int] = set()
         self.group_atoms: set[int] = set()  # All atoms connected to selected atoms
 
@@ -481,7 +481,7 @@ class MoveGroupDialog(BasePickingDialog):
         ]
         selected_radii = np.array(
             [
-                VDW_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
+                VDW_DISPLAY_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
                 for i in selected_indices
             ]
         )
@@ -510,7 +510,7 @@ class MoveGroupDialog(BasePickingDialog):
                 plotter.camera_position = cam
             except (AttributeError, RuntimeError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         plotter.render()
 
@@ -526,7 +526,7 @@ class MoveGroupDialog(BasePickingDialog):
                 plotter.remove_actor("move_group_highlight")
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         if self.highlight_actor:
             if plotter is not None:
@@ -534,7 +534,7 @@ class MoveGroupDialog(BasePickingDialog):
                     plotter.remove_actor(self.highlight_actor)
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                    pass
+                    logging.debug("Suppressed non-critical error", exc_info=True)
             self.highlight_actor = None
 
         if plotter is not None:
@@ -542,7 +542,7 @@ class MoveGroupDialog(BasePickingDialog):
                 plotter.render()
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                pass
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
     def reset_translation_inputs(self) -> None:
         """Reset all translation input fields to zero."""

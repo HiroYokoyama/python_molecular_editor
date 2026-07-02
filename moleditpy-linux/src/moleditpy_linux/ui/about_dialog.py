@@ -34,7 +34,7 @@ class AboutDialog(QDialog):
 
     def __init__(self, main_window: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self.image_label = None
+        self.image_label: Any = None
         self.main_window = main_window
         self.setWindowTitle("About MoleditPy")
         self.setFixedSize(250, 300)

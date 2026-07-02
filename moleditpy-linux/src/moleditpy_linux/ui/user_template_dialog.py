@@ -41,10 +41,10 @@ class UserTemplateDialog(QDialog):
 
     def __init__(self, main_window: Any, parent: Any = None) -> None:
         super().__init__(parent)
-        self.delete_button = None
-        self.save_current_button = None
-        self.template_layout = None
-        self.template_widget = None
+        self.delete_button: Any = None
+        self.save_current_button: Any = None
+        self.template_layout: Any = None
+        self.template_widget: Any = None
         self.main_window = main_window
         self.user_templates: List[Any] = []
         self.selected_template = None
@@ -59,7 +59,7 @@ class UserTemplateDialog(QDialog):
 
         # Position window to the top-right of the parent
         if self.parent():
-            parent_geometry = self.parent().geometry()
+            parent_geometry = self.parent().geometry()  # type: ignore[union-attr]
             x = parent_geometry.right() - self.width() - 20
             y = parent_geometry.top() + 50
             self.move(x, y)
