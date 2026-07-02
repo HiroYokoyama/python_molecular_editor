@@ -35,7 +35,6 @@ from .main_window_init import MainInitManager
 from .string_importers import StringImporterManager
 from .ui_manager import UIManager
 from .view_3d_logic import View3DManager
-from .molecule_scene import MoleculeScene
 from ..core.molecular_data import MolecularData
 from .custom_qt_interactor import CustomQtInteractor
 
