@@ -308,6 +308,9 @@ def test_trigger_conversion_chemistry_problems(mock_parser_host):
     with (
         patch("rdkit.Chem.DetectChemistryProblems", return_value=[problem]),
         patch.object(compute.data, "to_rdkit_mol", return_value=mol),
+        # Patch the modal dialog: the MagicMock host is not a valid QWidget
+        # parent, so the real QMessageBox.critical would raise TypeError.
+        patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
     ):
         compute.trigger_conversion()
         all_messages = [
