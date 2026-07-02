@@ -65,7 +65,6 @@ except ImportError:
     winreg = None  # type: ignore[assignment]
 
 
-from .color_settings_dialog import ColorSettingsDialog
 from ..utils.constants import DEFAULT_CPK_COLORS, NUM_DASHES, VERSION
 from .custom_qt_interactor import CustomQtInteractor
 from ..core.molecular_data import MolecularData
