@@ -618,10 +618,13 @@ def resolve_2d_overlaps(
     parent = {aid: aid for aid in atom_ids}
 
     def find_set(aid: int) -> int:
-        if parent[aid] == aid:
-            return aid
-        parent[aid] = find_set(parent[aid])
-        return parent[aid]
+        # Iterative path compression (avoids recursion limit on large groups)
+        root = aid
+        while parent[root] != root:
+            root = parent[root]
+        while parent[aid] != root:
+            parent[aid], aid = root, parent[aid]
+        return root
 
     def unite_sets(aid1: int, aid2: int) -> None:
         root1 = find_set(aid1)

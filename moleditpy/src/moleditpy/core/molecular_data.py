@@ -101,9 +101,15 @@ class MolecularData:
         if (id1, id2) in self.bonds:
             self.bonds[(id1, id2)].update(bond_data)
             return (id1, id2), "updated"
-        else:
-            self.bonds[(id1, id2)] = bond_data
-            return (id1, id2), "created"
+        if (id2, id1) in self.bonds:
+            # Same bond stored under the reversed key (e.g. the stereo
+            # direction changed): re-key it instead of creating a duplicate.
+            existing = self.bonds.pop((id2, id1))
+            existing.update(bond_data)
+            self.bonds[(id1, id2)] = existing
+            return (id1, id2), "updated"
+        self.bonds[(id1, id2)] = bond_data
+        return (id1, id2), "created"
 
     def remove_atom(self, atom_id: int) -> None:
         """Remove an atom and all bonds involving it from the data model."""
@@ -338,10 +344,11 @@ class MolecularData:
 
         if not self.atoms:
             return None
-        atom_map = {old_id: new_id for new_id, old_id in enumerate(self.atoms.keys())}
-        num_atoms, num_bonds = len(self.atoms), len(self.bonds)
-        mol_block = "\n  MoleditPy\n\n"
-        mol_block += f"{num_atoms:3d}{num_bonds:3d}  0  0  0  0  0  0  0  0999 V2000\n"
+
+        # Emit atom lines first so the counts line and bond indices only
+        # reflect atoms that actually have a usable position.
+        atom_map = {}
+        atom_lines = []
         for old_id, atom in self.atoms.items():
             # Convert scene pixel coordinates to angstroms when emitting MOL block
             pos = atom.get("pos")
@@ -373,10 +380,19 @@ class MolecularData:
             elif charge == -3:
                 chg_code = 7
 
-            mol_block += f"{x:10.4f}{y:10.4f}{z:10.4f} {symbol:<3} 0  0  0{chg_code:3d}  0  0  0  0  0  0  0\n"
+            atom_map[old_id] = len(atom_lines)
+            atom_lines.append(
+                f"{x:10.4f}{y:10.4f}{z:10.4f} {symbol:<3} 0  0  0{chg_code:3d}  0  0  0  0  0  0  0\n"
+            )
 
+        bond_lines = []
         for (id1, id2), bond in self.bonds.items():
-            idx1, idx2, order = atom_map[id1] + 1, atom_map[id2] + 1, bond["order"]
+            if id1 not in atom_map or id2 not in atom_map:
+                continue
+            idx1, idx2 = atom_map[id1] + 1, atom_map[id2] + 1
+            # Bond order may be a float (1.5 = aromatic); V2000 uses code 4.
+            order_val = float(bond["order"])
+            order = 4 if order_val == 1.5 else int(order_val)
             stereo_code = 0
             bond_stereo = bond.get("stereo", 0)
             if bond_stereo == 1:
@@ -384,8 +400,14 @@ class MolecularData:
             elif bond_stereo == 2:
                 stereo_code = 6
 
-            mol_block += f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n"
+            bond_lines.append(f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n")
 
+        mol_block = "\n  MoleditPy\n\n"
+        mol_block += (
+            f"{len(atom_lines):3d}{len(bond_lines):3d}  0  0  0  0  0  0  0  0999 V2000\n"
+        )
+        mol_block += "".join(atom_lines)
+        mol_block += "".join(bond_lines)
         mol_block += "M  END\n"
         return mol_block
 
