@@ -169,6 +169,11 @@ class PluginManager:
                         # Case A: ZIP contains a single folder (e.g. MyPlugin/init.py)
                         top_folder = list(roots)[0]
 
+                        # Guard: a root named __init__.py (file or folder) must get
+                        # a wrapper folder, otherwise we pollute the plugin_dir root.
+                        if top_folder == "__init__.py":
+                            is_nested = False
+
                     if is_nested:
                         # Case A (Confirmed): Extract directly
                         dest_path = os.path.join(self.plugin_dir, top_folder)

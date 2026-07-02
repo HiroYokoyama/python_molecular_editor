@@ -745,3 +745,65 @@ PLUGIN_VERSION = (1, ("x",))
 
         with patch("builtins.open", side_effect=OSError("Err")):
             pm.get_plugin_info_safe(str(f))
+
+
+# =============================================================================
+# ZIP install: single-file archives must get a wrapper folder
+# =============================================================================
+
+
+def test_install_zip_single_file_gets_wrapper_folder(tmp_path):
+    """A ZIP whose only entry is one top-level .py file is a flat ZIP:
+    it must be extracted into a folder named after the archive."""
+    plugin_dir = tmp_path / "plugins"
+    plugin_dir.mkdir()
+    pm = PluginManager(main_window=MagicMock())
+    pm.plugin_dir = str(plugin_dir)
+    pm.discover_plugins = MagicMock()
+
+    zip_file = tmp_path / "solo.zip"
+    with zipfile.ZipFile(zip_file, "w") as zf:
+        zf.writestr("myplugin.py", "PLUGIN_NAME='Solo'")
+
+    success, msg = pm.install_plugin(str(zip_file))
+    assert success, msg
+    assert (plugin_dir / "solo" / "myplugin.py").exists()
+    assert not (plugin_dir / "myplugin.py").exists()
+
+
+def test_install_zip_single_folder_stays_nested(tmp_path):
+    """A ZIP with one top-level folder still extracts directly (Case A)."""
+    plugin_dir = tmp_path / "plugins"
+    plugin_dir.mkdir()
+    pm = PluginManager(main_window=MagicMock())
+    pm.plugin_dir = str(plugin_dir)
+    pm.discover_plugins = MagicMock()
+
+    zip_file = tmp_path / "pkg.zip"
+    with zipfile.ZipFile(zip_file, "w") as zf:
+        zf.writestr("MyPlugin/__init__.py", "PLUGIN_NAME='Pkg'")
+
+    success, msg = pm.install_plugin(str(zip_file))
+    assert success, msg
+    assert (plugin_dir / "MyPlugin" / "__init__.py").exists()
+
+
+# =============================================================================
+# discover_plugins: hidden (dot) directories are skipped
+# =============================================================================
+
+
+def test_discover_plugins_skips_dot_directories(tmp_path):
+    """Plugins inside hidden directories like .git must not be loaded."""
+    plugin_dir = tmp_path / "plugins"
+    hidden = plugin_dir / ".git"
+    hidden.mkdir(parents=True)
+    (hidden / "sneaky.py").write_text(
+        "PLUGIN_NAME='Sneaky'\ndef initialize(context):\n    pass\n",
+        encoding="utf-8",
+    )
+
+    pm = PluginManager(main_window=MagicMock())
+    pm.plugin_dir = str(plugin_dir)
+    plugins = pm.discover_plugins()
+    assert all(p["name"] != "Sneaky" for p in plugins)
