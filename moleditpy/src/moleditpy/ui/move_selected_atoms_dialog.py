@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Optional, Any
+from typing import Optional, Any, cast
 import logging
 import numpy as np
 import pyvista as pv
@@ -78,32 +78,32 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
     @property
     def x_trans_input(self) -> QLineEdit:
         """Expose x_trans_input widget."""
-        return self.widgets["x_trans_input"]
+        return cast(QLineEdit, self.widgets["x_trans_input"])
 
     @property
     def y_trans_input(self) -> QLineEdit:
         """Expose y_trans_input widget."""
-        return self.widgets["y_trans_input"]
+        return cast(QLineEdit, self.widgets["y_trans_input"])
 
     @property
     def z_trans_input(self) -> QLineEdit:
         """Expose z_trans_input widget."""
-        return self.widgets["z_trans_input"]
+        return cast(QLineEdit, self.widgets["z_trans_input"])
 
     @property
     def x_rot_input(self) -> QLineEdit:
         """Expose x_rot_input widget."""
-        return self.widgets["x_rot_input"]
+        return cast(QLineEdit, self.widgets["x_rot_input"])
 
     @property
     def y_rot_input(self) -> QLineEdit:
         """Expose y_rot_input widget."""
-        return self.widgets["y_rot_input"]
+        return cast(QLineEdit, self.widgets["y_rot_input"])
 
     @property
     def z_rot_input(self) -> QLineEdit:
         """Expose z_rot_input widget."""
-        return self.widgets["z_rot_input"]
+        return cast(QLineEdit, self.widgets["z_rot_input"])
 
     def init_ui(self) -> None:
         """Initialize UI widgets and layout."""

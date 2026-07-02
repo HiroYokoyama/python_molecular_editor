@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as np
 from PyQt6.QtCore import Qt, QTimer
@@ -38,9 +38,9 @@ class SelectionList(list):
         if item not in self:
             self.append(item)
 
-    def update(self, items: object) -> None:
+    def update(self, items: Any) -> None:
         """Append each item that is not already present."""
-        for item in items:  # type: ignore[union-attr]
+        for item in items:
             self.add(item)
 
 

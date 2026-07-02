@@ -133,7 +133,7 @@ class MainInitManager:
         # Variable tracking the saved state
         self.host.set_has_unsaved_changes(False)
         self.settings_dirty = True
-        self.current_file_path = None
+        self.current_file_path: Optional[str] = None
         self.host.initialization_complete = False
         self.host.ih_update_counter = 0
 
@@ -153,14 +153,14 @@ class MainInitManager:
 
         self.plugin_menubar_separator_added = False
         self.plugin_menu_manager = PluginMenuManager(self)
-        self.active_worker_ids = set()
+        self.active_worker_ids: set[int] = set()
         self.analysis_action: Any = None
         self.atom_index_base_0_action: Any = None
         self.atom_index_base_1_action: Any = None
         self.atom_index_base_menu: Any = None
-        self.conv_actions = None
+        self.conv_actions: Any = None
         self.edit_3d_action: Any = None
-        self.halt_ids = set()
+        self.halt_ids: set[Any] = set()
         self.measurement_action: Any = None
         self.next_conversion_id = 1
         self.opt3d_actions: Any = None
@@ -272,9 +272,9 @@ class MainInitManager:
     def init_worker_thread(self) -> None:
         """Initialize shared state for managing background calculation workers."""
         # Initialize shared state for calculation runs.
-        self.halt_ids: set[Any] = set()
+        self.halt_ids = set()
         self.next_conversion_id = 1
-        self.active_worker_ids: set[int] = set()
+        self.active_worker_ids = set()
         self.host.reset_active_calc_threads()
 
     def load_command_line_file(self, file_path: str) -> None:
