@@ -307,7 +307,6 @@ class IOManager:
         line_edit.setText("0")
         error_label = QLabel("", dialog)
         error_label.setStyleSheet("color: red;")
-        error_label.setVisible(False)
         btn_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
             parent=dialog,
@@ -328,7 +327,7 @@ class IOManager:
                 int(float(line_edit.text().strip() or "0"))
             except ValueError:
                 error_label.setText("Invalid charge: enter an integer (e.g. 0, -1, 2).")
-                error_label.setVisible(True)
+                dialog.adjustSize()
                 line_edit.selectAll()
                 line_edit.setFocus()
                 return
@@ -382,7 +381,9 @@ class IOManager:
                             bonds_added.append((i, j, distance))
                         except (RuntimeError, ValueError, TypeError):
                             # Safe defensive fallback catching RuntimeError, ValueError, TypeError
-                            logging.debug("Suppressed non-critical error", exc_info=True)
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
         return len(bonds_added)
 

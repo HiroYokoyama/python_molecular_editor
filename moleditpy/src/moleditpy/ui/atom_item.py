@@ -386,7 +386,9 @@ class AtomItem(QGraphicsItem):
                             # If sip check fails, continue defensively.
                             # This usually means the object is in an inconsistent state.
                             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError  # Silent failure for non-critical partner state check
-                            logging.debug("Suppressed non-critical error", exc_info=True)
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
                         other_pos = None
                         try:

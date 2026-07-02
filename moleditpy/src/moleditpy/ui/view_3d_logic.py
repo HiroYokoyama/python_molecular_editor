@@ -1261,7 +1261,9 @@ class View3DManager:
                                     label = "?"
                         except (KeyError, RuntimeError, TypeError):
                             # Safe defensive fallback catching KeyError, RuntimeError, TypeError
-                            logging.debug("Suppressed non-critical error", exc_info=True)
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
                     pts.append(center_pos)
                     labels.append(label)

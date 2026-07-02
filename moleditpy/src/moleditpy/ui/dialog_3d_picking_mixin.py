@@ -83,7 +83,9 @@ class Dialog3DPickingMixin:
                                 self.on_atom_picked(int(closest_atom_idx))
                             except (AttributeError, RuntimeError):
                                 # Safe defensive fallback catching AttributeError, RuntimeError
-                                logging.debug("Suppressed non-critical error", exc_info=True)
+                                logging.debug(
+                                    "Suppressed non-critical error", exc_info=True
+                                )
 
                         from PyQt6.QtCore import QTimer
 
@@ -136,7 +138,9 @@ class Dialog3DPickingMixin:
                                 self.clear_selection()
                             except (AttributeError, RuntimeError):
                                 # Safe defensive fallback catching AttributeError, RuntimeError
-                                logging.debug("Suppressed non-critical error", exc_info=True)
+                                logging.debug(
+                                    "Suppressed non-critical error", exc_info=True
+                                )
 
                         from PyQt6.QtCore import QTimer
 

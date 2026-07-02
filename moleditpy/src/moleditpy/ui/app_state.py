@@ -203,7 +203,10 @@ class StateManager:
                                         )
                                     except (RuntimeError, ValueError, TypeError):
                                         # Safe defensive fallback catching RuntimeError, ValueError, TypeError
-                                        logging.debug("Suppressed non-critical error", exc_info=True)
+                                        logging.debug(
+                                            "Suppressed non-critical error",
+                                            exc_info=True,
+                                        )
 
                     # Sync 2D atoms with 3D actors
                     if self.host.compute_manager:
@@ -627,7 +630,10 @@ class StateManager:
                                                 TypeError,
                                                 IndexError,
                                             ):  # [RDKIT GUARD] RDKit atom property assignment may fail on invalid ids; skip silently.
-                                                logging.debug("Suppressed non-critical error", exc_info=True)
+                                                logging.debug(
+                                                    "Suppressed non-critical error",
+                                                    exc_info=True,
+                                                )
                                 self.host.set_3d_atom_positions(positions_3d)
 
                             # Build mapping
@@ -637,7 +643,9 @@ class StateManager:
                                 self.host.view_3d_manager.update_atom_id_menu_state()
                             except (RuntimeError, TypeError, AttributeError):
                                 # Safe defensive fallback catching RuntimeError, TypeError, AttributeError
-                                logging.debug("Suppressed non-critical error", exc_info=True)
+                                logging.debug(
+                                    "Suppressed non-critical error", exc_info=True
+                                )
 
                         # Always show 3D if 3D molecule exists
                         self.host.view_3d_manager.draw_molecule_3d(
@@ -659,7 +667,9 @@ class StateManager:
                             self.host.ui_manager.enable_3d_features(True)
                         except (RuntimeError, TypeError, AttributeError):
                             # Safe defensive fallback catching RuntimeError, TypeError, AttributeError
-                            logging.debug("Suppressed non-critical error", exc_info=True)
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
             except (RuntimeError, ValueError, TypeError, binascii.Error) as e:
                 logging.error(f"Could not restore 3D molecular data: {e}")
                 self.host.set_current_molecule(None)

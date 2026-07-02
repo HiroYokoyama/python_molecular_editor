@@ -160,7 +160,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 move_group_dialog.on_atom_picked(clicked_atom_idx)
                             except (AttributeError, RuntimeError):
                                 # Safe defensive fallback catching AttributeError, RuntimeError
-                                logging.debug("Suppressed non-critical error", exc_info=True)
+                                logging.debug(
+                                    "Suppressed non-critical error", exc_info=True
+                                )
 
                         QTimer.singleShot(0, _deferred_toggle)
                         self._suppress_next_left_button_up = True
@@ -221,7 +223,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             move_group_dialog.update_display()
                         except (AttributeError, RuntimeError):
                             # Safe defensive fallback catching AttributeError, RuntimeError
-                            logging.debug("Suppressed non-critical error", exc_info=True)
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
                     QTimer.singleShot(0, _deferred_move_group_update)
                     return
@@ -270,7 +274,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                     )
                                 except (AttributeError, RuntimeError):
                                     # Safe defensive fallback catching AttributeError, RuntimeError
-                                    logging.debug("Suppressed non-critical error", exc_info=True)
+                                    logging.debug(
+                                        "Suppressed non-critical error", exc_info=True
+                                    )
 
                             QTimer.singleShot(0, _deferred_measure)
                             self._suppress_next_left_button_up = True
@@ -687,14 +693,19 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         ValueError,
                                         TypeError,
                                     ):  # [VTK SYNC] atom_positions_3d update may race with VTK teardown; skip safely.
-                                        logging.debug("Suppressed non-critical error", exc_info=True)
+                                        logging.debug(
+                                            "Suppressed non-critical error",
+                                            exc_info=True,
+                                        )
                             except (
                                 AttributeError,
                                 RuntimeError,
                                 TypeError,
                                 ValueError,
                             ):  # [VTK SYNC] Outer drag-loop coordinate sync may race with VTK teardown; skip safely.
-                                logging.debug("Suppressed non-critical error", exc_info=True)
+                                logging.debug(
+                                    "Suppressed non-critical error", exc_info=True
+                                )
                         conf = mw.view_3d_manager.current_mol.GetConformer()
                         pos_count = (
                             len(mw.view_3d_manager.atom_positions_3d)

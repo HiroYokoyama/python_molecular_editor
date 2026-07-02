@@ -536,12 +536,17 @@ class TestPromptForChargeInlineValidation:
             validator = MockBox.return_value.accepted.connect.call_args[0][0]
 
             dlg.accept.reset_mock()
-            MockLabel.return_value.setVisible.reset_mock()
+            MockLabel.return_value.setText.reset_mock()
 
-            # Invalid text: dialog stays open, error label shown
+            # Invalid text: dialog stays open, error message set inline
             validator()
             dlg.accept.assert_not_called()
-            MockLabel.return_value.setVisible.assert_called_with(True)
+            msgs = [
+                str(c[0][0])
+                for c in MockLabel.return_value.setText.call_args_list
+                if c[0]
+            ]
+            assert any("Invalid charge" in m for m in msgs)
 
             # Valid text: dialog accepts
             le.text.return_value = "-2"

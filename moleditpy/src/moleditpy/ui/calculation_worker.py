@@ -907,9 +907,7 @@ class CalculationWorker(QObject):
 
         # Fallback embedding strategies
         if conf_id == -1:
-            with suppress_log(
-                AttributeError, RuntimeError, ValueError, TypeError
-            ):
+            with suppress_log(AttributeError, RuntimeError, ValueError, TypeError):
                 bm = AllChem.GetMoleculeBoundsMatrix(mol)
                 for b_idx, s, satoms in orig_stereo:
                     if len(satoms) == 2:
@@ -919,9 +917,7 @@ class CalculationWorker(QObject):
                 conf_id = AllChem.EmbedMolecule(mol, bm, params)
 
         if conf_id == -1:
-            with suppress_log(
-                AttributeError, RuntimeError, ValueError, TypeError
-            ):
+            with suppress_log(AttributeError, RuntimeError, ValueError, TypeError):
                 conf_id = AllChem.EmbedMolecule(mol, AllChem.ETKDGv2(randomSeed=42))
 
         if conf_id == -1:

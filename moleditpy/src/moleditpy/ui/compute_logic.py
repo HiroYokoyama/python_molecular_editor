@@ -327,6 +327,12 @@ class ComputeManager:
             )
             return
 
+        _reg = getattr(_plugin_mgr, "optimization_methods", None)
+        plugin_entry = _reg.get(method) if isinstance(_reg, dict) else None
+        if plugin_entry:
+            self._run_plugin_optimization(method, plugin_entry)
+            return
+
         self.host.statusBar().showMessage(f"Optimizing 3D structure ({method})...")  # type: ignore[union-attr]
 
         mol_block = Chem.MolToMolBlock(
@@ -359,6 +365,38 @@ class ComputeManager:
             self.host.init_manager.optimize_3d_button.setEnabled(True)
 
         self._start_calculation_worker(mol_block, options, run_id)
+
+    def _run_plugin_optimization(self, method: str, entry: Dict[str, Any]) -> None:
+        """Run a plugin-registered optimization callback synchronously.
+
+        The callback receives the current RDKit mol, modifies it in place,
+        and returns True on success (see register_optimization_method).
+        """
+        mol = self.host.view_3d_manager.current_mol
+        label = entry.get("label", method)
+        self.host.update_status_message(f"Optimizing 3D structure ({label})...")
+        try:
+            success = bool(entry["callback"](mol))
+        except Exception:  # plugins have full app access; isolate failures
+            logging.exception("Plugin optimization method '%s' failed", label)
+            self._refresh_ui_state()
+            self.host.update_status_message(
+                f"Plugin optimization '{label}' failed (see log)."
+            )
+            return
+
+        if not success:
+            self._refresh_ui_state()
+            self.host.update_status_message(f"Optimization with {label} failed.")
+            return
+
+        self.last_successful_optimization_method = label
+        self.host.view_3d_manager.draw_molecule_3d(mol)
+        self._refresh_ui_state()
+        self.host.edit_actions_manager.push_undo_state()
+        if self.host.view_3d_manager.plotter:
+            self.host.view_3d_manager.plotter.reset_camera()
+        self.host.update_status_message(f"Process completed ({label}).")
 
     def _prepare_rdkit_mol_for_conversion(self) -> Optional[Chem.Mol]:
         mol = self.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)

@@ -679,7 +679,9 @@ class PluginManager:
                                     ValueError,
                                     TypeError,
                                 ):  # [AST PARSE] Complex/unexpected AST node shapes during metadata extraction; skip gracefully.
-                                    logging.debug("Suppressed non-critical error", exc_info=True)
+                                    logging.debug(
+                                        "Suppressed non-critical error", exc_info=True
+                                    )
 
                         if val is not None:
                             if target.id == "PLUGIN_NAME":

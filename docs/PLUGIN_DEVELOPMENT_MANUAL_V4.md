@@ -401,9 +401,14 @@ Register a fully custom 3D visualization mode. This allows you to completely byp
 - **callback** (`Callable[[MainWindow, rdkit.Chem.Mol], None]`): Function responsible for the entire drawing process. Access the PyVista plotter via `mw.plotter`.
 
 #### `register_optimization_method(method_name, callback)`
-Add a custom geometry optimizer to the **Compute > Optimize Geometry** menu.
-- **method_name** (`str`): Name as it appears in the menu.
-- **callback** (`Callable[[rdkit.Chem.Mol], bool]`): Function that receives the RDKit molecule. It should modify the coordinates in-place and return `True` on success.
+Add a custom geometry optimizer. It appears in the **right-click menu of the "Optimize 3D" button**, labelled `<method_name> (Plugin)`.
+- **method_name** (`str`): Name as it appears in the menu (stored upper-cased).
+- **callback** (`Callable[[rdkit.Chem.Mol], bool]`): Receives the current 3D RDKit molecule. Modify its conformer coordinates **in place** and return `True` on success or `False` on failure.
+
+Behaviour notes:
+- The callback runs **synchronously on the GUI thread** (unlike built-in force fields, which run on a worker thread) — keep it fast or drive your own progress UI.
+- On success the app redraws the 3D view, pushes an undo state, and records the method as the last successful optimization.
+- Exceptions are caught, logged with traceback, and reported in the status bar; they never crash the app.
 
 #### `plotter` (Property)
 Direct access to the `pyvista.Plotter` instance. Use for adding custom actors, text, or shapes to the 3D scene (e.g., `context.plotter.add_mesh(...)`).

@@ -519,7 +519,9 @@ class ExportManager:
                         except (AttributeError, RuntimeError, TypeError):
                             # Use default color on failure to avoid console noise during complex mesh export
                             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-                            logging.debug("Suppressed non-critical error", exc_info=True)
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
                         # Create mesh copy
                         mesh_copy = mesh.copy()
@@ -565,7 +567,9 @@ class ExportManager:
                                     ValueError,
                                     TypeError,
                                 ):  # [PYVISTA] Mesh color extraction may fail on headless/incomplete meshes; fall through to default.
-                                    logging.debug("Suppressed non-critical error", exc_info=True)
+                                    logging.debug(
+                                        "Suppressed non-critical error", exc_info=True
+                                    )
                             if colors is not None and colors.size > 0:
                                 # Normalize float colors to 0-255
                                 colors_arr = np.asarray(colors)
@@ -659,7 +663,9 @@ class ExportManager:
                         except (AttributeError, RuntimeError, ValueError, TypeError):
                             # Fallback: add single mesh on failure
                             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                            logging.debug("Suppressed non-critical error", exc_info=True)
+                            logging.debug(
+                                "Suppressed non-critical error", exc_info=True
+                            )
 
                         meshes_with_colors.append(
                             {

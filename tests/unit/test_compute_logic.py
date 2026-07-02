@@ -1144,3 +1144,65 @@ def test_on_calculation_error_uff_fallback_temporary(mock_parser_host):
             mock_optimize.assert_called_once_with("UFF_RDKIT")
             # Check if persistent method remains unchanged
             assert compute.optimization_method == "MMFF_RDKIT"
+
+
+# =============================================================================
+# Plugin-registered optimization methods (register_optimization_method)
+# =============================================================================
+
+
+def _mol_with_conformer():
+    mol = Chem.AddHs(Chem.MolFromSmiles("C"))
+    AllChem.EmbedMolecule(mol)
+    return mol
+
+
+def _compute_with_plugin_method(mock_parser_host, callback):
+    compute = DummyCompute(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = _mol_with_conformer()
+    mock_parser_host.plugin_manager.optimization_methods = {
+        "MYOPT": {"plugin": "P", "callback": callback, "label": "My Optimizer"}
+    }
+    return compute
+
+
+def test_plugin_optimization_method_invoked(mock_parser_host):
+    """A plugin-registered method is dispatched with the current mol."""
+    calls = []
+    compute = _compute_with_plugin_method(
+        mock_parser_host, lambda mol: calls.append(mol) or True
+    )
+
+    compute.optimize_3d_structure("MYOPT")
+
+    assert calls == [mock_parser_host.view_3d_manager.current_mol]
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+    assert compute.last_successful_optimization_method == "My Optimizer"
+
+
+def test_plugin_optimization_failure_is_isolated(mock_parser_host):
+    """A raising plugin callback is caught, logged, and reported via status."""
+
+    def _boom(mol):
+        raise RuntimeError("plugin exploded")
+
+    compute = _compute_with_plugin_method(mock_parser_host, _boom)
+    compute.optimize_3d_structure("MYOPT")  # must not raise
+
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+    messages = [
+        str(c[0][0])
+        for c in mock_parser_host.update_status_message.call_args_list
+        if c[0]
+    ]
+    assert any("failed" in m for m in messages)
+
+
+def test_plugin_optimization_false_return_reports_failure(mock_parser_host):
+    """A callback returning False reports failure without redrawing."""
+    compute = _compute_with_plugin_method(mock_parser_host, lambda mol: False)
+    compute.optimize_3d_structure("MYOPT")
+
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+    assert compute.last_successful_optimization_method is None
