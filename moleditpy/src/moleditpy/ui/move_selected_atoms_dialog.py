@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 
 from .atom_picking import pick_atom_index_from_screen
 from .base_picking_dialog import BasePickingDialog
-from ..utils.constants import VDW_RADII
+from ..utils.constants import VDW_DISPLAY_RADII
 
 
 class MoveSelectedAtomsDialog(BasePickingDialog):
@@ -509,7 +509,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         ]
         selected_radii = np.array(
             [
-                VDW_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
+                VDW_DISPLAY_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
                 for i in selected_indices
             ]
         )

@@ -45,8 +45,16 @@ def detect_system_theme() -> Optional[str]:
                 val, _ = winreg.QueryValueEx(k, "AppsUseLightTheme")
                 return "dark" if int(val) == 0 else "light"
 
-        # macOS fallback
+        # macOS: AppleInterfaceStyle is "Dark" when dark mode is on and the
+        # key is absent (non-zero exit) in light mode.
         if platform.system() == "Darwin":
+            p = subprocess.run(
+                ["defaults", "read", "-g", "AppleInterfaceStyle"],
+                capture_output=True,
+                text=True,
+            )
+            if p.returncode == 0 and "dark" in p.stdout.strip().lower():
+                return "dark"
             return "light"
 
         # Linux / GNOME

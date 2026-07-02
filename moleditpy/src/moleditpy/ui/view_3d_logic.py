@@ -32,7 +32,7 @@ from PyQt6.QtGui import QColor, QTransform
 from PyQt6.QtWidgets import QGraphicsView
 
 
-from ..utils.constants import CPK_COLORS_PV, VDW_RADII, pt
+from ..utils.constants import CPK_COLORS_PV, VDW_DISPLAY_RADII, pt
 from .template_preview_item import TemplatePreviewItem
 
 
@@ -345,7 +345,7 @@ class View3DManager:
             resolution = self.host.init_manager.settings.get(
                 "ball_stick_resolution", 16
             )
-            rad = np.array([VDW_RADII.get(s, 0.4) * atom_scale for s in sym])
+            rad = np.array([VDW_DISPLAY_RADII.get(s, 0.4) * atom_scale for s in sym])
 
         self.glyph_source = pv.PolyData(self.atom_positions_3d)
         self.glyph_source["colors"] = col

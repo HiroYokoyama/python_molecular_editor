@@ -17,7 +17,7 @@ import logging
 
 import numpy as np
 
-from ..utils.constants import VDW_RADII, pt
+from ..utils.constants import VDW_DISPLAY_RADII, pt
 
 
 def _world_to_display(renderer: Any, pos: Any) -> Optional[tuple[float, float, float]]:
@@ -62,7 +62,7 @@ def _atom_world_radius(view_3d_manager: Any, mol: Any, atom_idx: int) -> float:
         return 0.01
 
     scale = settings.get("ball_stick_atom_scale", 1.0)
-    return float(VDW_RADII.get(symbol, 0.4)) * float(scale)
+    return float(VDW_DISPLAY_RADII.get(symbol, 0.4)) * float(scale)
 
 
 def _projected_radius_px(

@@ -30,7 +30,7 @@ from ..core.mol_geometry import (
     calculate_dihedral as _calculate_dihedral,
 )
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
-from ..utils.constants import VDW_RADII
+from ..utils.constants import VDW_DISPLAY_RADII
 
 
 # --- Classes ---
@@ -448,7 +448,7 @@ class Edit3DManager:
         # Highlight with slightly larger radius
         selected_radii = np.array(
             [
-                VDW_RADII.get(
+                VDW_DISPLAY_RADII.get(
                     self.host.view_3d_manager.current_mol.GetAtomWithIdx(i).GetSymbol(),
                     0.4,
                 )

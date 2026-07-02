@@ -205,7 +205,13 @@ DEFAULT_CPK_COLORS = {
 
 
 pt = Chem.GetPeriodicTable()
-VDW_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
+# Display radii for 3D rendering: true van der Waals radii scaled by 0.3.
+# NOT physical vdW radii — do not use for chemistry/geometry calculations.
+VDW_DISPLAY_RADII = {
+    pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)
+}
+# Backward-compatible alias (deprecated; kept for external plugins)
+VDW_RADII = VDW_DISPLAY_RADII
 
 # Covalent radii (Angstrom) for bond estimation
 COVALENT_RADII = {
