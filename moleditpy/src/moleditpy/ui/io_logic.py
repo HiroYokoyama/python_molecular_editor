@@ -169,16 +169,13 @@ class IOManager:
 
         def _process(charge_val: int, use_rd_determine: bool = True) -> Any:
             if use_rd_determine:
-                try:
-                    from rdkit.Chem import rdDetermineBonds
+                from rdkit.Chem import rdDetermineBonds
 
-                    mol_copy = Chem.RWMol(mol)
-                    rdDetermineBonds.DetermineBonds(mol_copy, charge=charge_val)
-                    candidate = mol_copy.GetMol()
-                    _set_prop(candidate, "_xyz_charge", charge_val)
-                    return candidate
-                except (RuntimeError, ValueError, TypeError):
-                    raise
+                mol_copy = Chem.RWMol(mol)
+                rdDetermineBonds.DetermineBonds(mol_copy, charge=charge_val)
+                candidate = mol_copy.GetMol()
+                _set_prop(candidate, "_xyz_charge", charge_val)
+                return candidate
             else:
                 self.estimate_bonds_from_distances(mol)
                 candidate = mol.GetMol()
@@ -386,6 +383,7 @@ class IOManager:
 
                 self.host.set_has_unsaved_changes(False)
                 self.host.state_manager.update_window_title()
+                self.host.save_state_snapshot()
                 self.host.update_status_message(
                     f"Project saved to {self.host.get_current_file_path()}"
                 )
@@ -887,6 +885,8 @@ class IOManager:
             "MOL Files (*.mol);;All Files (*)",
         )
         if file_path:
+            if not file_path.lower().endswith(".mol"):
+                file_path += ".mol"
             try:
                 mol_block = Chem.MolToMolBlock(
                     self.host.view_3d_manager.current_mol, includeStereo=True
