@@ -284,8 +284,8 @@ class MolecularData:
                 begin_atom_idx = bond.GetBeginAtomIdx()
                 end_atom_idx = bond.GetEndAtomIdx()
 
-                bond_data: dict[str, Any] = info.get("bond_data") or {}  # type: ignore[assignment]
-                stereo_atoms_specified = bond_data.get("stereo_atoms")
+                label_bond_data: dict[str, Any] = info.get("bond_data") or {}
+                stereo_atoms_specified = label_bond_data.get("stereo_atoms")
 
                 if stereo_atoms_specified:
                     try:
@@ -345,8 +345,8 @@ class MolecularData:
             return None
 
         # Counts line and bond indices must only reflect atoms actually written
-        atom_map = {}
-        atom_lines = []
+        atom_map: Dict[int, int] = {}
+        atom_lines: List[str] = []
         for old_id, atom in self.atoms.items():
             # Convert scene pixel coordinates to angstroms when emitting MOL block
             pos = atom.get("pos")

@@ -137,7 +137,7 @@ class SettingsModelTab(SettingsTabBase):
         self.info_text = info_text
         super().__init__(default_settings, parent)
         self.bond_color_button: Any = None
-        self.current_bond_color = None
+        self.current_bond_color: Any = None
         self.use_cpk_checkbox: Any = None
         self._setup_ui()
 

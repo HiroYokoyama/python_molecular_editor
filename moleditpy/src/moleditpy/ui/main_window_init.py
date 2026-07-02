@@ -83,7 +83,7 @@ class MainInitManager:
     ) -> None:
         self.host = host
         # Explicit declarations for Mypy
-        self.scene: Optional[MoleculeScene] = None
+        self.scene: Any = None  # MoleculeScene, created during init
         self.data: Optional[MolecularData] = None
         self.formula_label: Optional[QLabel] = None
         self.status_bar: Optional[Any] = None

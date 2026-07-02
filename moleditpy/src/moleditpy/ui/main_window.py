@@ -305,8 +305,8 @@ class MainWindow(QMainWindow):
         return self.state_manager.data  # type: ignore[return-value, no-any-return]
 
     @property
-    def scene(self) -> Optional[MoleculeScene]:
-        """Proxy for 2D scene (read)."""
+    def scene(self) -> Any:
+        """Proxy for 2D scene (read). A MoleculeScene once init completes."""
         return self.init_manager.scene
 
     @property

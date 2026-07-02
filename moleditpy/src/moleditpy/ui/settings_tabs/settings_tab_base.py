@@ -77,24 +77,25 @@ class SettingsTabBase(QWidget):
             slider.valueChanged.connect(sync_spin)
             spin.valueChanged.connect(sync_slider)
         else:
-            spin = QDoubleSpinBox()
-            spin.setRange(min_val / scale, max_val / scale)
-            spin.setSingleStep(1.0 / scale)
-            spin.setDecimals(2)
-            spin.setValue(slider.value() / scale)
+            dspin = QDoubleSpinBox()
+            dspin.setRange(min_val / scale, max_val / scale)
+            dspin.setSingleStep(1.0 / scale)
+            dspin.setDecimals(2)
+            dspin.setValue(slider.value() / scale)
 
-            def sync_spin(val: int) -> None:
-                spin.blockSignals(True)
-                spin.setValue(val / scale)
-                spin.blockSignals(False)
+            def sync_dspin(val: int) -> None:
+                dspin.blockSignals(True)
+                dspin.setValue(val / scale)
+                dspin.blockSignals(False)
 
-            def sync_slider(val: float) -> None:
+            def sync_slider_f(val: float) -> None:
                 slider.blockSignals(True)
                 slider.setValue(int(round(val * scale)))
                 slider.blockSignals(False)
 
-            slider.valueChanged.connect(sync_spin)
-            spin.valueChanged.connect(sync_slider)
+            slider.valueChanged.connect(sync_dspin)
+            dspin.valueChanged.connect(sync_slider_f)
+            return slider, dspin
 
         return slider, spin
 

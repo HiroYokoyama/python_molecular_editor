@@ -34,13 +34,13 @@ class SettingsDialog(QDialog):
 
     def __init__(self, current_settings: Any, parent: Any = None) -> None:
         super().__init__(parent)
-        self.tab_2d = None
-        self.tab_bs = None
-        self.tab_cpk = None
-        self.tab_other = None
-        self.tab_scene = None
-        self.tab_stick = None
-        self.tab_wf = None
+        self.tab_2d: Any = None
+        self.tab_bs: Any = None
+        self.tab_cpk: Any = None
+        self.tab_other: Any = None
+        self.tab_scene: Any = None
+        self.tab_stick: Any = None
+        self.tab_wf: Any = None
         self.tab_widget: Any = None
         self.setWindowTitle("Settings")
         self.setMinimumSize(650, 750)

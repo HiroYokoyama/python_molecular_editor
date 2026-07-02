@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Optional
 
 from PyQt6.QtCore import QEvent, QPointF, Qt
-from PyQt6.QtGui import QMouseEvent, QWheelEvent
+from PyQt6.QtGui import QMouseEvent, QWheelEvent, QNativeGestureEvent
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QWidget
 
 
@@ -127,7 +127,7 @@ class ZoomableView(QGraphicsView):
         """Handle native gestures (like pinch zoom on trackpads)"""
         if event is None:
             return super().viewportEvent(event)
-        if event.type() == QEvent.Type.NativeGesture:
+        if isinstance(event, QNativeGestureEvent):
             # Detect pinch zoom gestures
             if event.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:
                 # event.value() returns the scale factor delta

@@ -109,7 +109,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         # Check Move Group dialog
         # Check Move Group or Move Selected Atoms dialog
-        move_group_dialog = None
+        move_group_dialog: Any = None
         for widget in QApplication.topLevelWidgets():
             try:
                 if (
@@ -323,7 +323,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         mw = self.main_window
 
         # Check if Move Group dialog or Move Selected Atoms dialog is open
-        move_group_dialog = None
+        move_group_dialog: Any = None
         try:
             for widget in QApplication.topLevelWidgets():
                 if (
@@ -384,7 +384,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         mw = self.main_window
 
         # Move Group / Selected Atoms drag handling
-        move_group_dialog = None
+        move_group_dialog: Any = None
         try:
             for widget in QApplication.topLevelWidgets():
                 if (
@@ -480,7 +480,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         mw = self.main_window
 
         # Finalize Move Group / Selected Atoms drag
-        move_group_dialog = None
+        move_group_dialog: Any = None
         try:
             for widget in QApplication.topLevelWidgets():
                 if (
@@ -798,7 +798,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         mw = self.main_window
 
         # Finalize Move Group / Selected Atoms rotation
-        move_group_dialog = None
+        move_group_dialog: Any = None
         try:
             for widget in QApplication.topLevelWidgets():
                 if (

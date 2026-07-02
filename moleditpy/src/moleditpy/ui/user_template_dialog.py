@@ -44,7 +44,7 @@ class UserTemplateDialog(QDialog):
         self.delete_button: Any = None
         self.save_current_button: Any = None
         self.template_layout: Any = None
-        self.template_widget = None
+        self.template_widget: Any = None
         self.main_window = main_window
         self.user_templates: List[Any] = []
         self.selected_template = None

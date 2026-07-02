@@ -38,7 +38,7 @@ class ColorSettingsDialog(QDialog):
     def __init__(self, current_settings: Any, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("CPK Colors")
-        self.parent_window = parent
+        self.parent_window: Any = parent
         self.current_settings = current_settings or {}
 
         self.changed_cpk: Dict[str, str] = {}  # symbol -> hex
@@ -348,12 +348,11 @@ class ColorSettingsDialog(QDialog):
             )
 
         # Refresh SettingsDialog
-        from .settings_dialog import SettingsDialog  # type: ignore[assignment]
+        from .settings_dialog import SettingsDialog
 
-        if SettingsDialog:
-            for w in QApplication.topLevelWidgets():
-                if isinstance(w, SettingsDialog):
-                    w.update_ui_from_settings(settings)
+        for w in QApplication.topLevelWidgets():
+            if isinstance(w, SettingsDialog):
+                w.update_ui_from_settings(settings)
 
         # Persist B&S color
         if getattr(self, "changed_bs_color", None):
