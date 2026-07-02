@@ -151,23 +151,23 @@ class PluginManager:
                     # Smart Extraction: Check if ZIP has a single top-level folder
                     # Fix for paths with backslashes on Windows if zip was created on Windows
                     roots = set()
+                    root_is_dir = False
                     for name in zf.namelist():
                         # Normalize path separators to forward slash for consistent check
                         name = name.replace("\\", "/")
                         parts = name.split("/")
                         if parts[0]:
                             roots.add(parts[0])
+                            # Entries below the root (or explicit dir entries)
+                            # prove the single root is a folder, not a file.
+                            if len(parts) > 1:
+                                root_is_dir = True
 
-                    is_nested = len(roots) == 1
+                    is_nested = len(roots) == 1 and root_is_dir
 
                     if is_nested:
                         # Case A: ZIP contains a single folder (e.g. MyPlugin/init.py)
                         top_folder = list(roots)[0]
-
-                        # Guard: If the single item is __init__.py, we MUST create a wrapper folder
-                        # otherwise we pollute the plugin_dir root.
-                        if top_folder == "__init__.py":
-                            is_nested = False
 
                     if is_nested:
                         # Case A (Confirmed): Extract directly
@@ -249,8 +249,10 @@ class PluginManager:
             return []
 
         for root, dirs, files in os.walk(self.plugin_dir):
-            # Exclude hidden directories
-            dirs[:] = [d for d in dirs if not d.startswith("__") and d != "__pycache__"]
+            # Exclude hidden and dunder directories (e.g. .git, __pycache__)
+            dirs[:] = [
+                d for d in dirs if not d.startswith("__") and not d.startswith(".")
+            ]
 
             # [Check] Is current dir a package (plugin body)?
             if "__init__.py" in files:
@@ -608,10 +610,6 @@ class PluginManager:
                                     selected_indices.append(i)
                             except (RuntimeError, ValueError, TypeError):
                                 continue
-        except (
-            ImportError
-        ):  # [OPTIONAL DEP] importlib.metadata unavailable (<3.8); silently skip.
-            pass
         except (RuntimeError, AttributeError) as e:
             logging.error(f"Error retrieving selected atom indices: {e}")
 
