@@ -251,7 +251,8 @@ class MainWindow(QMainWindow):
 
     def set_atom_id_to_rdkit_idx_map(self, mapping: Dict[int, int]) -> None:
         """Set 2D-to-3D atom ID mapping."""
-        self.view_3d_manager.atom_id_to_rdkit_idx_map = mapping
+        # Must live on MainWindow: compute_logic writes it, edit_3d_logic reads it
+        self.atom_id_to_rdkit_idx_map = mapping
 
     def save_state_snapshot(self) -> None:
         """Create a deep copy snapshot of the current state for undo/redo comparison."""

@@ -86,6 +86,9 @@ EZ_LABEL_BOX_SIZE = 28
 SNAP_DISTANCE = 14.0
 SUM_TOLERANCE = 0.1
 
+# Max undo entries; each holds a full state deep-copy, oldest are dropped
+UNDO_STACK_MAX_DEPTH = 100
+
 # Misc drawing
 NUM_DASHES = 8
 HOVER_PEN_WIDTH = 8
@@ -205,10 +208,9 @@ DEFAULT_CPK_COLORS = {
 
 
 pt = Chem.GetPeriodicTable()
-# Display radii for 3D rendering: true van der Waals radii scaled by 0.3.
-# NOT physical vdW radii — do not use for chemistry/geometry calculations.
+# 0.3-scaled vdW radii for 3D display only — not physical values
 VDW_DISPLAY_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
-# Backward-compatible alias (deprecated; kept for external plugins)
+# Deprecated alias kept for external plugins
 VDW_RADII = VDW_DISPLAY_RADII
 
 # Covalent radii (Angstrom) for bond estimation

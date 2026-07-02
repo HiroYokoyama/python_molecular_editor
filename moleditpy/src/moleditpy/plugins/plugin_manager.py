@@ -158,8 +158,7 @@ class PluginManager:
                         parts = name.split("/")
                         if parts[0]:
                             roots.add(parts[0])
-                            # Entries below the root (or explicit dir entries)
-                            # prove the single root is a folder, not a file.
+                            # Sub-entries prove the root is a folder
                             if len(parts) > 1:
                                 root_is_dir = True
 
@@ -169,8 +168,7 @@ class PluginManager:
                         # Case A: ZIP contains a single folder (e.g. MyPlugin/init.py)
                         top_folder = list(roots)[0]
 
-                        # Guard: a root named __init__.py (file or folder) must get
-                        # a wrapper folder, otherwise we pollute the plugin_dir root.
+                        # A root named __init__.py always needs a wrapper folder
                         if top_folder == "__init__.py":
                             is_nested = False
 

@@ -618,7 +618,7 @@ def resolve_2d_overlaps(
     parent = {aid: aid for aid in atom_ids}
 
     def find_set(aid: int) -> int:
-        # Iterative path compression (avoids recursion limit on large groups)
+        # Iterative path compression avoids recursion limits
         root = aid
         while parent[root] != root:
             root = parent[root]

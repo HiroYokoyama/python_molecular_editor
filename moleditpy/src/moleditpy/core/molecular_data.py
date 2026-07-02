@@ -102,8 +102,7 @@ class MolecularData:
             self.bonds[(id1, id2)].update(bond_data)
             return (id1, id2), "updated"
         if (id2, id1) in self.bonds:
-            # Same bond stored under the reversed key (e.g. the stereo
-            # direction changed): re-key it instead of creating a duplicate.
+            # Re-key reversed entry (stereo direction changed) to avoid duplicates
             existing = self.bonds.pop((id2, id1))
             existing.update(bond_data)
             self.bonds[(id1, id2)] = existing
@@ -345,8 +344,7 @@ class MolecularData:
         if not self.atoms:
             return None
 
-        # Emit atom lines first so the counts line and bond indices only
-        # reflect atoms that actually have a usable position.
+        # Counts line and bond indices must only reflect atoms actually written
         atom_map = {}
         atom_lines = []
         for old_id, atom in self.atoms.items():

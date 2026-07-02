@@ -66,7 +66,7 @@ class ComputeManager:
             with contextlib.suppress(AttributeError, RuntimeError, TypeError):
                 plotter.renderer.RemoveActor(actor)
         self._calculating_text_actor = None
-        # Legacy cleanup: older versions stored the actor on the host
+        # Legacy: older versions stored the actor on the host
         with contextlib.suppress(AttributeError):
             if "_calculating_text_actor" in self.host.__dict__:
                 delattr(self.host, "_calculating_text_actor")

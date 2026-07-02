@@ -42,7 +42,7 @@ from rdkit import Chem
 
 from .atom_item import AtomItem
 from .bond_item import BondItem
-from ..utils.constants import CLIPBOARD_MIME_TYPE
+from ..utils.constants import CLIPBOARD_MIME_TYPE, UNDO_STACK_MAX_DEPTH
 from ..core.molecular_data import MolecularData
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
@@ -183,6 +183,9 @@ class EditActionsManager:
             # Deepcopy state via pickling or explicit get_current_state call
             state = copy.deepcopy(self.host.state_manager.get_current_state())
             self.undo_stack.append(state)
+            # Drop oldest entries beyond the cap
+            if len(self.undo_stack) > UNDO_STACK_MAX_DEPTH:
+                del self.undo_stack[: len(self.undo_stack) - UNDO_STACK_MAX_DEPTH]
 
             self.redo_stack.clear()
             # Record changes after initialization

@@ -109,7 +109,7 @@ def main() -> None:
     setup_logging()
 
     if sys.platform == "win32":
-        # Derive from the app's major version so taskbar grouping follows releases
+        # Taskbar grouping ID follows the major version
         major = VERSION.split(".")[0] if VERSION and VERSION != "Unknown" else "0"
         myappid = f"hyoko.moleditpy.{major}"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)

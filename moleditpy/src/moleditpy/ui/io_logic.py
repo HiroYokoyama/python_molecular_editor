@@ -71,13 +71,13 @@ class IOManager:
 
 
     def _plotter_view_isometric(self) -> None:
-        """Deferred camera reset; the plotter may be gone by the time it fires."""
+        """Deferred camera reset (plotter may be gone when this fires)."""
         plotter = self.host.view_3d_manager.plotter
         if plotter:
             plotter.view_isometric()
 
     def _plotter_render(self) -> None:
-        """Deferred render; the plotter may be gone by the time it fires."""
+        """Deferred render (plotter may be gone when this fires)."""
         plotter = self.host.view_3d_manager.plotter
         if plotter:
             plotter.render()
@@ -323,8 +323,7 @@ class IOManager:
         result = {"accepted": False, "skip": False}
 
         def _accept_if_valid() -> None:
-            # Validate inline: keep the dialog open and show the error in place
-            # instead of silently falling back to charge 0.
+            # Invalid input: show inline error and keep the dialog open
             try:
                 int(float(line_edit.text().strip() or "0"))
             except ValueError:
@@ -348,7 +347,7 @@ class IOManager:
             val = int(float(line_edit.text().strip() or "0"))
             return val, True, False
         except ValueError:
-            # Unreachable via OK (validated inline); safe default for Skip path
+            # Unreachable via OK (validated inline)
             return 0, True, False
 
     def estimate_bonds_from_distances(self, mol: Chem.RWMol) -> int:
@@ -472,10 +471,7 @@ class IOManager:
     def open_project_file(self, file_path: Optional[str] = None) -> None:
         """Open project file (.pmeprj or .pmeraw).
 
-        The unsaved-changes check happens in load_json_data / load_raw_data
-        so that direct calls to those methods (e.g. from plugins) are also
-        protected without double-prompting.
-        """
+        Unsaved-changes check is done in load_json_data / load_raw_data."""
         if not file_path:
             default_dir = (
                 os.path.dirname(self.host.init_manager.current_file_path)
