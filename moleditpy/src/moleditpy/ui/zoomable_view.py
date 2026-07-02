@@ -12,7 +12,7 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, cast
 
 from PyQt6.QtCore import QEvent, QPointF, Qt
 from PyQt6.QtGui import QMouseEvent, QWheelEvent, QNativeGestureEvent
@@ -127,12 +127,13 @@ class ZoomableView(QGraphicsView):
         """Handle native gestures (like pinch zoom on trackpads)"""
         if event is None:
             return super().viewportEvent(event)
-        if isinstance(event, QNativeGestureEvent):
+        if event.type() == QEvent.Type.NativeGesture:
+            gesture = cast(QNativeGestureEvent, event)
             # Detect pinch zoom gestures
-            if event.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:
-                # event.value() returns the scale factor delta
+            if gesture.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:
+                # gesture.value() returns the scale factor delta
                 # (positive for zoom-in, negative for zoom-out)
-                factor = 1.0 + event.value()
+                factor = 1.0 + gesture.value()
 
                 # Apply scaling if within limits
                 self.scale(factor, factor)
