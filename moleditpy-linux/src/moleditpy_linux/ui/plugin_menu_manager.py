@@ -81,6 +81,7 @@ class PluginMenuManager:
         self.integrate_plugin_export_actions()
         self.integrate_plugin_file_openers()
         self.integrate_plugin_analysis_tools()
+        self.integrate_plugin_optimization_methods()
 
     def rebuild_plugin_menus(self) -> None:
         """Fully rebuild all plugin-managed UI after an install/uninstall.
@@ -120,6 +121,7 @@ class PluginMenuManager:
             (self.integrate_plugin_file_openers, "file openers"),
             (self.integrate_plugin_analysis_tools, "analysis tools"),
             (self.update_style_menu_with_plugins, "style menu"),
+            (self.integrate_plugin_optimization_methods, "optimization methods"),
         ]:
             try:
                 method()
@@ -365,6 +367,16 @@ class PluginMenuManager:
                 )
                 a.setData(PLUGIN_ACTION_TAG)
                 menu.addAction(a)
+
+    def integrate_plugin_optimization_methods(self) -> None:
+        """Inject plugin optimization methods into the 3D Optimization Settings menu."""
+        if not hasattr(self._im.host.plugin_manager, "optimization_methods"):
+            return
+
+        for key, entry in self._im.host.plugin_manager.optimization_methods.items():
+            self._im.add_optimization_method(entry["label"], key)
+            if key in self._im.opt3d_actions:
+                self._im.opt3d_actions[key].setData("plugin_managed")
 
     def integrate_plugin_file_openers(self) -> None:
         """Inject plugin file-opener entries into the File > Import menu."""

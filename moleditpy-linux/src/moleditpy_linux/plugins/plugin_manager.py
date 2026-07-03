@@ -485,12 +485,18 @@ class PluginManager:
         self, plugin_name: str, method_name: str, callback: Callable
     ) -> None:
         """Register a named 3D optimization method provided by a plugin."""
-        # Key by upper-case method name for consistency
-        self.optimization_methods[method_name.upper()] = {
+        method_key = method_name.upper()
+        self.optimization_methods[method_key] = {
             "plugin": plugin_name,
             "callback": callback,
             "label": method_name,
         }
+        if hasattr(self.main_window, "init_manager") and hasattr(
+            self.main_window.init_manager, "add_optimization_method"
+        ):
+            self.main_window.init_manager.add_optimization_method(
+                method_name, method_key
+            )
 
     def register_file_opener(
         self, plugin_name: str, extension: str, callback: Callable, priority: int = 0
