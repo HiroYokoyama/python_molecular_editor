@@ -148,8 +148,26 @@ def test_register_export_action():
 def test_register_optimization_method():
     """register_optimization_method stores the callback under its method name."""
     pm = PluginManager()
+
+    # Mock main_window and init_manager
+    class MockInitManager:
+        def __init__(self):
+            self.added_methods = []
+
+        def add_optimization_method(self, label, key):
+            self.added_methods.append((label, key))
+
+    class MockMainWindow:
+        def __init__(self):
+            self.init_manager = MockInitManager()
+
+    pm.main_window = MockMainWindow()
+
     pm.register_optimization_method("TestPlugin", "MMFF94", lambda: None)
+
     assert "MMFF94" in pm.optimization_methods
+    assert len(pm.main_window.init_manager.added_methods) == 1
+    assert pm.main_window.init_manager.added_methods[0] == ("MMFF94", "MMFF94")
 
 
 def test_register_file_opener():

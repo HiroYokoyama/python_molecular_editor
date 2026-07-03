@@ -45,6 +45,7 @@ def _make_plugin_manager(
     pm.file_openers = file_openers or {}
     pm.analysis_tools = analysis_tools or []
     pm.custom_3d_styles = custom_3d_styles or []
+    pm.optimization_methods = {}
     return pm
 
 
@@ -89,6 +90,7 @@ class TestRebuildCompleteness:
         pmm.integrate_plugin_file_openers = track("file_openers")
         pmm.integrate_plugin_analysis_tools = track("analysis_tools")
         pmm.update_style_menu_with_plugins = track("style_menu")
+        pmm.integrate_plugin_optimization_methods = track("optimization_methods")
 
         pmm.rebuild_plugin_menus()
 
@@ -99,6 +101,7 @@ class TestRebuildCompleteness:
             "file_openers",
             "analysis_tools",
             "style_menu",
+            "optimization_methods",
         ], f"Expected all six steps in order, got: {called}"
 
     def test_all_six_steps_run_when_all_registries_populated(self):
@@ -278,6 +281,7 @@ class TestUpdatePluginMenuIntegration:
             "integrate_plugin_export_actions",
             "integrate_plugin_file_openers",
             "integrate_plugin_analysis_tools",
+            "integrate_plugin_optimization_methods",
         ]
         mocks = {m: MagicMock() for m in integration_methods}
         for m, mock in mocks.items():

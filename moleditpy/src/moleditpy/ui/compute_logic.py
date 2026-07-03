@@ -178,20 +178,10 @@ class ComputeManager:
             return
 
         menu = QMenu(self.host)
-        opt_list = [
-            ("MMFF94s (RDKit)", "MMFF_RDKIT"),
-            ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
-            ("UFF (RDKit)", "UFF_RDKIT"),
-            ("MMFF94s (Open Babel)", "MMFF94s_OBABEL"),
-            ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
-            ("UFF (Open Babel)", "UFF_OBABEL"),
-            ("GAFF (Open Babel)", "GAFF_OBABEL"),
-            ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
-        ]
-        for label, key in opt_list:
+        for key, source_action in self.host.init_manager.opt3d_actions.items():
+            label = source_action.text().replace("&", "")
             a = QAction(label, self.host)
-            if key in self.host.init_manager.opt3d_actions:
-                a.setEnabled(self.host.init_manager.opt3d_actions[key].isEnabled())
+            a.setEnabled(source_action.isEnabled())
             a.triggered.connect(
                 lambda checked=False, k=key: self._trigger_optimize_with_temp_method(k)
             )

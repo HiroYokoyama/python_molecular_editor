@@ -1062,6 +1062,26 @@ _Verify that UFF fallback uses _temp_optimization_method and doesn't change pers
 - mock_optimize.assert_called_once_with('UFF_RDKIT')
 - assert compute.optimization_method == 'MMFF_RDKIT'
 
+### test_plugin_optimization_method_invoked
+_A plugin-registered method is dispatched with the current mol._
+
+- assert calls == [mock_parser_host.view_3d_manager.current_mol]
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+- assert compute.last_successful_optimization_method == 'My Optimizer'
+
+### test_plugin_optimization_failure_is_isolated
+_A raising plugin callback is caught, logged, and reported via status._
+
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+- assert any(('failed' in m for m in messages))
+
+### test_plugin_optimization_false_return_reports_failure
+_A callback returning False reports failure without redrawing._
+
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+- assert compute.last_successful_optimization_method is None
+
 ## tests/unit/test_constants.py
 
 ### test_constants_version_from_metadata
@@ -2375,6 +2395,16 @@ _Verify 2D overlap resolution logic handles collisions correctly._
 - assert len(moves) > 0
 - assert len(moves[0][0]) == 1
 
+### test_identify_valence_problems_flags_invalid
+_Hypervalent/radical-overloaded atoms are flagged for any element._
+
+- assert center in identify_valence_problems(d.atoms, d.bonds)
+
+### test_identify_valence_problems_accepts_valid
+_Chemically valid atoms (incl. charges/radicals) are not flagged._
+
+- assert center not in identify_valence_problems(d.atoms, d.bonds)
+
 ## tests/unit/test_geometry_base_dialog.py
 
 ### TestSyncInputToSlider.test_valid_float_sets_slider
@@ -2869,7 +2899,7 @@ _No description provided._
 _No description provided._
 
 - dlg.accept.assert_not_called()
-- MockLabel.return_value.setVisible.assert_called_with(True)
+- assert any(('Invalid charge' in m for m in msgs))
 - dlg.accept.assert_called_once()
 
 ## tests/unit/test_items_visual.py
@@ -4231,6 +4261,14 @@ _Planarize triggers a 3D redraw after modifying geometry._
 
 - mw.view_3d_manager.draw_molecule_3d.assert_called()
 
+### test_on_atom_picked_refreshes_labels
+_Clicking an atom in the 3D view shows/updates the numbered labels._
+
+- assert 0 in dlg.selected_atoms
+- mock_labels.assert_called_once()
+- assert 0 not in dlg.selected_atoms
+- assert mock_labels.call_count == 2
+
 ## tests/unit/test_plugin_context.py
 
 ### TestMarkProjectModified.test_sets_has_unsaved_changes
@@ -4589,6 +4627,8 @@ _register_export_action stores the action with its label in export_actions._
 _register_optimization_method stores the callback under its method name._
 
 - assert 'MMFF94' in pm.optimization_methods
+- assert len(pm.main_window.init_manager.added_methods) == 1
+- assert pm.main_window.init_manager.added_methods[0] == ('MMFF94', 'MMFF94')
 
 ### test_register_file_opener
 _register_file_opener stores a callback under the given extension key._
@@ -7342,7 +7382,7 @@ _Test error message when plugin path is invalid._
 ### TestRebuildCompleteness.test_all_six_steps_run_when_all_registries_empty
 _Even with empty registries, all six rebuild methods execute._
 
-- assert called == ['menu_actions', 'toolbar_actions', 'export_actions', 'file_openers', 'analysis_tools', 'style_menu']
+- assert called == ['menu_actions', 'toolbar_actions', 'export_actions', 'file_openers', 'analysis_tools', 'style_menu', 'optimization_methods']
 
 ### TestRebuildCompleteness.test_all_six_steps_run_when_all_registries_populated
 _With all registries populated, all six steps still run._
