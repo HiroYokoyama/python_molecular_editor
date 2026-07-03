@@ -1648,7 +1648,7 @@ class MainInitManager:
             self.conv_actions[saved_conv].setChecked(True)
         self.settings["3d_conversion_mode"] = saved_conv
 
-        optimization_menu = settings_menu.addMenu("3D Optimization Settings")
+        self.optimization_menu = settings_menu.addMenu("3D Optimization Settings")
         opt_methods = [
             ("MMFF94s (RDKit)", "MMFF_RDKIT"),
             ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
@@ -1660,8 +1660,8 @@ class MainInitManager:
             ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
         ]
         self.opt3d_method_labels = {key.upper(): label for (label, key) in opt_methods}
-        opt_group = QActionGroup(self.host)
-        opt_group.setExclusive(True)
+        self.opt_group = QActionGroup(self.host)
+        self.opt_group.setExclusive(True)
         self.opt3d_actions = {}
         for label, key in opt_methods:
             action = QAction(label, self.host)
@@ -1672,11 +1672,11 @@ class MainInitManager:
                 lambda checked,
                 m=key: self.host.compute_manager.set_optimization_method(m)
             )
-            optimization_menu.addAction(action)
-            opt_group.addAction(action)
+            self.optimization_menu.addAction(action)
+            self.opt_group.addAction(action)
             self.opt3d_actions[key] = action
 
-        optimization_menu.addSeparator()
+        self.opt3d_separator = self.optimization_menu.addSeparator()
         self.host.intermolecular_rdkit_action = QAction(
             "Consider Intermolecular Interaction for RDKit", self.host
         )
@@ -1687,7 +1687,7 @@ class MainInitManager:
         self.host.intermolecular_rdkit_action.triggered.connect(
             self.host.compute_manager.toggle_intermolecular_interaction_rdkit
         )
-        optimization_menu.addAction(self.host.intermolecular_rdkit_action)
+        self.optimization_menu.addAction(self.host.intermolecular_rdkit_action)
 
         saved_opt = (self.settings.get("optimization_method") or "MMFF_RDKIT").upper()
         if (
@@ -1704,6 +1704,24 @@ class MainInitManager:
         reset_settings_action = QAction("Reset All Settings", self.host)
         reset_settings_action.triggered.connect(self.reset_all_settings_menu)
         settings_menu.addAction(reset_settings_action)
+
+    def add_optimization_method(self, label: str, key: str) -> None:
+        """Dynamically add an optimization method to the menu."""
+        key_upper = key.upper()
+        if key_upper in self.opt3d_actions:
+            return
+
+        self.opt3d_method_labels[key_upper] = label
+        action = QAction(label, self.host)
+        action.setCheckable(True)
+        action.triggered.connect(
+            lambda checked,
+            m=key_upper: self.host.compute_manager.set_optimization_method(m)
+        )
+
+        self.optimization_menu.insertAction(self.opt3d_separator, action)
+        self.opt_group.addAction(action)
+        self.opt3d_actions[key_upper] = action
 
     def _init_help_menu(self, menu_bar: Any) -> None:
         """Initialize the Help menu."""
