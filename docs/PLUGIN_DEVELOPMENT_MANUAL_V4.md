@@ -401,11 +401,15 @@ Register a fully custom 3D visualization mode. This allows you to completely byp
 - **callback** (`Callable[[MainWindow, rdkit.Chem.Mol], None]`): Function responsible for the entire drawing process. Access the PyVista plotter via `mw.plotter`.
 
 #### `register_optimization_method(method_name, callback)`
-Add a custom geometry optimizer. It appears in the **right-click menu of the "Optimize 3D" button**, labelled `<method_name> (Plugin)`.
-- **method_name** (`str`): Name as it appears in the menu (stored upper-cased).
+Add a custom geometry optimizer. As soon as it is registered, the method appears **dynamically** in **two** places (no restart or manual menu rebuild required):
+1. **`Settings ▸ 3D Optimization Settings`** — as a checkable entry alongside the built-in force fields (MMFF, UFF, …). Selecting it makes your method the persistent default used by the **Optimize 3D** button.
+2. The **right-click menu of the "Optimize 3D" button** — for a one-off run without changing the persistent default.
+
+- **method_name** (`str`): Name as it appears in the menu. The label is shown as-is; internally it is stored upper-cased as the method key.
 - **callback** (`Callable[[rdkit.Chem.Mol], bool]`): Receives the current 3D RDKit molecule. Modify its conformer coordinates **in place** and return `True` on success or `False` on failure.
 
 Behaviour notes:
+- Registration is wired straight into the live UI: `register_optimization_method` calls into the main window's menu manager, so the entry shows up immediately for the running session. A full `rebuild_menus()` also preserves plugin methods.
 - The callback runs **synchronously on the GUI thread** (unlike built-in force fields, which run on a worker thread) — keep it fast or drive your own progress UI.
 - On success the app redraws the 3D view, pushes an undo state, and records the method as the last successful optimization.
 - Exceptions are caught, logged with traceback, and reported in the status bar; they never crash the app.
@@ -968,7 +972,7 @@ def draw_hc_style(mw, mol):
 ```
 
 ### 10.6 Custom Optimization Method
-Optimization callbacks must modify the molecule **in-place**.
+Optimization callbacks must modify the molecule **in-place**. Once registered, the method shows up immediately under `Settings ▸ 3D Optimization Settings` (as a selectable default) and in the **Optimize 3D** button's right-click menu — see [`register_optimization_method`](#register_optimization_methodmethod_name-callback) for the full behaviour.
 
 ```python
 from rdkit.Chem import AllChem

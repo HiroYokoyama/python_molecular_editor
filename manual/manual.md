@@ -225,9 +225,12 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 
 **(Settings):** You can select the force field calculation library and method (RDKit MMFF94/MMFF94s/UFF, Open Babel MMFF94/MMFF94s/UFF/GAFF/Ghemical) from the menu `Settings` \> `3D Optimization Settings`.
 
+**(Quick select):** **Right-click** the **Optimize 3D** button to run any available method once, without changing your default selection.
+
 **Optimization Methods:**
 *   **RDKit Backend**: Supports **MMFF94s** (spectroscopic/default), **MMFF94**, and **UFF** (Universal Force Field). If MMFF94s fails setup due to unsupported elements (such as transition metals), the system automatically falls back to UFF to prevent crashes.
 *   **Open Babel Backend**: Supports **MMFF94s**, **MMFF94**, **UFF**, **GAFF** (General Amber Force Field), and **Ghemical**. It performs 100 iterations of Steepest Descent to clear major atomic collisions, followed by Conjugate Gradients minimization.
+*   **Plugin methods**: Installed plugins can add their own optimizers. When present, they appear in `Settings` \> `3D Optimization Settings` (selectable as the default) and in the **Optimize 3D** right-click menu, alongside the built-in force fields.
 
 ### 5.3. Changing 3D Display Style
 
