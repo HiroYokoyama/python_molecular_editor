@@ -4326,13 +4326,13 @@ _refresh_ui calls update_realtime_info, update_undo_redo_actions, and update_win
 _refresh_ui does not raise when the main window has no manager attributes._
 
 
-### TestFit3dView.test_calls_fit_to_view
-_fit_3d_view delegates to view_3d_manager.fit_to_view._
+### TestFit2dView.test_calls_fit_to_view
+_fit_2d_view delegates to view_3d_manager.fit_to_view._
 
 - mw.view_3d_manager.fit_to_view.assert_called_once()
 
-### TestFit3dView.test_no_crash_when_fit_to_view_missing
-_fit_3d_view does not raise when fit_to_view is absent on the view manager._
+### TestFit2dView.test_no_crash_when_fit_to_view_missing
+_fit_2d_view does not raise when fit_to_view is absent on the view manager._
 
 
 ### test_clear_canvas_delegates

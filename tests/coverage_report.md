@@ -25,7 +25,7 @@
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     81 |      4 |   95.1% |
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    366 |     56 |   84.7% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    238 |     17 |   92.9% |
-| moleditpy\src\moleditpy\ui\calculation_worker.py        |    583 |    101 |   82.7% |
+| moleditpy\src\moleditpy\ui\calculation_worker.py        |    583 |    102 |   82.5% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    166 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    431 |     88 |   79.6% |
 | moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py |    472 |    120 |   74.6% |
@@ -67,7 +67,7 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     39 |      0 |  100.0% |
-| **TOTAL** | **16041** | **2773** | **82.71%** |
+| **TOTAL** | **16041** | **2774** | **82.71%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
