@@ -764,6 +764,46 @@ MoleditPy uses **0-based RDKit indices**. These may differ from atom numbers in 
 ### 8.5 Hot Reloading
 Use **Plugins > Reload All Plugins** to pick up code changes without restarting. Plugins survive reloads correctly as long as all persistent windows are registered via `context.register_window()`.
 
+### 8.6 Logging & Debugging
+Use Python's standard `logging` module for all diagnostics — **never `print()`** and **never a silent `except: pass`**. The host configures the root logger at startup, so a plugin only needs to call `logging` and its output is captured automatically.
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)  # optional; module-scoped logger
+
+def my_callback(context):
+    try:
+        ...
+    except Exception:
+        logging.exception("MyPlugin: operation failed")  # ERROR + traceback
+```
+
+**Where the output goes**
+- All records stream to **stdout**.
+- When **Settings ▸ Other ▸ "Save log to file"** is enabled, records are also written to `~/.moleditpy/moleditpy.log` (rotating).
+- **DEBUG-level** records are shown **only** when **Settings ▸ Other ▸ "Enable DEBUG level logging"** is enabled. Otherwise the threshold is `INFO`.
+
+**Choosing a level** — pick the level by how much the user needs to know, so DEBUG mode stays useful and the normal log stays quiet:
+
+| Level | Use for |
+|-------|---------|
+| `logging.debug()` | Non-important, best-effort failures you deliberately swallow (parse-skip of a malformed line, optional settings load, dialog teardown races). Replaces `except: pass`. |
+| `logging.info()` | Notable lifecycle events (plugin loaded, file imported). |
+| `logging.warning()` | Something recoverable that the user may care about. **Do not** downgrade these to DEBUG just to quiet the log. |
+| `logging.error()` / `logging.exception()` | A real failure. `exception()` adds the traceback. |
+
+**Suppressing "best-effort" blocks at DEBUG level** — instead of a silent `except: pass`, route the swallowed exception to DEBUG so it stays diagnosable. Either call `logging.debug("...", exc_info=True)` directly, or use the host helper `suppress_log` (available since app **4.2.0**), a drop-in `contextlib.suppress` that logs the suppressed exception at DEBUG with a full traceback:
+
+```python
+from moleditpy.utils.suppress_log import suppress_log
+
+with suppress_log(RuntimeError, AttributeError, note="teardown"):
+    self._detach_event_filter()   # best-effort; failure is non-fatal but still logged at DEBUG
+```
+
+> If your plugin must also run against app versions **older than 4.2.0**, guard the import and fall back to `logging.debug(..., exc_info=True)`, since `suppress_log` will not exist there.
+
 ---
 
 ## 9. Complete Integrated Example
