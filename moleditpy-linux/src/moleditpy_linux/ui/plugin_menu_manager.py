@@ -369,14 +369,30 @@ class PluginMenuManager:
                 menu.addAction(a)
 
     def integrate_plugin_optimization_methods(self) -> None:
-        """Inject plugin optimization methods into the 3D Optimization Settings menu."""
-        if not hasattr(self._im.host.plugin_manager, "optimization_methods"):
+        """Inject plugin optimization methods into the 3D Optimization Settings menu.
+
+        Idempotent: previously-added plugin methods are purged first, so a menu
+        rebuild (install/uninstall/reload) re-adds only the currently registered
+        ones. Without this, _clean_menu removes the menu action while
+        opt3d_actions still holds it, and add_optimization_method's dedupe guard
+        would then skip re-adding a still-installed method.
+        """
+        im = self._im
+        methods = getattr(im.host.plugin_manager, "optimization_methods", None)
+        if not isinstance(methods, dict):
             return
 
-        for key, entry in self._im.host.plugin_manager.optimization_methods.items():
-            self._im.add_optimization_method(entry["label"], key)
-            if key in self._im.opt3d_actions:
-                self._im.opt3d_actions[key].setData("plugin_managed")
+        for key, action in list(im.opt3d_actions.items()):
+            if action.data() == "plugin_managed":
+                im.opt_group.removeAction(action)
+                im.optimization_menu.removeAction(action)
+                del im.opt3d_actions[key]
+                im.opt3d_method_labels.pop(key, None)
+
+        for key, entry in methods.items():
+            im.add_optimization_method(entry["label"], key)
+            if key in im.opt3d_actions:
+                im.opt3d_actions[key].setData("plugin_managed")
 
     def integrate_plugin_file_openers(self) -> None:
         """Inject plugin file-opener entries into the File > Import menu."""
