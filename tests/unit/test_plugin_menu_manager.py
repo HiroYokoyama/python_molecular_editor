@@ -16,14 +16,25 @@ from moleditpy.ui.plugin_menu_manager import PluginMenuManager
 
 
 @pytest.fixture(autouse=True)
-def _patch_qaction(monkeypatch):
-    """Allow QAction to be constructed with a MagicMock host in unit tests."""
+def _patch_qaction(monkeypatch, app):
+    """Allow QAction to be constructed with a MagicMock host in unit tests.
+
+    Parent the actions to a real QObject holder (not None): unparented QActions
+    get GC'd after QApplication teardown, causing an access-violation crash on
+    Windows when this file runs in isolation. The holder gives them an owner
+    destroyed in order while the app is alive.
+    """
+    from PyQt6.QtCore import QObject
     from PyQt6.QtGui import QAction as _RealQAction
 
+    holder = QObject()
+
     def _safe_qaction(text: str, parent=None) -> QAction:
-        return _RealQAction(text)
+        return _RealQAction(text, holder)
 
     monkeypatch.setattr("moleditpy.ui.plugin_menu_manager.QAction", _safe_qaction)
+    yield
+    holder.deleteLater()
 
 
 # ---------------------------------------------------------------------------

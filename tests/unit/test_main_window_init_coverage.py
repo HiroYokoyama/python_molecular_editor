@@ -8,21 +8,26 @@ def test_imports_mainwindow():
     assert hasattr(MainInitManager, "init_ui")
 
 
-def test_mainwindow_init_with_mocks():
+def test_mainwindow_init_with_mocks(app):
     """Verify MainWindow instantiates MainInitManager during initialization."""
     # Patch the MainInitManager class in the main_window module
     with patch("moleditpy.ui.main_window.MainInitManager") as MockInitManager:
         from moleditpy.ui.main_window import MainWindow
 
-        # Instantiate MainWindow
+        # Instantiate MainWindow. Close + delete it before teardown: an un-closed
+        # real QMainWindow GC'd after QApplication teardown crashes on Windows
+        # when this file runs in isolation.
         mw = MainWindow()
+        try:
+            # Verify MainInitManager was instantiated
+            MockInitManager.assert_called_once()
 
-        # Verify MainInitManager was instantiated
-        MockInitManager.assert_called_once()
+            # Verify the instance is assigned to mw.init_manager
+            assert mw.init_manager == MockInitManager.return_value
 
-        # Verify the instance is assigned to mw.init_manager
-        assert mw.init_manager == MockInitManager.return_value
-
-        # Verify it was called with mw as the first argument (host)
-        args, kwargs = MockInitManager.call_args
-        assert args[0] == mw
+            # Verify it was called with mw as the first argument (host)
+            args, kwargs = MockInitManager.call_args
+            assert args[0] == mw
+        finally:
+            mw.close()
+            mw.deleteLater()
