@@ -4044,6 +4044,22 @@ _Test that a single click clears the selection when Box Selection is ON._
 
 - mock_clear.assert_called_once()
 
+## tests/unit/test_optimization_method_restore.py
+
+### test_saved_plugin_method_restored_on_registration
+_No description provided._
+
+- assert im.opt3d_actions['QUICK UFF'].isChecked()
+- assert not im.opt3d_actions['MMFF_RDKIT'].isChecked()
+- assert im.optimization_method == 'QUICK UFF'
+
+### test_non_default_plugin_method_left_unchecked
+_No description provided._
+
+- assert not im.opt3d_actions['QUICK UFF'].isChecked()
+- assert im.opt3d_actions['MMFF_RDKIT'].isChecked()
+- assert im.optimization_method == 'MMFF_RDKIT'
+
 ## tests/unit/test_parser_robustness.py
 
 ### test_set_mol_prop_safe_robustness
@@ -7455,6 +7471,22 @@ _Registered analysis tools appear as actions in the Analysis menu after rebuild.
 - assert 'NMR Predict' in added.text()
 - assert 'NMRPro' in added.text()
 
+## tests/integration/test_plugin_opt_method_rebuild.py
+
+### test_plugin_method_readded_after_rebuild
+_No description provided._
+
+- assert 'Quick UFF' in _menu_labels(im)
+- assert 'Quick UFF' not in _menu_labels(im)
+- assert 'Quick UFF' in _menu_labels(im)
+- assert 'QUICK UFF' in im.opt3d_actions
+
+### test_uninstalled_plugin_method_purged_on_rebuild
+_No description provided._
+
+- assert 'QUICK UFF' not in im.opt3d_actions
+- assert 'Quick UFF' not in _menu_labels(im)
+
 ## tests/integration/test_trigger_conversion_plugin_wrap.py
 
 ### TestTriggerConversionTempMode.test_temp_mode_stored_and_consumed
@@ -7487,6 +7519,24 @@ _The conversion mode set via _trigger_conversion_with_temp_mode_
 
 - assert hasattr(compute, '_captured_options')
 - assert compute._captured_options['conversion_mode'] == 'fallback'
+
+### TestPluginConversionPreOptimize.test_plugin_default_preoptimizes_with_mmff_and_queues_post_step
+_No description provided._
+
+- assert options['optimization_method'] == 'MMFF_RDKIT'
+- assert compute._pending_plugin_opt[run_id] == ('QUICK UFF', entry)
+
+### TestPluginConversionPreOptimize.test_builtin_default_queues_no_post_step
+_No description provided._
+
+- assert options['optimization_method'] == 'UFF_RDKIT'
+- assert compute._pending_plugin_opt == {}
+
+### TestPluginConversionPreOptimize.test_finished_runs_pending_plugin_callback
+_No description provided._
+
+- cb.assert_called_once_with(mol)
+- assert run_id not in compute._pending_plugin_opt
 
 ## tests/gui/test_additional_dialogs_launch.py
 

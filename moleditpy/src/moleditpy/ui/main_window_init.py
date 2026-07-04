@@ -1723,6 +1723,13 @@ class MainInitManager:
         self.opt_group.addAction(action)
         self.opt3d_actions[key_upper] = action
 
+        # Plugins register after menu-init, so restore the saved default here
+        # if it names this method (menu-init fell back to MMFF_RDKIT).
+        saved_opt = (self.settings.get("optimization_method") or "").upper()
+        if key_upper == saved_opt:
+            action.setChecked(True)
+            self.optimization_method = key_upper
+
     def _init_help_menu(self, menu_bar: Any) -> None:
         """Initialize the Help menu."""
         help_menu = menu_bar.addMenu("&Help")

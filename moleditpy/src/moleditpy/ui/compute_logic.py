@@ -45,6 +45,9 @@ class ComputeManager:
         self.halt_ids: Set[int] = set()
         self.next_conversion_id: int = 1
         self.active_worker_ids: Set[int] = set()
+        # worker_id -> (method_key, plugin_entry) for a plugin optimizer to run
+        # as a post-step once conversion's built-in pre-optimization completes.
+        self._pending_plugin_opt: Dict[int, Tuple[str, Dict[str, Any]]] = {}
 
     def reset_active_threads(self) -> None:
         """Reset active calculation threads list."""
@@ -239,6 +242,25 @@ class ComputeManager:
         self.next_conversion_id = run_id + 1
         self.active_worker_ids.add(run_id)
 
+        # The worker only runs built-in force fields. If the selected method is a
+        # plugin optimizer, pre-optimize with MMFF (RDKit) in the worker (which
+        # auto-falls-back to UFF if MMFF setup fails), then run the plugin
+        # callback as a post-step in on_calculation_finished.
+        effective_method = (
+            optimization_method
+            or self.host.init_manager.optimization_method
+            or "MMFF_RDKIT"
+        ).upper()
+        _reg = getattr(
+            getattr(self.host, "plugin_manager", None), "optimization_methods", None
+        )
+        plugin_entry = _reg.get(effective_method) if isinstance(_reg, dict) else None
+        if plugin_entry:
+            self._pending_plugin_opt[run_id] = (effective_method, plugin_entry)
+            worker_method = "MMFF_RDKIT"
+        else:
+            worker_method = effective_method
+
         # UI Updates
         self.host.init_manager.convert_button.setText("Halt conversion")  # type: ignore[union-attr]
         self._safe_disconnect(self.host.init_manager.convert_button.clicked)  # type: ignore[union-attr]
@@ -267,8 +289,7 @@ class ComputeManager:
         options = {
             "conversion_mode": conversion_mode
             or self.host.init_manager.settings.get("3d_conversion_mode", "fallback"),
-            "optimization_method": optimization_method
-            or self.host.init_manager.optimization_method,
+            "optimization_method": worker_method,
             "optimize_intermolecular_interaction_rdkit": self.host.init_manager.settings.get(
                 "optimize_intermolecular_interaction_rdkit", True
             ),
@@ -285,6 +306,7 @@ class ComputeManager:
         if wids_to_halt:
             self.halt_ids.update(wids_to_halt)
         self.active_worker_ids.clear()
+        self._pending_plugin_opt.clear()
 
         self._restore_button_ui()
         self.host.init_manager.cleanup_button.setEnabled(True)  # type: ignore[union-attr]
@@ -529,6 +551,16 @@ class ComputeManager:
         self.host.view_3d_manager.update_atom_id_menu_text()
         self.host.view_3d_manager.update_atom_id_menu_state()
 
+        # If the selected method was a plugin optimizer, the worker only did the
+        # built-in pre-optimization; run the plugin callback now on the result.
+        pending = (
+            self._pending_plugin_opt.pop(worker_id, None)
+            if worker_id is not None
+            else None
+        )
+        if pending and mol:
+            self._run_plugin_optimization(*pending)
+
     def on_calculation_error(self, message: Union[str, Tuple[int, str]]) -> None:
         """Handle an error or halt signal from the background optimization worker."""
         # Accept either a string or (worker_id, message) tuple from the worker signal
@@ -547,8 +579,10 @@ class ComputeManager:
                     self.host.statusBar().showMessage(  # type: ignore[union-attr]
                         f"Ignored stale worker error: {msg} (ID = {worker_id})"
                     )
+                self._pending_plugin_opt.pop(worker_id, None)
                 return  # stale worker, ignore
             self.active_worker_ids.discard(worker_id)
+            self._pending_plugin_opt.pop(worker_id, None)
         else:
             msg = str(message)
 

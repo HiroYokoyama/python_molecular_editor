@@ -13,15 +13,24 @@ from moleditpy.ui.plugin_menu_manager import PluginMenuManager
 
 
 # QAction(text, MagicMock) fails because PyQt6 strictly validates parent type.
-# Patch it to drop the mock parent so tests run headlessly (including CI).
+# Patch it to parent actions to a real QObject instead of the mock. Parenting
+# (rather than dropping the parent) gives the QActions a deterministic owner, so
+# Qt destroys them in order with the holder while QApplication is still alive —
+# leaving them unparented causes an access-violation crash at GC on Windows when
+# this file runs in isolation.
 @pytest.fixture(autouse=True)
-def _patch_qaction(monkeypatch):
+def _patch_qaction(monkeypatch, app):
+    from PyQt6.QtCore import QObject
     from PyQt6.QtGui import QAction as _RealQAction
 
+    holder = QObject()
+
     def _safe_qaction(text: str, parent=None) -> _RealQAction:
-        return _RealQAction(text)
+        return _RealQAction(text, holder)
 
     monkeypatch.setattr("moleditpy.ui.plugin_menu_manager.QAction", _safe_qaction)
+    yield
+    holder.deleteLater()
 
 
 # ---------------------------------------------------------------------------

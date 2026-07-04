@@ -351,3 +351,101 @@ class TestPluginWrappedTriggerConversion:
             "trigger_conversion never reached _start_calculation_worker"
         )
         assert compute._captured_options["conversion_mode"] == "fallback"
+
+
+# ---------------------------------------------------------------------------
+# Test: plugin optimization method as the conversion default
+# ---------------------------------------------------------------------------
+
+
+class TestPluginConversionPreOptimize:
+    """When the default optimizer is a plugin method, conversion pre-optimizes
+    with a built-in force field and runs the plugin callback as a post-step."""
+
+    @staticmethod
+    def _make_compute(host):
+        compute = object.__new__(ComputeManager)
+        compute._host = host
+        ComputeManager.__init__(compute, host)
+        return compute
+
+    def test_plugin_default_preoptimizes_with_mmff_and_queues_post_step(
+        self, host, app
+    ):
+        compute = self._make_compute(host)
+        entry = {
+            "plugin": "P",
+            "callback": MagicMock(return_value=True),
+            "label": "Quick UFF",
+        }
+        host.plugin_manager.optimization_methods = {"QUICK UFF": entry}
+        host.init_manager.optimization_method = "QUICK UFF"
+
+        mol = Chem.MolFromSmiles("C")
+        host.state_manager.data.atoms = {1: {"symbol": "C"}}
+
+        with (
+            patch.object(host.state_manager.data, "to_rdkit_mol", return_value=mol),
+            patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
+            patch("rdkit.Chem.SanitizeMol"),
+            patch.object(
+                host.state_manager.data,
+                "to_mol_block",
+                return_value=Chem.MolToMolBlock(mol),
+            ),
+            patch.object(compute, "_start_calculation_worker") as mock_start,
+        ):
+            compute.trigger_conversion()
+
+        options = mock_start.call_args[0][1]
+        # Worker gets a built-in FF, not the plugin key.
+        assert options["optimization_method"] == "MMFF_RDKIT"
+        # The plugin post-step is queued against the worker id.
+        run_id = options["worker_id"]
+        assert compute._pending_plugin_opt[run_id] == ("QUICK UFF", entry)
+
+    def test_builtin_default_queues_no_post_step(self, host, app):
+        compute = self._make_compute(host)
+        host.plugin_manager.optimization_methods = {}
+        host.init_manager.optimization_method = "UFF_RDKIT"
+
+        mol = Chem.MolFromSmiles("C")
+        host.state_manager.data.atoms = {1: {"symbol": "C"}}
+
+        with (
+            patch.object(host.state_manager.data, "to_rdkit_mol", return_value=mol),
+            patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
+            patch("rdkit.Chem.SanitizeMol"),
+            patch.object(
+                host.state_manager.data,
+                "to_mol_block",
+                return_value=Chem.MolToMolBlock(mol),
+            ),
+            patch.object(compute, "_start_calculation_worker") as mock_start,
+        ):
+            compute.trigger_conversion()
+
+        options = mock_start.call_args[0][1]
+        assert options["optimization_method"] == "UFF_RDKIT"
+        assert compute._pending_plugin_opt == {}
+
+    def test_finished_runs_pending_plugin_callback(self, host, app):
+        compute = self._make_compute(host)
+        cb = MagicMock(return_value=True)
+        entry = {"plugin": "P", "callback": cb, "label": "Quick UFF"}
+        run_id = 7
+        compute._pending_plugin_opt[run_id] = ("QUICK UFF", entry)
+        compute.active_worker_ids.add(run_id)
+
+        mol = Chem.MolFromSmiles("C")
+        host.view_3d_manager.current_mol = mol
+
+        with (
+            patch.object(compute, "create_atom_id_mapping"),
+            patch.object(compute, "_refresh_ui_state"),
+            patch.object(compute, "_remove_calculating_text"),
+        ):
+            compute.on_calculation_finished((run_id, mol))
+
+        cb.assert_called_once_with(mol)
+        assert run_id not in compute._pending_plugin_opt
