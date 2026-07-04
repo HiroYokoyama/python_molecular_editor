@@ -139,7 +139,7 @@ The `context` object passed to `initialize(context)` is your safe proxy to the a
 | **3D** | `refresh_3d_view()` | Lightweight 3D redraw |
 | **3D** | `draw_molecule_3d(mol)` | Full 3D scene rebuild |
 | **3D** | `reset_3d_camera()` | Fit camera to molecule |
-| **3D** | `fit_3d_view()` | Zoom viewport to fit the current molecule |
+| **2D** | `fit_2d_view()` | Fit all 2D scene items into the 2D editor viewport |
 | **3D** | `get_3d_controller()` | Atom/bond color overrides |
 | **3D** | `register_3d_style(name, cb)` | Custom visualization mode |
 | **3D** | `register_optimization_method(name, cb)` | Custom geometry optimizer |
@@ -389,8 +389,8 @@ Directly trigger a full redraw of the 3D scene using a specific RDKit molecule. 
 #### `reset_3d_camera()`
 Zoom in and re-center the 3D viewport to perfectly fit the current molecule.
 
-#### `fit_3d_view()`
-Zoom and re-center the 3D viewport to fit the current molecule. This is equivalent to `reset_3d_camera()` but uses the scene's internal fit-to-view logic rather than the plotter's camera reset, which may give a tighter fit for certain molecule shapes.
+#### `fit_2d_view()`
+Fit all visible items in the 2D editor canvas into the viewport. Equivalent to the **Fit to View** toolbar action in the 2D editor.
 
 #### `get_3d_controller()`
 Returns a `Plugin3DController` instance (see Section 3). Use this for high-level visual overrides (atom/bond colors).
@@ -602,7 +602,7 @@ def highlight_selection(context):
 | `mw.settings.get(key)` | `context.get_setting(key)` |
 | `mw.state_manager.has_unsaved_changes = True` + `mw.state_manager.update_window_title()` | `context.mark_project_modified()` |
 | `mw.state_manager.update_realtime_info()` + `mw.edit_actions_manager.update_undo_redo_actions()` + `mw.state_manager.update_window_title()` | `context.refresh_ui()` |
-| `mw.view_3d_manager.fit_to_view()` | `context.fit_3d_view()` |
+| `mw.view_3d_manager.fit_to_view()` | `context.fit_2d_view()` |
 | `mw.edit_actions_manager.clear_2d_editor(push_to_undo=False)` | `context.clear_canvas(push_to_undo=False)` |
 | `mw.ui_manager.enable_3d_features(enabled)` | `context.set_3d_features_enabled(enabled)` |
 | `mw.init_manager.analysis_action.setEnabled(enabled)` | `context.set_analysis_enabled(enabled)` |

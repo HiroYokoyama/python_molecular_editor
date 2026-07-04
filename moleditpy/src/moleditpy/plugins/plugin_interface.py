@@ -420,8 +420,8 @@ class PluginContext:
             if fn:
                 fn()
 
-    def fit_3d_view(self) -> None:
-        """Zoom and re-center the 3D viewport to fit the current molecule."""
+    def fit_2d_view(self) -> None:
+        """Fit all 2D scene items into the 2D editor viewport."""
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
             fit = getattr(mw.view_3d_manager, "fit_to_view", None)
