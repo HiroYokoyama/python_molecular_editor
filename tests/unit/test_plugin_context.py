@@ -99,18 +99,18 @@ class TestRefreshUi(unittest.TestCase):
         _make_context(MagicMock(spec=[])).refresh_ui()
 
 
-class TestFit3dView(unittest.TestCase):
+class TestFit2dView(unittest.TestCase):
     def test_calls_fit_to_view(self):
-        """fit_3d_view delegates to view_3d_manager.fit_to_view."""
+        """fit_2d_view delegates to view_3d_manager.fit_to_view."""
         mw = MagicMock()
-        _make_context(mw).fit_3d_view()
+        _make_context(mw).fit_2d_view()
         mw.view_3d_manager.fit_to_view.assert_called_once()
 
     def test_no_crash_when_fit_to_view_missing(self):
-        """fit_3d_view does not raise when fit_to_view is absent on the view manager."""
+        """fit_2d_view does not raise when fit_to_view is absent on the view manager."""
         mw = MagicMock(spec=["view_3d_manager"])
         mw.view_3d_manager = MagicMock(spec=[])
-        _make_context(mw).fit_3d_view()
+        _make_context(mw).fit_2d_view()
 
 
 @pytest.mark.parametrize("push_to_undo", [True, False])
@@ -198,7 +198,7 @@ class TestRefresh2dScene(unittest.TestCase):
     [
         lambda ctx: ctx.mark_project_modified(),
         lambda ctx: ctx.refresh_ui(),
-        lambda ctx: ctx.fit_3d_view(),
+        lambda ctx: ctx.fit_2d_view(),
         lambda ctx: ctx.clear_canvas(),
         lambda ctx: ctx.set_3d_features_enabled(True),
         lambda ctx: ctx.set_analysis_enabled(True),
@@ -208,7 +208,7 @@ class TestRefresh2dScene(unittest.TestCase):
     ids=[
         "mark_project_modified",
         "refresh_ui",
-        "fit_3d_view",
+        "fit_2d_view",
         "clear_canvas",
         "set_3d_features_enabled",
         "set_analysis_enabled",
