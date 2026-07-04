@@ -7471,6 +7471,22 @@ _Registered analysis tools appear as actions in the Analysis menu after rebuild.
 - assert 'NMR Predict' in added.text()
 - assert 'NMRPro' in added.text()
 
+## tests/integration/test_plugin_opt_method_rebuild.py
+
+### test_plugin_method_readded_after_rebuild
+_No description provided._
+
+- assert 'Quick UFF' in _menu_labels(im)
+- assert 'Quick UFF' not in _menu_labels(im)
+- assert 'Quick UFF' in _menu_labels(im)
+- assert 'QUICK UFF' in im.opt3d_actions
+
+### test_uninstalled_plugin_method_purged_on_rebuild
+_No description provided._
+
+- assert 'QUICK UFF' not in im.opt3d_actions
+- assert 'Quick UFF' not in _menu_labels(im)
+
 ## tests/integration/test_trigger_conversion_plugin_wrap.py
 
 ### TestTriggerConversionTempMode.test_temp_mode_stored_and_consumed
