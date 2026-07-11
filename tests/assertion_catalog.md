@@ -7417,6 +7417,11 @@ _If one step raises, all subsequent steps still execute._
 - assert 'export' in survived
 - assert 'style' in survived
 
+### TestRebuildCleanup.test_rebuild_cleans_tagged_actions_from_target_menus
+_rebuild_plugin_menus must remove actions tagged with 'plugin_managed' from target menus._
+
+- export_menu.removeAction.assert_called_once_with(tagged_action)
+
 ### TestPluginMenuManagerRouting.test_main_window_proxy_returns_init_manager_pmm
 _MainWindow.plugin_menu_manager property reads from init_manager._
 

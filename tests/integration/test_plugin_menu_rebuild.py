@@ -193,6 +193,37 @@ class TestRebuildCompleteness:
         assert "style" in survived
 
 
+class TestRebuildCleanup:
+    """Verify that rebuild_plugin_menus cleans up existing tagged plugin actions."""
+
+    def test_rebuild_cleans_tagged_actions_from_target_menus(self):
+        """rebuild_plugin_menus must remove actions tagged with 'plugin_managed' from target menus."""
+        im = _make_im()
+
+        # Setup a mock menu for export button
+        export_menu = MagicMock()
+        im.export_button.menu.return_value = export_menu
+
+        # Create a mock action that is tagged
+        tagged_action = MagicMock()
+        tagged_action.data.return_value = "plugin_managed"
+        tagged_action.menu.return_value = None
+
+        # Create a mock action that is NOT tagged
+        untagged_action = MagicMock()
+        untagged_action.data.return_value = None
+        untagged_action.menu.return_value = None
+
+        # Export menu has both actions
+        export_menu.actions.return_value = [tagged_action, untagged_action]
+
+        pmm = PluginMenuManager(im)
+        pmm.rebuild_plugin_menus()
+
+        # The tagged action should be removed
+        export_menu.removeAction.assert_called_once_with(tagged_action)
+
+
 # ---------------------------------------------------------------------------
 # MainWindow.plugin_menu_manager proxy and PluginManager call path
 # ---------------------------------------------------------------------------
