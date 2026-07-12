@@ -815,6 +815,11 @@ _Test on_calculation_error for an ACTIVE worker._
 - assert compute.statusBar().showMessage.called
 - assert 'Real Error' in compute.statusBar().showMessage.call_args[0][0]
 
+### test_on_calculation_error_reenables_export
+_A failed optimization runs the full UI restore (which re-enables Export),_
+
+- refresh.assert_called_once()
+
 ### test_compute_set_optimization_method
 _Verify that setting the optimization method updates both settings and internal state._
 
@@ -3022,6 +3027,11 @@ _A worker-thread record must not queue a dialog (QMessageBox unsafe)._
 
 ### test_handler_honors_no_dialog_extra
 _extra={'no_dialog': True} opts a record out entirely._
+
+- qtimer.singleShot.assert_not_called()
+
+### test_handler_suppressed_during_shutdown
+_Benign teardown errors must not pop a dialog once the app is closing._
 
 - qtimer.singleShot.assert_not_called()
 

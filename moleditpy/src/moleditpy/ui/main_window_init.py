@@ -306,7 +306,9 @@ class MainInitManager:
                 except Exception:  # plugins have full app access; any failure falls through to the next opener
                     logging.warning(
                         "Plugin opener failed for '%s'",
-                        opener_info.get("plugin", "Unknown"), exc_info=True)
+                        opener_info.get("plugin", "Unknown"),
+                        exc_info=True,
+                    )
                     continue
 
         if file_ext in ["mol", "sdf"]:

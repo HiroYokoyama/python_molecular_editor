@@ -131,7 +131,10 @@ class View3DManager:
                     return
                 except Exception:  # plugins have full app access; catch everything to keep 3D view functional
                     logging.warning(
-                        "Error in custom 3D style '%s'", self.current_3d_style, exc_info=True)
+                        "Error in custom 3D style '%s'",
+                        self.current_3d_style,
+                        exc_info=True,
+                    )
 
         self.draw_standard_3d_style(mol)
 
@@ -1047,7 +1050,9 @@ class View3DManager:
                     z_off = 0
                     for idx, lbl in chiral_centers:
                         if self.atom_positions_3d is None:
-                            logging.warning("atom_positions_3d is None in _add_3d_labels")
+                            logging.warning(
+                                "atom_positions_3d is None in _add_3d_labels"
+                            )
                             continue
                         coord = self.atom_positions_3d[idx].copy()
                         coord[2] += z_off

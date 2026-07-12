@@ -390,7 +390,9 @@ class ComputeManager:
         try:
             success = bool(entry["callback"](mol))
         except Exception:  # plugins have full app access; isolate failures
-            logging.warning("Plugin optimization method '%s' failed", label, exc_info=True)
+            logging.warning(
+                "Plugin optimization method '%s' failed", label, exc_info=True
+            )
             self._refresh_ui_state()
             self.host.update_status_message(
                 f"Plugin optimization '{label}' failed (see log)."

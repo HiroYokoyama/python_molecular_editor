@@ -28,8 +28,13 @@ from moleditpy.main import (
 def _record(message="boom", level=logging.ERROR, exc_info=None, **extra):
     """Build a logging.LogRecord as the handler would receive it."""
     rec = logging.LogRecord(
-        name="test", level=level, pathname=__file__, lineno=1,
-        msg=message, args=(), exc_info=exc_info,
+        name="test",
+        level=level,
+        pathname=__file__,
+        lineno=1,
+        msg=message,
+        args=(),
+        exc_info=exc_info,
     )
     for key, value in extra.items():
         setattr(rec, key, value)
@@ -43,9 +48,10 @@ def _record(message="boom", level=logging.ERROR, exc_info=None, **extra):
 
 def test_handler_skips_without_qapplication():
     """No GUI event loop → nothing is queued (the log record is the surface)."""
-    with patch.object(main_mod, "QApplication") as qapp, patch.object(
-        main_mod, "QTimer"
-    ) as qtimer:
+    with (
+        patch.object(main_mod, "QApplication") as qapp,
+        patch.object(main_mod, "QTimer") as qtimer,
+    ):
         qapp.instance.return_value = None
         _ErrorDialogHandler().emit(_record())
     qtimer.singleShot.assert_not_called()
@@ -56,9 +62,11 @@ def test_handler_skips_off_gui_thread():
     app = MagicMock()
     app.thread.return_value = "gui"
     app.property.return_value = None
-    with patch.object(main_mod, "QApplication") as qapp, patch.object(
-        main_mod, "QThread"
-    ) as qthread, patch.object(main_mod, "QTimer") as qtimer:
+    with (
+        patch.object(main_mod, "QApplication") as qapp,
+        patch.object(main_mod, "QThread") as qthread,
+        patch.object(main_mod, "QTimer") as qtimer,
+    ):
         qapp.instance.return_value = app
         qthread.currentThread.return_value = "worker"
         _ErrorDialogHandler().emit(_record())
@@ -77,9 +85,11 @@ def test_handler_suppressed_during_shutdown():
     app = MagicMock()
     app.thread.return_value = "gui"
     app.property.return_value = True  # moleditpy_shutting_down
-    with patch.object(main_mod, "QApplication") as qapp, patch.object(
-        main_mod, "QThread"
-    ) as qthread, patch.object(main_mod, "QTimer") as qtimer:
+    with (
+        patch.object(main_mod, "QApplication") as qapp,
+        patch.object(main_mod, "QThread") as qthread,
+        patch.object(main_mod, "QTimer") as qtimer,
+    ):
         qapp.instance.return_value = app
         qthread.currentThread.return_value = "gui"
         _ErrorDialogHandler().emit(_record())
@@ -92,11 +102,12 @@ def test_handler_dedups_rapid_repeat_within_window():
     app = MagicMock()
     app.thread.return_value = "gui"
     app.property.return_value = None
-    with patch.object(main_mod, "QApplication") as qapp, patch.object(
-        main_mod, "QThread"
-    ) as qthread, patch.object(main_mod, "QTimer") as qtimer, patch.object(
-        main_mod.time, "monotonic"
-    ) as mono:
+    with (
+        patch.object(main_mod, "QApplication") as qapp,
+        patch.object(main_mod, "QThread") as qthread,
+        patch.object(main_mod, "QTimer") as qtimer,
+        patch.object(main_mod.time, "monotonic") as mono,
+    ):
         qapp.instance.return_value = app
         qthread.currentThread.return_value = "gui"
         mono.side_effect = [100.0, 102.0]  # 2s apart, inside the 10s window
@@ -112,11 +123,12 @@ def test_handler_reshows_same_error_after_window():
     app = MagicMock()
     app.thread.return_value = "gui"
     app.property.return_value = None
-    with patch.object(main_mod, "QApplication") as qapp, patch.object(
-        main_mod, "QThread"
-    ) as qthread, patch.object(main_mod, "QTimer") as qtimer, patch.object(
-        main_mod.time, "monotonic"
-    ) as mono:
+    with (
+        patch.object(main_mod, "QApplication") as qapp,
+        patch.object(main_mod, "QThread") as qthread,
+        patch.object(main_mod, "QTimer") as qtimer,
+        patch.object(main_mod.time, "monotonic") as mono,
+    ):
         qapp.instance.return_value = app
         qthread.currentThread.return_value = "gui"
         # 2nd occurrence is 15s later — past the 10s window.
@@ -132,9 +144,11 @@ def test_handler_emit_never_raises():
     app = MagicMock()
     app.thread.return_value = "gui"
     app.property.return_value = None
-    with patch.object(main_mod, "QApplication") as qapp, patch.object(
-        main_mod, "QThread"
-    ) as qthread, patch.object(main_mod, "QTimer") as qtimer:
+    with (
+        patch.object(main_mod, "QApplication") as qapp,
+        patch.object(main_mod, "QThread") as qthread,
+        patch.object(main_mod, "QTimer") as qtimer,
+    ):
         qapp.instance.return_value = app
         qthread.currentThread.return_value = "gui"
         qtimer.singleShot.side_effect = RuntimeError("boom")
@@ -151,9 +165,10 @@ def test_handler_emit_never_raises():
 
 def test_show_yields_to_existing_modal():
     """If a site/plugin QMessageBox.critical is already up, stay quiet."""
-    with patch.object(main_mod, "QApplication") as qapp, patch.object(
-        main_mod, "QMessageBox"
-    ) as qmb:
+    with (
+        patch.object(main_mod, "QApplication") as qapp,
+        patch.object(main_mod, "QMessageBox") as qmb,
+    ):
         qapp.activeModalWidget.return_value = MagicMock()  # a modal is showing
         _ErrorDialogHandler()._show("boom", "")
     qmb.assert_not_called()
@@ -163,9 +178,10 @@ def test_show_displays_non_blocking_when_no_modal():
     """With no other modal up, the dialog is shown non-blocking (show, not exec)
     and held alive so it is not garbage-collected away."""
     handler = _ErrorDialogHandler()
-    with patch.object(main_mod, "QApplication") as qapp, patch.object(
-        main_mod, "QMessageBox"
-    ) as qmb:
+    with (
+        patch.object(main_mod, "QApplication") as qapp,
+        patch.object(main_mod, "QMessageBox") as qmb,
+    ):
         qapp.activeModalWidget.return_value = None
         handler._show("boom", "Traceback (most recent call last): ...")
     qmb.return_value.setDetailedText.assert_called_once()
@@ -177,9 +193,10 @@ def test_show_displays_non_blocking_when_no_modal():
 def test_show_swallows_its_own_errors():
     """A failure while building the dialog must not propagate."""
     handler = _ErrorDialogHandler()
-    with patch.object(main_mod, "QApplication") as qapp, patch.object(
-        main_mod, "QMessageBox"
-    ) as qmb:
+    with (
+        patch.object(main_mod, "QApplication") as qapp,
+        patch.object(main_mod, "QMessageBox") as qmb,
+    ):
         qapp.activeModalWidget.return_value = None
         qmb.side_effect = RuntimeError("Qt is gone")
         handler._show("boom", "")  # must not raise
@@ -203,8 +220,7 @@ def test_details_names_log_file_when_file_logging_on():
 
 def _dialog_handlers():
     return [
-        h for h in logging.getLogger().handlers
-        if isinstance(h, _ErrorDialogHandler)
+        h for h in logging.getLogger().handlers if isinstance(h, _ErrorDialogHandler)
     ]
 
 

@@ -725,7 +725,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 ),
                             )
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        logging.warning("Caught exception in " + __file__, exc_info=True)
+                        logging.warning(
+                            "Caught exception in " + __file__, exc_info=True
+                        )
 
                     # Defer the redraw + undo push out of the VTK observer
                     # callback to prevent re-entrant plotter.render() deadlock.

@@ -98,9 +98,7 @@ class _ErrorDialogHandler(logging.Handler):
             # Source location (as the terminal log shows), then any traceback.
             detail = f"{record.pathname}:{record.lineno}"
             if record.exc_info:
-                detail += "\n\n" + "".join(
-                    traceback.format_exception(*record.exc_info)
-                )
+                detail += "\n\n" + "".join(traceback.format_exception(*record.exc_info))
 
             signature = hashlib.sha1(
                 (message + detail).encode("utf-8", "replace")
