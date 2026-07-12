@@ -71,19 +71,43 @@ def test_handler_honors_no_dialog_extra():
     qtimer.singleShot.assert_not_called()
 
 
-def test_handler_queues_once_then_dedups():
-    """Identical message+traceback queues one dialog; the repeat is suppressed."""
+def test_handler_dedups_rapid_repeat_within_window():
+    """A fast repeat of the same error (within the dedup window) is collapsed
+    to one dialog, so a per-tick error can't storm the user with modals."""
     app = MagicMock()
     app.thread.return_value = "gui"
     with patch.object(main_mod, "QApplication") as qapp, patch.object(
         main_mod, "QThread"
-    ) as qthread, patch.object(main_mod, "QTimer") as qtimer:
+    ) as qthread, patch.object(main_mod, "QTimer") as qtimer, patch.object(
+        main_mod.time, "monotonic"
+    ) as mono:
         qapp.instance.return_value = app
         qthread.currentThread.return_value = "gui"
+        mono.side_effect = [100.0, 102.0]  # 2s apart, inside the 10s window
         handler = _ErrorDialogHandler()
         handler.emit(_record("same error"))
         handler.emit(_record("same error"))
     assert qtimer.singleShot.call_count == 1
+
+
+def test_handler_reshows_same_error_after_window():
+    """The same error surfacing again after the dedup window DOES show a new
+    dialog, so a genuine retry is not silently swallowed."""
+    app = MagicMock()
+    app.thread.return_value = "gui"
+    with patch.object(main_mod, "QApplication") as qapp, patch.object(
+        main_mod, "QThread"
+    ) as qthread, patch.object(main_mod, "QTimer") as qtimer, patch.object(
+        main_mod.time, "monotonic"
+    ) as mono:
+        qapp.instance.return_value = app
+        qthread.currentThread.return_value = "gui"
+        # 2nd occurrence is 15s later — past the 10s window.
+        mono.side_effect = [100.0, 115.0]
+        handler = _ErrorDialogHandler()
+        handler.emit(_record("same error"))
+        handler.emit(_record("same error"))
+    assert qtimer.singleShot.call_count == 2
 
 
 def test_handler_emit_never_raises():

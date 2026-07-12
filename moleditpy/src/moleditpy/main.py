@@ -18,8 +18,9 @@ import logging.handlers
 import os
 import sys
 import argparse
+import time
 import traceback
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from .utils.constants import VERSION
 
@@ -61,18 +62,24 @@ class _ErrorDialogHandler(logging.Handler):
     in :func:`setup_logging` (only for a real GUI run, never headless).
 
     Guards: GUI thread + live QApplication only (a worker-thread record, where a
-    QMessageBox is unsafe, stays log-only); per-message-signature dedup so a
-    repeating error surfaces once, not once per tick; and
-    ``extra={"no_dialog": True}`` to opt a record out. ``emit`` never raises.
+    QMessageBox is unsafe, stays log-only); a time-windowed dedup so a fast
+    repeating error (e.g. from a QTimer slot) collapses to one dialog while a
+    genuine retry seconds later surfaces again; and ``extra={"no_dialog": True}``
+    to opt a record out. ``emit`` never raises.
 
     The dialog is shown non-blocking (``show``, not ``exec``): it never spins a
     nested event loop, so it cannot freeze the app — or a GUI-enabled test run —
     while it is on screen.
     """
 
+    # Identical errors within this many seconds share one dialog; a repeat
+    # after it surfaces again.
+    _DEDUP_WINDOW_S = 10.0
+
     def __init__(self, log_path: Optional[str] = None) -> None:
         super().__init__(level=logging.ERROR)
-        self._shown_signatures: set[str] = set()
+        # signature -> monotonic timestamp of its last shown dialog.
+        self._last_shown: Dict[str, float] = {}
         # Held so a non-blocking box is not garbage-collected before it closes.
         self._open_boxes: set = set()
         self._log_path = log_path
@@ -93,9 +100,11 @@ class _ErrorDialogHandler(logging.Handler):
             signature = hashlib.sha1(
                 (message + detail).encode("utf-8", "replace")
             ).hexdigest()
-            if signature in self._shown_signatures:
+            now = time.monotonic()
+            last = self._last_shown.get(signature)
+            if last is not None and now - last < self._DEDUP_WINDOW_S:
                 return
-            self._shown_signatures.add(signature)
+            self._last_shown[signature] = now
 
             # Defer so a site's own QMessageBox.critical (raised right after the
             # log call) is already modal when _show checks activeModalWidget.
