@@ -162,7 +162,7 @@ class AlignPlaneDialog(BasePickingDialog):
             self.update_display()
 
         except (AttributeError, RuntimeError, TypeError, KeyError) as e:
-            logging.exception("Failed to select all atoms")
+            logging.warning("Failed to select all atoms", exc_info=True)
             QMessageBox.warning(self, "Warning", f"Failed to select all atoms: {e}")
 
     def update_display(self) -> None:
@@ -285,5 +285,4 @@ class AlignPlaneDialog(BasePickingDialog):
             self.show_atom_labels()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.exception("Failed to apply align")
-            QMessageBox.critical(self, "Error", f"Failed to apply align: {str(e)}")
+            logging.exception("Failed to apply align: %s", e)

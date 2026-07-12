@@ -390,7 +390,9 @@ class ComputeManager:
         try:
             success = bool(entry["callback"](mol))
         except Exception:  # plugins have full app access; isolate failures
-            logging.exception("Plugin optimization method '%s' failed", label)
+            logging.warning(
+                "Plugin optimization method '%s' failed", label, exc_info=True
+            )
             self._refresh_ui_state()
             self.host.update_status_message(
                 f"Plugin optimization '{label}' failed (see log)."
@@ -431,7 +433,7 @@ class ComputeManager:
         try:
             Chem.SanitizeMol(mol)
         except (ValueError, RuntimeError) as e:
-            logging.error(f"Sanitization failed: {e}")
+            logging.warning(f"Sanitization failed: {e}")
             self.host.statusBar().showMessage("Error: Invalid chemical structure.")  # type: ignore[union-attr]
             return None
         return mol
@@ -587,7 +589,8 @@ class ComputeManager:
             msg = str(message)
 
         self._remove_calculating_text()
-        self._restore_button_ui()
+        # Full restore like the success path, else Export stays disabled on error.
+        self._refresh_ui_state()
 
         if msg == "Halt" or msg == "Halted":
             self.host.statusBar().showMessage("Halted")  # type: ignore[union-attr]

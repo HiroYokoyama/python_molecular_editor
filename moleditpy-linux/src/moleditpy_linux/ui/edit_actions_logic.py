@@ -986,7 +986,7 @@ class EditActionsManager:
                 ):
                     problem_map[atom_id] = True
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.error(f"Error during chemistry problem detection: {e}")
+            logging.warning(f"Error during chemistry problem detection: {e}")
 
         return problem_map
 

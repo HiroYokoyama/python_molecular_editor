@@ -156,7 +156,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 self.ff_combo.setCurrentText("MMFF94s")
 
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            logging.exception("Could not set default force field")
+            logging.warning("Could not set default force field", exc_info=True)
 
     def init_ui(self) -> None:
         """Build the constrained optimization dialog with constraint table and controls."""
@@ -528,9 +528,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 add_torsion_constraint = ff.UFFAddTorsionConstraint
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            QMessageBox.critical(
-                self, "Error", f"Failed to initialize force field {ff_name}: {e}"
-            )
+            logging.exception("Failed to initialize force field %s: %s", ff_name, e)
             return
 
         # Add constraints
@@ -578,8 +576,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     )
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            QMessageBox.critical(self, "Error", f"Failed to add constraints: {e}")
-            logging.error("Failed to add constraints", exc_info=True)
+            logging.exception("Failed to add constraints: %s", e)
             return
 
         # Execute optimization
@@ -598,7 +595,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             self._opt_thread.start()
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to start optimization: {e}")
+            logging.exception("Failed to start optimization: %s", e)
             self.optimize_button.setEnabled(True)
 
     def _on_optimization_error(self, err_msg: str) -> None:
@@ -673,7 +670,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 logging.warning("Failed to save constraints post-optimization: %s", e)
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            QMessageBox.critical(self, "Error", f"Optimization failed: {e}")
+            logging.exception("Optimization failed: %s", e)
 
     def closeEvent(self, event: Any) -> None:
         """Delegate window close to reject."""
