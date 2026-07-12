@@ -34,6 +34,10 @@ class PluginMenuManager:
     can access shared state (host, buttons, toolbars) without duplicating them.
     """
 
+    # QAction.data() marker stamped on every plugin-owned menu entry/separator
+    # so the rebuild pass can find and remove exactly those on the next reload.
+    _PLUGIN_ACTION_TAG = "plugin_managed"
+
     def __init__(self, init_manager: MainInitManager) -> None:
         self._im = init_manager
 
@@ -55,6 +59,21 @@ class PluginMenuManager:
                     logging.debug("Suppressed non-critical error", exc_info=True)
 
         return _safe
+
+    @staticmethod
+    def _remove_action(menu: QMenu, action: QAction) -> None:
+        """Remove *action* from *menu* and from its QActionGroup, if any.
+
+        Checkable plugin actions (e.g. custom 3D styles) are added to an
+        exclusive QActionGroup. ``menu.removeAction`` alone leaves them in the
+        group — and, being parented to the host, alive — so each rebuild would
+        leak a stale member into the group and could drop the active item's
+        check state. Detaching from the group first keeps the group in sync.
+        """
+        group = action.actionGroup()
+        if group is not None:
+            group.removeAction(action)
+        menu.removeAction(action)
 
     def _get_plugin_target_menus(self) -> List[QMenu]:
         """Return a list of all menus that might contain plugin actions."""
@@ -115,7 +134,6 @@ class PluginMenuManager:
         re-populates every integration point: menus, toolbars, export,
         file-openers, analysis tools, and 3D styles.
         """
-        plugin_action_tag = "plugin_managed"
 
         def _clean_menu(menu: QMenu) -> None:
             for action in list(menu.actions()):
@@ -124,8 +142,8 @@ class PluginMenuManager:
                     _clean_menu(submenu)
                     if not any(not a.isSeparator() for a in submenu.actions()):
                         menu.removeAction(action)
-                elif action.data() == plugin_action_tag:
-                    menu.removeAction(action)
+                elif action.data() == self._PLUGIN_ACTION_TAG:
+                    self._remove_action(menu, action)
 
         try:
             for menu in self._get_plugin_target_menus():
@@ -151,7 +169,6 @@ class PluginMenuManager:
 
     def add_registered_plugin_actions(self) -> None:
         """Add menu actions explicitly registered by V3/V4 plugins."""
-        plugin_action_tag = "plugin_managed"
         if not self._im.host.plugin_manager.menu_actions:
             return
 
@@ -192,10 +209,10 @@ class PluginMenuManager:
             if (
                 actions
                 and not actions[-1].isSeparator()
-                and actions[-1].data() != plugin_action_tag
+                and actions[-1].data() != self._PLUGIN_ACTION_TAG
             ):
                 sep = current_menu.addSeparator()
-                sep.setData(plugin_action_tag)
+                sep.setData(self._PLUGIN_ACTION_TAG)
 
             action = QAction(text or parts[-1], self._im.host)
             action.triggered.connect(
@@ -203,7 +220,7 @@ class PluginMenuManager:
             )
             if action_def.get("shortcut"):
                 action.setShortcut(QKeySequence(action_def["shortcut"]))
-            action.setData(plugin_action_tag)
+            action.setData(self._PLUGIN_ACTION_TAG)
             current_menu.addAction(action)
 
     def add_plugin_toolbar_actions(self) -> None:
@@ -248,14 +265,13 @@ class PluginMenuManager:
 
     def _clear_all_plugin_actions(self, plugin_menu: QMenu) -> None:
         """Remove all tagged plugin actions from every menu and the export button."""
-        plugin_action_tag = "plugin_managed"
 
         def clear_menu(menu: Any) -> None:
             if not menu:
                 return
             for act in list(menu.actions()):
-                if act.data() == plugin_action_tag:
-                    menu.removeAction(act)
+                if act.data() == self._PLUGIN_ACTION_TAG:
+                    self._remove_action(menu, act)
                 elif act.menu():
                     clear_menu(act.menu())
 
@@ -265,7 +281,6 @@ class PluginMenuManager:
 
     def update_style_menu_with_plugins(self) -> None:
         """Append custom 3D styles registered by plugins to the style menu."""
-        plugin_action_tag = "plugin_managed"
         style_button = getattr(self._im, "style_button", None)
         if not style_button or not style_button.menu():
             return
@@ -278,7 +293,7 @@ class PluginMenuManager:
         if style_group and self._im.host.plugin_manager.custom_3d_styles:
             if style_menu.actions() and not style_menu.actions()[-1].isSeparator():
                 sep = style_menu.addSeparator()
-                sep.setData(plugin_action_tag)
+                sep.setData(self._PLUGIN_ACTION_TAG)
 
             for style_name in self._im.host.plugin_manager.custom_3d_styles:
                 if not any(a.text() == style_name for a in style_menu.actions()):
@@ -288,7 +303,7 @@ class PluginMenuManager:
                         lambda checked=False,
                         s=style_name: self._im.host.view_3d_manager.set_3d_style(s)
                     )
-                    action.setData(plugin_action_tag)
+                    action.setData(self._PLUGIN_ACTION_TAG)
                     style_menu.addAction(action)
                     style_group.addAction(action)
 
@@ -352,7 +367,6 @@ class PluginMenuManager:
         if not self._im.host.plugin_manager.export_actions:
             return
 
-        plugin_action_tag = "plugin_managed"
         main_export_menu = None
         for top_action in self._im.host.menuBar().actions():
             if top_action.menu() and top_action.text().replace("&", "") == "File":
@@ -376,7 +390,7 @@ class PluginMenuManager:
 
         for menu in targets:
             sep = menu.addSeparator()
-            sep.setData(plugin_action_tag)
+            sep.setData(self._PLUGIN_ACTION_TAG)
             for exp in self._im.host.plugin_manager.export_actions:
                 a = QAction(exp["label"], self._im.host)
                 a.triggered.connect(
@@ -384,7 +398,7 @@ class PluginMenuManager:
                         exp["callback"], exp.get("plugin", "Plugin")
                     )
                 )
-                a.setData(plugin_action_tag)
+                a.setData(self._PLUGIN_ACTION_TAG)
                 menu.addAction(a)
 
     def integrate_plugin_optimization_methods(self) -> None:
@@ -402,7 +416,7 @@ class PluginMenuManager:
             return
 
         for key, action in list(im.opt3d_actions.items()):
-            if action.data() == "plugin_managed":
+            if action.data() == self._PLUGIN_ACTION_TAG:
                 im.opt_group.removeAction(action)
                 im.optimization_menu.removeAction(action)
                 del im.opt3d_actions[key]
@@ -411,7 +425,7 @@ class PluginMenuManager:
         for key, entry in methods.items():
             im.add_optimization_method(entry["label"], key)
             if key in im.opt3d_actions:
-                im.opt3d_actions[key].setData("plugin_managed")
+                im.opt3d_actions[key].setData(self._PLUGIN_ACTION_TAG)
 
     def integrate_plugin_file_openers(self) -> None:
         """Inject plugin file-opener entries into the File > Import menu."""
@@ -424,9 +438,8 @@ class PluginMenuManager:
         if import_menu is None:
             return
 
-        plugin_action_tag = "plugin_managed"
         sep = import_menu.addSeparator()
-        sep.setData(plugin_action_tag)
+        sep.setData(self._PLUGIN_ACTION_TAG)
 
         plugin_map: Dict[str, Any] = {}
         for ext, openers in self._im.host.plugin_manager.file_openers.items():
@@ -471,7 +484,7 @@ class PluginMenuManager:
 
             a = QAction(f"Import {ext_str} ({p_name})...", self._im.host)
             a.triggered.connect(make_cb(ext_map, filter_str, p_name))
-            a.setData(plugin_action_tag)
+            a.setData(self._PLUGIN_ACTION_TAG)
             import_menu.addAction(a)
 
     def integrate_plugin_analysis_tools(self) -> None:
@@ -485,9 +498,8 @@ class PluginMenuManager:
             None,
         )
         if analysis_menu and self._im.host.plugin_manager.analysis_tools:
-            plugin_action_tag = "plugin_managed"
             sep = analysis_menu.addSeparator()
-            sep.setData(plugin_action_tag)
+            sep.setData(self._PLUGIN_ACTION_TAG)
             for tool in self._im.host.plugin_manager.analysis_tools:
                 a = QAction(
                     f"{tool['label']} ({tool.get('plugin', 'Plugin')})", self._im.host
@@ -497,7 +509,7 @@ class PluginMenuManager:
                         tool["callback"], tool.get("plugin", "Plugin")
                     )
                 )
-                a.setData(plugin_action_tag)
+                a.setData(self._PLUGIN_ACTION_TAG)
                 analysis_menu.addAction(a)
 
     def _clear_plugin_ui_elements(self, plugin_menu: QMenu) -> None:
