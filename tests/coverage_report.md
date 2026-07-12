@@ -7,8 +7,8 @@
 | File | Stmts | Miss | Cover |
 | :--- | :--- | :--- | :--- |
 | moleditpy\src\moleditpy\__init__.py                     |      6 |      2 |   66.7% |
-| moleditpy\src\moleditpy\main.py                         |    164 |     34 |   79.3% |
-| moleditpy\src\moleditpy\core\mol_geometry.py            |    292 |     42 |   85.6% |
+| moleditpy\src\moleditpy\main.py                         |    168 |     35 |   79.2% |
+| moleditpy\src\moleditpy\core\mol_geometry.py            |    292 |     43 |   85.3% |
 | moleditpy\src\moleditpy\core\molecular_data.py          |    258 |     28 |   89.1% |
 | moleditpy\src\moleditpy\plugins\plugin_interface.py     |    233 |      6 |   97.4% |
 | moleditpy\src\moleditpy\plugins\plugin_manager.py       |    378 |      8 |   97.9% |
@@ -67,7 +67,7 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     39 |      0 |  100.0% |
-| **TOTAL** | **16097** | **2768** | **82.80%** |
+| **TOTAL** | **16101** | **2770** | **82.80%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED

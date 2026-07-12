@@ -301,6 +301,16 @@ _Test the internal binary state serialization used for Undo/Redo._
 - assert mw.state_manager.data.atoms[aid]['symbol'] == 'N'
 - assert mw.view_3d_manager.current_mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == aid
 
+### test_undo_restore_preserves_camera
+_Undo/redo (is_restoring_state) must NOT reset the camera — draw_molecule_3d_
+
+- mw.view_3d_manager.plotter.reset_camera.assert_not_called()
+
+### test_fresh_load_refits_camera
+_A normal load (not restoring state) still refits the camera._
+
+- mw.view_3d_manager.plotter.reset_camera.assert_called_once()
+
 ### test_legacy_version_handling
 _Verify that version mismatch warnings are triggered (but don't crash)._
 
@@ -3015,10 +3025,15 @@ _extra={'no_dialog': True} opts a record out entirely._
 
 - qtimer.singleShot.assert_not_called()
 
-### test_handler_queues_once_then_dedups
-_Identical message+traceback queues one dialog; the repeat is suppressed._
+### test_handler_dedups_rapid_repeat_within_window
+_A fast repeat of the same error (within the dedup window) is collapsed_
 
 - assert qtimer.singleShot.call_count == 1
+
+### test_handler_reshows_same_error_after_window
+_The same error surfacing again after the dedup window DOES show a new_
+
+- assert qtimer.singleShot.call_count == 2
 
 ### test_handler_emit_never_raises
 _emit must swallow internal failures (logging contract)._
@@ -3971,7 +3986,7 @@ _MoveSelectedAtomsDialog pre-populates selected_atoms from preselected_atoms._
 - assert dlg.selected_atoms == {0, 1}
 
 ### test_show_atom_labels_none_positions
-_show_atom_labels logs an error and does nothing when atom_positions_3d is None._
+_show_atom_labels logs a warning and does nothing when atom_positions_3d is None._
 
 - mock_log.assert_called_once_with('atom_positions_3d is None in update_atom_labels')
 
@@ -4819,7 +4834,7 @@ _get_main_window returns the value set by set_main_window._
 - assert pm.get_main_window() == 'mw'
 
 ### TestPluginManagerExtended.test_ensure_plugin_dir_error
-_ensure_plugin_dir logs an error when os.makedirs raises OSError._
+_ensure_plugin_dir logs a warning when os.makedirs raises OSError._
 
 - mock_log.assert_called_with('Error creating plugin directory: test mkdir err')
 
@@ -4862,7 +4877,7 @@ _discover_plugins returns an empty list when the plugin directory does not exist
 - assert pm.discover_plugins() == []
 
 ### TestPluginManagerExtended.test_load_single_plugin_exceptions_and_stub
-__load_single_plugin logs errors on RuntimeError and handles a None spec._
+__load_single_plugin logs warnings on RuntimeError and handles a None spec._
 
 - assert 'Cat' in sys.modules
 - assert 'Cat.SubCat' in sys.modules
@@ -4913,7 +4928,7 @@ _register_window stores and get_window retrieves a plugin's named window._
 - assert pm.get_window('P1', 'w1') == 'WIN'
 
 ### TestPluginManagerExtended.test_invoke_document_reset_handlers_logs_error
-_invoke_document_reset_handlers logs an error when a handler raises._
+_invoke_document_reset_handlers logs a warning when a handler raises._
 
 - mock_log.assert_called()
 
