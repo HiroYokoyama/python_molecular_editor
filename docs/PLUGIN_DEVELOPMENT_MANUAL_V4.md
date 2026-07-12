@@ -791,7 +791,7 @@ def my_callback(context):
 | `logging.debug()` | Non-important, best-effort failures you deliberately swallow (parse-skip of a malformed line, optional settings load, dialog teardown races). Replaces `except: pass`. |
 | `logging.info()` | Notable lifecycle events (plugin loaded, file imported). |
 | `logging.warning()` | Something recoverable that the user may care about. **Do not** downgrade these to DEBUG just to quiet the log. |
-| `logging.error()` / `logging.exception()` | A real failure. `exception()` adds the traceback. |
+| `logging.error()` / `logging.exception()` | A real failure. `exception()` adds the traceback. **On app 4.3.0+ these also pop an error dialog** — see below. |
 
 **Suppressing "best-effort" blocks at DEBUG level** — instead of a silent `except: pass`, route the swallowed exception to DEBUG so it stays diagnosable. Either call `logging.debug("...", exc_info=True)` directly, or use the host helper `suppress_log` (available since app **4.2.0**), a drop-in `contextlib.suppress` that logs the suppressed exception at DEBUG with a full traceback:
 
@@ -803,6 +803,26 @@ with suppress_log(RuntimeError, AttributeError, note="teardown"):
 ```
 
 > If your plugin must also run against app versions **older than 4.2.0**, guard the import and fall back to `logging.debug(..., exc_info=True)`, since `suppress_log` will not exist there.
+
+**Error records surface a dialog (app 4.3.0+)** — since **4.3.0** the host attaches a global handler that shows the user a modal **error dialog** for every `logging.error()`, `logging.exception()`, and `logging.critical()` record. `warning`/`info`/`debug` never do. Practical consequences for plugins:
+
+- **Pick the level for the user, not just the log.** Use `error`/`exception` only for a genuine failure the user should be told about; use `logging.warning()` for something recoverable/background — it stays log-only, no dialog. (This is why a noisy `logging.error` in a redraw or polling loop is now user-visible.)
+- **The dialog is deduped and non-blocking.** The same message is shown at most once per ~10 s (a fast repeat from a `QTimer` slot won't storm the user), it never blocks the event loop, and its *Details* expander shows the source `file:line` and traceback. Records logged off the GUI thread (e.g. from a `QThread` worker) stay log-only — a dialog there is unsafe.
+- **Avoid a double dialog when you show your own.** If your plugin logs the error **and** shows its own `QMessageBox.critical`, **log first, then show your dialog** — the host defers its generic dialog one tick and suppresses it when it sees your modal already open. The reverse order (dialog first, then log) pops **two** dialogs.
+
+```python
+except Exception as e:
+    logging.exception("MyPlugin: export failed")     # log FIRST
+    QMessageBox.critical(self, "Export failed", str(e))  # your dialog suppresses the host's
+```
+
+- **Opt a record out of the dialog** (still logged) with the `no_dialog` extra — for a genuine error you want recorded but don't want to interrupt the user with:
+
+```python
+logging.error("MyPlugin: background sync failed", extra={"no_dialog": True})
+```
+
+> The `no_dialog` extra is harmless on older apps (<4.3.0), which simply ignore it — no version guard needed.
 
 ---
 
