@@ -11,20 +11,22 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import ctypes
+import hashlib
 import json
 import logging
 import logging.handlers
 import os
 import sys
 import argparse
+import traceback
 from typing import Any, Optional
 
 from .utils.constants import VERSION
 
 # VERSION is resolved above (before Qt) so --version works without launching the app.
 
-from PyQt6.QtCore import QtMsgType, qInstallMessageHandler
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QtMsgType, QThread, qInstallMessageHandler
+from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from .ui.main_window import MainWindow
 
@@ -47,6 +49,57 @@ def _qt_message_handler(mode: QtMsgType, _context: Any, message: Optional[str]) 
             logging.debug("Qt: %s", message)
             return
     logging.log(_QT_LOG_LEVEL.get(mode, logging.WARNING), "Qt: %s", message)
+
+
+# Traceback signatures already shown this session, so a repeating exception
+# (e.g. one thrown from a QTimer slot or a paint event) surfaces a dialog once
+# instead of storming the user with an unclosable stack of modals.
+_shown_exception_signatures: set[str] = set()
+
+
+def _show_exception_dialog(
+    exc_type: Any, exc_value: Any, exc_traceback: Any
+) -> None:
+    """Surface an uncaught exception in a modal dialog, at most once per bug.
+
+    Only runs when a GUI event loop is up and we are on the GUI thread — an
+    exception raised before/without the QApplication, or from a worker thread
+    (where a QMessageBox is unsafe), falls back to the already-emitted log
+    record. Anything that goes wrong here is swallowed to DEBUG so the
+    excepthook can never recurse or mask the original error.
+    """
+    try:
+        app = QApplication.instance()
+        if app is None or QThread.currentThread() is not app.thread():
+            return
+
+        tb_text = "".join(
+            traceback.format_exception(exc_type, exc_value, exc_traceback)
+        )
+        signature = hashlib.sha1(tb_text.encode("utf-8", "replace")).hexdigest()
+        if signature in _shown_exception_signatures:
+            return
+        _shown_exception_signatures.add(signature)
+
+        log_path = os.path.join(
+            os.path.expanduser("~"), ".moleditpy", "moleditpy.log"
+        )
+        box = QMessageBox()
+        box.setIcon(QMessageBox.Icon.Critical)
+        box.setWindowTitle("MoleditPy — Unexpected Error")
+        box.setText(
+            "An unexpected error occurred. The application may be unstable; "
+            "saving your work and restarting is recommended."
+        )
+        box.setInformativeText(
+            f"{exc_type.__name__}: {exc_value}\n\n"
+            f"Details are in the log:\n{log_path}"
+        )
+        box.setDetailedText(tb_text)
+        box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        box.exec()
+    except Exception:
+        logging.debug("Failed to show exception dialog", exc_info=True)
 
 
 def _read_startup_log_settings() -> tuple[bool, bool]:
@@ -94,13 +147,18 @@ def setup_logging() -> None:
             logging.warning("Could not open log file: %s", e)
 
     def handle_exception(exc_type: Any, exc_value: Any, exc_traceback: Any) -> None:
-        """Log unhandled exceptions using the configured logging system."""
+        """Log unhandled exceptions and, if a GUI is up, surface them once.
+
+        This fires only for genuinely uncaught exceptions (real bugs) — never
+        for logged warnings/info, which do not pass through sys.excepthook.
+        """
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
         logging.error(
             "Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback)
         )
+        _show_exception_dialog(exc_type, exc_value, exc_traceback)
 
     sys.excepthook = handle_exception
 

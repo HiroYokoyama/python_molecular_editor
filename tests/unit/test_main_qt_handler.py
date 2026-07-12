@@ -16,11 +16,82 @@ if _SRC not in sys.path:
 
 from PyQt6.QtCore import QtMsgType
 
+import moleditpy.main as main_mod
 from moleditpy.main import (
     _DOWNGRADED_QT_PATTERNS,
     _qt_message_handler,
     _read_startup_log_settings,
+    _show_exception_dialog,
 )
+
+
+def _exc_args(message="boom"):
+    """Build a (type, value, tb) triple for a real raised exception."""
+    try:
+        raise ValueError(message)
+    except ValueError as exc:
+        return type(exc), exc, exc.__traceback__
+
+
+@pytest.fixture(autouse=True)
+def _clear_shown_signatures():
+    """Isolate the module-level dedup set between tests."""
+    main_mod._shown_exception_signatures.clear()
+    yield
+    main_mod._shown_exception_signatures.clear()
+
+
+def test_exception_dialog_skipped_without_qapplication():
+    """No GUI event loop → no dialog (the log record is the only surface)."""
+    with patch.object(main_mod, "QApplication") as qapp, patch.object(
+        main_mod, "QMessageBox"
+    ) as qmb:
+        qapp.instance.return_value = None
+        _show_exception_dialog(*_exc_args())
+    qmb.assert_not_called()
+
+
+def test_exception_dialog_skipped_off_gui_thread():
+    """A worker-thread exception must not pop a QMessageBox (unsafe)."""
+    app = MagicMock()
+    with patch.object(main_mod, "QApplication") as qapp, patch.object(
+        main_mod, "QThread"
+    ) as qthread, patch.object(main_mod, "QMessageBox") as qmb:
+        qapp.instance.return_value = app
+        app.thread.return_value = "gui-thread"
+        qthread.currentThread.return_value = "worker-thread"
+        _show_exception_dialog(*_exc_args())
+    qmb.assert_not_called()
+
+
+def test_exception_dialog_shown_once_on_gui_thread():
+    """On the GUI thread the dialog is shown once, then deduped by traceback."""
+    app = MagicMock()
+    with patch.object(main_mod, "QApplication") as qapp, patch.object(
+        main_mod, "QThread"
+    ) as qthread, patch.object(main_mod, "QMessageBox") as qmb:
+        qapp.instance.return_value = app
+        app.thread.return_value = "gui-thread"
+        qthread.currentThread.return_value = "gui-thread"
+        args = _exc_args()
+        _show_exception_dialog(*args)
+        _show_exception_dialog(*args)  # identical traceback → suppressed
+    assert qmb.call_count == 1
+    qmb.return_value.exec.assert_called_once()
+
+
+def test_exception_dialog_swallows_its_own_errors():
+    """A failure while building the dialog must not escape the excepthook."""
+    app = MagicMock()
+    with patch.object(main_mod, "QApplication") as qapp, patch.object(
+        main_mod, "QThread"
+    ) as qthread, patch.object(main_mod, "QMessageBox") as qmb:
+        qapp.instance.return_value = app
+        app.thread.return_value = "gui-thread"
+        qthread.currentThread.return_value = "gui-thread"
+        qmb.side_effect = RuntimeError("Qt is gone")
+        # Must not raise.
+        _show_exception_dialog(*_exc_args())
 
 
 @pytest.mark.parametrize("pattern", _DOWNGRADED_QT_PATTERNS)
