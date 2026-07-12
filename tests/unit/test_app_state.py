@@ -446,6 +446,42 @@ def test_undo_state_binary_roundtrip(dummy_window):
     )
 
 
+def _state_with_3d_mol(mw):
+    aid = mw.state_manager.data.add_atom("N", QPointF(5, 5))
+    mol = Chem.AddHs(Chem.MolFromSmiles("N"))
+    AllChem.EmbedMolecule(mol)
+    mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", aid)
+    mw.view_3d_manager.current_mol = mol
+    return mw.get_current_state()
+
+
+def test_undo_restore_preserves_camera(dummy_window):
+    """Undo/redo (is_restoring_state) must NOT reset the camera — draw_molecule_3d
+    already preserves it, so the user's zoom survives the restore."""
+    mw = dummy_window
+    state = _state_with_3d_mol(mw)
+
+    mw.clear_2d_editor(push_to_undo=False)
+    mw.is_restoring_state = True
+    mw.view_3d_manager.plotter.reset_camera.reset_mock()
+    mw.set_state_from_data(state)
+
+    mw.view_3d_manager.plotter.reset_camera.assert_not_called()
+
+
+def test_fresh_load_refits_camera(dummy_window):
+    """A normal load (not restoring state) still refits the camera."""
+    mw = dummy_window
+    state = _state_with_3d_mol(mw)
+
+    mw.clear_2d_editor(push_to_undo=False)
+    mw.is_restoring_state = False
+    mw.view_3d_manager.plotter.reset_camera.reset_mock()
+    mw.set_state_from_data(state)
+
+    mw.view_3d_manager.plotter.reset_camera.assert_called_once()
+
+
 def test_legacy_version_handling(dummy_window):
     """Verify that version mismatch warnings are triggered (but don't crash)."""
     mw = dummy_window

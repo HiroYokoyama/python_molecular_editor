@@ -223,7 +223,11 @@ class StateManager:
                     self.host.view_3d_manager.draw_molecule_3d(
                         self.host.view_3d_manager.current_mol
                     )
-                    if self.host.view_3d_manager.plotter:
+                    # draw_molecule_3d already preserves the camera; only refit
+                    # on a fresh load, not on undo/redo (which restores state).
+                    if self.host.view_3d_manager.plotter and not getattr(
+                        self.host, "is_restoring_state", False
+                    ):
                         self.host.view_3d_manager.plotter.reset_camera()
 
                     self.host.ui_manager.enable_3d_features(True)
