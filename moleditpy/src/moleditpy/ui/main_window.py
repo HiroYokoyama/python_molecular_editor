@@ -260,7 +260,7 @@ class MainWindow(QMainWindow):
                 self.state_manager.get_current_state()
             )
         except (RuntimeError, TypeError, ValueError, AttributeError) as e:
-            logging.error(f"save_state_snapshot failed: {e}")
+            logging.warning(f"save_state_snapshot failed: {e}")
 
     def update_window_title(self) -> None:
         """Update main window title to reflect file path and save status."""

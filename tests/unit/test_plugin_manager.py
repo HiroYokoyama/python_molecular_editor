@@ -473,9 +473,9 @@ except BaseException:
 
     @patch("os.makedirs", side_effect=OSError("test mkdir err"))
     @patch("os.path.exists", return_value=False)
-    @patch("logging.error")
+    @patch("logging.warning")
     def test_ensure_plugin_dir_error(self, mock_log, mock_exists, mock_makedirs):
-        """ensure_plugin_dir logs an error when os.makedirs raises OSError."""
+        """ensure_plugin_dir logs a warning when os.makedirs raises OSError."""
         pm = PluginManager()
         pm.ensure_plugin_dir()
         mock_log.assert_called_with("Error creating plugin directory: test mkdir err")
@@ -589,10 +589,10 @@ except BaseException:
 
     @patch("importlib.util.spec_from_file_location")
     def test_load_single_plugin_exceptions_and_stub(self, mock_spec):
-        """_load_single_plugin logs errors on RuntimeError and handles a None spec."""
+        """_load_single_plugin logs warnings on RuntimeError and handles a None spec."""
         pm = PluginManager()
         mock_spec.side_effect = RuntimeError("Load err")
-        with patch("logging.error") as mock_log:
+        with patch("logging.warning") as mock_log:
             pm._load_single_plugin("test.py", "test", "cat")
             mock_log.assert_called()
 
@@ -721,14 +721,14 @@ except BaseException:
         assert pm.get_window("P1", "w1") == "WIN"
 
     def test_invoke_document_reset_handlers_logs_error(self):
-        """invoke_document_reset_handlers logs an error when a handler raises."""
+        """invoke_document_reset_handlers logs a warning when a handler raises."""
         pm = PluginManager()
 
         def bad_cb():
             raise RuntimeError("Reset err")
 
         pm.register_document_reset_handler("P1", bad_cb)
-        with patch("logging.error") as mock_log:
+        with patch("logging.warning") as mock_log:
             pm.invoke_document_reset_handlers()
             mock_log.assert_called()
 

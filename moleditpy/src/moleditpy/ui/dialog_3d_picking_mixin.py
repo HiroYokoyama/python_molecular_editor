@@ -100,7 +100,7 @@ class Dialog3DPickingMixin:
                 return False
 
             except (AttributeError, RuntimeError, ValueError, TypeError):
-                logging.exception("Error in eventFilter")
+                logging.warning("Error in eventFilter", exc_info=True)
                 return False
 
         # Add movement tracking for smart selection

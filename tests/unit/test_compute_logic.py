@@ -198,6 +198,16 @@ def test_on_calculation_error_basic(mock_parser_host):
     assert "Real Error" in compute.statusBar().showMessage.call_args[0][0]
 
 
+def test_on_calculation_error_reenables_export(mock_parser_host):
+    """A failed optimization runs the full UI restore (which re-enables Export),
+    not just the convert/optimize button restore."""
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"active_id"}
+    with patch.object(compute, "_refresh_ui_state") as refresh:
+        compute.on_calculation_error(("active_id", "Optimization failed"))
+    refresh.assert_called_once()
+
+
 def test_compute_set_optimization_method(mock_parser_host):
     """Verify that setting the optimization method updates both settings and internal state."""
     compute = DummyCompute(mock_parser_host)

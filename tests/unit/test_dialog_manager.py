@@ -27,6 +27,7 @@ No local imports exist in dialog_logic.py so all classes are patchable at the
 module level.
 """
 
+import logging
 import os
 import sys
 import json
@@ -400,18 +401,18 @@ class TestSave2DAsTemplate:
             dm.save_2d_as_template()
         assert json.loads(f.read_text()) == {"original": True}
 
-    def test_shows_error_on_exception(self, dm):
-        """save_2d_as_template shows a critical error dialog when serialisation raises."""
+    def test_shows_error_on_exception(self, dm, caplog):
+        """save_2d_as_template logs the error when serialisation raises."""
         dm.host.state_manager.data.to_template_dict.side_effect = AttributeError("boom")
         with (
             patch(
                 "moleditpy.ui.dialog_logic.QInputDialog.getText",
                 return_value=("mytemplate", True),
             ),
-            patch("moleditpy.ui.dialog_logic.QMessageBox.critical") as mock_crit,
+            caplog.at_level(logging.ERROR),
         ):
             dm.save_2d_as_template()
-        mock_crit.assert_called_once()
+        assert "Failed to save template: boom" in caplog.text
 
 
 # ===========================================================================

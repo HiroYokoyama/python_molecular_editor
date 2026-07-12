@@ -223,6 +223,48 @@ class TestRebuildCleanup:
         # The tagged action should be removed
         export_menu.removeAction.assert_called_once_with(tagged_action)
 
+    def test_rebuild_detaches_tagged_action_from_its_action_group(self):
+        """A tagged action in a QActionGroup (e.g. a custom 3D style) must be
+        removed from the group as well as the menu, otherwise it leaks into the
+        exclusive group across rebuilds and can drop the active check state."""
+        im = _make_im()
+
+        style_menu = MagicMock()
+        im.style_button.menu.return_value = style_menu
+
+        group = MagicMock()
+        tagged_action = MagicMock()
+        tagged_action.data.return_value = "plugin_managed"
+        tagged_action.menu.return_value = None
+        tagged_action.actionGroup.return_value = group
+        style_menu.actions.return_value = [tagged_action]
+
+        pmm = PluginMenuManager(im)
+        pmm.rebuild_plugin_menus()
+
+        group.removeAction.assert_called_once_with(tagged_action)
+        style_menu.removeAction.assert_called_once_with(tagged_action)
+
+    def test_untagged_action_in_group_is_left_alone(self):
+        """A non-plugin action sharing the style group must not be touched."""
+        im = _make_im()
+
+        style_menu = MagicMock()
+        im.style_button.menu.return_value = style_menu
+
+        group = MagicMock()
+        builtin_action = MagicMock()
+        builtin_action.data.return_value = None
+        builtin_action.menu.return_value = None
+        builtin_action.actionGroup.return_value = group
+        style_menu.actions.return_value = [builtin_action]
+
+        pmm = PluginMenuManager(im)
+        pmm.rebuild_plugin_menus()
+
+        group.removeAction.assert_not_called()
+        style_menu.removeAction.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # MainWindow.plugin_menu_manager proxy and PluginManager call path

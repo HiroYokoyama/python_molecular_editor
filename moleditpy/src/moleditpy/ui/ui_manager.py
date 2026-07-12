@@ -275,6 +275,11 @@ class UIManager(QObject):
             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
             logging.debug("Suppressed non-critical error", exc_info=True)
 
+        # Mark shutdown so benign teardown errors don't pop an error dialog.
+        app = QApplication.instance()
+        if app is not None:
+            app.setProperty("moleditpy_shutting_down", True)
+
         return True
 
     def closeEvent(self, event: QEvent) -> None:
@@ -365,7 +370,7 @@ class UIManager(QObject):
                     event.acceptProposedAction()
                     return
             except Exception:  # plugins have full app access; catch everything to prevent app-wide crash
-                logging.exception("Error in plugin drop handler")
+                logging.warning("Error in plugin drop handler", exc_info=True)
 
         # 2. Built-in Handlers
         file_lower = file_path.lower()

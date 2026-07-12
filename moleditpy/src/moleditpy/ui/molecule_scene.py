@@ -393,7 +393,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                             self.window.edit_actions_manager.push_undo_state()
                             data_changed = False  # Already added to undo stack, so skip redundant pushes later
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                        logging.error(
+                        logging.warning(
                             f"Error in E/Z stereo toggle (mousePressEvent): {e}",
                             exc_info=True,
                         )
@@ -632,7 +632,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                         self.update_all_items()  # Force redraw
                         self.window.edit_actions_manager.push_undo_state()  # Push to undo stack here
                 except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                    logging.error(
+                    logging.warning(
                         f"Error in E/Z stereo toggle (mouseReleaseEvent): {e}",
                         exc_info=True,
                     )
@@ -931,7 +931,7 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                 return
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 # On any unexpected error, fall back to default handling
-                logging.error(f"Error in connected component selection: {e}")
+                logging.warning(f"Error in connected component selection: {e}")
 
         elif self.mode in ["bond_2_5"]:
             event.accept()

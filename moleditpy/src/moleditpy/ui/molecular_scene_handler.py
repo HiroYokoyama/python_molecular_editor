@@ -851,7 +851,7 @@ class KeyboardMixin:
 
                 QGraphicsScene.keyPressEvent(self, event)  # type: ignore[arg-type]
             except (ImportError, AttributeError, TypeError, RuntimeError):
-                logging.exception("Error delegating keyPressEvent")
+                logging.warning("Error delegating keyPressEvent", exc_info=True)
             return
 
         view = self.views()[0]
@@ -1065,7 +1065,7 @@ class KeyboardMixin:
                         event.accept()
                         return
                     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                        logging.error(
+                        logging.warning(
                             f"Error changing atom symbol via key {key}: {e}",
                             exc_info=True,
                         )
@@ -1369,7 +1369,7 @@ class KeyboardMixin:
             QGraphicsScene.keyPressEvent(self, event)  # type: ignore[arg-type]
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.error(
+            logging.warning(
                 f"Unexpected error in MoleculeScene.keyPressEvent: {e}", exc_info=True
             )
             event.ignore()
@@ -1417,7 +1417,7 @@ class SceneQueryMixin:
     ) -> Any:
         """Add a bond between two atom items in both data model and scene."""
         if start_atom is None or end_atom is None:
-            logging.error("Error: Cannot create bond with None atoms")
+            logging.warning("Error: Cannot create bond with None atoms")
             return
 
         try:
@@ -1443,7 +1443,7 @@ class SceneQueryMixin:
             end_atom.update_style()
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            logging.error(f"Error creating bond: {e}", exc_info=True)
+            logging.warning(f"Error creating bond: {e}", exc_info=True)
             self.update_all_items()
 
     def delete_items(self, items_to_delete: Any) -> bool:
@@ -1578,7 +1578,7 @@ class SceneQueryMixin:
             return True
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.error(f"Error during delete_items operation: {e}", exc_info=True)
+            logging.warning(f"Error during delete_items operation: {e}", exc_info=True)
             self.update_all_items()
             return False
 
@@ -1642,7 +1642,7 @@ class SceneQueryMixin:
             self.data_changed_in_event = True
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.error(
+            logging.warning(
                 f"Error updating bond stereo for bond {bond_item}: {e}", exc_info=True
             )
             self.window.statusBar().showMessage(f"Error: {e}", 5000)

@@ -170,7 +170,7 @@ class PlanarizeDialog(BasePickingDialog):
             # Get positions of selected atoms
             selected_indices = list(sorted(self.selected_atoms))
             if self.main_window.view_3d_manager.atom_positions_3d is None:
-                logging.error("atom_positions_3d is None in apply_planarize")
+                logging.warning("atom_positions_3d is None in apply_planarize")
                 return
             selected_positions = self.main_window.view_3d_manager.atom_positions_3d[
                 selected_indices
@@ -217,4 +217,4 @@ class PlanarizeDialog(BasePickingDialog):
             )
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            QMessageBox.critical(self, "Error", f"Failed to planarize: {e}")
+            logging.exception("Failed to planarize: %s", e)

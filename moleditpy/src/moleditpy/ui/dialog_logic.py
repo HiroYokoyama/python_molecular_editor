@@ -14,6 +14,7 @@ from __future__ import annotations
 
 
 import json
+import logging
 import os
 import sys
 from typing import Any, List, Literal, Optional, cast
@@ -187,9 +188,7 @@ class DialogManager:
             )
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            QMessageBox.critical(
-                self.host, "Error", f"Failed to save template: {str(e)}"
-            )
+            logging.exception("Failed to save template: %s", e)
 
     def _show_modeless_dialog(self, dialog: QDialog) -> None:
         """Show a modeless dialog on top, especially important for macOS."""

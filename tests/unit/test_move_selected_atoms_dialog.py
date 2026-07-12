@@ -299,10 +299,10 @@ def test_preselected_atoms_init(qapp):
 
 
 def test_show_atom_labels_none_positions(make_dialog):
-    """show_atom_labels logs an error and does nothing when atom_positions_3d is None."""
+    """show_atom_labels logs a warning and does nothing when atom_positions_3d is None."""
     dlg, mol, mw = make_dialog()
     mw.view_3d_manager.atom_positions_3d = None
-    with patch("moleditpy.ui.move_selected_atoms_dialog.logging.error") as mock_log:
+    with patch("moleditpy.ui.move_selected_atoms_dialog.logging.warning") as mock_log:
         dlg.selected_atoms.add(0)
         dlg.show_atom_labels()
         mock_log.assert_called_once_with(

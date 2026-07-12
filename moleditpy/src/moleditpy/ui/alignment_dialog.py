@@ -276,8 +276,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
             )
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.exception("Failed to apply alignment")
-            QMessageBox.critical(self, "Error", f"Failed to apply alignment: {str(e)}")
+            logging.exception("Failed to apply alignment: %s", e)
 
     def closeEvent(self, event: Optional[QCloseEvent]) -> None:
         """Clean up when the dialog is closed."""

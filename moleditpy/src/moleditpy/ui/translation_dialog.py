@@ -283,7 +283,7 @@ class TranslationDialog(BasePickingDialog):
             self.show_atom_labels()
             self.update_display()
         except (AttributeError, RuntimeError, TypeError) as exc:
-            logging.exception("Failed to select all atoms: %s", exc)
+            logging.warning("Failed to select all atoms: %s", exc, exc_info=True)
 
     def _set_origin(self) -> None:
         self.abs_x_input.setText("0.0000")

@@ -301,6 +301,16 @@ _Test the internal binary state serialization used for Undo/Redo._
 - assert mw.state_manager.data.atoms[aid]['symbol'] == 'N'
 - assert mw.view_3d_manager.current_mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == aid
 
+### test_undo_restore_preserves_camera
+_Undo/redo (is_restoring_state) must NOT reset the camera — draw_molecule_3d_
+
+- mw.view_3d_manager.plotter.reset_camera.assert_not_called()
+
+### test_fresh_load_refits_camera
+_A normal load (not restoring state) still refits the camera._
+
+- mw.view_3d_manager.plotter.reset_camera.assert_called_once()
+
 ### test_legacy_version_handling
 _Verify that version mismatch warnings are triggered (but don't crash)._
 
@@ -804,6 +814,11 @@ _Test on_calculation_error for an ACTIVE worker._
 
 - assert compute.statusBar().showMessage.called
 - assert 'Real Error' in compute.statusBar().showMessage.call_args[0][0]
+
+### test_on_calculation_error_reenables_export
+_A failed optimization runs the full UI restore (which re-enables Export),_
+
+- refresh.assert_called_once()
 
 ### test_compute_set_optimization_method
 _Verify that setting the optimization method updates both settings and internal state._
@@ -1723,9 +1738,9 @@ _save_2d_as_template leaves the existing file unchanged when user answers No._
 - assert json.loads(f.read_text()) == {'original': True}
 
 ### TestSave2DAsTemplate.test_shows_error_on_exception
-_save_2d_as_template shows a critical error dialog when serialisation raises._
+_save_2d_as_template logs the error when serialisation raises._
 
-- mock_crit.assert_called_once()
+- assert 'Failed to save template: boom' in caplog.text
 
 ### TestModelessGeometryDialogs.test_open_translation_dialog
 _open_translation_dialog shows a modeless dialog and wires up all signals._
@@ -3000,6 +3015,75 @@ _Test BondItem.update_position resilience when atoms exist._
 
 ## tests/unit/test_main_qt_handler.py
 
+### test_handler_skips_without_qapplication
+_No GUI event loop → nothing is queued (the log record is the surface)._
+
+- qtimer.singleShot.assert_not_called()
+
+### test_handler_skips_off_gui_thread
+_A worker-thread record must not queue a dialog (QMessageBox unsafe)._
+
+- qtimer.singleShot.assert_not_called()
+
+### test_handler_honors_no_dialog_extra
+_extra={'no_dialog': True} opts a record out entirely._
+
+- qtimer.singleShot.assert_not_called()
+
+### test_handler_suppressed_during_shutdown
+_Benign teardown errors must not pop a dialog once the app is closing._
+
+- qtimer.singleShot.assert_not_called()
+
+### test_handler_dedups_rapid_repeat_within_window
+_A fast repeat of the same error (within the dedup window) is collapsed_
+
+- assert qtimer.singleShot.call_count == 1
+
+### test_handler_reshows_same_error_after_window
+_The same error surfacing again after the dedup window DOES show a new_
+
+- assert qtimer.singleShot.call_count == 2
+
+### test_handler_emit_never_raises
+_emit must swallow internal failures (logging contract)._
+
+- handle_err.assert_called_once()
+
+### test_show_yields_to_existing_modal
+_If a site/plugin QMessageBox.critical is already up, stay quiet._
+
+- qmb.assert_not_called()
+
+### test_show_displays_non_blocking_when_no_modal
+_With no other modal up, the dialog is shown non-blocking (show, not exec)_
+
+- qmb.return_value.setDetailedText.assert_called_once()
+- qmb.return_value.show.assert_called_once()
+- qmb.return_value.exec.assert_not_called()
+- assert qmb.return_value in handler._open_boxes
+
+### test_show_swallows_its_own_errors
+_A failure while building the dialog must not propagate._
+
+
+### test_details_names_log_file_when_file_logging_on
+_The informative text points at the log file only when one is active._
+
+- assert '/home/u/.moleditpy/moleditpy.log' in with_file._details()
+- assert 'terminal' in hint.lower()
+- assert 'moleditpy.log' not in hint
+
+### test_dialog_handler_not_attached_when_headless
+_MOLEDITPY_HEADLESS must suppress the modal dialog handler entirely,_
+
+- assert _dialog_handlers() == []
+
+### test_dialog_handler_attached_when_not_headless
+_A real (non-headless) run installs exactly one dialog handler._
+
+- assert len(_dialog_handlers()) == 1
+
 ### test_downgraded_pattern_routes_to_debug
 _Messages matching a downgraded pattern are logged at DEBUG, not WARNING._
 
@@ -3912,7 +3996,7 @@ _MoveSelectedAtomsDialog pre-populates selected_atoms from preselected_atoms._
 - assert dlg.selected_atoms == {0, 1}
 
 ### test_show_atom_labels_none_positions
-_show_atom_labels logs an error and does nothing when atom_positions_3d is None._
+_show_atom_labels logs a warning and does nothing when atom_positions_3d is None._
 
 - mock_log.assert_called_once_with('atom_positions_3d is None in update_atom_labels')
 
@@ -4760,7 +4844,7 @@ _get_main_window returns the value set by set_main_window._
 - assert pm.get_main_window() == 'mw'
 
 ### TestPluginManagerExtended.test_ensure_plugin_dir_error
-_ensure_plugin_dir logs an error when os.makedirs raises OSError._
+_ensure_plugin_dir logs a warning when os.makedirs raises OSError._
 
 - mock_log.assert_called_with('Error creating plugin directory: test mkdir err')
 
@@ -4803,7 +4887,7 @@ _discover_plugins returns an empty list when the plugin directory does not exist
 - assert pm.discover_plugins() == []
 
 ### TestPluginManagerExtended.test_load_single_plugin_exceptions_and_stub
-__load_single_plugin logs errors on RuntimeError and handles a None spec._
+__load_single_plugin logs warnings on RuntimeError and handles a None spec._
 
 - assert 'Cat' in sys.modules
 - assert 'Cat.SubCat' in sys.modules
@@ -4854,7 +4938,7 @@ _register_window stores and get_window retrieves a plugin's named window._
 - assert pm.get_window('P1', 'w1') == 'WIN'
 
 ### TestPluginManagerExtended.test_invoke_document_reset_handlers_logs_error
-_invoke_document_reset_handlers logs an error when a handler raises._
+_invoke_document_reset_handlers logs a warning when a handler raises._
 
 - mock_log.assert_called()
 
@@ -4943,9 +5027,9 @@ _on_remove_plugin removes a package plugin by calling shutil.rmtree on its direc
 - mock_info.assert_called()
 
 ### test_on_remove_plugin_error
-_on_remove_plugin shows a critical error dialog when os.remove raises OSError._
+_on_remove_plugin logs the error when os.remove raises OSError._
 
-- mock_critical.assert_called_with(window, 'Error', 'Failed to delete plugin: Remove error')
+- assert 'Failed to delete plugin: Remove error' in caplog.text
 
 ### test_on_remove_plugin_not_exists
 _on_remove_plugin shows a warning when the plugin file does not exist._
@@ -7421,6 +7505,18 @@ _If one step raises, all subsequent steps still execute._
 _rebuild_plugin_menus must remove actions tagged with 'plugin_managed' from target menus._
 
 - export_menu.removeAction.assert_called_once_with(tagged_action)
+
+### TestRebuildCleanup.test_rebuild_detaches_tagged_action_from_its_action_group
+_A tagged action in a QActionGroup (e.g. a custom 3D style) must be_
+
+- group.removeAction.assert_called_once_with(tagged_action)
+- style_menu.removeAction.assert_called_once_with(tagged_action)
+
+### TestRebuildCleanup.test_untagged_action_in_group_is_left_alone
+_A non-plugin action sharing the style group must not be touched._
+
+- group.removeAction.assert_not_called()
+- style_menu.removeAction.assert_not_called()
 
 ### TestPluginMenuManagerRouting.test_main_window_proxy_returns_init_manager_pmm
 _MainWindow.plugin_menu_manager property reads from init_manager._

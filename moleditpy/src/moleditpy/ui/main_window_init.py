@@ -144,7 +144,7 @@ class MainInitManager:
             try:
                 self.host.plugin_manager = PluginManager()
             except (AttributeError, RuntimeError, ValueError) as e:
-                logging.error(f"Failed to initialize PluginManager: {e}")
+                logging.warning(f"Failed to initialize PluginManager: {e}")
                 self.host.plugin_manager = None
 
         # Dictionary holding data for plugins that haven't been loaded
@@ -189,7 +189,7 @@ class MainInitManager:
                 for atom in warmup_mol.GetAtoms():
                     atom.GetNumImplicitHs()
         except (AttributeError, RuntimeError, ValueError) as e:
-            logging.error(f"RDKit warm-up failed: {e}")
+            logging.warning(f"RDKit warm-up failed: {e}")
 
         self.host.state_manager.reset_undo_stack()
         self.scene.selectionChanged.connect(  # type: ignore[attr-defined]
@@ -304,9 +304,10 @@ class MainInitManager:
                     self.host.state_manager.update_window_title()
                     return  # Success
                 except Exception:  # plugins have full app access; any failure falls through to the next opener
-                    logging.exception(
+                    logging.warning(
                         "Plugin opener failed for '%s'",
                         opener_info.get("plugin", "Unknown"),
+                        exc_info=True,
                     )
                     continue
 
@@ -404,7 +405,7 @@ class MainInitManager:
                             c.blueF(),
                         ]
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-            logging.error(f"Failed to update CPK colors from settings: {e}")
+            logging.warning(f"Failed to update CPK colors from settings: {e}")
 
     def open_settings_dialog(self) -> None:
         """Open the application settings dialog."""
@@ -567,7 +568,7 @@ class MainInitManager:
             self.settings_dirty = False
             self.host.initial_settings = self.settings.copy()
         except (AttributeError, RuntimeError, ValueError) as e:
-            logging.error(f"Error saving settings: {e}")
+            logging.warning(f"Error saving settings: {e}")
 
     # --- UI Initialization Helpers ---
     def _init_main_layout(self) -> None:
