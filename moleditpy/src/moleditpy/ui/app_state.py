@@ -232,7 +232,7 @@ class StateManager:
                     self.host.clear_3d_view()
                     self.host.ui_manager.enable_3d_features(False)
             except (RuntimeError, ValueError, TypeError) as e:
-                logging.error(f"Could not load 3D model from state data: {e}")
+                logging.warning(f"Could not load 3D model from state data: {e}")
                 self.host.update_status_message(f"Error loading 3D model: {e}", 5000)
                 self.host.set_current_molecule(None)
                 self.host.ui_manager.enable_3d_features(False)
@@ -528,7 +528,7 @@ class StateManager:
                         p_state = callback()
                         plugin_data[name] = p_state
                     except Exception:  # plugins have full app access; catch everything to prevent save corruption
-                        logging.exception("Error saving state for plugin %s", name)
+                        logging.warning("Error saving state for plugin %s", name, exc_info=True)
 
         if plugin_data:
             json_data["plugins"] = plugin_data
@@ -564,7 +564,7 @@ class StateManager:
                         try:
                             load_hand(p_state)
                         except Exception:  # plugins have full app access; catch everything to prevent load corruption
-                            logging.exception("Error loading state for plugin %s", name)
+                            logging.warning("Error loading state for plugin %s", name, exc_info=True)
                     else:
                         # No handler found (plugin disabled or missing)
                         # Preserve data so it's not lost on next save
@@ -671,5 +671,5 @@ class StateManager:
                                 "Suppressed non-critical error", exc_info=True
                             )
             except (RuntimeError, ValueError, TypeError, binascii.Error) as e:
-                logging.error(f"Could not restore 3D molecular data: {e}")
+                logging.warning(f"Could not restore 3D molecular data: {e}")
                 self.host.set_current_molecule(None)

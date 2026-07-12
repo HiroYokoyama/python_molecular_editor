@@ -474,7 +474,7 @@ class MoveGroupDialog(BasePickingDialog):
 
         selected_indices = list(self.group_atoms)
         if self.main_window.view_3d_manager.atom_positions_3d is None:
-            logging.error("atom_positions_3d is None in update_atom_labels")
+            logging.warning("atom_positions_3d is None in update_atom_labels")
             return
         selected_positions = self.main_window.view_3d_manager.atom_positions_3d[
             selected_indices

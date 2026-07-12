@@ -113,7 +113,7 @@ class PluginManager:
             try:
                 os.makedirs(self.plugin_dir)
             except OSError as e:
-                logging.error(f"Error creating plugin directory: {e}")
+                logging.warning(f"Error creating plugin directory: {e}")
 
     def open_plugin_folder(self) -> None:
         """Opens the plugin directory in the OS file explorer."""
@@ -381,7 +381,7 @@ class PluginManager:
                         module.initialize(context)
                     except Exception as e:  # plugins have full app access; catch everything to isolate faults
                         status = f"Error (Init): {e}"
-                        logging.exception("Plugin %s initialize error", plugin_name)
+                        logging.warning("Plugin %s initialize error", plugin_name, exc_info=True)
                 elif has_autorun:
                     try:
                         if self.main_window:
@@ -390,7 +390,7 @@ class PluginManager:
                             status = "Skipped (No MW)"
                     except Exception as e:  # plugins have full app access; catch everything to isolate faults
                         status = f"Error (Autorun): {e}"
-                        logging.exception("Plugin %s autorun error", plugin_name)
+                        logging.warning("Plugin %s autorun error", plugin_name, exc_info=True)
                 elif not has_run:
                     status = "No Entry Point"
 
@@ -409,7 +409,7 @@ class PluginManager:
                 )
 
         except Exception as e:  # plugins have full app access; isolate any load failure to prevent crashing discovery
-            logging.exception("Failed to load plugin %s: %s", module_name, e)
+            logging.warning("Failed to load plugin %s: %s", module_name, e, exc_info=True)
 
     def run_plugin(self, module: Any, main_window: Any) -> None:
         """Executes the plugin's run method (Legacy manual trigger)."""
@@ -620,7 +620,7 @@ class PluginManager:
                             except (RuntimeError, ValueError, TypeError):
                                 continue
         except (RuntimeError, AttributeError) as e:
-            logging.error(f"Error retrieving selected atom indices: {e}")
+            logging.warning(f"Error retrieving selected atom indices: {e}")
 
         return selected_indices
 
@@ -640,8 +640,8 @@ class PluginManager:
             try:
                 handler["callback"]()
             except Exception as e:  # plugins have full app access; catch everything to prevent data loss on document reset
-                logging.exception(
-                    "Error in document reset handler for %s: %s", handler["plugin"], e
+                logging.warning(
+                    "Error in document reset handler for %s: %s", handler["plugin"], e, exc_info=True
                 )
 
     def get_plugin_info_safe(self, file_path: str) -> Dict[str, str]:

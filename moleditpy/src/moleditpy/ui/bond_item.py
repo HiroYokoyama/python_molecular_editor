@@ -96,7 +96,7 @@ class BondItem(QGraphicsItem):
                     view.viewport().update()  # type: ignore[union-attr]
 
         except (AttributeError, RuntimeError, TypeError):
-            logging.exception("Error in BondItem.set_stereo")
+            logging.warning("Error in BondItem.set_stereo", exc_info=True)
             # Continue without crashing
             self.stereo = new_stereo
 
@@ -604,7 +604,7 @@ class BondItem(QGraphicsItem):
                 self.setPos(self.atom1.pos())
             self.update()
         except (AttributeError, RuntimeError):
-            logging.exception("Error updating bond position")
+            logging.warning("Error updating bond position", exc_info=True)
             # Continue without crashing
 
     def hoverEnterEvent(self, event: QGraphicsSceneHoverEvent) -> None:  # type: ignore[override]

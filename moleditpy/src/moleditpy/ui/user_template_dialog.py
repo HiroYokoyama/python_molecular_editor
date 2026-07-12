@@ -122,7 +122,7 @@ class UserTemplateDialog(QDialog):
             if hasattr(self.main_window, "ui_manager") and self.main_window.ui_manager:
                 self.main_window.ui_manager.set_mode_and_update_toolbar(target_mode)
         except (AttributeError, RuntimeError, ValueError) as e:
-            logging.error(f"Error resetting main window mode: {e}")
+            logging.warning(f"Error resetting main window mode: {e}")
 
         # 3. Reset Scene State (The Source of Truth)
         try:
@@ -154,7 +154,7 @@ class UserTemplateDialog(QDialog):
 
                 scene.update()
         except (AttributeError, RuntimeError, ValueError) as e:
-            logging.error(f"Error cleaning up scene state: {e}")
+            logging.warning(f"Error cleaning up scene state: {e}")
 
     def resizeEvent(self, event: Any) -> None:
         """Refit template previews when the dialog is resized."""
@@ -208,7 +208,7 @@ class UserTemplateDialog(QDialog):
                         template_data["filepath"] = filepath
                         self.user_templates.append(template_data)
         except (AttributeError, RuntimeError, ValueError) as e:
-            logging.error(f"Error loading user templates: {e}")
+            logging.warning(f"Error loading user templates: {e}")
 
         self.update_template_grid()
 
@@ -218,7 +218,7 @@ class UserTemplateDialog(QDialog):
             with open(filepath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (OSError, json.JSONDecodeError) as e:
-            logging.error(f"Error loading template file {filepath}: {e}")
+            logging.warning(f"Error loading template file {filepath}: {e}")
             return None
 
     def save_template_file(self, filepath: str, template_data: Any) -> bool:
@@ -228,7 +228,7 @@ class UserTemplateDialog(QDialog):
                 json.dump(template_data, f, indent=2, ensure_ascii=False)
             return True
         except OSError as e:
-            logging.error(f"Error saving template file {filepath}: {e}")
+            logging.warning(f"Error saving template file {filepath}: {e}")
             return False
 
     def update_template_grid(self) -> None:

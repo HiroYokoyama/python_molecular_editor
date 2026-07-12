@@ -49,7 +49,7 @@ class TemplatePreviewView(QGraphicsView):
                     self.original_scene_rect, Qt.AspectRatioMode.KeepAspectRatio
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            logging.exception("Failed to refit template preview")
+            logging.warning("Failed to refit template preview", exc_info=True)
 
     def showEvent(self, event: Optional[QShowEvent]) -> None:
         """Handle the show event to ensure the preview fits correctly upon display."""
@@ -88,4 +88,4 @@ class TemplatePreviewView(QGraphicsView):
                     ),
                 )
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            logging.exception("Failed to redraw template preview")
+            logging.warning("Failed to redraw template preview", exc_info=True)

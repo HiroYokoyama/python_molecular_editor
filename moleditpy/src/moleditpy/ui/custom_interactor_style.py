@@ -120,7 +120,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
             except (AttributeError, RuntimeError, TypeError):
-                logging.error("Caught exception in " + __file__, exc_info=True)
+                logging.warning("Caught exception in " + __file__, exc_info=True)
 
         if move_group_dialog and move_group_dialog.group_atoms:
             # Group drag if selected
@@ -401,7 +401,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            logging.error("Caught exception in " + __file__, exc_info=True)
+            logging.warning("Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
             move_group_dialog, "is_dragging_group_vtk", False
         ):
@@ -497,7 +497,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            logging.error("Caught exception in " + __file__, exc_info=True)
+            logging.warning("Caught exception in " + __file__, exc_info=True)
         # Prevent multi-click issues
         if move_group_dialog:
             if getattr(
@@ -509,7 +509,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     try:
                         move_group_dialog.on_atom_picked(clicked_atom)
                     except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                        logging.error(f"Error in toggle: {e}")
+                        logging.warning(f"Error in toggle: {e}")
                 # Reset if multi-clicked without drag
                 move_group_dialog.is_dragging_group_vtk = False
                 move_group_dialog.drag_start_pos_vtk = None
@@ -589,7 +589,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                     QTimer.singleShot(0, _deferred_group_redraw)
                 except (AttributeError, RuntimeError, TypeError, ValueError):
-                    logging.exception("Error finalizing group drag")
+                    logging.warning("Error finalizing group drag", exc_info=True)
             else:
                 # No drag = click only -> toggle
                 clicked_atom = getattr(move_group_dialog, "drag_atom_idx_vtk", None)
@@ -597,7 +597,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     try:
                         move_group_dialog.on_atom_picked(clicked_atom)
                     except (AttributeError, RuntimeError, TypeError, ValueError):
-                        logging.exception("Error in toggle")
+                        logging.warning("Error in toggle", exc_info=True)
 
         # Background click: deselect Move Group
         if move_group_dialog and not getattr(
@@ -725,7 +725,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 ),
                             )
                     except (AttributeError, RuntimeError, ValueError, TypeError):
-                        logging.error("Caught exception in " + __file__, exc_info=True)
+                        logging.warning("Caught exception in " + __file__, exc_info=True)
 
                     # Defer the redraw + undo push out of the VTK observer
                     # callback to prevent re-entrant plotter.render() deadlock.
@@ -735,7 +735,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         try:
                             mw.view_3d_manager.draw_molecule_3d(_atom_mol)
                         except (AttributeError, RuntimeError, ValueError, TypeError):
-                            logging.error(
+                            logging.warning(
                                 "Caught exception in " + __file__, exc_info=True
                             )
                         mw.edit_actions_manager.push_undo_state()
@@ -760,7 +760,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         try:
                             fn()
                         except (AttributeError, RuntimeError, ValueError, TypeError):
-                            logging.error(
+                            logging.warning(
                                 "Caught exception in " + __file__, exc_info=True
                             )
 
@@ -790,13 +790,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 if hasattr(move_group_dialog, "drag_atom_idx_vtk"):  # Safe
                     delattr(move_group_dialog, "drag_atom_idx_vtk")
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            logging.error("Caught exception in " + __file__, exc_info=True)
+            logging.warning("Caught exception in " + __file__, exc_info=True)
 
         # Update cursor after release
         try:
             mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ArrowCursor)
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            logging.error("Caught exception in " + __file__, exc_info=True)
+            logging.warning("Caught exception in " + __file__, exc_info=True)
 
         # Restore focus to 2D view
         if mw and mw.init_manager.view_2d:
@@ -820,7 +820,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog = widget
                     break
         except (AttributeError, RuntimeError, TypeError):
-            logging.error("Caught exception in " + __file__, exc_info=True)
+            logging.warning("Caught exception in " + __file__, exc_info=True)
         if move_group_dialog and getattr(
             move_group_dialog, "is_rotating_group_vtk", False
         ):
@@ -935,7 +935,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             move_group_dialog.show_atom_labels()
                             mw.edit_actions_manager.push_undo_state()
                 except (AttributeError, RuntimeError, TypeError, ValueError):
-                    logging.exception("Error finalizing group rotation")
+                    logging.warning("Error finalizing group rotation", exc_info=True)
 
             # Reset state
             move_group_dialog.is_rotating_group_vtk = False

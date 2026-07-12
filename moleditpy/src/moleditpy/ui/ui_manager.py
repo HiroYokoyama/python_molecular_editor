@@ -365,7 +365,7 @@ class UIManager(QObject):
                     event.acceptProposedAction()
                     return
             except Exception:  # plugins have full app access; catch everything to prevent app-wide crash
-                logging.exception("Error in plugin drop handler")
+                logging.warning("Error in plugin drop handler", exc_info=True)
 
         # 2. Built-in Handlers
         file_lower = file_path.lower()

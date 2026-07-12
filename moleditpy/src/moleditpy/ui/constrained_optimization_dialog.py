@@ -156,7 +156,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 self.ff_combo.setCurrentText("MMFF94s")
 
         except (AttributeError, RuntimeError, ValueError, TypeError):
-            logging.exception("Could not set default force field")
+            logging.warning("Could not set default force field", exc_info=True)
 
     def init_ui(self) -> None:
         """Build the constrained optimization dialog with constraint table and controls."""

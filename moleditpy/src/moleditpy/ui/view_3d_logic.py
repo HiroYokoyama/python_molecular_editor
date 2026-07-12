@@ -130,9 +130,8 @@ class View3DManager:
                     handler(mw, mol)
                     return
                 except Exception:  # plugins have full app access; catch everything to keep 3D view functional
-                    logging.exception(
-                        "Error in custom 3D style '%s'", self.current_3d_style
-                    )
+                    logging.warning(
+                        "Error in custom 3D style '%s'", self.current_3d_style, exc_info=True)
 
         self.draw_standard_3d_style(mol)
 
@@ -295,7 +294,7 @@ class View3DManager:
                     # Force a render so the change is visible immediately
                     self.plotter.render()  # type: ignore[union-attr]
                 except (AttributeError, RuntimeError, TypeError) as e:
-                    logging.error(f"Render failed: {e}")
+                    logging.warning(f"Render failed: {e}")
 
         # Re-display if AtomID or other atom info is shown
         if self.atom_info_display_mode is not None:
@@ -488,7 +487,7 @@ class View3DManager:
 
                     # Add normal atoms (excluding skip list)
                     if self.atom_positions_3d is None:
-                        logging.error(
+                        logging.warning(
                             "atom_positions_3d is None in _add_3d_atom_glyphs"
                         )
                         return
@@ -589,7 +588,7 @@ class View3DManager:
                     q = QColor(bs_hex)
                     bs_bond_rgb = [q.red(), q.green(), q.blue()]
                 except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                    logging.error(f"Failed to load bond color from settings: {e}")
+                    logging.warning(f"Failed to load bond color from settings: {e}")
 
             # Lists for batch processing
             all_points = []
@@ -899,7 +898,7 @@ class View3DManager:
                 for ring in aromatic_rings:
                     # Get atom positions
                     if self.atom_positions_3d is None:
-                        logging.error(
+                        logging.warning(
                             "atom_positions_3d is None in _update_atom_glyphs_internal"
                         )
                         continue
@@ -1036,7 +1035,7 @@ class View3DManager:
                     self.plotter.add_mesh(circle_line, color=torus_color, **mesh_props)  # type: ignore[union-attr]
 
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                logging.error(f"Error rendering aromatic circles: {e}")
+                logging.warning(f"Error rendering aromatic circles: {e}")
 
     def _add_3d_labels(self, mol: Any, mol_to_draw: Any) -> None:
         if getattr(self, "show_chiral_labels", False):
@@ -1048,7 +1047,7 @@ class View3DManager:
                     z_off = 0
                     for idx, lbl in chiral_centers:
                         if self.atom_positions_3d is None:
-                            logging.error("atom_positions_3d is None in _add_3d_labels")
+                            logging.warning("atom_positions_3d is None in _add_3d_labels")
                             continue
                         coord = self.atom_positions_3d[idx].copy()
                         coord[2] += z_off
@@ -1191,7 +1190,7 @@ class View3DManager:
             try:
                 self.plotter.remove_actor("ez_labels")  # type: ignore[union-attr]
             except (AttributeError, RuntimeError, TypeError) as e:
-                logging.error(f"Failed to remove EZ labels: {e}")
+                logging.warning(f"Failed to remove EZ labels: {e}")
 
         pts, labels = [], []
 
@@ -1210,7 +1209,7 @@ class View3DManager:
                 mol, cleanIt=True, force=True, flagPossibleStereoCenters=True
             )
         except (AttributeError, RuntimeError, TypeError, ValueError):
-            logging.error("Caught exception in " + __file__, exc_info=True)
+            logging.warning("Caught exception in " + __file__, exc_info=True)
 
         for bond in mol.GetBonds():
             if bond.GetBondType() == Chem.BondType.DOUBLE:
@@ -1329,7 +1328,7 @@ class View3DManager:
                 try:
                     Chem.AssignAtomChiralTagsFromStructure(mol_for_chirality, confId=0)
                 except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-                    logging.error(f"AssignAtomChiralTagsFromStructure failed: {e}")
+                    logging.warning(f"AssignAtomChiralTagsFromStructure failed: {e}")
 
             # Get chiral centers (list of (idx, 'R'/'S'/'?'))
             chiral_centers = Chem.FindMolChiralCenters(
@@ -1462,7 +1461,7 @@ class View3DManager:
                 if atom.HasProp("_original_atom_id"):
                     return True
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-            logging.error(f"Failed to check original atom IDs: {e}")
+            logging.warning(f"Failed to check original atom IDs: {e}")
         return False
 
     def update_atom_id_menu_text(self) -> None:
@@ -1655,7 +1654,7 @@ class View3DManager:
                 )
                 self.current_atom_info_labels.append(a)
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:
-            logging.error(f"Error adding atom info labels: {e}")
+            logging.warning(f"Error adding atom info labels: {e}")
 
         # Display legend in the top-right (remove existing legends)
         try:

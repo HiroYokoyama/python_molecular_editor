@@ -141,7 +141,7 @@ class PluginMenuManager:
             for menu in self._get_plugin_target_menus():
                 _clean_menu(menu)
         except Exception:
-            logging.exception("Plugin rebuild: menu cleanup error")
+            logging.warning("Plugin rebuild: menu cleanup error", exc_info=True)
 
         self._im.plugin_menubar_separator_added = False
 
@@ -157,7 +157,7 @@ class PluginMenuManager:
             try:
                 method()
             except Exception:
-                logging.exception("Plugin rebuild: %s error", label)
+                logging.warning("Plugin rebuild: %s error", label, exc_info=True)
 
     def add_registered_plugin_actions(self) -> None:
         """Add menu actions explicitly registered by V3/V4 plugins."""
