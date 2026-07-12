@@ -587,7 +587,8 @@ class ComputeManager:
             msg = str(message)
 
         self._remove_calculating_text()
-        self._restore_button_ui()
+        # Full restore like the success path, else Export stays disabled on error.
+        self._refresh_ui_state()
 
         if msg == "Halt" or msg == "Halted":
             self.host.statusBar().showMessage("Halted")  # type: ignore[union-attr]
