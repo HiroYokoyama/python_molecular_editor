@@ -593,7 +593,7 @@ class UserTemplateDialog(QDialog):
             self._activate_template_mode(template_data)
             self.selected_template = template_data
         except (AttributeError, RuntimeError, ValueError) as e:
-            QMessageBox.critical(self, "Error", f"Failed to apply template: {str(e)}")
+            logging.exception("Failed to apply template: %s", e)
 
     def save_current_as_template(self) -> None:
         """Save the current editor structure as a new user template."""
@@ -635,7 +635,7 @@ class UserTemplateDialog(QDialog):
                 QMessageBox.critical(self, "Error", "Failed to save template.")
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            QMessageBox.critical(self, "Error", f"Failed to save template: {str(e)}")
+            logging.exception("Failed to save template: %s", e)
 
     def convert_structure_to_template(self, name: str) -> Any:
         """Convert the internal molecular data to template format."""
@@ -708,6 +708,4 @@ class UserTemplateDialog(QDialog):
                 self.selected_template = None
                 self.delete_button.setEnabled(False)
             except OSError as e:
-                QMessageBox.critical(
-                    self, "Error", f"Failed to delete template: {str(e)}"
-                )
+                logging.exception("Failed to delete template: %s", e)

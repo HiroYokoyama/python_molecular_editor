@@ -1723,9 +1723,9 @@ _save_2d_as_template leaves the existing file unchanged when user answers No._
 - assert json.loads(f.read_text()) == {'original': True}
 
 ### TestSave2DAsTemplate.test_shows_error_on_exception
-_save_2d_as_template shows a critical error dialog when serialisation raises._
+_save_2d_as_template logs the error when serialisation raises._
 
-- mock_crit.assert_called_once()
+- assert 'Failed to save template: boom' in caplog.text
 
 ### TestModelessGeometryDialogs.test_open_translation_dialog
 _open_translation_dialog shows a modeless dialog and wires up all signals._
@@ -2999,6 +2999,65 @@ _Test BondItem.update_position resilience when atoms exist._
 - assert line.length() == 0.0
 
 ## tests/unit/test_main_qt_handler.py
+
+### test_handler_skips_without_qapplication
+_No GUI event loop → nothing is queued (the log record is the surface)._
+
+- qtimer.singleShot.assert_not_called()
+
+### test_handler_skips_off_gui_thread
+_A worker-thread record must not queue a dialog (QMessageBox unsafe)._
+
+- qtimer.singleShot.assert_not_called()
+
+### test_handler_honors_no_dialog_extra
+_extra={'no_dialog': True} opts a record out entirely._
+
+- qtimer.singleShot.assert_not_called()
+
+### test_handler_queues_once_then_dedups
+_Identical message+traceback queues one dialog; the repeat is suppressed._
+
+- assert qtimer.singleShot.call_count == 1
+
+### test_handler_emit_never_raises
+_emit must swallow internal failures (logging contract)._
+
+- handle_err.assert_called_once()
+
+### test_show_yields_to_existing_modal
+_If a site/plugin QMessageBox.critical is already up, stay quiet._
+
+- qmb.assert_not_called()
+
+### test_show_displays_non_blocking_when_no_modal
+_With no other modal up, the dialog is shown non-blocking (show, not exec)_
+
+- qmb.return_value.setDetailedText.assert_called_once()
+- qmb.return_value.show.assert_called_once()
+- qmb.return_value.exec.assert_not_called()
+- assert qmb.return_value in handler._open_boxes
+
+### test_show_swallows_its_own_errors
+_A failure while building the dialog must not propagate._
+
+
+### test_details_names_log_file_when_file_logging_on
+_The informative text points at the log file only when one is active._
+
+- assert '/home/u/.moleditpy/moleditpy.log' in with_file._details()
+- assert 'terminal' in hint.lower()
+- assert 'moleditpy.log' not in hint
+
+### test_dialog_handler_not_attached_when_headless
+_MOLEDITPY_HEADLESS must suppress the modal dialog handler entirely,_
+
+- assert _dialog_handlers() == []
+
+### test_dialog_handler_attached_when_not_headless
+_A real (non-headless) run installs exactly one dialog handler._
+
+- assert len(_dialog_handlers()) == 1
 
 ### test_downgraded_pattern_routes_to_debug
 _Messages matching a downgraded pattern are logged at DEBUG, not WARNING._
@@ -4943,9 +5002,9 @@ _on_remove_plugin removes a package plugin by calling shutil.rmtree on its direc
 - mock_info.assert_called()
 
 ### test_on_remove_plugin_error
-_on_remove_plugin shows a critical error dialog when os.remove raises OSError._
+_on_remove_plugin logs the error when os.remove raises OSError._
 
-- mock_critical.assert_called_with(window, 'Error', 'Failed to delete plugin: Remove error')
+- assert 'Failed to delete plugin: Remove error' in caplog.text
 
 ### test_on_remove_plugin_not_exists
 _on_remove_plugin shows a warning when the plugin file does not exist._
@@ -7421,6 +7480,18 @@ _If one step raises, all subsequent steps still execute._
 _rebuild_plugin_menus must remove actions tagged with 'plugin_managed' from target menus._
 
 - export_menu.removeAction.assert_called_once_with(tagged_action)
+
+### TestRebuildCleanup.test_rebuild_detaches_tagged_action_from_its_action_group
+_A tagged action in a QActionGroup (e.g. a custom 3D style) must be_
+
+- group.removeAction.assert_called_once_with(tagged_action)
+- style_menu.removeAction.assert_called_once_with(tagged_action)
+
+### TestRebuildCleanup.test_untagged_action_in_group_is_left_alone
+_A non-plugin action sharing the style group must not be touched._
+
+- group.removeAction.assert_not_called()
+- style_menu.removeAction.assert_not_called()
 
 ### TestPluginMenuManagerRouting.test_main_window_proxy_returns_init_manager_pmm
 _MainWindow.plugin_menu_manager property reads from init_manager._

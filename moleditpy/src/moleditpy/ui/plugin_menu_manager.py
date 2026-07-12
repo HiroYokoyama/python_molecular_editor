@@ -47,16 +47,8 @@ class PluginMenuManager:
         def _safe(*args: Any, **kwargs: Any) -> None:
             try:
                 callback()
-            except Exception as exc:
+            except Exception:
                 logging.exception("Plugin callback error (%s)", plugin_name)
-                try:
-                    QMessageBox.critical(
-                        self._im.host,
-                        "Plugin Error",
-                        f"An error occurred in plugin '{plugin_name}':\n{exc}",
-                    )
-                except Exception:
-                    logging.debug("Suppressed non-critical error", exc_info=True)
 
         return _safe
 
@@ -469,13 +461,8 @@ class PluginMenuManager:
                         if ext in m:
                             try:
                                 m[ext](fpath)
-                            except Exception as exc:
+                            except Exception:
                                 logging.exception("Plugin file opener error (%s)", n)
-                                QMessageBox.critical(
-                                    self._im.host,
-                                    "Plugin Error",
-                                    f"An error occurred in plugin '{n}':\n{exc}",
-                                )
                                 return
                             self._im.current_file_path = fpath
                             self._im.host.state_manager.update_window_title()

@@ -285,5 +285,4 @@ class AlignPlaneDialog(BasePickingDialog):
             self.show_atom_labels()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            logging.exception("Failed to apply align")
-            QMessageBox.critical(self, "Error", f"Failed to apply align: {str(e)}")
+            logging.exception("Failed to apply align: %s", e)

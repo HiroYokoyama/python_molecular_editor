@@ -217,4 +217,4 @@ class PlanarizeDialog(BasePickingDialog):
             )
 
         except (AttributeError, RuntimeError, ValueError) as e:
-            QMessageBox.critical(self, "Error", f"Failed to planarize: {e}")
+            logging.exception("Failed to planarize: %s", e)

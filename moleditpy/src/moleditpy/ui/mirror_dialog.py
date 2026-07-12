@@ -141,6 +141,4 @@ class MirrorDialog(QDialog):
             )
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-            QMessageBox.critical(
-                self, "Error", f"Failed to apply mirror transformation: {str(e)}"
-            )
+            logging.exception("Failed to apply mirror transformation: %s", e)

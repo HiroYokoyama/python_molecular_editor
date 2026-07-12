@@ -10,6 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 import os
 import shutil
 from typing import Any, Optional
@@ -213,9 +214,7 @@ class PluginManagerWindow(QDialog):
                             f"Removed '{plugin.get('name', 'Unknown')}'.",
                         )
                     except OSError as e:
-                        QMessageBox.critical(
-                            self, "Error", f"Failed to delete plugin: {e}"
-                        )
+                        logging.exception("Failed to delete plugin: %s", e)
             else:
                 QMessageBox.warning(
                     self, "Error", f"Plugin file not found:\n{filepath}"

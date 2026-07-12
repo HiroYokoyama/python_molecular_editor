@@ -72,12 +72,9 @@ class _ErrorDialogHandler(logging.Handler):
 
     def __init__(self, log_path: Optional[str] = None) -> None:
         super().__init__(level=logging.ERROR)
-        # Message+traceback signatures already shown this session.
         self._shown_signatures: set[str] = set()
-        # Live dialogs, held so a non-blocking box is not garbage collected
-        # (and thus dismissed) the moment _show returns.
+        # Held so a non-blocking box is not garbage-collected before it closes.
         self._open_boxes: set = set()
-        # Log-file path, set only when file logging is enabled (see _details).
         self._log_path = log_path
 
     def emit(self, record: logging.LogRecord) -> None:

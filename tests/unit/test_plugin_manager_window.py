@@ -1,5 +1,6 @@
 """Unit tests for PluginManagerWindow drag-and-drop and UI behavior."""
 
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -179,23 +180,21 @@ def test_on_remove_plugin_package(
 
 
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.question")
-@patch("moleditpy.plugins.plugin_manager_window.QMessageBox.critical")
 @patch("os.path.exists", return_value=True)
 @patch("os.remove", side_effect=PermissionError("Remove error"))
 def test_on_remove_plugin_error(
-    mock_remove, mock_exists, mock_critical, mock_question, mock_plugin_manager, qtbot
+    mock_remove, mock_exists, mock_question, mock_plugin_manager, qtbot, caplog
 ):
-    """on_remove_plugin shows a critical error dialog when os.remove raises OSError."""
+    """on_remove_plugin logs the error when os.remove raises OSError."""
     mock_question.return_value = QMessageBox.StandardButton.Yes
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
     window.table.selectRow(0)
-    window.on_remove_plugin()
+    with caplog.at_level(logging.ERROR):
+        window.on_remove_plugin()
 
-    mock_critical.assert_called_with(
-        window, "Error", "Failed to delete plugin: Remove error"
-    )
+    assert "Failed to delete plugin: Remove error" in caplog.text
 
 
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.warning")
