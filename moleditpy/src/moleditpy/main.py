@@ -91,6 +91,8 @@ class _ErrorDialogHandler(logging.Handler):
             app = QApplication.instance()
             if app is None or QThread.currentThread() is not app.thread():
                 return
+            if app.property("moleditpy_shutting_down"):
+                return
 
             message = record.getMessage()
             # Source location (as the terminal log shows), then any traceback.

@@ -55,6 +55,7 @@ def test_handler_skips_off_gui_thread():
     """A worker-thread record must not queue a dialog (QMessageBox unsafe)."""
     app = MagicMock()
     app.thread.return_value = "gui"
+    app.property.return_value = None
     with patch.object(main_mod, "QApplication") as qapp, patch.object(
         main_mod, "QThread"
     ) as qthread, patch.object(main_mod, "QTimer") as qtimer:
@@ -71,11 +72,26 @@ def test_handler_honors_no_dialog_extra():
     qtimer.singleShot.assert_not_called()
 
 
+def test_handler_suppressed_during_shutdown():
+    """Benign teardown errors must not pop a dialog once the app is closing."""
+    app = MagicMock()
+    app.thread.return_value = "gui"
+    app.property.return_value = True  # moleditpy_shutting_down
+    with patch.object(main_mod, "QApplication") as qapp, patch.object(
+        main_mod, "QThread"
+    ) as qthread, patch.object(main_mod, "QTimer") as qtimer:
+        qapp.instance.return_value = app
+        qthread.currentThread.return_value = "gui"
+        _ErrorDialogHandler().emit(_record())
+    qtimer.singleShot.assert_not_called()
+
+
 def test_handler_dedups_rapid_repeat_within_window():
     """A fast repeat of the same error (within the dedup window) is collapsed
     to one dialog, so a per-tick error can't storm the user with modals."""
     app = MagicMock()
     app.thread.return_value = "gui"
+    app.property.return_value = None
     with patch.object(main_mod, "QApplication") as qapp, patch.object(
         main_mod, "QThread"
     ) as qthread, patch.object(main_mod, "QTimer") as qtimer, patch.object(
@@ -95,6 +111,7 @@ def test_handler_reshows_same_error_after_window():
     dialog, so a genuine retry is not silently swallowed."""
     app = MagicMock()
     app.thread.return_value = "gui"
+    app.property.return_value = None
     with patch.object(main_mod, "QApplication") as qapp, patch.object(
         main_mod, "QThread"
     ) as qthread, patch.object(main_mod, "QTimer") as qtimer, patch.object(
@@ -114,6 +131,7 @@ def test_handler_emit_never_raises():
     """emit must swallow internal failures (logging contract)."""
     app = MagicMock()
     app.thread.return_value = "gui"
+    app.property.return_value = None
     with patch.object(main_mod, "QApplication") as qapp, patch.object(
         main_mod, "QThread"
     ) as qthread, patch.object(main_mod, "QTimer") as qtimer:
