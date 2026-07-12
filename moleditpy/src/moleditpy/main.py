@@ -25,7 +25,7 @@ from .utils.constants import VERSION
 
 # VERSION is resolved above (before Qt) so --version works without launching the app.
 
-from PyQt6.QtCore import QtMsgType, QThread, qInstallMessageHandler
+from PyQt6.QtCore import QtMsgType, QThread, QTimer, qInstallMessageHandler
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from .ui.main_window import MainWindow
@@ -51,55 +51,99 @@ def _qt_message_handler(mode: QtMsgType, _context: Any, message: Optional[str]) 
     logging.log(_QT_LOG_LEVEL.get(mode, logging.WARNING), "Qt: %s", message)
 
 
-# Traceback signatures already shown this session, so a repeating exception
-# (e.g. one thrown from a QTimer slot or a paint event) surfaces a dialog once
-# instead of storming the user with an unclosable stack of modals.
-_shown_exception_signatures: set[str] = set()
+class _ErrorDialogHandler(logging.Handler):
+    """Surface ERROR/CRITICAL log records in a dialog, once per unique message.
 
+    The uncaught-exception hook routes through here too (it logs at ERROR with
+    ``exc_info``), so every genuine failure — logged explicitly or bubbling out
+    of Qt — gets one dialog. Warnings/info never reach it (handler level is
+    ERROR). All state is per-instance; the one instance is created and attached
+    in :func:`setup_logging` (only for a real GUI run, never headless).
 
-def _show_exception_dialog(
-    exc_type: Any, exc_value: Any, exc_traceback: Any
-) -> None:
-    """Surface an uncaught exception in a modal dialog, at most once per bug.
+    Guards: GUI thread + live QApplication only (a worker-thread record, where a
+    QMessageBox is unsafe, stays log-only); per-message-signature dedup so a
+    repeating error surfaces once, not once per tick; and
+    ``extra={"no_dialog": True}`` to opt a record out. ``emit`` never raises.
 
-    Only runs when a GUI event loop is up and we are on the GUI thread — an
-    exception raised before/without the QApplication, or from a worker thread
-    (where a QMessageBox is unsafe), falls back to the already-emitted log
-    record. Anything that goes wrong here is swallowed to DEBUG so the
-    excepthook can never recurse or mask the original error.
+    The dialog is shown non-blocking (``show``, not ``exec``): it never spins a
+    nested event loop, so it cannot freeze the app — or a GUI-enabled test run —
+    while it is on screen.
     """
-    try:
-        app = QApplication.instance()
-        if app is None or QThread.currentThread() is not app.thread():
-            return
 
-        tb_text = "".join(
-            traceback.format_exception(exc_type, exc_value, exc_traceback)
-        )
-        signature = hashlib.sha1(tb_text.encode("utf-8", "replace")).hexdigest()
-        if signature in _shown_exception_signatures:
-            return
-        _shown_exception_signatures.add(signature)
+    def __init__(self, log_path: Optional[str] = None) -> None:
+        super().__init__(level=logging.ERROR)
+        # Message+traceback signatures already shown this session.
+        self._shown_signatures: set[str] = set()
+        # Live dialogs, held so a non-blocking box is not garbage collected
+        # (and thus dismissed) the moment _show returns.
+        self._open_boxes: set = set()
+        # Log-file path, set only when file logging is enabled (see _details).
+        self._log_path = log_path
 
-        log_path = os.path.join(
-            os.path.expanduser("~"), ".moleditpy", "moleditpy.log"
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            if getattr(record, "no_dialog", False):
+                return
+            app = QApplication.instance()
+            if app is None or QThread.currentThread() is not app.thread():
+                return
+
+            message = record.getMessage()
+            detail = ""
+            if record.exc_info:
+                detail = "".join(traceback.format_exception(*record.exc_info))
+
+            signature = hashlib.sha1(
+                (message + detail).encode("utf-8", "replace")
+            ).hexdigest()
+            if signature in self._shown_signatures:
+                return
+            self._shown_signatures.add(signature)
+
+            # Defer so a site's own QMessageBox.critical (raised right after the
+            # log call) is already modal when _show checks activeModalWidget.
+            QTimer.singleShot(0, lambda: self._show(message, detail))
+        except Exception:  # pragma: no cover - logging must never raise
+            self.handleError(record)
+
+    def _details(self) -> str:
+        """Where to find the full error text, honest about file logging."""
+        if self._log_path:
+            return (
+                "Full details are in the terminal output and the log file:\n"
+                f"{self._log_path}"
+            )
+        return (
+            "Full details are in the terminal output. Enable "
+            "Settings ▸ Other ▸ 'Save log to file' to also keep them "
+            "on disk."
         )
-        box = QMessageBox()
-        box.setIcon(QMessageBox.Icon.Critical)
-        box.setWindowTitle("MoleditPy — Unexpected Error")
-        box.setText(
-            "An unexpected error occurred. The application may be unstable; "
-            "saving your work and restarting is recommended."
-        )
-        box.setInformativeText(
-            f"{exc_type.__name__}: {exc_value}\n\n"
-            f"Details are in the log:\n{log_path}"
-        )
-        box.setDetailedText(tb_text)
-        box.setStandardButtons(QMessageBox.StandardButton.Ok)
-        box.exec()
-    except Exception:
-        logging.debug("Failed to show exception dialog", exc_info=True)
+
+    def _show(self, message: str, detail: str) -> None:
+        """Show one non-blocking error dialog, unless another modal is up.
+
+        Sites (and plugins) log the error and then immediately raise their own
+        ``QMessageBox.critical``; by the time this deferred call fires, that
+        modal is up, so we detect it and stay quiet — surfacing the generic
+        dialog only for errors nobody else reports.
+        """
+        if QApplication.activeModalWidget() is not None:
+            return
+        try:
+            box = QMessageBox()
+            box.setIcon(QMessageBox.Icon.Critical)
+            box.setWindowTitle("MoleditPy — Error")
+            box.setText(message or "An unexpected error occurred.")
+            box.setInformativeText(self._details())
+            if detail:
+                box.setDetailedText(detail)
+            box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            box.setModal(True)
+            self._open_boxes.add(box)
+            box.finished.connect(lambda _result, b=box: self._open_boxes.discard(b))
+            box.show()
+        except Exception:
+            logging.debug("Failed to show error dialog", exc_info=True)
 
 
 def _read_startup_log_settings() -> tuple[bool, bool]:
@@ -131,6 +175,7 @@ def setup_logging() -> None:
         force=True,
     )
 
+    active_log_path: Optional[str] = None
     if log_to_file:
         log_dir = os.path.join(os.path.expanduser("~"), ".moleditpy")
         try:
@@ -143,14 +188,22 @@ def setup_logging() -> None:
             fh.setFormatter(logging.Formatter(fmt))
             logging.getLogger().addHandler(fh)
             logging.info("File logging enabled: %s", log_path)
+            active_log_path = log_path
         except OSError as e:
             logging.warning("Could not open log file: %s", e)
 
-    def handle_exception(exc_type: Any, exc_value: Any, exc_traceback: Any) -> None:
-        """Log unhandled exceptions and, if a GUI is up, surface them once.
+    # Surface every ERROR/CRITICAL record in a dialog (see _ErrorDialogHandler);
+    # uncaught exceptions flow through here too via handle_exception's log call.
+    # It is a GUI feature, so it is skipped in headless mode (MOLEDITPY_HEADLESS),
+    # where a blocking modal would hang the run.
+    if not os.environ.get("MOLEDITPY_HEADLESS"):
+        logging.getLogger().addHandler(_ErrorDialogHandler(log_path=active_log_path))
 
-        This fires only for genuinely uncaught exceptions (real bugs) — never
-        for logged warnings/info, which do not pass through sys.excepthook.
+    def handle_exception(exc_type: Any, exc_value: Any, exc_traceback: Any) -> None:
+        """Log unhandled exceptions; the ERROR dialog handler surfaces them.
+
+        The dialog fires only for genuine failures — this log call and explicit
+        logging.error/critical calls — never for warnings/info.
         """
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -158,7 +211,6 @@ def setup_logging() -> None:
         logging.error(
             "Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback)
         )
-        _show_exception_dialog(exc_type, exc_value, exc_traceback)
 
     sys.excepthook = handle_exception
 
