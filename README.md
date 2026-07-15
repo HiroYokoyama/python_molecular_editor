@@ -67,16 +67,17 @@ This application combines a modern GUI built with **PyQt6**, powerful cheminform
   * **Stereochemistry Display:** Automatically identifies and displays R/S labels for chiral centers in the 3D view after conversion.
   * **File I/O:**
       * Save and load entire sessions, including 2D/3D data and constraints, with the native `.pmeprj` project file.
-      * Import structures from **MOL/SDF** files or **SMILES** strings.
+      * Import structures from **MOL/SDF/XYZ** files or **SMILES/InChI** strings.
       * Export 3D structures to **MOL** or **XYZ** formats, which are compatible with most DFT calculation software.
-      * Export 2D and 3D views as high-resolution PNG images.
+      * Export 2D views as high-resolution PNG or SVG images, and 3D views as PNG images.
+      * Export the 3D model as **STL** or **OBJ/MTL** files for 3D printing and rendering.
       * **Security note on `.pmeraw`:** the legacy `.pmeraw` project format uses Python pickle, which can execute arbitrary code when loaded. Only open `.pmeraw` files that you created yourself; prefer the JSON-based `.pmeprj` format for sharing.
 
 ### 4. Programmable & Extensible
 
   * **Python Plugin System:** Drop your Python scripts into the plugin folder, and they instantly become part of the application menu.
   * **Downloadable Plugins:** Explore and download specialized plugins from the [Plugin Explorer](https://hiroyokoyama.github.io/moleditpy-plugins/explorer/).
-  * **Full API Access:** Plugins have direct access to the `MainWindow`, `RDKit` molecule objects, and `PyGraphics` items, allowing for limitless customization.
+  * **Full API Access:** Plugins have direct access to the `MainWindow`, `RDKit` molecule objects, and the Qt graphics items of the 2D scene, allowing for limitless customization.
   * **Rapid Prototyping:** Ideal for researchers who need to test new algorithms or workflow automations on the fly.
 
 ## Installation and Execution
@@ -132,7 +133,7 @@ moleditpy
   * **GUI and 2D Drawing (PyQt6):** The editor is built on a `QGraphicsScene`, where custom `AtomItem` and `BondItem` objects are interactively manipulated. The Undo/Redo feature is implemented by serializing the application state.
   * **Chemical Calculations (RDKit / Open Babel):** RDKit is used to generate molecule objects from 2D data, perform 3D coordinate generation, and calculate properties. Open Babel serves as a fallback for 3D conversion. All heavy computations are run on a separate `QThread` to keep the GUI responsive.
   * **3D Visualization (PyVista / pyvistaqt):** 3D rendering is achieved by generating PyVista meshes (spheres and cylinders) from RDKit conformer coordinates. A custom `vtkInteractorStyle` enables direct drag-and-drop editing of atoms in the 3D view.
-  * **Modular Architecture:** The codebase is organized into dedicated packages for `core` logic, `ui` components, and `utils`. The main application logic is decomposed into reusable mixins, ensuring long-term maintainability and easier verification.
+  * **Modular Architecture:** The codebase is organized into dedicated packages for `core` logic, `ui` components, and `utils`. The `MainWindow` acts as a composition hub that delegates all work to specialized manager objects (state, I/O, 3D view, dialogs), ensuring long-term maintainability and easier verification.
 
 ## License & Disclaimer
 
@@ -202,16 +203,17 @@ Additionally, please cite the plugins you used.
   * **立体化学表示:** 3D変換後、キラル中心を自動的に認識し、R/Sラベルを3Dビューに表示します。
   * **ファイル入出力:**
       * 2D/3Dデータや制約情報を含むセッション全体を、独自のプロジェクトファイル (`.pmeprj`) として保存・読み込みできます。
-      * **MOL/SDF**ファイルや**SMILES**文字列から構造をインポートできます。
+      * **MOL/SDF/XYZ**ファイルや**SMILES/InChI**文字列から構造をインポートできます。
       * 3D構造を**MOL**または**XYZ**形式でエクスポートでき、これらは多くのDFT計算ソフトウェアと互換性があります。
-      * 2Dおよび3Dビューを高解像度のPNG画像としてエクスポートできます。
+      * 2Dビューを高解像度のPNG・SVG画像として、3DビューをPNG画像としてエクスポートできます。
+      * 3Dモデルを**STL**または**OBJ/MTL**ファイルとしてエクスポートでき、3Dプリントやレンダリングに利用できます。
       * **`.pmeraw` に関するセキュリティ上の注意:** 旧形式の `.pmeraw` プロジェクトは Python の pickle を使用しており、読み込み時に任意のコードが実行される可能性があります。自分で作成した `.pmeraw` ファイルのみを開き、共有には JSON ベースの `.pmeprj` 形式を使用してください。
 
 ### 4. プログラマブルで拡張可能
 
   * **Pythonプラグインシステム:** Pythonスクリプトをプラグインフォルダに入れるだけで、即座にアプリケーションメニューの一部として機能します。
   * **プラグインのダウンロード:** [Plugin Explorer](https://hiroyokoyama.github.io/moleditpy-plugins/explorer/) から特化したプラグインを探索・ダウンロードできます。
-  * **フルAPIアクセス:** プラグインは `MainWindow`、`RDKit` 分子オブジェクト、`PyGraphics` アイテムに直接アクセスでき、無限のカスタマイズが可能です。
+  * **フルAPIアクセス:** プラグインは `MainWindow`、`RDKit` 分子オブジェクト、2D シーンの Qt グラフィックスアイテムに直接アクセスでき、無限のカスタマイズが可能です。
   * **迅速なプロトタイピング:** 新しいアルゴリズムやワークフローの自動化をその場でテストしたい研究者に最適です。
 
 ## インストールと実行
@@ -267,6 +269,7 @@ moleditpy
   * **GUIと2D描画 (PyQt6):** `QGraphicsScene`上にカスタムの`AtomItem`（原子）と`BondItem`（結合）を配置し、対話的に操作します。Undo/Redo機能は、アプリケーションの状態をシリアライズしてスタックに保存することで実現しています。
   * **化学計算 (RDKit / Open Babel):** 2DデータからRDKit分子オブジェクトを生成し、3D座標生成や分子特性計算を実行します。RDKitでの3D座標生成が失敗した際は、Open Babelにフォールバックします。重い計算処理は別スレッド (`QThread`) で実行し、GUIの応答性を維持しています。
   * **3D可視化 (PyVista / pyvistaqt):** RDKitのコンフォーマ座標からPyVistaのメッシュ（球や円柱）を生成して描画します。カスタムの`vtkInteractorStyle`を実装し、3Dビュー内での原子の直接的なドラッグ＆ドロップ編集を可能にしています。
+  * **モジュラーアーキテクチャ:** コードベースは `core` ロジック、`ui` コンポーネント、`utils` の専用パッケージに整理されています。`MainWindow` は、状態管理・ファイル入出力・3D ビュー・ダイアログなどを専門のマネージャーオブジェクトに委譲するコンポジションハブとして機能し、長期的な保守性と検証の容易さを確保しています。
 
 ## ライセンス & 免責事項
 
