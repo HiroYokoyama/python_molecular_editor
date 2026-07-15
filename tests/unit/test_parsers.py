@@ -518,3 +518,26 @@ def test_load_xyz_skip_chemistry_via_button(mock_parser_host, tmp_path):
     mol = parser.load_xyz_file(str(xyz_path))
     assert mol is not None
     assert mol.HasProp("_xyz_skip_checks") or getattr(mol, "_xyz_skip_checks", False)
+
+
+def test_estimate_bonds_heavy_elements_beyond_radii_table(mock_parser_host):
+    """Regression: COVALENT_RADII stops at V; missing elements fell back to a
+    1.0 A radius, so an I-I bond (~2.66 A) exceeded the 2*1.0*1.3 = 2.6 A
+    window and was silently dropped. RDKit's periodic table now backfills."""
+    from rdkit import Chem
+    from rdkit.Geometry import Point3D
+
+    parser = DummyParser(mock_parser_host)
+
+    mol = Chem.RWMol()
+    for _ in range(2):
+        mol.AddAtom(Chem.Atom(53))  # iodine
+    conf = Chem.Conformer(2)
+    conf.SetAtomPosition(0, Point3D(0.0, 0.0, 0.0))
+    conf.SetAtomPosition(1, Point3D(2.66, 0.0, 0.0))
+    mol.AddConformer(conf)
+
+    added = parser.estimate_bonds_from_distances(mol)
+
+    assert added == 1
+    assert mol.GetBondBetweenAtoms(0, 1) is not None

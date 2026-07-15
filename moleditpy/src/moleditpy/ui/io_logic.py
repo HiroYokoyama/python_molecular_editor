@@ -349,6 +349,19 @@ class IOManager:
             # Unreachable via OK (validated inline)
             return 0, True, False
 
+    @staticmethod
+    def _covalent_radius(symbol: str, atomic_num: int) -> float:
+        """Covalent radius from the local table, RDKit's periodic table for
+        elements the table lacks (it stops at V), or 1.0 as a last resort."""
+        radius = COVALENT_RADII.get(symbol)
+        if radius:
+            return radius
+        try:
+            radius = Chem.GetPeriodicTable().GetRcovalent(atomic_num)
+        except (ValueError, RuntimeError):
+            radius = 0.0
+        return radius if radius > 0.0 else 1.0
+
     def estimate_bonds_from_distances(self, mol: Chem.RWMol) -> int:
         """Estimate bonds based on interatomic distances using covalent radii."""
         conf = mol.GetConformer()
@@ -364,8 +377,8 @@ class IOManager:
                 distance = rdMolTransforms.GetBondLength(conf, i, j)
                 symbol_i = atom_i.GetSymbol()
                 symbol_j = atom_j.GetSymbol()
-                radius_i = COVALENT_RADII.get(symbol_i, 1.0)
-                radius_j = COVALENT_RADII.get(symbol_j, 1.0)
+                radius_i = self._covalent_radius(symbol_i, atom_i.GetAtomicNum())
+                radius_j = self._covalent_radius(symbol_j, atom_j.GetAtomicNum())
                 expected = radius_i + radius_j
                 tolerance = 1.2 if (symbol_i == "H" or symbol_j == "H") else 1.3
                 if expected * 0.5 <= distance <= expected * tolerance:
