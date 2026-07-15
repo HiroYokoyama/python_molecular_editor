@@ -1358,6 +1358,34 @@ __on_optimization_error re-enables the button and shows a critical dialog._
 - mock_mb.critical.assert_called_once()
 - assert 'Test Error' in mock_mb.critical.call_args[0][2]
 
+### TestCancelAndUndoIntegrity.test_finished_after_close_discards_result
+_A result arriving after the dialog was closed must not touch the doc._
+
+- assert dlg._closed is True
+- mock_conf.GetAtomPosition.assert_not_called()
+- dlg.main_window.view_3d_manager.draw_molecule_3d.assert_not_called()
+- dlg.main_window.edit_actions_manager.push_undo_state.assert_not_called()
+
+### TestCancelAndUndoIntegrity.test_error_after_close_is_suppressed
+_An error arriving after close must not pop a message box._
+
+- mock_mb.critical.assert_not_called()
+
+### TestCancelAndUndoIntegrity.test_reject_pushes_undo_when_constraints_changed
+_Closing the dialog after editing constraints must record an undo step._
+
+- dlg.main_window.edit_actions_manager.push_undo_state.assert_called_once()
+
+### TestCancelAndUndoIntegrity.test_reject_no_change_does_not_push_undo
+_Closing without touching constraints must not create an undo entry._
+
+- dlg.main_window.edit_actions_manager.push_undo_state.assert_not_called()
+
+### TestCancelAndUndoIntegrity.test_finished_syncs_constraints_before_undo_push
+_The undo snapshot must capture the constraints used for the run._
+
+- assert seen_at_push == [[['Distance', [0, 1], 1.54, 100000.0]]]
+
 ## tests/unit/test_custom_interactor_style.py
 
 ### test_custom_interactor_style_left_click_atom_selection
@@ -2245,6 +2273,13 @@ _The undo stack drops its oldest entries beyond UNDO_STACK_MAX_DEPTH._
 - assert len(mgr.undo_stack) == UNDO_STACK_MAX_DEPTH
 - assert mgr.undo_stack[-1]['_next_atom_id'] == UNDO_STACK_MAX_DEPTH + 24
 - assert mgr.undo_stack[0]['_next_atom_id'] == 25
+
+### test_push_undo_state_detects_constraint_change
+_Two states identical except for constraints_3d must both be pushed._
+
+- assert len(mgr.undo_stack) == 1
+- assert len(mgr.undo_stack) == 1
+- assert len(mgr.undo_stack) == 2
 
 ## tests/unit/test_export_logic.py
 
@@ -3198,6 +3233,11 @@ _Test create_multi_material_obj with Triangle Strips and Quads._
 - assert 'f 5 6 7 8' in content
 - assert 'f 1 2 3' in content
 - assert 'f 3 2 4' in content
+
+### test_export_obj_mtl_uppercase_extension_keeps_paths_distinct
+_Regression: an upper-case .OBJ filename made mtl_path identical to_
+
+- mock_create.assert_called_once_with(meshes, '/path/to/MODEL.OBJ', '/path/to/MODEL.mtl')
 
 ## tests/unit/test_main_window_init_coverage.py
 
@@ -4309,6 +4349,18 @@ _Verify skip chemistry check flag is set when user chooses to skip._
 
 - assert mol is not None
 - assert mol.HasProp('_xyz_skip_checks') or getattr(mol, '_xyz_skip_checks', False)
+
+### test_estimate_bonds_heavy_elements_beyond_radii_table
+_Regression: COVALENT_RADII stops at V; missing elements fell back to a_
+
+- assert added == 1
+- assert mol.GetBondBetweenAtoms(0, 1) is not None
+
+### test_report_load_error_dialog_gating
+_Dialog shown in GUI mode, suppressed under MOLEDITPY_HEADLESS._
+
+- mb.warning.assert_not_called()
+- mb.warning.assert_called_once()
 
 ## tests/unit/test_periodic_table_dialog.py
 
@@ -5609,6 +5661,13 @@ _Test Template preview logic._
 _Test benzene template rotation alignment._
 
 - assert data.add_atom.called
+
+### test_wedge_flip_via_key_w_pushes_undo
+_Regression: pressing W on an already-wedge bond flips its direction_
+
+- assert (1, 0) in data.bonds and (0, 1) not in data.bonds
+- assert bond.atom1 is a2 and bond.atom2 is a1
+- win.edit_actions_manager.push_undo_state.assert_called_once()
 
 ## tests/unit/test_scene_interactions.py
 
@@ -7572,6 +7631,24 @@ _Registered analysis tools appear as actions in the Analysis menu after rebuild.
 - assert 'NMR Predict' in added.text()
 - assert 'NMRPro' in added.text()
 
+### TestTopLevelMenuCleanup.test_emptied_plugin_toplevel_menu_removed_on_rebuild
+_Regression: a plugin-created top-level menu stayed in the menu bar_
+
+- assert 'MyPluginMenu' in self._titles(bar)
+- assert 'MyPluginMenu' not in self._titles(bar)
+- assert bar.actions() == []
+
+### TestTopLevelMenuCleanup.test_still_registered_toplevel_menu_survives_rebuild
+_No description provided._
+
+- assert self._titles(bar) == ['MyPluginMenu']
+- assert labels == ['Do Thing']
+
+### TestTopLevelMenuCleanup.test_builtin_menus_never_removed
+_Untagged (application-owned) menus must survive even when empty._
+
+- assert 'File' in self._titles(bar)
+
 ## tests/integration/test_plugin_opt_method_rebuild.py
 
 ### test_plugin_method_readded_after_rebuild
@@ -8165,6 +8242,13 @@ _Test integration of plugin openers into the Import menu._
 - assert 'Import .fake' in import_action.text()
 - cb.assert_called_once_with('data.fake')
 - assert window.init_manager.current_file_path == 'data.fake'
+
+### test_quit_action_has_ctrl_q_shortcut
+_File > Quit must carry the Ctrl+Q shortcut documented in the manual._
+
+- assert file_action is not None
+- assert quit_action is not None
+- assert quit_action.shortcut().toString() == 'Ctrl+Q'
 
 ## tests/gui/test_molecule_scene_events.py
 
