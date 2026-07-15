@@ -39,16 +39,6 @@ This fixture file sets up the test environment for `pytest`.
       * **Dialogs**: Mocks all blocking dialogs (`QMessageBox`, `QFileDialog`, `QInputDialog`, `QDialog.exec`) to return default "success" values (e.g., "Yes" to questions, a fake path for file dialogs).
       * **MainWindow Property Proxies**: Patches the `MainWindow` class at startup with custom property descriptors (like `initial_settings`, `scene`, `data`, `undo_stack`). These properties proxy read/write calls to the correct manager classes. If the managers are not yet instantiated during the constructor's execution, the proxies safely fall back to the instance's local `__dict__` dictionary to avoid `AttributeError` crashes during initialization.
 
-### `test_plugin_manager.py`
-
-This file verifies the **integration aspects** of the plugin system, specifically file system interactions and safe metadata parsing.
-
-  * **Tests**:
-      * `test_install_and_discover_single_file`: Verifies the end-to-end installation of a single `.py` plugin file.
-      * `test_install_zip`: Verifies the extraction and installation of zipped plugins.
-      * `test_plugin_registration`: Checks if a plugin can correctly register UI actions (menus/toolbars) in the `PluginContext`.
-      * `test_ast_metadata_parsing`: Ensures safe, non-executing extraction of plugin metadata (Author, Version) using AST.
-
 ### `test_main_app.py`
 
 This is the primary integration test suite, executing user workflows in a headless environment.
@@ -74,7 +64,6 @@ This is the primary integration test suite, executing user workflows in a headle
 | **`test_main_window_settings.py`** | **Settings Integration** | Verifies that settings applied in the dialog correctly propagate to the main application. |
 | **`test_main_window_ui_integration.py`** | **UI/Data Sync** | Verifies consistent state between the data model and multiple UI views. |
 | **`test_molecule_scene_events.py`** | **Scene Events** | Detailed verification of mouse and keyboard event filtering in the 2D scene. |
-| **`test_plugin_manager_redundant.py`** | **Plugin Edge Cases** | Tests for redundant plugin registration and error handling in plugin loading. |
 | **`test_edit_actions_gui_extended.py`** | **Edit Actions GUI** | Verifies the `Rotate2DDialog` GUI in a full PyQt6 context.<br>• **Angle Sync**: Confirms the spinbox and slider remain synchronized during initialization and value changes. |
 
 ## 4\. Setup & Running
