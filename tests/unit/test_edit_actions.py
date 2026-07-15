@@ -553,3 +553,47 @@ def test_push_undo_state_caps_stack_depth(monkeypatch):
     # Newest state kept, oldest dropped
     assert mgr.undo_stack[-1]["_next_atom_id"] == UNDO_STACK_MAX_DEPTH + 24
     assert mgr.undo_stack[0]["_next_atom_id"] == 25
+
+
+def test_push_undo_state_detects_constraint_change(monkeypatch):
+    """Two states identical except for constraints_3d must both be pushed.
+
+    Regression: the dedup comparison ignored constraints_3d, so a
+    constraints-only edit (e.g. added in the Constrained Optimization
+    dialog and saved on close) was silently deduplicated away.
+    """
+    host = MagicMock()
+    host.is_restoring_state = False
+    host.view_3d_manager.current_mol = None
+    host.state_manager.data.atoms = {}
+    host.state_manager.data.bonds = {}
+    host.state_manager.data.next_atom_id = 0
+    host.edit_3d_manager.constraints_3d = []
+
+    mgr = EditActionsManager(host)
+    monkeypatch.setattr(mgr, "update_implicit_hydrogens", lambda: None)
+    monkeypatch.setattr(mgr, "update_undo_redo_actions", lambda: None)
+
+    def _state():
+        return {
+            "atoms": {},
+            "bonds": {},
+            "_next_atom_id": 0,
+            "constraints_3d": [
+                list(c) for c in host.edit_3d_manager.constraints_3d
+            ],
+        }
+
+    host.state_manager.get_current_state.side_effect = _state
+
+    mgr.push_undo_state()
+    assert len(mgr.undo_stack) == 1
+
+    # Identical state: deduplicated
+    mgr.push_undo_state()
+    assert len(mgr.undo_stack) == 1
+
+    # Same atoms/bonds, new constraint: must create a new entry
+    host.edit_3d_manager.constraints_3d = [["Distance", [0, 1], 1.54, 1.0e5]]
+    mgr.push_undo_state()
+    assert len(mgr.undo_stack) == 2
