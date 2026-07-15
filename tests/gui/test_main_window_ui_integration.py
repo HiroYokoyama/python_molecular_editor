@@ -271,3 +271,22 @@ def test_integrate_plugin_file_openers_ui(window, qtbot):
         cb.assert_called_once_with("data.fake")
         # Attributes are still proxied on host for now, but we check via io_manager if available
         assert window.init_manager.current_file_path == "data.fake"
+
+
+def test_quit_action_has_ctrl_q_shortcut(window, qtbot):
+    """File > Quit must carry the Ctrl+Q shortcut documented in the manual."""
+    menu_bar = window.menuBar()
+    file_action = next(
+        (a for a in menu_bar.actions() if "File" in a.text().replace("&", "")), None
+    )
+    assert file_action is not None
+    quit_action = next(
+        (
+            a
+            for a in file_action.menu().actions()
+            if a.text().replace("&", "") == "Quit"
+        ),
+        None,
+    )
+    assert quit_action is not None
+    assert quit_action.shortcut().toString() == "Ctrl+Q"

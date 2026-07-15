@@ -522,6 +522,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 | `Ctrl`+`2` | Panel Layout 70:30 (2D Focus) |
 | `Ctrl`+`3` | Panel Layout 30:70 (3D Focus) |
 | `Ctrl`+`H` | Toggle 2D Panel Visibility | 
+| `Ctrl`+`Q` | Quit |
 
 -----
 

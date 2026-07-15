@@ -1195,6 +1195,7 @@ class MainInitManager:
 
         file_menu.addSeparator()
         quit_action = QAction("Quit", self.host)
+        quit_action.setShortcut("Ctrl+Q")
         quit_action.triggered.connect(self.host.close)
         file_menu.addAction(quit_action)
 
