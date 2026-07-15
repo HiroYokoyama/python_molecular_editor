@@ -333,10 +333,12 @@ This is an advanced feature that performs a molecular structure optimization (fo
 
 From the menu `View` \> `3D Atom Info Display`, you can select the information to be displayed above each atom in the 3D view.
 
-  * **Show Original ID / Index (or Show XYZ Unique ID):** Displays the original ID if from the 2D editor, or the index within the XYZ file if from an XYZ file. Also includes a 0/1-base submenu to switch the starting index.
-  * **Show RDKit Index:** Displays the internal RDKit atom index.
+  * **Show Index:** Displays the internal RDKit atom index.
+  * **Show Original ID:** Displays the original ID assigned in the 2D editor.
+  * **Show XYZ Index:** Displays the index within the imported XYZ file.
   * **Show Coordinates (X,Y,Z):** Displays the 3D coordinates of each atom.
   * **Show Element Symbol:** Displays the element symbol for each atom.
+  * **Index Base:** A submenu to switch the starting index (0-based / 1-based) for the displayed indices.
 
 Selecting the same menu item again will turn off the display.
 
@@ -520,13 +522,12 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 | `Ctrl`+`2` | Panel Layout 70:30 (2D Focus) |
 | `Ctrl`+`3` | Panel Layout 30:70 (3D Focus) |
 | `Ctrl`+`H` | Toggle 2D Panel Visibility | 
-| `Ctrl`+`Q` | Quit |
 
 -----
 
 ## 11\. Version / License
 
-  * **Version:** 4.2
+  * **Version:** 4.3
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
