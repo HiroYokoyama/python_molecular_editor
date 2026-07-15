@@ -64,7 +64,7 @@ jobs:
         MOLEDITPY_HEADLESS: "1"
         QT_QPA_PLATFORM: "offscreen"
       run: |
-        # Run unit, integration, and GUI suites in CI on dev branch
+        # No suite flags: run_all_tests.py runs all four suites (unit, integration, E2E, GUI)
         python tests/run_all_tests.py --no-cov --no-report
 
   lint:
