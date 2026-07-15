@@ -1099,11 +1099,15 @@ class KeyboardMixin:
                     # 3. Update BondItem properties based on key
                     if key == Qt.Key.Key_W:
                         if bond.stereo == 1:
+                            # Direction flip mutates the data model (swapped
+                            # key + atoms) without touching order/stereo, so
+                            # it must set the undo flag itself.
                             bond_data = self.data.bonds.pop(current_key)
                             new_key = (current_key[1], current_key[0])
                             self.data.bonds[new_key] = bond_data
                             bond.atom1, bond.atom2 = bond.atom2, bond.atom1
                             bond.update_position()
+                            any_bond_changed = True
                         else:
                             bond.order = 1
                             bond.stereo = 1
@@ -1115,6 +1119,7 @@ class KeyboardMixin:
                             self.data.bonds[new_key] = bond_data
                             bond.atom1, bond.atom2 = bond.atom2, bond.atom1
                             bond.update_position()
+                            any_bond_changed = True
                         else:
                             bond.order = 1
                             bond.stereo = 2
