@@ -242,6 +242,14 @@ class IOManager:
             final_mol.xyz_atom_data = atoms_data
         return final_mol
 
+    def _report_load_error(self, title: str, message: str) -> None:
+        """Report a load failure on the status bar and, in GUI mode, a dialog."""
+        status_bar = self.host.statusBar()
+        if status_bar is not None:
+            status_bar.showMessage(message)
+        if not os.environ.get("MOLEDITPY_HEADLESS"):
+            QMessageBox.warning(self.host, title, message)
+
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
         """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
         if not self.host.state_manager.check_unsaved_changes():
@@ -349,6 +357,19 @@ class IOManager:
             # Unreachable via OK (validated inline)
             return 0, True, False
 
+    @staticmethod
+    def _covalent_radius(symbol: str, atomic_num: int) -> float:
+        """Covalent radius from the local table, RDKit's periodic table for
+        elements the table lacks (it stops at V), or 1.0 as a last resort."""
+        radius = COVALENT_RADII.get(symbol)
+        if radius:
+            return radius
+        try:
+            radius = Chem.GetPeriodicTable().GetRcovalent(atomic_num)
+        except (ValueError, RuntimeError):
+            radius = 0.0
+        return radius if radius > 0.0 else 1.0
+
     def estimate_bonds_from_distances(self, mol: Chem.RWMol) -> int:
         """Estimate bonds based on interatomic distances using covalent radii."""
         conf = mol.GetConformer()
@@ -364,8 +385,8 @@ class IOManager:
                 distance = rdMolTransforms.GetBondLength(conf, i, j)
                 symbol_i = atom_i.GetSymbol()
                 symbol_j = atom_j.GetSymbol()
-                radius_i = COVALENT_RADII.get(symbol_i, 1.0)
-                radius_j = COVALENT_RADII.get(symbol_j, 1.0)
+                radius_i = self._covalent_radius(symbol_i, atom_i.GetAtomicNum())
+                radius_j = self._covalent_radius(symbol_j, atom_j.GetAtomicNum())
                 expected = radius_i + radius_j
                 tolerance = 1.2 if (symbol_i == "H" or symbol_j == "H") else 1.3
                 if expected * 0.5 <= distance <= expected * tolerance:
@@ -493,8 +514,9 @@ class IOManager:
         elif file_path.lower().endswith(".pmeraw"):
             self.load_raw_data(file_path)
         else:
-            self.host.statusBar().showMessage(
-                "Error: Unable to determine file format or file corrupted."
+            self._report_load_error(
+                "Project Load Error",
+                "Error: Unable to determine file format or file corrupted.",
             )
 
     def save_as_json(self) -> None:
@@ -592,14 +614,23 @@ class IOManager:
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
 
         except FileNotFoundError:
-            self.host.statusBar().showMessage(f"File not found: {file_path}")
+            self._report_load_error(
+                "Project Load Error", f"File not found: {file_path}"
+            )
         except json.JSONDecodeError as e:
-            self.host.statusBar().showMessage(f"Invalid JSON format: {e}")
+            self._report_load_error("Project Load Error", f"Invalid JSON format: {e}")
         except (OSError, IOError) as e:
-            self.host.statusBar().showMessage(f"File I/O error: {e}")
-        except (TypeError, ValueError, RuntimeError, AttributeError, KeyError) as e:
-            self.host.statusBar().showMessage(
-                f"Data corruption in PME Project file: {e}"
+            self._report_load_error("Project Load Error", f"File I/O error: {e}")
+        except (
+            TypeError,
+            ValueError,
+            RuntimeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+        ) as e:
+            self._report_load_error(
+                "Project Load Error", f"Data corruption in PME Project file: {e}"
             )
 
     def save_raw_data(self) -> None:
@@ -757,7 +788,7 @@ class IOManager:
             AttributeError,
             KeyError,
         ) as e:
-            self.host.statusBar().showMessage(f"Error loading file: {e}")
+            self._report_load_error("MOL Import Error", f"Error loading file: {e}")
 
     def save_as_mol(self) -> None:
         """Save current 2D structure as MOL file."""
@@ -842,8 +873,7 @@ class IOManager:
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
         except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
-            if self.host.statusBar():
-                self.host.statusBar().showMessage(f"XYZ Load failed: {e}")
+            self._report_load_error("XYZ Load Error", f"XYZ Load failed: {e}")
 
     def load_mol_file_for_3d_viewing(self, file_path: Optional[str] = None) -> None:
         """Open MOL/SDF file in 3D viewer."""
@@ -897,7 +927,7 @@ class IOManager:
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
         except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
-            self.host.statusBar().showMessage(f"3D MOL Load failed: {e}")
+            self._report_load_error("3D MOL Load Error", f"3D MOL Load failed: {e}")
 
     def save_3d_as_mol(self) -> None:
         """Save current 3D structure as MOL file."""
@@ -1031,13 +1061,26 @@ class IOManager:
             QTimer.singleShot(100, self._plotter_render)
 
         except FileNotFoundError:
-            self.host.statusBar().showMessage(f"File not found: {file_path}")
+            self._report_load_error(
+                "Project Load Error", f"File not found: {file_path}"
+            )
         except (OSError, IOError) as e:
-            self.host.statusBar().showMessage(f"File I/O error: {e}")
-        except pickle.UnpicklingError as e:
-            self.host.statusBar().showMessage(f"Invalid project file format: {e}")
-        except (TypeError, ValueError, RuntimeError, AttributeError) as e:
-            self.host.statusBar().showMessage(f"Error loading project file: {e}")
+            self._report_load_error("Project Load Error", f"File I/O error: {e}")
+        except (pickle.UnpicklingError, EOFError, ImportError) as e:
+            self._report_load_error(
+                "Project Load Error", f"Invalid project file format: {e}"
+            )
+        except (
+            TypeError,
+            ValueError,
+            RuntimeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+        ) as e:
+            self._report_load_error(
+                "Project Load Error", f"Error loading project file: {e}"
+            )
 
     def _set_mol_prop(self, mol: Chem.Mol, prop_name: str, value: Any) -> None:
         """Set an RDKit molecule property safely."""

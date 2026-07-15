@@ -413,3 +413,36 @@ def test_create_multi_material_obj_complex_cells(window):
         assert "f 5 6 7 8" in content
         assert "f 1 2 3" in content
         assert "f 3 2 4" in content
+
+
+def test_export_obj_mtl_uppercase_extension_keeps_paths_distinct(
+    window, mock_file_dialog
+):
+    """Regression: an upper-case .OBJ filename made mtl_path identical to
+    file_path (case-sensitive str.replace found nothing to replace), so the
+    MTL content was written to the .OBJ path and then overwritten — silent
+    material data loss."""
+    mock_file_dialog.getSaveFileName.return_value = (
+        "/path/to/MODEL.OBJ",
+        "OBJ Files (*.obj)",
+    )
+
+    meshes = [
+        {
+            "mesh": MagicMock(),
+            "color": [255, 0, 0],
+            "name": "test_mesh",
+            "type": "actor",
+            "actor_name": "test",
+        }
+    ]
+
+    with (
+        patch.object(window, "export_from_3d_view_with_colors", return_value=meshes),
+        patch.object(window, "create_multi_material_obj") as mock_create,
+    ):
+        window.export_obj_mtl()
+
+        mock_create.assert_called_once_with(
+            meshes, "/path/to/MODEL.OBJ", "/path/to/MODEL.mtl"
+        )

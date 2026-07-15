@@ -181,3 +181,37 @@ def test_benzene_template_rotation_logic(scene_setup):
 
     scene.add_user_template_fragment(context)
     assert data.add_atom.called
+
+
+def test_wedge_flip_via_key_w_pushes_undo(scene_setup):
+    """Regression: pressing W on an already-wedge bond flips its direction
+    (swaps the data-model key and the bond's atoms) but left order/stereo
+    unchanged, so any_bond_changed stayed False and no undo checkpoint was
+    recorded for a real data mutation."""
+    scene, data, win = scene_setup
+
+    a1 = AtomItem(0, "C", QPointF(0, 0))
+    a2 = AtomItem(1, "C", QPointF(50, 0))
+    a1.atom_id, a2.atom_id = 0, 1
+    bond = BondItem(a1, a2, order=1, stereo=1)  # already a wedge
+    data.bonds[(0, 1)] = {"order": 1, "stereo": 1, "item": bond}
+
+    event = MagicMock()
+    event.key.return_value = Qt.Key.Key_W
+    event.modifiers.return_value = Qt.KeyboardModifier.NoModifier
+
+    win.ui_manager.is_2d_editable = True
+    win.edit_actions_manager.push_undo_state.reset_mock()
+
+    with (
+        patch.object(MoleculeScene, "itemAt", return_value=bond),
+        patch.object(scene, "find_atom_near", return_value=None),
+        patch.object(scene, "update_all_items"),
+    ):
+        scene.keyPressEvent(event)
+
+    # Direction flipped: key swapped in the data model, atoms swapped on item
+    assert (1, 0) in data.bonds and (0, 1) not in data.bonds
+    assert bond.atom1 is a2 and bond.atom2 is a1
+    # The mutation must be recorded in undo history
+    win.edit_actions_manager.push_undo_state.assert_called_once()

@@ -87,3 +87,42 @@ def test_xyz_load_enters_viewer_mode(window, qtbot, tmp_path, monkeypatch):
     assert mol.GetNumAtoms() == 3
     assert sorted(a.GetSymbol() for a in mol.GetAtoms()) == ["H", "H", "O"]
     assert window.ui_manager.is_2d_editable is False
+
+
+@pytest.mark.gui
+def test_3d_imports_invoke_plugin_document_reset(window, qtbot, tmp_path, monkeypatch):
+    """XYZ and MOL 3D-viewer imports replace the document, so the plugin
+    document-reset dispatch must fire (plugins rely on it to drop state tied
+    to the previous structure). The dispatch loop itself is unit-tested in
+    test_plugin_manager.py; here we pin that the import paths reach it."""
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
+
+    monkeypatch.setattr(
+        f"{_PKG}.ui.app_state.QMessageBox.question",
+        lambda *a, **k: QMessageBox.StandardButton.No,
+        raising=True,
+    )
+    window.init_manager.settings["skip_chemistry_checks"] = True
+
+    resets = []
+    monkeypatch.setattr(
+        window.plugin_manager,
+        "invoke_document_reset_handlers",
+        lambda: resets.append(True),
+        raising=True,
+    )
+
+    xyz_path = tmp_path / "water.xyz"
+    xyz_path.write_text(WATER_XYZ, encoding="utf-8")
+    window.io_manager.load_xyz_for_3d_viewing(str(xyz_path))
+    qtbot.wait(200)
+    assert len(resets) == 1, "XYZ 3D import must invoke document reset"
+
+    mol = Chem.AddHs(Chem.MolFromSmiles("C"))
+    AllChem.EmbedMolecule(mol, randomSeed=42)
+    mol_path = tmp_path / "methane.mol"
+    mol_path.write_text(Chem.MolToMolBlock(mol), encoding="utf-8")
+    window.io_manager.load_mol_file_for_3d_viewing(str(mol_path))
+    qtbot.wait(200)
+    assert len(resets) == 2, "MOL 3D import must invoke document reset"

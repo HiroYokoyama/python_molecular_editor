@@ -605,3 +605,87 @@ class TestOptimizationExecution:
         assert dlg.optimize_button.isEnabled()
         mock_mb.critical.assert_called_once()
         assert "Test Error" in mock_mb.critical.call_args[0][2]
+
+
+# ---------------------------------------------------------------------------
+# Cancellation & undo integrity (dev-4.3.1 bug fixes)
+# ---------------------------------------------------------------------------
+
+
+class TestCancelAndUndoIntegrity:
+    def _close_quietly(self, dlg):
+        dlg.picking_enabled = False
+        dlg.constraint_labels = []
+        dlg.selection_labels = []
+        dlg.reject()
+
+    def test_finished_after_close_discards_result(self, make_dialog):
+        """A result arriving after the dialog was closed must not touch the doc."""
+        dlg = make_dialog()
+        self._close_quietly(dlg)
+        assert dlg._closed is True
+
+        dlg.main_window.reset_mock()
+        mock_conf = MagicMock()
+        dlg._on_optimization_finished("MMFF94s", mock_conf)
+
+        mock_conf.GetAtomPosition.assert_not_called()
+        dlg.main_window.view_3d_manager.draw_molecule_3d.assert_not_called()
+        dlg.main_window.edit_actions_manager.push_undo_state.assert_not_called()
+
+    def test_error_after_close_is_suppressed(self, make_dialog):
+        """An error arriving after close must not pop a message box."""
+        dlg = make_dialog()
+        self._close_quietly(dlg)
+
+        with patch(
+            "moleditpy.ui.constrained_optimization_dialog.QMessageBox"
+        ) as mock_mb:
+            dlg._on_optimization_error("late failure")
+
+        mock_mb.critical.assert_not_called()
+
+    def test_reject_pushes_undo_when_constraints_changed(self, make_dialog):
+        """Closing the dialog after editing constraints must record an undo step."""
+        dlg = make_dialog()
+        dlg.constraints = [("Distance", (0, 1), 1.54, 1.0e5)]
+        dlg.main_window.edit_3d_manager.constraints_3d = []
+        self._close_quietly(dlg)
+
+        dlg.main_window.edit_actions_manager.push_undo_state.assert_called_once()
+
+    def test_reject_no_change_does_not_push_undo(self, make_dialog):
+        """Closing without touching constraints must not create an undo entry."""
+        dlg = make_dialog()
+        dlg.constraints = [("Distance", (0, 1), 1.54, 1.0e5)]
+        dlg.main_window.edit_3d_manager.constraints_3d = [
+            ["Distance", [0, 1], 1.54, 1.0e5]
+        ]
+        self._close_quietly(dlg)
+
+        dlg.main_window.edit_actions_manager.push_undo_state.assert_not_called()
+
+    def test_finished_syncs_constraints_before_undo_push(self, make_dialog):
+        """The undo snapshot must capture the constraints used for the run."""
+        dlg = make_dialog()
+        dlg.constraints = [("Distance", (0, 1), 1.54, 1.0e5)]
+        dlg.main_window.edit_3d_manager.constraints_3d = []
+
+        seen_at_push = []
+        dlg.main_window.edit_actions_manager.push_undo_state.side_effect = (
+            lambda: seen_at_push.append(
+                list(dlg.main_window.edit_3d_manager.constraints_3d)
+            )
+        )
+
+        mock_conf = MagicMock()
+        pos_mock = MagicMock()
+        pos_mock.x = pos_mock.y = pos_mock.z = 0.0
+        mock_conf.GetAtomPosition.return_value = pos_mock
+        dlg.main_window.view_3d_manager.atom_positions_3d = {
+            i: [0, 0, 0] for i in range(dlg.mol.GetNumAtoms())
+        }
+
+        dlg._on_optimization_finished("MMFF94s", mock_conf)
+
+        assert seen_at_push == [[["Distance", [0, 1], 1.54, 1.0e5]]]

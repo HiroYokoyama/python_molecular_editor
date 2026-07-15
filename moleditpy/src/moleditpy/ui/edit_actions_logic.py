@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import numpy as np
 
 from ..core.mol_geometry import identify_valence_problems
+from .app_state import _serialize_constraints
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from PyQt6.QtCore import QByteArray, QMimeData, QPointF, Qt, QTimer
@@ -116,6 +117,15 @@ class EditActionsManager:
         self.redo_stack.clear()
         self.push_undo_state()
 
+    def _constraints_for_comparison(self) -> List[Any]:
+        """Current 3D constraints in the serialized form stored in snapshots."""
+        constraints = getattr(
+            getattr(self.host, "edit_3d_manager", None), "constraints_3d", None
+        )
+        if not isinstance(constraints, list):
+            return []
+        return _serialize_constraints(constraints)
+
     def push_undo_state(self) -> None:
         """Saves current molecular state to undo stack for history tracking."""
         if getattr(self.host, "is_restoring_state", False):
@@ -150,6 +160,7 @@ class EditActionsManager:
             ]
             if self.host.view_3d_manager.current_mol
             else None,
+            "constraints_3d": self._constraints_for_comparison(),
         }
 
         last_state_for_comparison = None
@@ -174,6 +185,7 @@ class EditActionsManager:
                 "_next_atom_id": last_state.get("_next_atom_id"),
                 "mol_3d": last_state.get("mol_3d", None),
                 "mol_3d_atom_ids": last_state.get("mol_3d_atom_ids", None),
+                "constraints_3d": last_state.get("constraints_3d") or [],
             }
 
         if (

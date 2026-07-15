@@ -460,3 +460,84 @@ class TestAnalysisToolEndToEnd:
         added = analysis_menu.addAction.call_args[0][0]
         assert "NMR Predict" in added.text()
         assert "NMRPro" in added.text()
+
+
+# ---------------------------------------------------------------------------
+# rebuild_plugin_menus — plugin-created top-level menu removal (dev-4.3.1)
+# ---------------------------------------------------------------------------
+
+
+class TestTopLevelMenuCleanup:
+    def _make_im_with_real_menubar(self, pm):
+        from PyQt6.QtWidgets import QMenuBar
+
+        bar = QMenuBar()
+        im = _make_im(pm)
+        im.host.menuBar = lambda: bar
+        return im, bar
+
+    def _titles(self, bar):
+        return [a.text() for a in bar.actions() if a.menu() is not None]
+
+    def test_emptied_plugin_toplevel_menu_removed_on_rebuild(self, app):
+        """Regression: a plugin-created top-level menu stayed in the menu bar
+        forever (dead and empty) after the plugin was uninstalled/reloaded."""
+        pm = _make_plugin_manager(
+            menu_actions=[
+                {
+                    "plugin": "TestPlugin",
+                    "path": "MyPluginMenu/Do Thing",
+                    "callback": lambda: None,
+                    "text": "Do Thing",
+                    "icon": None,
+                    "shortcut": None,
+                }
+            ]
+        )
+        im, bar = self._make_im_with_real_menubar(pm)
+        mgr = PluginMenuManager(im)
+
+        mgr.add_registered_plugin_actions()
+        assert "MyPluginMenu" in self._titles(bar)
+
+        pm.menu_actions = []  # plugin uninstalled, registries re-discovered
+        mgr.rebuild_plugin_menus()
+
+        assert "MyPluginMenu" not in self._titles(bar)
+        # No orphaned menu-bar separator either
+        assert bar.actions() == []
+
+    def test_still_registered_toplevel_menu_survives_rebuild(self, app):
+        pm = _make_plugin_manager(
+            menu_actions=[
+                {
+                    "plugin": "TestPlugin",
+                    "path": "MyPluginMenu/Do Thing",
+                    "callback": lambda: None,
+                    "text": "Do Thing",
+                    "icon": None,
+                    "shortcut": None,
+                }
+            ]
+        )
+        im, bar = self._make_im_with_real_menubar(pm)
+        mgr = PluginMenuManager(im)
+
+        mgr.add_registered_plugin_actions()
+        mgr.rebuild_plugin_menus()
+
+        assert self._titles(bar) == ["MyPluginMenu"]
+        menu = bar.actions()[-1].menu()
+        labels = [a.text() for a in menu.actions() if not a.isSeparator()]
+        assert labels == ["Do Thing"]
+
+    def test_builtin_menus_never_removed(self, app):
+        """Untagged (application-owned) menus must survive even when empty."""
+        pm = _make_plugin_manager()
+        im, bar = self._make_im_with_real_menubar(pm)
+        bar.addMenu("File")  # built-in, untagged, currently empty
+        mgr = PluginMenuManager(im)
+
+        mgr.rebuild_plugin_menus()
+
+        assert "File" in self._titles(bar)

@@ -143,6 +143,20 @@ class PluginMenuManager:
         except Exception:
             logging.warning("Plugin rebuild: menu cleanup error", exc_info=True)
 
+        # Drop tagged (plugin-created) top-level menus the clean pass emptied
+        try:
+            menu_bar = self._im.host.menuBar()
+            for top_action in list(menu_bar.actions()):
+                if top_action.data() != self._PLUGIN_ACTION_TAG:
+                    continue
+                submenu = top_action.menu()
+                if submenu is None or not any(
+                    not a.isSeparator() for a in submenu.actions()
+                ):
+                    menu_bar.removeAction(top_action)
+        except Exception:
+            logging.warning("Plugin rebuild: menubar cleanup error", exc_info=True)
+
         self._im.plugin_menubar_separator_added = False
 
         for method, label in [
@@ -182,9 +196,11 @@ class PluginMenuManager:
 
             if not current_menu:
                 if not self._im.plugin_menubar_separator_added:
-                    self._im.host.menuBar().addSeparator()
+                    sep = self._im.host.menuBar().addSeparator()
+                    sep.setData(self._PLUGIN_ACTION_TAG)
                     self._im.plugin_menubar_separator_added = True
                 current_menu = self._im.host.menuBar().addMenu(top_level_title)
+                current_menu.menuAction().setData(self._PLUGIN_ACTION_TAG)
 
             for part in parts[1:-1]:
                 sub = next(
