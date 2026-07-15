@@ -116,8 +116,10 @@ class ExportManager:
             if not file_path.lower().endswith(".obj"):
                 file_path += ".obj"
 
-            # Save as OBJ+MTL with material per object
-            mtl_path = file_path.replace(".obj", ".mtl")
+            # Save as OBJ+MTL with material per object. splitext (not
+            # str.replace) so an upper-case ".OBJ" or a ".obj" substring in a
+            # directory name cannot make mtl_path collide with file_path.
+            mtl_path = os.path.splitext(file_path)[0] + ".mtl"
 
             self.create_multi_material_obj(meshes_with_colors, file_path, mtl_path)
 
