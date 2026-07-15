@@ -65,6 +65,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.constraints: list[Any] = []  # (type, atoms_indices, value)
         self.constraint_labels: list[Any] = []  # 3D label actors
         self._opt_thread: Any = None
+        # Closed dialogs must discard late optimization-thread results
+        self._closed = False
         self.init_ui()
         self.enable_picking()
 
@@ -599,6 +601,11 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             self.optimize_button.setEnabled(True)
 
     def _on_optimization_error(self, err_msg: str) -> None:
+        if self._closed:
+            logging.warning(
+                "Constrained optimization failed after dialog close: %s", err_msg
+            )
+            return
         self.optimize_button.setEnabled(True)
         status_bar = self.main_window.statusBar()
         if status_bar is not None:
@@ -606,6 +613,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         QMessageBox.critical(self, "Error", f"Optimization error: {err_msg}")
 
     def _on_optimization_finished(self, ff_name: str, conf: Any) -> None:
+        if self._closed:
+            logging.info("Discarding constrained optimization result after close.")
+            return
         self.optimize_button.setEnabled(True)
         try:
             # Apply optimized coordinates to the main window's numpy array
@@ -619,25 +629,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                         pos.z,
                     ]
 
-            # Update 3D view
-            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-            self.main_window.view_3d_manager.update_chiral_labels()
-            self.main_window.edit_actions_manager.push_undo_state()
-            status_bar = self.main_window.statusBar()
-            if status_bar is not None:
-                status_bar.showMessage("Constrained optimization finished.")
-
-            try:
-                constrained_method_name = f"Constrained_{ff_name}"
-                self.main_window.compute_manager.last_successful_optimization_method = (
-                    constrained_method_name
-                )
-            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-                logging.warning(
-                    "Failed to set last_successful_optimization_method: %s", e
-                )
-
-            # Save constraints list to MainWindow on success (same logic as reject)
+            # Sync constraints to MainWindow before push_undo_state so the snapshot records them
             try:
                 # Save as list for JSON compatibility
                 json_safe_constraints = []
@@ -669,6 +661,24 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 logging.warning("Failed to save constraints post-optimization: %s", e)
 
+            # Update 3D view
+            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+            self.main_window.view_3d_manager.update_chiral_labels()
+            self.main_window.edit_actions_manager.push_undo_state()
+            status_bar = self.main_window.statusBar()
+            if status_bar is not None:
+                status_bar.showMessage("Constrained optimization finished.")
+
+            try:
+                constrained_method_name = f"Constrained_{ff_name}"
+                self.main_window.compute_manager.last_successful_optimization_method = (
+                    constrained_method_name
+                )
+            except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                logging.warning(
+                    "Failed to set last_successful_optimization_method: %s", e
+                )
+
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.exception("Optimization failed: %s", e)
 
@@ -679,6 +689,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
     def reject(self) -> None:
         """Clear labels, disable picking, and save constraints before closing."""
+        self._closed = True
         self.clear_constraint_labels()
         self.clear_selection_labels()
         self.disable_picking()
@@ -706,6 +717,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     True  # Mark as unsaved changes
                 )
                 self.main_window.state_manager.update_window_title()
+                self.main_window.edit_actions_manager.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.warning("Failed to save constraints to main window: %s", e)

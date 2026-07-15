@@ -202,7 +202,8 @@ class MainInitManager:
         self.host.edit_actions_manager.update_edit_menu_actions()
 
         if initial_file:
-            self.load_command_line_file(initial_file)
+            # Deferred: a load-error dialog raised in the constructor would block the window from showing
+            QTimer.singleShot(0, lambda: self.load_command_line_file(initial_file))
 
         QTimer.singleShot(0, self.apply_initial_settings)
         # Camera initialization flag (permits reset only during the first draw)
@@ -1195,6 +1196,7 @@ class MainInitManager:
 
         file_menu.addSeparator()
         quit_action = QAction("Quit", self.host)
+        quit_action.setShortcut("Ctrl+Q")
         quit_action.triggered.connect(self.host.close)
         file_menu.addAction(quit_action)
 
