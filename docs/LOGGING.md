@@ -102,7 +102,7 @@ Qt's own logging (`qDebug`, `qWarning`, etc.) is piped through `_qt_message_hand
 
 Known noisy patterns (currently just `"Retrying to obtain clipboard"`) are downgraded to `DEBUG` to avoid flooding the log.
 
-To add a new downgrade pattern, edit the tuple in [`main.py`](../moleditpy/src/moleditpy/main.py#L39):
+To add a new downgrade pattern, edit the `_DOWNGRADED_QT_PATTERNS` tuple in [`main.py`](../moleditpy/src/moleditpy/main.py):
 
 ```python
 _DOWNGRADED_QT_PATTERNS = (

@@ -33,7 +33,7 @@ The application maintains a strict separation between the persistent chemical da
 
 ### Key Operations
 - **`to_rdkit_mol()`**: The bridge to RDKit. It handles the reconstruction of a 3D-aware RDKit molecule object, preserving atom properties and explicit stereochemical directions (Wedges/Dashes).
-- **`from_rdkit_mol()`**: populates the `atoms` and `bonds` dictionaries from an existing RDKit molecule.
+- **`add_atom()` / `add_bond()`**: the construction API. There is no reverse `from_rdkit_mol()` method — importers and the 2D scene populate `MolecularData` incrementally through these calls.
 
 ---
 
