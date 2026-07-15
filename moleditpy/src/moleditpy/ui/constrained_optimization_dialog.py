@@ -65,8 +65,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self.constraints: list[Any] = []  # (type, atoms_indices, value)
         self.constraint_labels: list[Any] = []  # 3D label actors
         self._opt_thread: Any = None
-        # Set when the dialog is closed; late results from a still-running
-        # optimization thread must be discarded, not applied to the document.
+        # Closed dialogs must discard late optimization-thread results
         self._closed = False
         self.init_ui()
         self.enable_picking()
@@ -615,8 +614,6 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
     def _on_optimization_finished(self, ff_name: str, conf: Any) -> None:
         if self._closed:
-            # The user closed the dialog while the thread was still running:
-            # treat the run as cancelled and leave the document untouched.
             logging.info("Discarding constrained optimization result after close.")
             return
         self.optimize_button.setEnabled(True)
@@ -632,9 +629,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                         pos.z,
                     ]
 
-            # Save constraints list to MainWindow on success (same logic as
-            # reject). This must happen BEFORE push_undo_state below, so the
-            # undo snapshot records the constraints actually used for this run.
+            # Sync constraints to MainWindow before push_undo_state so the snapshot records them
             try:
                 # Save as list for JSON compatibility
                 json_safe_constraints = []
@@ -694,8 +689,6 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
     def reject(self) -> None:
         """Clear labels, disable picking, and save constraints before closing."""
-        # Cancel any in-flight optimization: its late result must not be
-        # applied to the document after the user has closed the dialog.
         self._closed = True
         self.clear_constraint_labels()
         self.clear_selection_labels()
@@ -724,8 +717,6 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     True  # Mark as unsaved changes
                 )
                 self.main_window.state_manager.update_window_title()
-                # Constraint edits are document state: record them in history
-                # so Ctrl+Z can revert an add/edit/remove done in this dialog.
                 self.main_window.edit_actions_manager.push_undo_state()
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:

@@ -143,9 +143,7 @@ class PluginMenuManager:
         except Exception:
             logging.warning("Plugin rebuild: menu cleanup error", exc_info=True)
 
-        # Plugin-created top-level menus (and the menu-bar separator) are
-        # tagged on creation; drop the ones the clean pass emptied so an
-        # uninstalled plugin doesn't leave a dead menu in the menu bar.
+        # Drop tagged (plugin-created) top-level menus the clean pass emptied
         try:
             menu_bar = self._im.host.menuBar()
             for top_action in list(menu_bar.actions()):
@@ -202,8 +200,6 @@ class PluginMenuManager:
                     sep.setData(self._PLUGIN_ACTION_TAG)
                     self._im.plugin_menubar_separator_added = True
                 current_menu = self._im.host.menuBar().addMenu(top_level_title)
-                # Tag the owning action so rebuild_plugin_menus can remove the
-                # whole top-level menu once its plugin actions are gone.
                 current_menu.menuAction().setData(self._PLUGIN_ACTION_TAG)
 
             for part in parts[1:-1]:

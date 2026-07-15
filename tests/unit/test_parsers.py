@@ -541,3 +541,18 @@ def test_estimate_bonds_heavy_elements_beyond_radii_table(mock_parser_host):
 
     assert added == 1
     assert mol.GetBondBetweenAtoms(0, 1) is not None
+
+
+def test_report_load_error_dialog_gating(mock_parser_host, monkeypatch):
+    """Dialog shown in GUI mode, suppressed under MOLEDITPY_HEADLESS."""
+    from unittest.mock import patch as _patch
+
+    parser = DummyParser(mock_parser_host)
+    with _patch("moleditpy.ui.io_logic.QMessageBox") as mb:
+        monkeypatch.setenv("MOLEDITPY_HEADLESS", "1")
+        parser._report_load_error("Load Error", "broken file")
+        mb.warning.assert_not_called()
+
+        monkeypatch.delenv("MOLEDITPY_HEADLESS")
+        parser._report_load_error("Load Error", "broken file")
+        mb.warning.assert_called_once()
