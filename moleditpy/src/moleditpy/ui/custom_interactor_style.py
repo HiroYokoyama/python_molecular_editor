@@ -13,6 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Optional
 
 import numpy as np
@@ -38,6 +39,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._mouse_moved_during_drag = False
         self._mouse_press_pos: Optional[tuple[int, int]] = None
         self._suppress_next_left_button_up = False
+        self._last_pick_miss_log = 0.0
 
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)  # type: ignore[arg-type]
         # self.AddObserver("LeftButtonDoubleClickEvent", self.on_left_button_down)
@@ -80,6 +82,35 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             except (AttributeError, RuntimeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError
                 logging.debug("Suppressed non-critical error", exc_info=True)
+
+    def _log_pick_miss(self, click_pos: Any, mode: str) -> None:
+        """Diagnostic (rate-limited): a click in an active pick mode hit no atom.
+
+        A healthy background click also lands here, but a persistent stream of
+        misses while the user is clicking directly on atoms indicates the pick
+        pipeline is broken (stale atom_positions_3d, coordinate offset, etc.).
+        """
+        now = time.monotonic()
+        if now - self._last_pick_miss_log < 1.0:
+            return
+        self._last_pick_miss_log = now
+        try:
+            v3m = self.main_window.view_3d_manager
+            positions = getattr(v3m, "atom_positions_3d", None)
+            n_pos = len(positions) if positions is not None else -1
+            mol = getattr(v3m, "current_mol", None)
+            n_atoms = int(mol.GetNumAtoms()) if mol is not None else -1
+            size = v3m.plotter.renderer.GetSize()
+            logging.info(
+                "3D pick miss (%s): click=%s atoms=%d positions=%d renderer_size=%s",
+                mode,
+                tuple(click_pos),
+                n_atoms,
+                n_pos,
+                tuple(size),
+            )
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            logging.info("3D pick miss (%s): click=%s (state unavailable)", mode, click_pos)
 
     def _stop_vtk_left_button_state(self) -> None:
         """Clear VTK's button/drag state after a custom-handled left click."""
@@ -159,9 +190,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             try:
                                 move_group_dialog.on_atom_picked(clicked_atom_idx)
                             except (AttributeError, RuntimeError):
-                                # Safe defensive fallback catching AttributeError, RuntimeError
-                                logging.debug(
-                                    "Suppressed non-critical error", exc_info=True
+                                logging.warning(
+                                    "Move-dialog atom toggle failed", exc_info=True
                                 )
 
                         QTimer.singleShot(0, _deferred_toggle)
@@ -273,9 +303,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         closest_atom_idx
                                     )
                                 except (AttributeError, RuntimeError):
-                                    # Safe defensive fallback catching AttributeError, RuntimeError
-                                    logging.debug(
-                                        "Suppressed non-critical error", exc_info=True
+                                    logging.warning(
+                                        "Measurement selection failed", exc_info=True
                                     )
 
                             QTimer.singleShot(0, _deferred_measure)
@@ -283,6 +312,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             return  # Selection complete, disable camera rotation
 
             # Clear measurement if not dragging
+            self._log_pick_miss(click_pos, "measurement")
             self._is_dragging_atom = False
             self._mouse_press_pos = click_pos
             super().OnLeftButtonDown()
@@ -315,6 +345,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             )
                             self._suppress_next_left_button_up = True
                             return  # Prevent camera rotation
+            else:
+                self._log_pick_miss(click_pos, "3d-edit")
 
         # Track mouse event to distinguish rotation from click
         self._mouse_press_pos = self.GetInteractor().GetEventPosition()
