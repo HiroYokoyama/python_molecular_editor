@@ -384,11 +384,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     def _heal_stuck_pointer_state(self, move_group_dialog: Any) -> None:
         """Self-heal drag/rotate state whose release event was lost.
 
-        Fast clicking can make the Qt layer swallow a release whose press
-        already reached VTK, leaving this style (or a Move Group dialog) in a
-        permanent drag/rotate state that blocks all further interaction. Since
-        the healing press may itself be swallowed, verify against the real
-        button state on every move and reset when no button is held.
+        A release can be lost mid-gesture (e.g. pyvista temporarily swapping
+        the interactor style, a dialog grabbing events), leaving this style or
+        a Move Group dialog in a permanent drag/rotate state that blocks
+        interaction. Verify against the real button state on every move and
+        reset when the button is not actually held.
         """
         try:
             buttons = QApplication.mouseButtons()
