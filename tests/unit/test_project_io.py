@@ -530,3 +530,307 @@ def test_load_raw_data_io_error(io, tmp_path):
     io.statusBar().showMessage.assert_called()
     msg = io.statusBar().showMessage.call_args[0][0]
     assert "Invalid project file format" in msg
+
+
+from rdkit import Chem
+from rdkit.Chem import AllChem
+
+
+def _status_messages(host):
+    return [str(c.args[0]) for c in host.statusBar().showMessage.call_args_list]
+
+
+# ---------------------------------------------------------------------------
+# load_mol_file — 2D MOL/SDF import
+# ---------------------------------------------------------------------------
+
+_ETHANOL_MOL_BLOCK = """
+  Test
+
+  3  2  0  0  0  0  0  0  0  0999 V2000
+    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.5000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.2000    1.2000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0
+  2  3  1  0
+M  END
+"""
+
+
+def test_load_mol_file_no_path_cancelled_dialog(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")
+    ):
+        io.load_mol_file()
+    mock_parser_host.init_manager.scene.create_atom.assert_not_called()
+
+
+def test_load_mol_file_missing_file_reports_error(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    io.load_mol_file("/no/such/file.mol")
+    assert "File not found" in _status_messages(mock_parser_host)[-1]
+
+
+def test_load_mol_file_imports_atoms_and_bonds(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    path = tmp_path / "ethanol.mol"
+    path.write_text(_ETHANOL_MOL_BLOCK, encoding="utf-8")
+
+    io.load_mol_file(str(path))
+
+    assert len(mock_parser_host.state_manager.data.atoms) == 3
+    assert len(mock_parser_host.state_manager.data.bonds) == 2
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+    assert "Successfully imported" in _status_messages(mock_parser_host)[-1]
+
+
+def test_load_mol_file_places_relative_to_existing_atoms(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    mock_parser_host.init_manager.scene.create_atom("C", QPointF(500.0, 10.0))
+    path = tmp_path / "ethanol.mol"
+    path.write_text(_ETHANOL_MOL_BLOCK, encoding="utf-8")
+
+    io.load_mol_file(str(path))
+
+    # New atoms are placed to the right of the pre-existing rightmost atom.
+    assert len(mock_parser_host.state_manager.data.atoms) == 4
+
+
+def test_load_mol_file_invalid_block_reports_error(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    path = tmp_path / "bad.mol"
+    path.write_text("not a mol block", encoding="utf-8")
+
+    io.load_mol_file(str(path))
+
+    assert "MOL Import Error" not in "".join(_status_messages(mock_parser_host))
+    assert "Error loading file" in _status_messages(mock_parser_host)[-1]
+
+
+# ---------------------------------------------------------------------------
+# save_as_mol
+# ---------------------------------------------------------------------------
+
+
+def test_save_as_mol_no_data(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    assert mock_parser_host.state_manager.data.atoms == {}
+    io.save_as_mol()
+    assert "Error: No 2D data to save." in _status_messages(mock_parser_host)
+
+
+def test_save_as_mol_writes_file(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    mock_parser_host.init_manager.scene.create_atom("C", QPointF(0, 0))
+    out_path = tmp_path / "out.mol"
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(out_path), ""),
+    ):
+        io.save_as_mol()
+    assert out_path.exists()
+    assert "MoleditPy Ver." in out_path.read_text(encoding="utf-8")
+    assert "2D data saved to" in _status_messages(mock_parser_host)[-1]
+
+
+def test_save_as_mol_cancelled_dialog_writes_nothing(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    mock_parser_host.init_manager.scene.create_atom("C", QPointF(0, 0))
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ):
+        io.save_as_mol()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_save_as_mol_io_error_reports_message(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    mock_parser_host.init_manager.scene.create_atom("C", QPointF(0, 0))
+    bad_path = tmp_path / "no_such_dir" / "out.mol"
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(bad_path), ""),
+    ):
+        io.save_as_mol()
+    assert "Error saving MOL" in _status_messages(mock_parser_host)[-1]
+
+
+# ---------------------------------------------------------------------------
+# load_mol_file_for_3d_viewing
+# ---------------------------------------------------------------------------
+
+
+def test_load_mol_file_3d_no_path_cancelled(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")
+    ):
+        io.load_mol_file_for_3d_viewing()
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+
+
+def test_load_mol_file_3d_unsaved_changes_blocks(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    mock_parser_host.state_manager.check_unsaved_changes.return_value = False
+    io.load_mol_file_for_3d_viewing("ignored.mol")
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+
+
+def test_load_mol_file_3d_success_draws_molecule(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    path = tmp_path / "ethanol.mol"
+    path.write_text(_ETHANOL_MOL_BLOCK, encoding="utf-8")
+
+    io.load_mol_file_for_3d_viewing(str(path))
+
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+    mock_parser_host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+    assert mock_parser_host.is_xyz_derived is False
+    assert mock_parser_host.init_manager.current_file_path == str(path)
+
+
+def test_load_mol_file_3d_failure_reports_error(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    path = tmp_path / "bad.mol"
+    path.write_text("not a mol block", encoding="utf-8")
+
+    io.load_mol_file_for_3d_viewing(str(path))
+
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+    assert "3D MOL Load failed" in _status_messages(mock_parser_host)[-1]
+
+
+# ---------------------------------------------------------------------------
+# save_as_xyz
+# ---------------------------------------------------------------------------
+
+
+def test_save_as_xyz_no_current_mol(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = None
+    io.save_as_xyz()
+    assert "Please generate a 3D structure first" in _status_messages(
+        mock_parser_host
+    )[-1]
+
+
+def test_save_as_xyz_cancelled_dialog_writes_nothing(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    mol = Chem.MolFromSmiles("CO")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, randomSeed=1)
+    mock_parser_host.view_3d_manager.current_mol = mol
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ):
+        io.save_as_xyz()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_save_as_xyz_writes_charge_and_multiplicity(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    mol = Chem.MolFromSmiles("CO")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, randomSeed=1)
+    mol.SetIntProp("_xyz_charge", -1)
+    mock_parser_host.view_3d_manager.current_mol = mol
+    out_path = tmp_path / "out.xyz"
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(out_path), ""),
+    ):
+        io.save_as_xyz()
+    text = out_path.read_text(encoding="utf-8")
+    assert text.splitlines()[0] == str(mol.GetNumAtoms())
+    assert "chrg = -1" in text.splitlines()[1]
+    assert "Successfully saved to" in _status_messages(mock_parser_host)[-1]
+
+
+def test_save_as_xyz_io_error_reports_message(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    mol = Chem.MolFromSmiles("CO")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, randomSeed=1)
+    mock_parser_host.view_3d_manager.current_mol = mol
+    bad_path = tmp_path / "no_such_dir" / "out.xyz"
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(bad_path), ""),
+    ):
+        io.save_as_xyz()
+    assert "Error saving XYZ" in _status_messages(mock_parser_host)[-1]
+
+
+# ---------------------------------------------------------------------------
+# load_json_data error branches
+# ---------------------------------------------------------------------------
+
+
+def test_load_json_data_file_not_found(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    io.load_json_data("/no/such/project.pmeprj")
+    assert "File not found" in _status_messages(mock_parser_host)[-1]
+
+
+def test_load_json_data_invalid_json_syntax(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    path = tmp_path / "broken.pmeprj"
+    path.write_text("{not json", encoding="utf-8")
+    io.load_json_data(str(path))
+    assert "Invalid JSON format" in _status_messages(mock_parser_host)[-1]
+
+
+def test_load_json_data_corrupted_payload_reports_error(mock_parser_host, tmp_path):
+    io = DummyProjectIo(mock_parser_host)
+    path = tmp_path / "corrupt.pmeprj"
+    path.write_text(
+        json.dumps({"format": "PME Project", "version": "1.0"}), encoding="utf-8"
+    )
+    mock_parser_host.state_manager.load_from_json_data.side_effect = KeyError("atoms")
+    io.load_json_data(str(path))
+    assert "Data corruption in PME Project file" in _status_messages(
+        mock_parser_host
+    )[-1]
+
+
+# ---------------------------------------------------------------------------
+# _set_mol_prop / _get_mol_prop / _set_mol_prop_safe
+# ---------------------------------------------------------------------------
+
+
+def test_set_get_mol_prop_int_roundtrip(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    io._set_mol_prop(mol, "my_int", 7)
+    assert io._get_mol_prop(mol, "my_int") == 7
+
+
+def test_set_get_mol_prop_float_roundtrip(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    io._set_mol_prop(mol, "my_float", 3.5)
+    assert io._get_mol_prop(mol, "my_float") == 3.5
+
+
+def test_set_get_mol_prop_string_roundtrip(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    io._set_mol_prop(mol, "my_str", "hello")
+    assert io._get_mol_prop(mol, "my_str") == "hello"
+
+
+def test_get_mol_prop_missing_returns_default(mock_parser_host):
+    io = DummyProjectIo(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    assert io._get_mol_prop(mol, "absent", default="fallback") == "fallback"
+
+
+def test_set_mol_prop_safe_module_helper():
+    from moleditpy.ui.io_logic import _set_mol_prop_safe
+
+    mol = Chem.MolFromSmiles("C")
+    _set_mol_prop_safe(mol, "k_int", 5)
+    _set_mol_prop_safe(mol, "k_float", 2.25)
+    assert mol.GetIntProp("k_int") == 5
+    assert mol.GetDoubleProp("k_float") == 2.25
