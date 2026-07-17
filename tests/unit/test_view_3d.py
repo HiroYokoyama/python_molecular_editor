@@ -816,3 +816,145 @@ def test_update_bond_color_override_set_and_clear(mock_parser_host):
     view3d.update_bond_color_override(1, None)
     assert view3d._plugin_bond_color_overrides == {}
     view3d.draw_molecule_3d.assert_not_called()  # no molecule loaded
+
+
+# ---------------------------------------------------------------------------
+# show_all_atom_info — per-mode label building
+# ---------------------------------------------------------------------------
+
+
+def _labels_view(mock_parser_host, mode, mol=None, base=0):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.atom_info_display_mode = mode
+    view3d.atom_index_base = base
+    view3d.atom_positions_3d = np.array(
+        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=float
+    )
+    view3d.current_mol = mol
+    view3d.plotter = MagicMock()
+    return view3d
+
+
+def _label_calls(view3d):
+    """Return {name: texts} for every add_point_labels call."""
+    calls = {}
+    for c in view3d.plotter.add_point_labels.call_args_list:
+        calls[c.kwargs["name"]] = list(c.args[1])
+    return calls
+
+
+def test_show_all_atom_info_noop_without_mode(mock_parser_host):
+    view3d = _labels_view(mock_parser_host, None)
+    view3d.show_all_atom_info()
+    view3d.plotter.add_point_labels.assert_not_called()
+
+
+def test_show_all_atom_info_noop_without_positions(mock_parser_host):
+    view3d = _labels_view(mock_parser_host, "rdkit_index")
+    view3d.atom_positions_3d = None
+    view3d.show_all_atom_info()
+    view3d.plotter.add_point_labels.assert_not_called()
+
+
+def test_show_all_atom_info_rdkit_index_respects_base(mock_parser_host):
+    view3d = _labels_view(mock_parser_host, "rdkit_index", base=1)
+    view3d.show_all_atom_info()
+    calls = _label_calls(view3d)
+    assert calls == {"atom_labels_rdkit": ["1", "2"]}
+    # Legend for RDKit-index labels is drawn and tracked
+    assert view3d.atom_label_legend_names == ["legend_rdkit"]
+    assert view3d.plotter.add_text.call_args.args[0] == "RDKit"
+
+
+def test_show_all_atom_info_original_id_only_labels_tagged_atoms(
+    mock_parser_host,
+):
+    mol = Chem.MolFromSmiles("CC")
+    mol.GetAtomWithIdx(1).SetIntProp("_original_atom_id", 42)
+    view3d = _labels_view(mock_parser_host, "original_id", mol=mol)
+    view3d.show_all_atom_info()
+    calls = _label_calls(view3d)
+    assert calls == {"atom_labels_id": ["42"]}
+    assert view3d.atom_label_legend_names == ["legend_id"]
+
+
+def test_show_all_atom_info_xyz_index_mixes_with_rdkit_fallback(
+    mock_parser_host,
+):
+    mol = Chem.MolFromSmiles("CC")
+    mol.GetAtomWithIdx(0).SetIntProp("xyz_unique_id", 10)
+    view3d = _labels_view(mock_parser_host, "xyz_index", mol=mol, base=1)
+    view3d.show_all_atom_info()
+    calls = _label_calls(view3d)
+    assert calls["atom_labels_xyz"] == ["11"]  # 10 + base 1
+    assert calls["atom_labels_rdkit"] == ["2"]  # untagged atom falls back
+    assert set(view3d.atom_label_legend_names) == {"legend_rdkit", "legend_xyz"}
+
+
+def test_show_all_atom_info_coords_formats_positions(mock_parser_host):
+    view3d = _labels_view(mock_parser_host, "coords")
+    view3d.show_all_atom_info()
+    calls = _label_calls(view3d)
+    assert calls["atom_labels_other"] == [
+        "(1.00,2.00,3.00)",
+        "(4.00,5.00,6.00)",
+    ]
+    assert view3d.atom_label_legend_names == []  # no legend for coords
+
+
+def test_show_all_atom_info_symbol_mode(mock_parser_host):
+    mol = Chem.MolFromSmiles("CO")
+    view3d = _labels_view(mock_parser_host, "symbol", mol=mol)
+    view3d.show_all_atom_info()
+    assert _label_calls(view3d)["atom_labels_other"] == ["C", "O"]
+
+
+def test_show_all_atom_info_symbol_mode_without_mol_uses_placeholder(
+    mock_parser_host,
+):
+    view3d = _labels_view(mock_parser_host, "symbol", mol=None)
+    view3d.show_all_atom_info()
+    assert _label_calls(view3d)["atom_labels_other"] == ["?", "?"]
+
+
+# ---------------------------------------------------------------------------
+# clear_all_atom_info_labels
+# ---------------------------------------------------------------------------
+
+
+def test_clear_labels_removes_list_of_actors_and_legends(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    actor_a, actor_b = MagicMock(), MagicMock()
+    view3d.current_atom_info_labels = [actor_a, actor_b]
+    view3d.atom_label_legend_names = ["legend_rdkit", "legend_xyz"]
+
+    view3d.clear_all_atom_info_labels()
+
+    removed = [c.args[0] for c in view3d.plotter.remove_actor.call_args_list]
+    assert actor_a in removed and actor_b in removed
+    assert "legend_rdkit" in removed and "legend_xyz" in removed
+    assert view3d.current_atom_info_labels is None
+    assert view3d.atom_label_legend_names == []
+
+
+def test_clear_labels_handles_single_actor(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    actor = MagicMock()
+    view3d.current_atom_info_labels = actor
+
+    view3d.clear_all_atom_info_labels()
+
+    view3d.plotter.remove_actor.assert_any_call(actor)
+    assert view3d.current_atom_info_labels is None
+
+
+def test_clear_labels_survives_remove_actor_failure(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.plotter.remove_actor.side_effect = RuntimeError("actor gone")
+    view3d.current_atom_info_labels = [MagicMock()]
+    view3d.atom_label_legend_names = ["legend_rdkit"]
+
+    view3d.clear_all_atom_info_labels()  # must not raise
+
+    assert view3d.current_atom_info_labels is None
+    assert view3d.atom_label_legend_names == []
