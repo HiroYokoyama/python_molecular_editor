@@ -356,3 +356,292 @@ def test_export_2d_png_hides_items(mock_parser_host, tmp_path):
     # The code calls item.hide() then item.setVisible(was_visible)
     assert other_item.hide.called
     other_item.setVisible.assert_called_with(True)
+
+
+# ---------------------------------------------------------------------------
+# Default path helpers
+# ---------------------------------------------------------------------------
+
+
+def _status_messages(host):
+    return [str(c.args[0]) for c in host.statusBar().showMessage.call_args_list]
+
+
+def test_default_basename_from_current_file(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    mock_parser_host.init_manager.current_file_path = os.path.join(
+        "C:", "mols", "benzene.pmeprj"
+    )
+    assert exporter._get_default_basename() == "benzene"
+
+
+def test_default_basename_untitled_when_no_file(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    mock_parser_host.init_manager.current_file_path = None
+    assert exporter._get_default_basename() == "untitled"
+
+
+def test_default_basename_untitled_on_broken_host(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    type(mock_parser_host.init_manager).current_file_path = property(
+        lambda self: (_ for _ in ()).throw(RuntimeError("gone"))
+    )
+    try:
+        assert exporter._get_default_basename() == "untitled"
+    finally:
+        del type(mock_parser_host.init_manager).current_file_path
+
+
+def test_default_path_joins_current_directory(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    current = str(tmp_path / "benzene.pmeprj")
+    mock_parser_host.init_manager.current_file_path = current
+    assert exporter._get_default_path(".stl") == str(tmp_path / "benzene.stl")
+
+
+def test_default_path_bare_basename_without_file(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    mock_parser_host.init_manager.current_file_path = None
+    assert exporter._get_default_path(".png") == "untitled.png"
+
+
+# ---------------------------------------------------------------------------
+# export_stl / export_color_stl
+# ---------------------------------------------------------------------------
+
+
+def test_export_stl_cancel_does_nothing(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    exporter.export_from_3d_view_no_color = MagicMock()
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ):
+        exporter.export_stl()
+    exporter.export_from_3d_view_no_color.assert_not_called()
+
+
+def test_export_stl_no_geometry_message(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    exporter.export_from_3d_view_no_color = MagicMock(return_value=None)
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(tmp_path / "out.stl"), ""),
+    ):
+        exporter.export_stl()
+    assert "No 3D geometry to export." in _status_messages(mock_parser_host)
+
+
+def test_export_stl_appends_extension_and_saves_binary(
+    mock_parser_host, tmp_path
+):
+    exporter = DummyExport(mock_parser_host)
+    mesh = MagicMock()
+    mesh.n_points = 10
+    exporter.export_from_3d_view_no_color = MagicMock(return_value=mesh)
+    chosen = str(tmp_path / "model")  # no extension
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
+    ):
+        exporter.export_stl()
+    mesh.save.assert_called_once_with(chosen + ".stl", binary=True)
+    assert any("STL exported to" in m for m in _status_messages(mock_parser_host))
+
+
+def test_export_stl_save_error_reported(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    mesh = MagicMock()
+    mesh.n_points = 10
+    mesh.save.side_effect = RuntimeError("disk full")
+    exporter.export_from_3d_view_no_color = MagicMock(return_value=mesh)
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(tmp_path / "out.stl"), ""),
+    ):
+        exporter.export_stl()
+    assert any(
+        "Error exporting STL: disk full" in m
+        for m in _status_messages(mock_parser_host)
+    )
+
+
+def test_export_color_stl_no_geometry_message(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    mesh = MagicMock()
+    mesh.n_points = 0
+    exporter.export_from_3d_view = MagicMock(return_value=mesh)
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(tmp_path / "out.stl"), ""),
+    ):
+        exporter.export_color_stl()
+    assert "No 3D geometry to export." in _status_messages(mock_parser_host)
+
+
+def test_export_color_stl_saves_with_extension(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    mesh = MagicMock()
+    mesh.n_points = 5
+    exporter.export_from_3d_view = MagicMock(return_value=mesh)
+    chosen = str(tmp_path / "colored")
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
+    ):
+        exporter.export_color_stl()
+    mesh.save.assert_called_once_with(chosen + ".stl", binary=True)
+
+
+# ---------------------------------------------------------------------------
+# export_obj_mtl
+# ---------------------------------------------------------------------------
+
+
+def test_export_obj_mtl_cancel_does_nothing(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    exporter.export_from_3d_view_with_colors = MagicMock()
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ):
+        exporter.export_obj_mtl()
+    exporter.export_from_3d_view_with_colors.assert_not_called()
+
+
+def test_export_obj_mtl_empty_meshes_message(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    exporter.export_from_3d_view_with_colors = MagicMock(return_value=[])
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(tmp_path / "out.obj"), ""),
+    ):
+        exporter.export_obj_mtl()
+    assert "No 3D geometry to export." in _status_messages(mock_parser_host)
+
+
+def test_export_obj_mtl_derives_mtl_path_via_splitext(
+    mock_parser_host, tmp_path
+):
+    """Uppercase .OBJ must not produce an .mtl path equal to the .obj path."""
+    exporter = DummyExport(mock_parser_host)
+    meshes = [{"mesh": MagicMock(), "color": [1, 2, 3], "name": "a"}]
+    exporter.export_from_3d_view_with_colors = MagicMock(return_value=meshes)
+    exporter.create_multi_material_obj = MagicMock()
+    chosen = str(tmp_path / "model.OBJ")
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
+    ):
+        exporter.export_obj_mtl()
+    obj_path, mtl_path = exporter.create_multi_material_obj.call_args.args[1:3]
+    assert obj_path == chosen
+    assert mtl_path == str(tmp_path / "model.mtl")
+    assert mtl_path != obj_path
+
+
+def test_export_obj_mtl_error_reported(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    exporter.export_from_3d_view_with_colors = MagicMock(
+        side_effect=RuntimeError("no view")
+    )
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(tmp_path / "out.obj"), ""),
+    ):
+        exporter.export_obj_mtl()
+    assert any(
+        "Error exporting OBJ/MTL: no view" in m
+        for m in _status_messages(mock_parser_host)
+    )
+
+
+# ---------------------------------------------------------------------------
+# export_3d_png
+# ---------------------------------------------------------------------------
+
+
+def test_export_3d_png_cancel_dialog_does_nothing(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ):
+        exporter.export_3d_png()
+    mock_parser_host.view_3d_manager.plotter.screenshot.assert_not_called()
+
+
+def test_export_3d_png_cancel_background_question(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(str(tmp_path / "shot.png"), ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.Cancel,
+        ),
+    ):
+        exporter.export_3d_png()
+    mock_parser_host.view_3d_manager.plotter.screenshot.assert_not_called()
+    assert any(
+        "Export cancelled." in str(c.args[0])
+        for c in mock_parser_host.statusBar().showMessage.call_args_list
+    )
+
+
+def test_export_3d_png_transparent_screenshot_appends_extension(
+    mock_parser_host, tmp_path
+):
+    exporter = DummyExport(mock_parser_host)
+    chosen = str(tmp_path / "shot")  # no extension
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(chosen, ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.Yes,
+        ),
+    ):
+        exporter.export_3d_png()
+    mock_parser_host.view_3d_manager.plotter.screenshot.assert_called_once_with(
+        chosen + ".png", transparent_background=True
+    )
+
+
+def test_export_3d_png_opaque_background_choice(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    chosen = str(tmp_path / "shot.png")
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(chosen, ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.No,
+        ),
+    ):
+        exporter.export_3d_png()
+    mock_parser_host.view_3d_manager.plotter.screenshot.assert_called_once_with(
+        chosen, transparent_background=False
+    )
+
+
+def test_export_3d_png_screenshot_error_reported(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    mock_parser_host.view_3d_manager.plotter.screenshot.side_effect = RuntimeError(
+        "no render window"
+    )
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(str(tmp_path / "shot.png"), ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.Yes,
+        ),
+    ):
+        exporter.export_3d_png()
+    assert any(
+        "Error exporting 3D PNG: no render window" in m
+        for m in _status_messages(mock_parser_host)
+    )
