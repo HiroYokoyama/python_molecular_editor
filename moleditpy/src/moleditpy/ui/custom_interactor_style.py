@@ -13,7 +13,6 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import logging
-import time
 from typing import Any, Optional
 
 import numpy as np
@@ -39,7 +38,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._mouse_moved_during_drag = False
         self._mouse_press_pos: Optional[tuple[int, int]] = None
         self._suppress_next_left_button_up = False
-        self._last_pick_miss_log = 0.0
 
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)  # type: ignore[arg-type]
         # self.AddObserver("LeftButtonDoubleClickEvent", self.on_left_button_down)
@@ -83,78 +81,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 # Safe defensive fallback catching AttributeError, RuntimeError
                 logging.debug("Suppressed non-critical error", exc_info=True)
 
-    def _log_pick_miss(self, click_pos: Any, mode: str) -> None:
-        """Diagnostic (rate-limited): a click in an active pick mode hit no atom.
-
-        A healthy background click also lands here, but a persistent stream of
-        misses while the user is clicking directly on atoms indicates the pick
-        pipeline is broken (stale atom_positions_3d, coordinate offset, etc.).
-        """
-        now = time.monotonic()
-        if now - self._last_pick_miss_log < 1.0:
-            return
-        self._last_pick_miss_log = now
-        try:
-            v3m = self.main_window.view_3d_manager
-            positions = getattr(v3m, "atom_positions_3d", None)
-            n_pos = len(positions) if positions is not None else -1
-            mol = getattr(v3m, "current_mol", None)
-            n_atoms = int(mol.GetNumAtoms()) if mol is not None else -1
-            renderer = v3m.plotter.renderer
-            size = renderer.GetSize()
-
-            # Project all atoms to display coords with the same renderer the
-            # picker uses, so the log shows where picking THINKS the atoms are.
-            bbox = "n/a"
-            if positions is not None and n_pos > 0:
-                display_pts = []
-                for pos in positions:
-                    renderer.SetWorldPoint(
-                        float(pos[0]), float(pos[1]), float(pos[2]), 1.0
-                    )
-                    renderer.WorldToDisplay()
-                    d = renderer.GetDisplayPoint()
-                    display_pts.append((float(d[0]), float(d[1])))
-                xs = [p[0] for p in display_pts]
-                ys = [p[1] for p in display_pts]
-                bbox = (
-                    f"x[{min(xs):.0f}..{max(xs):.0f}] y[{min(ys):.0f}..{max(ys):.0f}]"
-                )
-
-            interactor = self.GetInteractor()
-            iren_size = tuple(interactor.GetSize()) if interactor else "n/a"
-            rw = interactor.GetRenderWindow() if interactor else None
-            rw_size = tuple(rw.GetSize()) if rw else "n/a"
-            widget = getattr(v3m.plotter, "interactor", None)
-            if widget is not None:
-                qt_geo = (widget.width(), widget.height())
-                dpr = round(float(widget.devicePixelRatioF()), 3)
-            else:
-                qt_geo, dpr = "n/a", "n/a"
-
-            logging.debug(
-                "3D pick miss (%s): click=%s atoms=%d positions=%d "
-                "atom_display_bbox=%s renderer_size=%s iren_size=%s rw_size=%s "
-                "qt_widget=%s dpr=%s",
-                mode,
-                tuple(click_pos),
-                n_atoms,
-                n_pos,
-                bbox,
-                tuple(size),
-                iren_size,
-                rw_size,
-                qt_geo,
-                dpr,
-            )
-        except (AttributeError, RuntimeError, TypeError, ValueError):
-            logging.debug(
-                "3D pick miss (%s): click=%s (state unavailable)",
-                mode,
-                click_pos,
-                exc_info=True,
-            )
-
     def _stop_vtk_left_button_state(self) -> None:
         """Clear VTK's button/drag state after a custom-handled left click."""
         try:
@@ -175,20 +101,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         mw = self.main_window
 
-        if logging.getLogger().isEnabledFor(logging.DEBUG):
-            try:
-                logging.debug(
-                    "3D press: pos=%s measurement=%s edit3d=%s mol=%s style=%s",
-                    tuple(self.GetInteractor().GetEventPosition()),
-                    mw.edit_3d_manager.measurement_mode,
-                    mw.edit_3d_manager.is_3d_edit_mode,
-                    mw.view_3d_manager.current_mol is not None,
-                    type(
-                        self.GetInteractor().GetInteractorStyle()
-                    ).__name__,
-                )
-            except (AttributeError, RuntimeError, TypeError):
-                logging.debug("3D press: state unavailable", exc_info=True)
+        logging.debug(
+            "3D press: measurement=%s edit3d=%s mol=%s",
+            mw.edit_3d_manager.measurement_mode,
+            mw.edit_3d_manager.is_3d_edit_mode,
+            mw.view_3d_manager.current_mol is not None,
+        )
 
         # Clear previous drag state
         self._is_dragging_atom = False
@@ -354,10 +272,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     )
                     if atom:
                         if True:
-                            logging.debug(
-                                "3D pick hit (measurement): atom=%d",
-                                int(closest_atom_idx),
-                            )
 
                             def _deferred_measure() -> None:
                                 try:
@@ -374,7 +288,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             return  # Selection complete, disable camera rotation
 
             # Clear measurement if not dragging
-            self._log_pick_miss(click_pos, "measurement")
             self._is_dragging_atom = False
             self._mouse_press_pos = click_pos
             super().OnLeftButtonDown()
@@ -398,10 +311,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     )
                     if atom:
                         if True:
-                            logging.debug(
-                                "3D pick hit (3d-edit): atom=%d",
-                                int(closest_atom_idx),
-                            )
                             # Successfully grabbed atom
                             self._is_dragging_atom = True
                             self.is_dragging = False
@@ -411,8 +320,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             )
                             self._suppress_next_left_button_up = True
                             return  # Prevent camera rotation
-            else:
-                self._log_pick_miss(click_pos, "3d-edit")
 
         # Track mouse event to distinguish rotation from click
         self._mouse_press_pos = self.GetInteractor().GetEventPosition()

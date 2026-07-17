@@ -325,6 +325,33 @@ class UIManager(QObject):
         self.host.view_3d_manager.plotter.interactor.SetInteractorStyle(style)
         self.host.view_3d_manager.plotter.interactor.Initialize()
 
+        # Watchdog: if anything silently replaces the custom style (observed as
+        # "rotation works but pick/select is dead"), report it and reinstall.
+        self._expected_style = style
+        self._style_watchdog = QTimer(self)
+        self._style_watchdog.setInterval(2000)
+        self._style_watchdog.timeout.connect(self._check_interactor_style)
+        self._style_watchdog.start()
+
+    def _check_interactor_style(self) -> None:
+        """Reinstall CustomInteractorStyle if it was silently replaced."""
+        try:
+            interactor = self.host.view_3d_manager.plotter.interactor
+            current = interactor.GetInteractorStyle()
+            if current is self._expected_style:
+                return
+            name = type(current).__name__
+            if "RubberBand" in name:  # legitimate temporary box-selection style
+                return
+            logging.warning(
+                "3D interactor style was replaced by %s — reinstalling "
+                "CustomInteractorStyle",
+                name,
+            )
+            interactor.SetInteractorStyle(self._expected_style)
+        except (AttributeError, RuntimeError):
+            logging.debug("Style watchdog check failed", exc_info=True)
+
     def handle_drag_enter_event(self, event: QDragEnterEvent) -> None:
         """Internal handler for drag enter event (bypasses PyQt type checks in tests)."""
         mime_data = event.mimeData()
