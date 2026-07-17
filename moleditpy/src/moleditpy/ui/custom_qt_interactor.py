@@ -10,9 +10,12 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import logging
 import time
 from typing import Any, Optional
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication
 from pyvistaqt import QtInteractor
 
 
@@ -29,7 +32,9 @@ class CustomQtInteractor(QtInteractor):
         self.main_window = main_window
         self._last_click_time = 0.0
         self._click_count = 0
-        self._ignore_next_release = False
+        # Buttons whose press was swallowed; their release must be swallowed
+        # too so VTK never sees an unpaired press/release.
+        self._swallowed_buttons: set = set()
 
     def wheelEvent(self, event: Any) -> None:
         """
@@ -45,11 +50,11 @@ class CustomQtInteractor(QtInteractor):
     def mouseReleaseEvent(self, event: Any) -> None:
         """
         Override the Qt mouse release event to return focus to the 2D view after
-        all 3D view operations. Also filters out "Ghost Release" (release without
-        a corresponding press).
+        all 3D view operations. Also swallows the release of any press that was
+        swallowed, so VTK never receives an unpaired release.
         """
-        if self._ignore_next_release:
-            self._ignore_next_release = False
+        if event.button() in self._swallowed_buttons:
+            self._swallowed_buttons.discard(event.button())
             event.accept()
             return
 
@@ -59,23 +64,24 @@ class CustomQtInteractor(QtInteractor):
 
     def mousePressEvent(self, event: Any) -> None:
         """
-        Custom mouse press handling to track accumulated clicks and filter out
-        triple-clicks.
+        Custom mouse press handling to track accumulated left-clicks and filter
+        out triple-clicks (rapid clicking desyncs VTK's internal state).
         """
-        current_time = time.time()
-        # Reset count if too much time has passed (0.5s is standard double-click time)
-        if current_time - self._last_click_time > 0.5:
-            self._click_count = 0
+        if event.button() == Qt.MouseButton.LeftButton:
+            current_time = time.time()
+            # Reset count if too much time has passed (0.5s is standard double-click time)
+            if current_time - self._last_click_time > 0.5:
+                self._click_count = 0
 
-        self._click_count += 1
-        self._last_click_time = current_time
+            self._click_count += 1
+            self._last_click_time = current_time
 
-        # If this is the 3rd click (or more), swallow it to prevent
-        # the internal state desync that happens with rapid clicking sequences.
-        if self._click_count >= 3:
-            self._ignore_next_release = True
-            event.accept()
-            return
+            # If this is the 3rd click (or more), swallow it to prevent
+            # the internal state desync that happens with rapid clicking sequences.
+            if self._click_count >= 3:
+                self._swallowed_buttons.add(event.button())
+                event.accept()
+                return
 
         super().mousePressEvent(event)
 
@@ -84,18 +90,12 @@ class CustomQtInteractor(QtInteractor):
 
         Swallow the double-click event so it doesn't trigger selection, editing,
         or camera jumps. We intentionally do not call the superclass handler.
-        Crucially, we also flag the NEXT release event to be swallowed, preventing
-        a "Ghost Release" (Release without Press) from reaching VTK.
+        Crucially, the matching release is also swallowed, preventing a "Ghost
+        Release" (Release without Press) from reaching VTK.
         """
-        current_time = time.time()
-        self._last_click_time = current_time
-        # Set to 2 to ensure the next click counts as 3rd
-        if current_time - self._last_click_time < 0.5:
-            self._click_count = 2
-        else:
-            self._click_count = 2  # Force sync
-
-        self._ignore_next_release = True
+        self._last_click_time = time.time()
+        self._click_count = 2  # The next fast click counts as the 3rd
+        self._swallowed_buttons.add(event.button())
 
         try:
             # Accept the event to mark it handled and prevent further processing.
@@ -103,3 +103,13 @@ class CustomQtInteractor(QtInteractor):
         except (AttributeError, RuntimeError, TypeError):
             # If event doesn't support accept for some reason, just return.
             return
+
+    def leaveEvent(self, event: Any) -> None:
+        """Clear stale swallow latches when the pointer leaves with no button held."""
+        try:
+            if QApplication.mouseButtons() == Qt.MouseButton.NoButton:
+                self._swallowed_buttons.clear()
+        except (AttributeError, RuntimeError, TypeError):
+            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
+            logging.debug("Suppressed non-critical error", exc_info=True)
+        super().leaveEvent(event)
