@@ -1,8 +1,33 @@
 """Unit tests for CustomInteractorStyle 3D event handling."""
 
+import numpy as np
+
 from unittest.mock import MagicMock, patch
 from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
 from PyQt6.QtCore import Qt
+
+_VTK_BASE = "vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera"
+
+
+def _style_at(host, pos=(100, 100)):
+    """Style with a mocked interactor at *pos* and neutral VTK state."""
+    style = CustomInteractorStyle(host)
+    style.GetState = MagicMock(return_value=0)
+    style.StopState = MagicMock()
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = pos
+    mock_interactor.GetAltKey.return_value = False
+    style.GetInteractor = MagicMock(return_value=mock_interactor)
+    return style
+
+
+def _move_dialog(**flags):
+    dlg = MagicMock()
+    dlg.isVisible.return_value = True
+    type(dlg).__name__ = "MoveGroupDialog"
+    for name, value in flags.items():
+        setattr(dlg, name, value)
+    return dlg
 
 
 def test_custom_interactor_style_left_click_atom_selection(app, mock_parser_host):
@@ -344,3 +369,502 @@ def test_custom_interactor_style_right_click_rotation(app, mock_parser_host):
         assert mock_dialog.is_rotating_group_vtk is False
         assert mock_dialog.rotation_start_pos is None
         mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# on_mouse_move
+# ---------------------------------------------------------------------------
+
+
+def test_mouse_move_group_drag_past_threshold_marks_moved(app, mock_parser_host):
+    style = _style_at(mock_parser_host, pos=(110, 110))
+    dlg = _move_dialog(
+        is_dragging_group_vtk=True,
+        drag_start_pos_vtk=(100, 100),
+        mouse_moved_vtk=False,
+    )
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnMouseMove") as mock_super_move,
+    ):
+        mock_qapp.topLevelWidgets.return_value = [dlg]
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.LeftButton
+        style.on_mouse_move(None, None)
+
+    assert dlg.mouse_moved_vtk is True
+    mock_super_move.assert_not_called()  # camera rotation stays disabled
+
+
+def test_mouse_move_group_drag_below_threshold_not_moved(app, mock_parser_host):
+    style = _style_at(mock_parser_host, pos=(103, 103))
+    dlg = _move_dialog(
+        is_dragging_group_vtk=True,
+        drag_start_pos_vtk=(100, 100),
+        mouse_moved_vtk=False,
+    )
+
+    with patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp:
+        mock_qapp.topLevelWidgets.return_value = [dlg]
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.LeftButton
+        style.on_mouse_move(None, None)
+
+    assert dlg.mouse_moved_vtk is False
+
+
+def test_mouse_move_group_drag_without_start_pos_returns_early(
+    app, mock_parser_host
+):
+    style = _style_at(mock_parser_host)
+    dlg = _move_dialog(
+        is_dragging_group_vtk=True, drag_start_pos_vtk=None, mouse_moved_vtk=False
+    )
+
+    with patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp:
+        mock_qapp.topLevelWidgets.return_value = [dlg]
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.LeftButton
+        style.on_mouse_move(None, None)
+
+    assert dlg.mouse_moved_vtk is False
+
+
+def test_mouse_move_group_rotation_past_threshold_marks_moved(
+    app, mock_parser_host
+):
+    style = _style_at(mock_parser_host, pos=(90, 120))
+    dlg = _move_dialog(
+        is_dragging_group_vtk=False,
+        is_rotating_group_vtk=True,
+        rotation_start_pos=(100, 100),
+        rotation_mouse_moved=False,
+    )
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnMouseMove") as mock_super_move,
+    ):
+        mock_qapp.topLevelWidgets.return_value = [dlg]
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.RightButton
+        style.on_mouse_move(None, None)
+
+    assert dlg.rotation_mouse_moved is True
+    mock_super_move.assert_not_called()
+
+
+def test_mouse_move_past_press_threshold_sets_moved_during_drag(
+    app, mock_parser_host
+):
+    mock_parser_host.edit_3d_manager.is_3d_edit_mode = False
+    style = _style_at(mock_parser_host, pos=(104, 104))
+    style._mouse_press_pos = (100, 100)
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnMouseMove"),
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.LeftButton
+        style.on_mouse_move(None, None)
+
+    assert style._mouse_moved_during_drag is True
+
+
+def test_mouse_move_within_press_threshold_keeps_flag_clear(
+    app, mock_parser_host
+):
+    mock_parser_host.edit_3d_manager.is_3d_edit_mode = False
+    style = _style_at(mock_parser_host, pos=(102, 102))
+    style._mouse_press_pos = (100, 100)
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnMouseMove"),
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.LeftButton
+        style.on_mouse_move(None, None)
+
+    assert style._mouse_moved_during_drag is False
+
+
+def test_mouse_move_during_atom_drag_sets_is_dragging_and_skips_camera(
+    app, mock_parser_host
+):
+    style = _style_at(mock_parser_host)
+    style._is_dragging_atom = True
+    mock_parser_host.dragged_atom_info = {"id": 0}
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnMouseMove") as mock_super_move,
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.LeftButton
+        style.on_mouse_move(None, None)
+
+    assert style.is_dragging is True
+    mock_super_move.assert_not_called()
+
+
+def test_mouse_move_hover_over_atom_shows_open_hand(app, mock_parser_host):
+    mock_parser_host.edit_3d_manager.is_3d_edit_mode = True
+    style = _style_at(mock_parser_host)
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnMouseMove") as mock_super_move,
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=0,
+        ),
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.NoButton
+        style.on_mouse_move(None, None)
+
+    mock_super_move.assert_called_once()
+    mock_parser_host.view_3d_manager.plotter.setCursor.assert_called_with(
+        Qt.CursorShape.OpenHandCursor
+    )
+
+
+def test_mouse_move_hover_over_background_shows_arrow(app, mock_parser_host):
+    mock_parser_host.edit_3d_manager.is_3d_edit_mode = True
+    style = _style_at(mock_parser_host)
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnMouseMove"),
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=None,
+        ),
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.NoButton
+        style.on_mouse_move(None, None)
+
+    mock_parser_host.view_3d_manager.plotter.setCursor.assert_called_with(
+        Qt.CursorShape.ArrowCursor
+    )
+
+
+def test_mouse_move_outside_edit_mode_shows_arrow_without_picking(
+    app, mock_parser_host
+):
+    mock_parser_host.edit_3d_manager.is_3d_edit_mode = False
+    style = _style_at(mock_parser_host)
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnMouseMove"),
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen"
+        ) as mock_pick,
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.NoButton
+        style.on_mouse_move(None, None)
+
+    mock_pick.assert_not_called()
+    mock_parser_host.view_3d_manager.plotter.setCursor.assert_called_with(
+        Qt.CursorShape.ArrowCursor
+    )
+
+
+# ---------------------------------------------------------------------------
+# on_left_button_up
+# ---------------------------------------------------------------------------
+
+
+def test_release_click_only_toggles_group_atom_and_resets_latch(
+    app, mock_parser_host
+):
+    mock_parser_host.edit_3d_manager.measurement_mode = False
+    style = _style_at(mock_parser_host)
+    dlg = _move_dialog(
+        is_dragging_group_vtk=True,
+        mouse_moved_vtk=False,
+        drag_atom_idx_vtk=3,
+        initial_positions={3: np.array([0.0, 0.0, 0.0])},
+    )
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnLeftButtonUp"),
+    ):
+        mock_qapp.topLevelWidgets.return_value = [dlg]
+        style.on_left_button_up(None, None)
+
+    dlg.on_atom_picked.assert_called_once_with(3)
+    assert dlg.is_dragging_group_vtk is False
+    assert dlg.drag_start_pos_vtk is None
+    assert dlg.mouse_moved_vtk is False
+    assert not hasattr(dlg, "initial_positions")
+
+
+def test_release_after_group_drag_translates_whole_group(app, mock_parser_host):
+    mock_parser_host.edit_3d_manager.measurement_mode = False
+    style = _style_at(mock_parser_host, pos=(150, 150))
+    dlg = _move_dialog(
+        is_dragging_group_vtk=True,
+        mouse_moved_vtk=True,
+        drag_atom_idx_vtk=0,
+        group_atoms={0, 1},
+        initial_positions={
+            0: np.array([0.0, 0.0, 0.0]),
+            1: np.array([2.0, 0.0, 0.0]),
+        },
+    )
+
+    renderer = mock_parser_host.view_3d_manager.plotter.renderer
+    renderer.GetDisplayPoint.return_value = (100.0, 100.0, 0.5)
+    renderer.GetWorldPoint.return_value = (1.0, 1.0, 0.0, 1.0)
+
+    mock_conf = MagicMock()
+    mock_mol = MagicMock()
+    mock_mol.GetConformer.return_value = mock_conf
+    mock_parser_host.view_3d_manager.current_mol = mock_mol
+    mock_parser_host.view_3d_manager.atom_positions_3d = np.zeros((2, 3))
+
+    deferred = []
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+            side_effect=lambda _ms, fn: deferred.append(fn),
+        ),
+        patch(f"{_VTK_BASE}.OnLeftButtonUp"),
+    ):
+        mock_qapp.topLevelWidgets.return_value = [dlg]
+        style.on_left_button_up(None, None)
+
+    # Translation vector is (1, 1, 0): both atoms moved by it
+    assert mock_conf.SetAtomPosition.call_count == 2
+    assert np.allclose(
+        mock_parser_host.view_3d_manager.atom_positions_3d,
+        [[1.0, 1.0, 0.0], [3.0, 1.0, 0.0]],
+    )
+
+    # Redraw + undo push are deferred out of the VTK callback
+    assert len(deferred) == 1
+    deferred[0]()
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+    mock_parser_host.view_3d_manager.update_chiral_labels.assert_called_once()
+    dlg.show_atom_labels.assert_called_once()
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+
+
+def test_release_background_click_deselects_move_group_deferred(
+    app, mock_parser_host
+):
+    mock_parser_host.edit_3d_manager.measurement_mode = False
+    style = _style_at(mock_parser_host)
+    style._mouse_press_pos = (100, 100)
+    style._mouse_moved_during_drag = False
+    dlg = _move_dialog(is_dragging_group_vtk=False)
+
+    deferred = []
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+            side_effect=lambda _ms, fn: deferred.append(fn),
+        ),
+        patch(f"{_VTK_BASE}.OnLeftButtonUp"),
+    ):
+        mock_qapp.topLevelWidgets.return_value = [dlg]
+        style.on_left_button_up(None, None)
+
+    assert len(deferred) == 1
+    deferred[0]()
+    dlg.group_atoms.clear.assert_called_once()
+    dlg.selected_atoms.clear.assert_called_once()
+    dlg.clear_atom_labels.assert_called_once()
+    dlg.update_display.assert_called_once()
+
+
+def test_release_background_click_in_measurement_mode_clears_selection(
+    app, mock_parser_host
+):
+    mock_parser_host.edit_3d_manager.measurement_mode = True
+    style = _style_at(mock_parser_host)
+    style._mouse_press_pos = (100, 100)
+    style._mouse_moved_during_drag = False
+
+    deferred = []
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+            side_effect=lambda _ms, fn: deferred.append(fn),
+        ),
+        patch(f"{_VTK_BASE}.OnLeftButtonUp"),
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        style.on_left_button_up(None, None)
+
+    assert len(deferred) == 1
+    deferred[0]()
+    mock_parser_host.edit_3d_manager.clear_measurement_selection.assert_called_once()
+
+
+def test_release_after_camera_drag_does_not_clear_measurement(
+    app, mock_parser_host
+):
+    mock_parser_host.edit_3d_manager.measurement_mode = True
+    style = _style_at(mock_parser_host)
+    style._mouse_press_pos = (100, 100)
+    style._mouse_moved_during_drag = True  # camera was rotated, not a click
+
+    deferred = []
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+            side_effect=lambda _ms, fn: deferred.append(fn),
+        ),
+        patch(f"{_VTK_BASE}.OnLeftButtonUp"),
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        style.on_left_button_up(None, None)
+
+    assert deferred == []
+
+
+def test_release_after_atom_drag_writes_position_and_defers_redraw(
+    app, mock_parser_host
+):
+    mock_parser_host.edit_3d_manager.measurement_mode = False
+    style = _style_at(mock_parser_host, pos=(150, 150))
+    style._is_dragging_atom = True
+    style.is_dragging = True
+    mock_parser_host.dragged_atom_info = {"id": 0}
+
+    mol = MagicMock()
+    mock_parser_host.view_3d_manager.current_mol = mol
+    mol.GetNumConformers.return_value = 1
+    mol.GetNumAtoms.return_value = 1
+    mock_conf = MagicMock()
+    mock_conf.GetAtomPosition.return_value = MagicMock(x=0.0, y=0.0, z=0.0)
+    mol.GetConformer.return_value = mock_conf
+
+    renderer = mock_parser_host.view_3d_manager.plotter.renderer
+    renderer.GetDisplayPoint.return_value = (100.0, 100.0, 0.5)
+    renderer.GetWorldPoint.return_value = (1.0, 1.0, 0.0, 1.0)
+    mock_parser_host.view_3d_manager.atom_positions_3d = np.zeros((1, 3))
+
+    deferred = []
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+            side_effect=lambda _ms, fn: deferred.append(fn),
+        ),
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        style.on_left_button_up(None, None)
+
+    assert np.allclose(
+        mock_parser_host.view_3d_manager.atom_positions_3d, [[1.0, 1.0, 0.0]]
+    )
+    mock_conf.SetAtomPosition.assert_called_once()
+    assert mock_parser_host.dragged_atom_info is None
+    assert style._is_dragging_atom is False
+    assert style.is_dragging is False
+
+    # Two deferred jobs: redraw+undo, then display updates
+    assert len(deferred) == 2
+    for fn in deferred:
+        fn()
+    mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+    mock_parser_host.edit_3d_manager.update_3d_selection_display.assert_called_once()
+    mock_parser_host.view_3d_manager.show_all_atom_info.assert_called_once()
+
+
+def test_release_suppressed_after_group_grab_skips_vtk_cleanup(
+    app, mock_parser_host
+):
+    mock_parser_host.edit_3d_manager.measurement_mode = False
+    style = _style_at(mock_parser_host)
+    style._suppress_next_left_button_up = True
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnLeftButtonUp") as mock_super_up,
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        style.on_left_button_up(None, None)
+
+    mock_super_up.assert_not_called()
+    style.StopState.assert_called()
+    assert style._suppress_next_left_button_up is False
+
+
+def test_release_delegates_to_vtk_and_restores_focus(app, mock_parser_host):
+    mock_parser_host.edit_3d_manager.measurement_mode = False
+    style = _style_at(mock_parser_host)
+    style._mouse_press_pos = None
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(f"{_VTK_BASE}.OnLeftButtonUp") as mock_super_up,
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        style.on_left_button_up(None, None)
+
+    mock_super_up.assert_called_once()
+    mock_parser_host.view_3d_manager.plotter.setCursor.assert_called_with(
+        Qt.CursorShape.ArrowCursor
+    )
+    mock_parser_host.init_manager.view_2d.setFocus.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# reset_interactor_state
+# ---------------------------------------------------------------------------
+
+
+def test_reset_interactor_state_clears_all_flags_and_cursor(
+    app, mock_parser_host
+):
+    style = _style_at(mock_parser_host)
+    style._is_dragging_atom = True
+    style.is_dragging = True
+    style._mouse_moved_during_drag = True
+    style._mouse_press_pos = (10, 10)
+    style._suppress_next_left_button_up = True
+
+    style.reset_interactor_state()
+
+    assert style._is_dragging_atom is False
+    assert style.is_dragging is False
+    assert style._mouse_moved_during_drag is False
+    assert style._mouse_press_pos is None
+    assert style._suppress_next_left_button_up is False
+    assert mock_parser_host.dragged_atom_info is None
+    mock_parser_host.view_3d_manager.plotter.setCursor.assert_called_with(
+        Qt.CursorShape.ArrowCursor
+    )
+
+
+def test_reset_interactor_state_survives_broken_plotter(app, mock_parser_host):
+    style = _style_at(mock_parser_host)
+    mock_parser_host.view_3d_manager.plotter.setCursor.side_effect = RuntimeError(
+        "render window gone"
+    )
+
+    style.reset_interactor_state()  # must not raise
+
+    assert style._is_dragging_atom is False
+
+
+def test_reset_interactor_state_without_main_window(app):
+    style = CustomInteractorStyle(None)
+    style.StopState = MagicMock()
+    style._is_dragging_atom = True
+
+    style.reset_interactor_state()  # must not raise
+
+    assert style._is_dragging_atom is False
