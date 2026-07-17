@@ -322,7 +322,7 @@ class UIManager(QObject):
         style = CustomInteractorStyle(self.host)
 
         # Set interactor style
-        self.host.view_3d_manager.plotter.interactor.SetInteractorStyle(style)
+        self._install_interactor_style(style)
         self.host.view_3d_manager.plotter.interactor.Initialize()
 
         # Watchdog: if anything silently replaces the custom style (observed as
@@ -332,6 +332,21 @@ class UIManager(QObject):
         self._style_watchdog.setInterval(2000)
         self._style_watchdog.timeout.connect(self._check_interactor_style)
         self._style_watchdog.start()
+
+    def _install_interactor_style(self, style: Any) -> None:
+        """Install *style* through pyvista's bookkeeping, not raw VTK.
+
+        pyvista's RenderWindowInteractor re-asserts its own ``_style_class``
+        via ``update_style()`` whenever its built-in double-click chart
+        handler fires (fast clicks!). Installing through the ``iren.style``
+        property keeps that bookkeeping pointing at our style so the
+        re-assert is a no-op instead of an eviction.
+        """
+        plotter = self.host.view_3d_manager.plotter
+        try:
+            plotter.iren.style = style
+        except AttributeError:
+            plotter.interactor.SetInteractorStyle(style)
 
     def _check_interactor_style(self) -> None:
         """Reinstall CustomInteractorStyle if it was silently replaced."""
@@ -343,12 +358,12 @@ class UIManager(QObject):
             name = type(current).__name__
             if "RubberBand" in name:  # legitimate temporary box-selection style
                 return
-            logging.warning(
+            logging.debug(
                 "3D interactor style was replaced by %s — reinstalling "
                 "CustomInteractorStyle",
                 name,
             )
-            interactor.SetInteractorStyle(self._expected_style)
+            self._install_interactor_style(self._expected_style)
         except (AttributeError, RuntimeError):
             logging.debug("Style watchdog check failed", exc_info=True)
 
