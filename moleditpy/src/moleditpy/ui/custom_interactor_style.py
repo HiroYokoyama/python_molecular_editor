@@ -100,17 +100,60 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             n_pos = len(positions) if positions is not None else -1
             mol = getattr(v3m, "current_mol", None)
             n_atoms = int(mol.GetNumAtoms()) if mol is not None else -1
-            size = v3m.plotter.renderer.GetSize()
-            logging.info(
-                "3D pick miss (%s): click=%s atoms=%d positions=%d renderer_size=%s",
+            renderer = v3m.plotter.renderer
+            size = renderer.GetSize()
+
+            # Project all atoms to display coords with the same renderer the
+            # picker uses, so the log shows where picking THINKS the atoms are.
+            bbox = "n/a"
+            if positions is not None and n_pos > 0:
+                display_pts = []
+                for pos in positions:
+                    renderer.SetWorldPoint(
+                        float(pos[0]), float(pos[1]), float(pos[2]), 1.0
+                    )
+                    renderer.WorldToDisplay()
+                    d = renderer.GetDisplayPoint()
+                    display_pts.append((float(d[0]), float(d[1])))
+                xs = [p[0] for p in display_pts]
+                ys = [p[1] for p in display_pts]
+                bbox = (
+                    f"x[{min(xs):.0f}..{max(xs):.0f}] y[{min(ys):.0f}..{max(ys):.0f}]"
+                )
+
+            interactor = self.GetInteractor()
+            iren_size = tuple(interactor.GetSize()) if interactor else "n/a"
+            rw = interactor.GetRenderWindow() if interactor else None
+            rw_size = tuple(rw.GetSize()) if rw else "n/a"
+            widget = getattr(v3m.plotter, "interactor", None)
+            if widget is not None:
+                qt_geo = (widget.width(), widget.height())
+                dpr = round(float(widget.devicePixelRatioF()), 3)
+            else:
+                qt_geo, dpr = "n/a", "n/a"
+
+            logging.debug(
+                "3D pick miss (%s): click=%s atoms=%d positions=%d "
+                "atom_display_bbox=%s renderer_size=%s iren_size=%s rw_size=%s "
+                "qt_widget=%s dpr=%s",
                 mode,
                 tuple(click_pos),
                 n_atoms,
                 n_pos,
+                bbox,
                 tuple(size),
+                iren_size,
+                rw_size,
+                qt_geo,
+                dpr,
             )
         except (AttributeError, RuntimeError, TypeError, ValueError):
-            logging.info("3D pick miss (%s): click=%s (state unavailable)", mode, click_pos)
+            logging.debug(
+                "3D pick miss (%s): click=%s (state unavailable)",
+                mode,
+                click_pos,
+                exc_info=True,
+            )
 
     def _stop_vtk_left_button_state(self) -> None:
         """Clear VTK's button/drag state after a custom-handled left click."""
