@@ -840,3 +840,23 @@ def test_box_selection_click_to_reset(qapp):
             dlg.eventFilter(interactor, press_ev)
             dlg.eventFilter(interactor, release_ev)
             mock_clear.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Box selection style restore (fast-click freeze root cause)
+# ---------------------------------------------------------------------------
+
+
+def test_box_selection_off_restores_style_via_pyvista(make_dialog):
+    """Restore must go through iren.style so pyvista bookkeeping tracks it."""
+    dlg, _mol, mw = make_dialog()
+    sentinel = object()
+    dlg.original_style = sentinel
+    dlg.widgets["box_select_btn"] = MagicMock()
+    plotter = mw.view_3d_manager.plotter
+
+    dlg.toggle_box_selection(False)
+
+    plotter.disable_picking.assert_called_once()
+    assert plotter.iren.style is sentinel
+    plotter.interactor.SetInteractorStyle.assert_not_called()

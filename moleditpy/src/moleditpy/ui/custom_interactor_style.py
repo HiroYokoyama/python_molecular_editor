@@ -101,13 +101,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         mw = self.main_window
 
-        logging.debug(
-            "3D press: measurement=%s edit3d=%s mol=%s",
-            mw.edit_3d_manager.measurement_mode,
-            mw.edit_3d_manager.is_3d_edit_mode,
-            mw.view_3d_manager.current_mol is not None,
-        )
-
         # Clear previous drag state
         self._is_dragging_atom = False
         self.is_dragging = False
