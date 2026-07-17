@@ -780,3 +780,204 @@ class TestMoveGroupDeselectToggle:
             dlg.on_atom_picked(0)
             assert len(dlg.group_atoms) == 0
             assert 0 not in dlg.selected_atoms
+
+
+# ---------------------------------------------------------------------------
+# eventFilter — 3D mouse handling
+# ---------------------------------------------------------------------------
+
+from PyQt6.QtCore import QPointF, Qt
+from PyQt6.QtGui import QMouseEvent
+
+_PICK = "moleditpy.ui.move_group_dialog.pick_atom_index_from_screen"
+
+
+def _mouse_event(etype, button=Qt.MouseButton.LeftButton):
+    return QMouseEvent(
+        etype,
+        QPointF(10.0, 10.0),
+        QPointF(10.0, 10.0),
+        button,
+        button,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
+
+class TestEventFilter:
+    def _interactor_at(self, mw, pos):
+        mw.view_3d_manager.plotter.interactor.GetEventPosition.return_value = pos
+        return mw.view_3d_manager.plotter.interactor
+
+    def test_no_plotter_returns_false(self, make_dialog):
+        dlg, _mol, mw = make_dialog()
+        mw.view_3d_manager.plotter = None
+        event = _mouse_event(QEvent.Type.MouseButtonPress)
+        assert dlg.eventFilter(MagicMock(), event) is False
+
+    def test_double_click_resets_drag_state(self, make_dialog):
+        dlg, _mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (10, 10))
+        dlg.is_dragging_group = True
+        dlg.drag_start_pos = (5, 5)
+        dlg.potential_drag = True
+        dlg.clicked_atom_for_toggle = 2
+
+        event = _mouse_event(QEvent.Type.MouseButtonDblClick)
+        assert dlg.eventFilter(interactor, event) is False
+        assert dlg.is_dragging_group is False
+        assert dlg.drag_start_pos is None
+        assert dlg.potential_drag is False
+        assert dlg.clicked_atom_for_toggle is None
+
+    def test_press_with_existing_group_delegates_to_interactor_style(
+        self, make_dialog
+    ):
+        dlg, _mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (10, 10))
+        dlg.group_atoms = {0, 1}
+
+        event = _mouse_event(QEvent.Type.MouseButtonPress)
+        assert dlg.eventFilter(interactor, event) is False
+
+    def test_press_on_atom_selects_group_and_consumes_release(self, make_dialog):
+        dlg, mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (10, 10))
+
+        with (
+            patch(_PICK, return_value=0),
+            patch.object(type(dlg), "show_atom_labels"),
+            patch.object(type(dlg), "clear_atom_labels"),
+        ):
+            press = _mouse_event(QEvent.Type.MouseButtonPress)
+            assert dlg.eventFilter(interactor, press) is True
+
+        assert len(dlg.group_atoms) == mol.GetNumAtoms()  # BFS selected ethane
+        assert dlg._consume_next_left_release is True
+
+        # The synthetic press consumed above must also swallow the next release
+        release = _mouse_event(QEvent.Type.MouseButtonRelease)
+        assert dlg.eventFilter(interactor, release) is True
+        assert dlg._consume_next_left_release is False
+
+    def test_press_on_background_returns_false(self, make_dialog):
+        dlg, _mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (10, 10))
+
+        with patch(_PICK, return_value=None):
+            event = _mouse_event(QEvent.Type.MouseButtonPress)
+            assert dlg.eventFilter(interactor, event) is False
+        assert dlg.group_atoms == set()
+
+    def test_move_past_threshold_starts_group_drag(self, make_dialog):
+        dlg, _mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (20, 20))
+        dlg.potential_drag = True
+        dlg.drag_start_pos = (10, 10)
+        dlg.is_dragging_group = False
+
+        move = _mouse_event(QEvent.Type.MouseMove, button=Qt.MouseButton.NoButton)
+        assert dlg.eventFilter(interactor, move) is True
+        assert dlg.is_dragging_group is True
+        assert dlg.potential_drag is False
+        mw.view_3d_manager.plotter.setCursor.assert_called_with(
+            Qt.CursorShape.ClosedHandCursor
+        )
+
+    def test_move_below_threshold_keeps_potential_drag(self, make_dialog):
+        dlg, _mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (12, 12))
+        dlg.potential_drag = True
+        dlg.drag_start_pos = (10, 10)
+        dlg.is_dragging_group = False
+
+        move = _mouse_event(QEvent.Type.MouseMove, button=Qt.MouseButton.NoButton)
+        assert dlg.eventFilter(interactor, move) is False
+        assert dlg.is_dragging_group is False
+        assert dlg.potential_drag is True
+
+    def test_move_while_dragging_marks_movement(self, make_dialog):
+        dlg, _mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (30, 30))
+        dlg.is_dragging_group = True
+        dlg.drag_start_pos = (10, 10)
+        dlg.mouse_moved_during_drag = False
+
+        move = _mouse_event(QEvent.Type.MouseMove, button=Qt.MouseButton.NoButton)
+        assert dlg.eventFilter(interactor, move) is True
+        assert dlg.mouse_moved_during_drag is True
+
+    def test_hover_over_group_atom_shows_open_hand(self, make_dialog):
+        dlg, _mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (10, 10))
+        dlg.group_atoms = {0}
+
+        with patch(_PICK, return_value=0):
+            move = _mouse_event(
+                QEvent.Type.MouseMove, button=Qt.MouseButton.NoButton
+            )
+            assert dlg.eventFilter(interactor, move) is False
+        mw.view_3d_manager.plotter.setCursor.assert_called_with(
+            Qt.CursorShape.OpenHandCursor
+        )
+
+    def test_hover_outside_group_shows_arrow(self, make_dialog):
+        dlg, _mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (10, 10))
+        dlg.group_atoms = {0}
+
+        with patch(_PICK, return_value=None):
+            move = _mouse_event(
+                QEvent.Type.MouseMove, button=Qt.MouseButton.NoButton
+            )
+            dlg.eventFilter(interactor, move)
+        mw.view_3d_manager.plotter.setCursor.assert_called_with(
+            Qt.CursorShape.ArrowCursor
+        )
+
+    def test_release_click_only_toggles_clicked_atom(self, make_dialog):
+        dlg, mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (10, 10))
+        dlg.potential_drag = True
+        dlg.drag_start_pos = (10, 10)
+        dlg.is_dragging_group = False
+        dlg.mouse_moved_during_drag = False
+        dlg.clicked_atom_for_toggle = 0
+
+        with (
+            patch.object(type(dlg), "on_atom_picked") as mock_pick,
+            ):
+            release = _mouse_event(QEvent.Type.MouseButtonRelease)
+            assert dlg.eventFilter(interactor, release) is True
+
+        mock_pick.assert_called_once_with(0)
+        assert dlg.potential_drag is False
+        assert dlg.drag_start_pos is None
+        assert dlg.clicked_atom_for_toggle is None
+        mw.view_3d_manager.plotter.setCursor.assert_called_with(
+            Qt.CursorShape.ArrowCursor
+        )
+
+    def test_release_after_real_drag_does_not_toggle(self, make_dialog):
+        dlg, _mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (30, 30))
+        dlg.is_dragging_group = True
+        dlg.drag_start_pos = (10, 10)
+        dlg.mouse_moved_during_drag = True
+        dlg.clicked_atom_for_toggle = 0
+
+        with patch.object(type(dlg), "on_atom_picked") as mock_pick:
+            release = _mouse_event(QEvent.Type.MouseButtonRelease)
+            assert dlg.eventFilter(interactor, release) is True
+
+        mock_pick.assert_not_called()
+        assert dlg.is_dragging_group is False
+        assert dlg.drag_start_pos is None
+
+    def test_release_without_pending_drag_returns_false(self, make_dialog):
+        dlg, _mol, mw = make_dialog()
+        interactor = self._interactor_at(mw, (10, 10))
+        dlg.potential_drag = False
+        dlg.is_dragging_group = False
+
+        release = _mouse_event(QEvent.Type.MouseButtonRelease)
+        assert dlg.eventFilter(interactor, release) is False
