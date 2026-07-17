@@ -645,3 +645,236 @@ def test_export_3d_png_screenshot_error_reported(mock_parser_host, tmp_path):
         "Error exporting 3D PNG: no render window" in m
         for m in _status_messages(mock_parser_host)
     )
+
+
+# ---------------------------------------------------------------------------
+# export_from_3d_view* — mesh gathering from plotter actors
+# ---------------------------------------------------------------------------
+
+from types import SimpleNamespace
+
+import moleditpy.ui.export_logic as export_logic_mod
+
+
+class _XMesh:
+    """Minimal mesh double that records merges."""
+
+    def __init__(self, n_points=5, point_data=None):
+        self.n_points = n_points
+        self.point_data = point_data or {}
+        self.cell_data = {}
+        self.merged = []
+
+    def extract_surface(self):
+        return self
+
+    def copy(self):
+        return self
+
+    def merge(self, other):
+        self.merged.append(other)
+        return self
+
+    def extract_points(self, point_inds, adjacent_cells=False):
+        return _XMesh(n_points=len(point_inds))
+
+
+class _EmptyPoly:
+    """Stands in for pv.PolyData(): a fresh empty combined mesh."""
+
+    def __init__(self, *a, **k):
+        self.n_points = 0
+
+
+class _GetInputMapper:
+    """Mapper exposing only the raw-VTK GetInput accessor."""
+
+    def __init__(self, mesh):
+        self._mesh = mesh
+
+    def GetInput(self):
+        return self._mesh
+
+
+def _host_with_actors(mock_parser_host, actors):
+    mock_parser_host.view_3d_manager.plotter.renderer = SimpleNamespace(
+        actors=actors
+    )
+    return mock_parser_host
+
+
+def test_export_from_3d_view_no_color_merges_actor_meshes(mock_parser_host):
+    mesh_a, mesh_b = _XMesh(), _XMesh()
+    actors = {
+        "atoms": SimpleNamespace(mapper=SimpleNamespace(input=mesh_a)),
+        "bonds": SimpleNamespace(mapper=SimpleNamespace(input=mesh_b)),
+        "meshless": SimpleNamespace(mapper=None),
+    }
+    exporter = DummyExport(_host_with_actors(mock_parser_host, actors))
+
+    with patch.object(export_logic_mod.pv, "PolyData", _EmptyPoly):
+        combined = exporter.export_from_3d_view_no_color()
+
+    assert combined is mesh_a  # first mesh becomes the base
+    assert combined.merged == [mesh_b]
+
+
+def test_export_from_3d_view_no_color_uses_vtk_getinput_fallback(
+    mock_parser_host,
+):
+    mesh = _XMesh()
+    actors = {"atoms": SimpleNamespace(mapper=_GetInputMapper(mesh))}
+    exporter = DummyExport(_host_with_actors(mock_parser_host, actors))
+
+    with patch.object(export_logic_mod.pv, "PolyData", _EmptyPoly):
+        combined = exporter.export_from_3d_view_no_color()
+
+    assert combined is mesh
+
+
+def test_export_from_3d_view_no_color_none_on_broken_plotter(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    mock_parser_host.view_3d_manager.plotter = None
+    assert exporter.export_from_3d_view_no_color() is None
+
+
+def test_export_from_3d_view_merges_like_no_color(mock_parser_host):
+    mesh_a, mesh_b = _XMesh(), _XMesh()
+    actors = {
+        "a": SimpleNamespace(mapper=SimpleNamespace(input=mesh_a)),
+        "b": SimpleNamespace(mapper=SimpleNamespace(input=mesh_b)),
+    }
+    exporter = DummyExport(_host_with_actors(mock_parser_host, actors))
+
+    with patch.object(export_logic_mod.pv, "PolyData", _EmptyPoly):
+        combined = exporter.export_from_3d_view()
+
+    assert combined is mesh_a
+    assert combined.merged == [mesh_b]
+
+
+def test_export_from_3d_view_none_on_broken_plotter(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    mock_parser_host.view_3d_manager.plotter = None
+    assert exporter.export_from_3d_view() is None
+
+
+def test_export_with_colors_reads_pyvista_prop_color(mock_parser_host):
+    mesh = _XMesh()
+    actor = SimpleNamespace(
+        mapper=SimpleNamespace(input=mesh),
+        prop=SimpleNamespace(color=(0.5, 0.25, 1.0)),
+    )
+    exporter = DummyExport(_host_with_actors(mock_parser_host, {"a": actor}))
+
+    with patch.object(export_logic_mod.pv, "PolyData", _EmptyPoly):
+        result = exporter.export_from_3d_view_with_colors()
+
+    assert len(result) == 1
+    assert result[0]["color"] == [127, 63, 255]
+    assert result[0]["mesh"] is mesh
+    assert result[0]["type"] == "display_actor"
+
+
+def test_export_with_colors_reads_vtk_getproperty_color(mock_parser_host):
+    mesh = _XMesh()
+
+    class _VtkActor:
+        mapper = SimpleNamespace(input=mesh)
+
+        def GetProperty(self):
+            return SimpleNamespace(GetColor=lambda: (0.0, 1.0, 0.0))
+
+    exporter = DummyExport(
+        _host_with_actors(mock_parser_host, {"a": _VtkActor()})
+    )
+
+    with patch.object(export_logic_mod.pv, "PolyData", _EmptyPoly):
+        result = exporter.export_from_3d_view_with_colors()
+
+    assert len(result) == 1
+    assert result[0]["color"] == [0, 255, 0]
+
+
+def test_export_with_colors_splits_vertex_colored_glyph_mesh(mock_parser_host):
+    point_data = {
+        "red": np.array([255, 255, 0, 0]),
+        "green": np.array([0, 0, 0, 0]),
+        "blue": np.array([0, 0, 255, 255]),
+    }
+    mesh = _XMesh(n_points=4, point_data=point_data)
+    actor = SimpleNamespace(
+        mapper=SimpleNamespace(input=mesh),
+        prop=SimpleNamespace(color=(0.5, 0.5, 0.5)),
+    )
+    exporter = DummyExport(
+        _host_with_actors(mock_parser_host, {"atoms": actor})
+    )
+
+    with patch.object(export_logic_mod.pv, "PolyData", _EmptyPoly):
+        result = exporter.export_from_3d_view_with_colors()
+
+    # One submesh per unique vertex color, not one merged gray blob
+    assert len(result) == 2
+    colors = sorted(entry["color"] for entry in result)
+    assert colors == [[0, 0, 255], [255, 0, 0]]
+    assert all(e["name"].startswith("atoms_color_") for e in result)
+    assert all(e["mesh"].n_points == 2 for e in result)
+
+
+def test_export_with_colors_empty_on_broken_plotter(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    mock_parser_host.view_3d_manager.plotter = None
+    assert exporter.export_from_3d_view_with_colors() == []
+
+
+# ---------------------------------------------------------------------------
+# export_2d_png guards
+# ---------------------------------------------------------------------------
+
+
+def test_export_2d_png_nothing_to_export(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    exporter.export_2d_png()
+    assert "Nothing to export." in _status_messages(mock_parser_host)
+
+
+def test_export_2d_png_cancel_background_question(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    exporter.data.add_atom("C", QPointF(0, 0))
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(str(tmp_path / "out.png"), ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.Cancel,
+        ),
+    ):
+        exporter.export_2d_png()
+    assert any(
+        "Export cancelled." in str(c.args[0])
+        for c in mock_parser_host.statusBar().showMessage.call_args_list
+    )
+
+
+def test_export_2d_png_reports_unresolvable_bounds(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    exporter.data.add_atom("C", QPointF(0, 0))
+    mock_parser_host.init_manager.scene.items.return_value = []
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(str(tmp_path / "out.png"), ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.No,
+        ),
+    ):
+        exporter.export_2d_png()
+    assert any(
+        "Could not determine molecule bounds" in str(c.args[0])
+        for c in mock_parser_host.statusBar().showMessage.call_args_list
+    )
