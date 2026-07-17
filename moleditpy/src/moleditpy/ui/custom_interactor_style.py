@@ -175,6 +175,21 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
         mw = self.main_window
 
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            try:
+                logging.debug(
+                    "3D press: pos=%s measurement=%s edit3d=%s mol=%s style=%s",
+                    tuple(self.GetInteractor().GetEventPosition()),
+                    mw.edit_3d_manager.measurement_mode,
+                    mw.edit_3d_manager.is_3d_edit_mode,
+                    mw.view_3d_manager.current_mol is not None,
+                    type(
+                        self.GetInteractor().GetInteractorStyle()
+                    ).__name__,
+                )
+            except (AttributeError, RuntimeError, TypeError):
+                logging.debug("3D press: state unavailable", exc_info=True)
+
         # Clear previous drag state
         self._is_dragging_atom = False
         self.is_dragging = False
@@ -339,6 +354,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     )
                     if atom:
                         if True:
+                            logging.debug(
+                                "3D pick hit (measurement): atom=%d",
+                                int(closest_atom_idx),
+                            )
 
                             def _deferred_measure() -> None:
                                 try:
@@ -379,6 +398,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     )
                     if atom:
                         if True:
+                            logging.debug(
+                                "3D pick hit (3d-edit): atom=%d",
+                                int(closest_atom_idx),
+                            )
                             # Successfully grabbed atom
                             self._is_dragging_atom = True
                             self.is_dragging = False
