@@ -696,9 +696,13 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         else:
             btn.setText("Box Selection: OFF")
             plotter.disable_picking()
-            # Restore original style
+            # Restore original style via pyvista's bookkeeping so its
+            # update_style() re-asserts ours instead of RubberBandPick
             if self.original_style is not None:
-                plotter.interactor.SetInteractorStyle(self.original_style)
+                try:
+                    plotter.iren.style = self.original_style
+                except AttributeError:
+                    plotter.interactor.SetInteractorStyle(self.original_style)
 
     def on_rectangle_picked(self, selection: Any) -> None:
         """Handle PyVista rectangle picking callback."""
