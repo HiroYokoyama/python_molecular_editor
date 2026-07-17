@@ -159,9 +159,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             try:
                                 move_group_dialog.on_atom_picked(clicked_atom_idx)
                             except (AttributeError, RuntimeError):
-                                # Safe defensive fallback catching AttributeError, RuntimeError
-                                logging.debug(
-                                    "Suppressed non-critical error", exc_info=True
+                                logging.warning(
+                                    "Move-dialog atom toggle failed", exc_info=True
                                 )
 
                         QTimer.singleShot(0, _deferred_toggle)
@@ -273,9 +272,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                         closest_atom_idx
                                     )
                                 except (AttributeError, RuntimeError):
-                                    # Safe defensive fallback catching AttributeError, RuntimeError
-                                    logging.debug(
-                                        "Suppressed non-critical error", exc_info=True
+                                    logging.warning(
+                                        "Measurement selection failed", exc_info=True
                                     )
 
                             QTimer.singleShot(0, _deferred_measure)
@@ -383,6 +381,54 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # Standard right-click
         super().OnRightButtonDown()
 
+    def _heal_stuck_pointer_state(self, move_group_dialog: Any) -> None:
+        """Self-heal drag/rotate state whose release event was lost.
+
+        A release can be lost mid-gesture (e.g. pyvista temporarily swapping
+        the interactor style, a dialog grabbing events), leaving this style or
+        a Move Group dialog in a permanent drag/rotate state that blocks
+        interaction. Verify against the real button state on every move and
+        reset when the button is not actually held.
+        """
+        try:
+            buttons = QApplication.mouseButtons()
+            left_held = bool(buttons & Qt.MouseButton.LeftButton)
+            right_held = bool(buttons & Qt.MouseButton.RightButton)
+            any_held = buttons != Qt.MouseButton.NoButton
+        except (AttributeError, RuntimeError, TypeError):
+            return
+
+        if self._is_dragging_atom and not left_held:
+            self.reset_interactor_state()
+
+        if not any_held:
+            try:
+                if self.GetState() != 0:  # stuck ROTATE/PAN/etc. without a button
+                    self.reset_interactor_state()
+            except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
+                logging.debug("Suppressed non-critical error", exc_info=True)
+
+        if move_group_dialog is not None:
+            try:
+                if (
+                    getattr(move_group_dialog, "is_dragging_group_vtk", False)
+                    and not left_held
+                ):
+                    move_group_dialog.is_dragging_group_vtk = False
+                    move_group_dialog.drag_start_pos_vtk = None
+                    move_group_dialog.mouse_moved_vtk = False
+                if (
+                    getattr(move_group_dialog, "is_rotating_group_vtk", False)
+                    and not right_held
+                ):
+                    move_group_dialog.is_rotating_group_vtk = False
+                    move_group_dialog.rotation_start_pos = None
+                    move_group_dialog.rotation_mouse_moved = False
+            except (AttributeError, RuntimeError, TypeError):
+                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
+                logging.debug("Suppressed non-critical error", exc_info=True)
+
     def on_mouse_move(self, obj: Any, event: Any) -> None:
         """
         Handle mouse move (drag vs camera/hover).
@@ -402,6 +448,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     break
         except (AttributeError, RuntimeError, TypeError):
             logging.warning("Caught exception in " + __file__, exc_info=True)
+
+        self._heal_stuck_pointer_state(move_group_dialog)
         if move_group_dialog and getattr(
             move_group_dialog, "is_dragging_group_vtk", False
         ):

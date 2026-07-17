@@ -213,6 +213,66 @@ def test_custom_interactor_style_move_selected_atoms_no_bfs(app, mock_parser_hos
         mock_dialog.on_atom_picked.assert_called_once_with(1)
 
 
+def test_heal_resets_stuck_atom_drag_when_left_button_not_held(app, mock_parser_host):
+    """A lost release must not leave _is_dragging_atom stuck when no button is held."""
+    interactor_style = CustomInteractorStyle(mock_parser_host)
+    interactor_style.GetState = MagicMock(return_value=0)
+    interactor_style.StopState = MagicMock()
+    interactor_style._is_dragging_atom = True
+
+    with patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp:
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.NoButton
+        interactor_style._heal_stuck_pointer_state(None)
+
+    assert interactor_style._is_dragging_atom is False
+
+
+def test_heal_resets_stuck_camera_state_when_no_button_held(app, mock_parser_host):
+    """A stuck VTK ROTATE/PAN state with no button held must be stopped."""
+    interactor_style = CustomInteractorStyle(mock_parser_host)
+    interactor_style.GetState = MagicMock(return_value=1)  # VTKIS_ROTATE
+    interactor_style.StopState = MagicMock()
+
+    with patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp:
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.NoButton
+        interactor_style._heal_stuck_pointer_state(None)
+
+    interactor_style.StopState.assert_called()
+
+
+def test_heal_keeps_active_drag_while_left_button_held(app, mock_parser_host):
+    """A genuine in-progress atom drag must not be reset."""
+    interactor_style = CustomInteractorStyle(mock_parser_host)
+    interactor_style.GetState = MagicMock(return_value=0)
+    interactor_style.StopState = MagicMock()
+    interactor_style._is_dragging_atom = True
+
+    with patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp:
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.LeftButton
+        interactor_style._heal_stuck_pointer_state(None)
+
+    assert interactor_style._is_dragging_atom is True
+    interactor_style.StopState.assert_not_called()
+
+
+def test_heal_clears_stuck_move_group_drag_flags(app, mock_parser_host):
+    """Stuck Move Group drag/rotate latches are cleared when buttons are not held."""
+    interactor_style = CustomInteractorStyle(mock_parser_host)
+    interactor_style.GetState = MagicMock(return_value=0)
+    interactor_style.StopState = MagicMock()
+
+    mock_dialog = MagicMock()
+    mock_dialog.is_dragging_group_vtk = True
+    mock_dialog.is_rotating_group_vtk = True
+
+    with patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp:
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.NoButton
+        interactor_style._heal_stuck_pointer_state(mock_dialog)
+
+    assert mock_dialog.is_dragging_group_vtk is False
+    assert mock_dialog.is_rotating_group_vtk is False
+
+
 def test_custom_interactor_style_right_click_rotation(app, mock_parser_host):
     """Verify right-click triggers group rotation and release finalizes it."""
     interactor_style = CustomInteractorStyle(mock_parser_host)

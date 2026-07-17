@@ -1421,6 +1421,28 @@ _Verify that clicking outside selection in MoveSelectedAtomsDialog toggles only 
 - mock_timer.assert_called_once()
 - mock_dialog.on_atom_picked.assert_called_once_with(1)
 
+### test_heal_resets_stuck_atom_drag_when_left_button_not_held
+_A lost release must not leave _is_dragging_atom stuck when no button is held._
+
+- assert interactor_style._is_dragging_atom is False
+
+### test_heal_resets_stuck_camera_state_when_no_button_held
+_A stuck VTK ROTATE/PAN state with no button held must be stopped._
+
+- interactor_style.StopState.assert_called()
+
+### test_heal_keeps_active_drag_while_left_button_held
+_A genuine in-progress atom drag must not be reset._
+
+- assert interactor_style._is_dragging_atom is True
+- interactor_style.StopState.assert_not_called()
+
+### test_heal_clears_stuck_move_group_drag_flags
+_Stuck Move Group drag/rotate latches are cleared when buttons are not held._
+
+- assert mock_dialog.is_dragging_group_vtk is False
+- assert mock_dialog.is_rotating_group_vtk is False
+
 ### test_custom_interactor_style_right_click_rotation
 _Verify right-click triggers group rotation and release finalizes it._
 
@@ -1433,6 +1455,25 @@ _Verify right-click triggers group rotation and release finalizes it._
 - assert mock_dialog.is_rotating_group_vtk is False
 - assert mock_dialog.rotation_start_pos is None
 - mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+
+## tests/unit/test_custom_qt_interactor.py
+
+### test_double_click_redispatched_as_plain_press
+_No description provided._
+
+- assert mock_press.call_count == 1
+- assert forwarded.type() == QEvent.Type.MouseButtonPress
+- assert forwarded.button() == Qt.MouseButton.LeftButton
+
+### test_fast_consecutive_presses_all_pass_through
+_No description provided._
+
+- assert mock_press.call_count == 4
+
+### test_release_passes_through_unconditionally
+_No description provided._
+
+- assert mock_release.call_count == 2
 
 ## tests/unit/test_dialog_3d_picking_mixin.py
 
@@ -4167,6 +4208,13 @@ _Test that the Box Selection toggle enables/disables rectangle picking._
 _Test that a single click clears the selection when Box Selection is ON._
 
 - mock_clear.assert_called_once()
+
+### test_box_selection_off_restores_style_via_pyvista
+_Restore must go through iren.style so pyvista bookkeeping tracks it._
+
+- plotter.disable_picking.assert_called_once()
+- assert plotter.iren.style is sentinel
+- plotter.interactor.SetInteractorStyle.assert_not_called()
 
 ## tests/unit/test_optimization_method_restore.py
 
@@ -6980,6 +7028,32 @@ _Test that set_mode handles template preview visibility._
 
 - assert ui.host.init_manager.scene.mode == 'atom_C'
 - assert ui.host.init_manager.scene.template_preview.hide.called
+
+### test_install_interactor_style_registers_via_pyvista
+_Style must go through iren.style so pyvista's update_style() keeps it._
+
+- assert plotter.iren.style is style
+- plotter.interactor.SetInteractorStyle.assert_not_called()
+
+### test_install_interactor_style_falls_back_to_raw_vtk
+_No description provided._
+
+- plotter.interactor.SetInteractorStyle.assert_called_once_with(style)
+
+### test_style_watchdog_reinstalls_replaced_style
+_A style evicted by pyvista (e.g. its double-click chart handler) is reinstalled._
+
+- assert plotter.iren.style is expected
+
+### test_style_watchdog_keeps_installed_style
+_No description provided._
+
+- assert plotter.iren.style is not expected
+
+### test_style_watchdog_ignores_rubberband_style
+_pyvista's temporary box-selection style must not be fought by the watchdog._
+
+- assert plotter.iren.style is not ui._expected_style
 
 ## tests/unit/test_utils_sip.py
 

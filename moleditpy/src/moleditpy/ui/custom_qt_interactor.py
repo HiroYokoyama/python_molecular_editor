@@ -10,9 +10,11 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-import time
+import logging
 from typing import Any, Optional
 
+from PyQt6.QtCore import QEvent
+from PyQt6.QtGui import QMouseEvent
 from pyvistaqt import QtInteractor
 
 
@@ -27,9 +29,6 @@ class CustomQtInteractor(QtInteractor):
     ) -> None:
         super().__init__(parent, **kwargs)
         self.main_window = main_window
-        self._last_click_time = 0.0
-        self._click_count = 0
-        self._ignore_next_release = False
 
     def wheelEvent(self, event: Any) -> None:
         """
@@ -45,61 +44,32 @@ class CustomQtInteractor(QtInteractor):
     def mouseReleaseEvent(self, event: Any) -> None:
         """
         Override the Qt mouse release event to return focus to the 2D view after
-        all 3D view operations. Also filters out "Ghost Release" (release without
-        a corresponding press).
+        all 3D view operations.
         """
-        if self._ignore_next_release:
-            self._ignore_next_release = False
-            event.accept()
-            return
-
         super().mouseReleaseEvent(event)  # Process parent class event first
         if self.main_window and hasattr(self.main_window.init_manager, "view_2d"):
             self.main_window.init_manager.view_2d.setFocus()
 
-    def mousePressEvent(self, event: Any) -> None:
-        """
-        Custom mouse press handling to track accumulated clicks and filter out
-        triple-clicks.
-        """
-        current_time = time.time()
-        # Reset count if too much time has passed (0.5s is standard double-click time)
-        if current_time - self._last_click_time > 0.5:
-            self._click_count = 0
-
-        self._click_count += 1
-        self._last_click_time = current_time
-
-        # If this is the 3rd click (or more), swallow it to prevent
-        # the internal state desync that happens with rapid clicking sequences.
-        if self._click_count >= 3:
-            self._ignore_next_release = True
-            event.accept()
-            return
-
-        super().mousePressEvent(event)
-
     def mouseDoubleClickEvent(self, event: Any) -> None:
-        """Ignore mouse double-clicks on the 3D widget to avoid accidental actions.
+        """Re-dispatch double-clicks as plain presses so fast clicking works.
 
-        Swallow the double-click event so it doesn't trigger selection, editing,
-        or camera jumps. We intentionally do not call the superclass handler.
-        Crucially, we also flag the NEXT release event to be swallowed, preventing
-        a "Ghost Release" (Release without Press) from reaching VTK.
+        Qt turns every second fast click into a double-click event. Forwarding
+        it unchanged would reach VTK with a repeat count and be dropped by the
+        interactor style, so the click would be lost (e.g. when rapidly
+        selecting atoms in measurement mode). Synthesizing a normal press keeps
+        press/release pairing intact and makes each fast click act as a click.
         """
-        current_time = time.time()
-        self._last_click_time = current_time
-        # Set to 2 to ensure the next click counts as 3rd
-        if current_time - self._last_click_time < 0.5:
-            self._click_count = 2
-        else:
-            self._click_count = 2  # Force sync
-
-        self._ignore_next_release = True
-
         try:
-            # Accept the event to mark it handled and prevent further processing.
+            synthetic_press = QMouseEvent(
+                QEvent.Type.MouseButtonPress,
+                event.position(),
+                event.globalPosition(),
+                event.button(),
+                event.buttons(),
+                event.modifiers(),
+            )
+            super().mousePressEvent(synthetic_press)
             event.accept()
         except (AttributeError, RuntimeError, TypeError):
-            # If event doesn't support accept for some reason, just return.
-            return
+            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
+            logging.debug("Suppressed non-critical error", exc_info=True)
