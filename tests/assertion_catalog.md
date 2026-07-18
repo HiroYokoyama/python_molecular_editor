@@ -315,6 +315,67 @@ _A normal load (not restoring state) still refits the camera._
 _Verify that version mismatch warnings are triggered (but don't crash)._
 
 
+### test_check_unsaved_changes_no_changes_returns_true
+_No description provided._
+
+- assert sm.check_unsaved_changes() is True
+
+### test_check_unsaved_changes_empty_document_returns_true
+_No description provided._
+
+- assert not sm.data.atoms
+- assert sm.check_unsaved_changes() is True
+
+### test_check_unsaved_changes_no_choice_returns_true
+_No description provided._
+
+- assert sm.check_unsaved_changes() is True
+
+### test_check_unsaved_changes_cancel_returns_false
+_No description provided._
+
+- assert sm.check_unsaved_changes() is False
+
+### test_check_unsaved_changes_save_untitled_uses_save_as
+_No description provided._
+
+- mock_parser_host.io_manager.save_project_as.assert_called_once()
+- mock_parser_host.io_manager.save_project.assert_not_called()
+- assert result is True
+
+### test_check_unsaved_changes_save_existing_pmeprj_uses_save
+_No description provided._
+
+- mock_parser_host.io_manager.save_project.assert_called_once()
+- mock_parser_host.io_manager.save_project_as.assert_not_called()
+- assert result is False
+
+### test_update_window_title_untitled_dirty_marks_asterisk
+_No description provided._
+
+- assert title.startswith('*Untitled - MoleditPy')
+
+### test_update_window_title_named_file_clean
+_No description provided._
+
+- assert title.startswith('benzene.pmeprj - MoleditPy')
+- assert not title.startswith('*')
+
+### test_update_window_title_named_file_dirty_marks_asterisk
+_No description provided._
+
+- assert title.startswith('*benzene.pmeprj - MoleditPy')
+
+### test_update_realtime_info_empty_clears_label
+_No description provided._
+
+- mock_parser_host.update_formula_label.assert_called_with('')
+
+### test_update_realtime_info_reports_formula_and_atom_count
+_No description provided._
+
+- assert 'Formula:' in msg and 'Atoms:' in msg
+
 ## tests/unit/test_atom_bond_items.py
 
 ### TestAtomItem.test_init
@@ -4868,6 +4929,45 @@ _No description provided._
 _No description provided._
 
 - scene.template_preview.hide.assert_called_once()
+
+### TestRightClickPress.test_radical_mode_resets_radical
+_No description provided._
+
+- assert item.radical == 0
+- assert scene.data.atoms[aid]['radical'] == 0
+- ev.accept.assert_called_once()
+
+### TestRightClickPress.test_charge_mode_resets_charge
+_No description provided._
+
+- assert item.charge == 0
+- assert scene.data.atoms[aid]['charge'] == 0
+
+### TestRightClickPress.test_bond25_right_click_clears_ez_label
+_No description provided._
+
+- bond.set_stereo.assert_called_once_with(0)
+- assert scene.data.bonds[a1, a2]['stereo'] == 0
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+
+### TestRightClickPress.test_delete_mode_right_click_removes_atom
+_No description provided._
+
+- del_items.assert_called_once()
+- assert item in del_items.call_args.args[0]
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+
+### TestRightClickPress.test_right_click_multi_selection_deletes_all
+_No description provided._
+
+- assert it1 in deleted and it2 in deleted
+- ev.accept.assert_called_once()
+
+### TestRightClickPress.test_right_click_empty_space_is_noop
+_No description provided._
+
+- ev.accept.assert_not_called()
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
 
 ## tests/unit/test_move_group_dialog.py
 

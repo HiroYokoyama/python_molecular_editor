@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **88.50%**
+- **Overall Project Coverage**: **88.71%**
 
 ### Coverage Breakdown
 
@@ -19,7 +19,7 @@
 | moleditpy\src\moleditpy\ui\alignment_dialog.py          |    147 |     10 |   93.2% |
 | moleditpy\src\moleditpy\ui\analysis_window.py           |    117 |     25 |   78.6% |
 | moleditpy\src\moleditpy\ui\angle_dialog.py              |    264 |     28 |   89.4% |
-| moleditpy\src\moleditpy\ui\app_state.py                 |    334 |     62 |   81.4% |
+| moleditpy\src\moleditpy\ui\app_state.py                 |    334 |     55 |   83.5% |
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    325 |     39 |   88.0% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |    167 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     81 |      4 |   95.1% |
@@ -43,7 +43,7 @@
 | moleditpy\src\moleditpy\ui\main_window_init.py          |   1061 |     94 |   91.1% |
 | moleditpy\src\moleditpy\ui\mirror_dialog.py             |     72 |      7 |   90.3% |
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |    999 |    146 |   85.4% |
-| moleditpy\src\moleditpy\ui\molecule_scene.py            |    614 |    110 |   82.1% |
+| moleditpy\src\moleditpy\ui\molecule_scene.py            |    614 |     82 |   86.6% |
 | moleditpy\src\moleditpy\ui\move_group_dialog.py         |    386 |     42 |   89.1% |
 | moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py |    464 |     44 |   90.5% |
 | moleditpy\src\moleditpy\ui\periodic_table_dialog.py     |     37 |      2 |   94.6% |
@@ -67,7 +67,7 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     39 |      0 |  100.0% |
-| **TOTAL** | **16187** | **1862** | **88.50%** |
+| **TOTAL** | **16187** | **1827** | **88.71%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
