@@ -510,3 +510,218 @@ def test_to_mol_block_fallback_skips_positionless_atoms_consistently(monkeypatch
     bond_line = lines[6]
     # Bond must reference the re-numbered atoms 1-2, not the original 2-3
     assert bond_line[:6] == f"{1:3d}{2:3d}"
+
+
+# =============================================================================
+# set_atom_pos raw-tuple branch
+# =============================================================================
+
+from unittest.mock import patch
+
+
+def test_set_atom_pos_accepts_raw_tuple():
+    data = MolecularData()
+    aid = data.add_atom("C", QPointF(0, 0))
+    data.set_atom_pos(aid, (5.0, 7.0))
+    pos = data.atoms[aid]["pos"]
+    assert (pos.x(), pos.y()) == (5.0, 7.0)
+
+
+# =============================================================================
+# to_mol_block manual fallback (to_rdkit_mol unavailable)
+# =============================================================================
+
+
+def test_to_mol_block_manual_fallback_charges_positions_stereo():
+    data = MolecularData()
+    ids = {
+        3: data.add_atom("C", QPointF(0, 0), charge=3),
+        2: data.add_atom("C", QPointF(10, 0), charge=2),
+        1: data.add_atom("C", QPointF(20, 0), charge=1),
+        -1: data.add_atom("C", QPointF(30, 0), charge=-1),
+        -2: data.add_atom("C", QPointF(40, 0), charge=-2),
+        -3: data.add_atom("C", QPointF(50, 0), charge=-3),
+    }
+    tuple_atom = data.add_atom("C", QPointF(60, 0))
+    data.atoms[tuple_atom]["pos"] = [70.0, 5.0]  # raw list pos branch
+    none_atom = data.add_atom("C", QPointF(80, 0))
+    data.atoms[none_atom]["pos"] = None  # falsy pos -> skipped
+    bad_atom = data.add_atom("C", QPointF(90, 0))
+    data.atoms[bad_atom]["pos"] = 12345  # invalid pos type -> skipped
+
+    data.add_bond(ids[3], ids[2], order=1, stereo=1)  # wedge stereo code
+    data.add_bond(ids[2], ids[1], order=2, stereo=2)  # dash stereo code
+    # Bond referencing a skipped atom is dropped from the bond block
+    data.bonds[(ids[1], none_atom)] = {"order": 1, "stereo": 0}
+
+    with patch.object(data, "to_rdkit_mol", return_value=None):
+        block = data.to_mol_block()
+
+    assert block is not None
+    assert "MoleditPy" in block
+    lines = block.split("\n")
+    counts = lines[3]
+    # 6 charged + 1 tuple atom = 7 atoms written (None/invalid skipped)
+    assert counts.startswith("  7")
+
+
+def test_to_mol_block_returns_none_when_empty():
+    data = MolecularData()
+    with patch.object(data, "to_rdkit_mol", return_value=None):
+        assert data.to_mol_block() is None
+
+
+# =============================================================================
+# to_rdkit_mol E/Z stereo label handling
+# =============================================================================
+
+
+def _but2ene():
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    c3 = data.add_atom("C", QPointF(100, 0))
+    c4 = data.add_atom("C", QPointF(150, 0))
+    data.add_bond(c1, c2, order=1)
+    data.add_bond(c2, c3, order=2, stereo=3)  # Z label on the double bond
+    data.add_bond(c3, c4, order=1)
+    return data, (c2, c3)
+
+
+def test_to_rdkit_mol_assigns_z_stereo_on_double_bond():
+    data, (c2, c3) = _but2ene()
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    assert mol is not None
+    dbond = None
+    for b in mol.GetBonds():
+        if b.GetBondType() == Chem.BondType.DOUBLE:
+            dbond = b
+    assert dbond is not None
+    assert dbond.GetStereo() in (Chem.BondStereo.STEREOZ, Chem.BondStereo.STEREOE)
+
+
+def test_to_rdkit_mol_stereo_label_on_single_bond_is_ignored():
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    data.add_bond(c1, c2, order=1, stereo=3)  # E/Z label on a single bond
+    mol = data.to_rdkit_mol()
+    assert mol is not None  # label ignored, no crash
+
+
+def test_to_rdkit_mol_ez_falls_back_to_hydrogen_neighbor():
+    # C0=C1 with an explicit H on C1 and a methyl on C0: the C1 side has only
+    # a hydrogen neighbor, exercising the non-heavy fallback in neighbor pick.
+    data = MolecularData()
+    c0 = data.add_atom("C", QPointF(0, 0))
+    c1 = data.add_atom("C", QPointF(50, 0))
+    ch3 = data.add_atom("C", QPointF(-50, 0))
+    h = data.add_atom("H", QPointF(100, 0))
+    data.add_bond(c0, c1, order=2, stereo=4)  # E label
+    data.add_bond(c0, ch3, order=1)
+    data.add_bond(c1, h, order=1)
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    assert mol is not None
+
+
+def test_to_rdkit_mol_ez_with_explicit_stereo_atoms():
+    data, (c2, c3) = _but2ene()
+    # Provide explicit stereo_atoms so the specified-index branch runs
+    data.bonds[(c2, c3)]["stereo_atoms"] = (
+        list(data.atoms.keys())[0],
+        list(data.atoms.keys())[3],
+    )
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    assert mol is not None
+
+
+def test_to_rdkit_mol_terminal_double_bond_stereo_skipped():
+    # Ethene with no other substituents: neighbor pick returns None -> skip
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    data.add_bond(c1, c2, order=2, stereo=3)
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    assert mol is not None
+
+
+# =============================================================================
+# to_rdkit_mol drops bonds referencing removed atoms
+# =============================================================================
+
+
+def test_to_rdkit_mol_skips_bond_with_unmapped_atom():
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    data.add_bond(c1, c2, order=1)
+    # Inject a dangling bond referencing a non-existent atom id
+    data.bonds[(c1, 999)] = {"order": 1, "stereo": 0}
+    mol = data.to_rdkit_mol()
+    assert mol is not None
+    assert mol.GetNumBonds() == 1  # dangling bond ignored
+
+
+def test_add_atom_accepts_raw_tuple_position():
+    data = MolecularData()
+    aid = data.add_atom("C", (3.0, 4.0))  # raw tuple, not QPointF
+    assert (data.atoms[aid]["pos"].x(), data.atoms[aid]["pos"].y()) == (3.0, 4.0)
+
+
+def test_set_atom_pos_accepts_qpointf():
+    data = MolecularData()
+    aid = data.add_atom("C", (0.0, 0.0))
+    data.set_atom_pos(aid, QPointF(9.0, 8.0))
+    assert (data.atoms[aid]["pos"].x(), data.atoms[aid]["pos"].y()) == (9.0, 8.0)
+
+
+def test_to_rdkit_mol_returns_none_for_unknown_symbol():
+    data = MolecularData()
+    data.add_atom("Xx", QPointF(0, 0))  # RDKit rejects this element
+    assert data.to_rdkit_mol() is None
+
+
+def test_to_rdkit_mol_returns_none_on_sanitize_failure():
+    data = MolecularData()
+    c = data.add_atom("C", QPointF(0, 0))
+    hs = [data.add_atom("H", QPointF(10 * i, 10)) for i in range(5)]
+    for h in hs:
+        data.add_bond(c, h, order=1)  # pentavalent carbon fails sanitization
+    assert data.to_rdkit_mol() is None
+
+
+def test_to_rdkit_mol_conformer_handles_tuple_and_invalid_pos():
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    data.add_bond(c1, c2, order=1)
+    data.atoms[c1]["pos"] = [10.0, 20.0]  # raw list -> tuple conformer branch
+    data.atoms[c2]["pos"] = 999  # invalid -> conformer skip branch
+    mol = data.to_rdkit_mol()
+    assert mol is not None
+
+
+def test_to_mol_block_manual_fallback_when_moltomolblock_raises():
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0), charge=0)
+    import moleditpy.core.molecular_data as md
+    with patch.object(md.Chem, "MolToMolBlock", side_effect=RuntimeError("boom")):
+        block = data.to_mol_block()
+    assert block is not None and "MoleditPy" in block
+
+
+def test_to_rdkit_mol_3d_without_ez_labels_estimates_from_coords():
+    # use_2d_stereo=False with a double bond but no E/Z label -> coordinate path
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(50, 0))
+    data.add_bond(c1, c2, order=2, stereo=0)
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    assert mol is not None
+
+
+def test_to_rdkit_mol_ez_invalid_stereo_atoms_suppressed():
+    data, (c2, c3) = _but2ene()
+    data.bonds[(c2, c3)]["stereo_atoms"] = 5  # not unpackable -> exception branch
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    assert mol is not None
