@@ -958,3 +958,255 @@ def test_clear_labels_survives_remove_actor_failure(mock_parser_host):
 
     assert view3d.current_atom_info_labels is None
     assert view3d.atom_label_legend_names == []
+
+
+# ---------------------------------------------------------------------------
+# apply_3d_settings
+# ---------------------------------------------------------------------------
+
+
+def _settings_view(mock_host, **settings):
+    view3d = _make_view3d(mock_host)
+    mock_host.init_manager.settings.update(settings)
+    view3d.axes_widget = None
+    return view3d
+
+
+def test_apply_3d_settings_orthographic_sets_parallel_projection(mock_parser_host):
+    view3d = _settings_view(mock_parser_host, projection_mode="Orthographic",
+                            show_3d_axes=False)
+    cam = MagicMock()
+    view3d.plotter.renderer.GetActiveCamera.return_value = cam
+
+    with patch.object(view3d, "draw_molecule_3d"):
+        view3d.apply_3d_settings(redraw=False)
+
+    cam.SetParallelProjection.assert_called_once_with(True)
+
+
+def test_apply_3d_settings_hides_axes_when_disabled(mock_parser_host):
+    view3d = _settings_view(mock_parser_host, show_3d_axes=False,
+                            background_color="#222222")
+    with patch.object(view3d, "draw_molecule_3d"):
+        view3d.apply_3d_settings(redraw=False)
+
+    view3d.plotter.hide_axes.assert_called_once()
+    view3d.plotter.set_background.assert_called_with("#222222")
+
+
+def test_apply_3d_settings_redraw_true_draws_molecule(mock_parser_host):
+    view3d = _settings_view(mock_parser_host, show_3d_axes=False)
+    view3d.current_mol = MagicMock()
+    with patch.object(view3d, "draw_molecule_3d") as draw:
+        view3d.apply_3d_settings(redraw=True)
+    draw.assert_called_once_with(view3d.current_mol)
+
+
+def test_apply_3d_settings_redraw_false_skips_draw(mock_parser_host):
+    view3d = _settings_view(mock_parser_host, show_3d_axes=False)
+    with patch.object(view3d, "draw_molecule_3d") as draw:
+        view3d.apply_3d_settings(redraw=False)
+    draw.assert_not_called()
+
+
+def test_apply_3d_settings_resets_camera_only_once(mock_parser_host):
+    view3d = _settings_view(mock_parser_host, show_3d_axes=False)
+    with patch.object(view3d, "draw_molecule_3d"):
+        view3d.apply_3d_settings(redraw=False)
+        assert view3d._camera_initialized is True
+        view3d.plotter.reset_camera.reset_mock()
+        view3d.apply_3d_settings(redraw=False)
+    view3d.plotter.reset_camera.assert_not_called()
+
+
+def test_apply_3d_settings_axes_on_builds_orientation_widget(mock_parser_host):
+    view3d = _settings_view(mock_parser_host, show_3d_axes=True,
+                            background_color="#000000")
+    with (
+        patch.object(view3d, "draw_molecule_3d"),
+        patch("moleditpy.ui.view_3d_logic.vtk") as mock_vtk,
+    ):
+        view3d.apply_3d_settings(redraw=False)
+
+    mock_vtk.vtkOrientationMarkerWidget.assert_called_once()
+    assert view3d.axes_widget is not None
+
+
+# ---------------------------------------------------------------------------
+# update_chiral_labels / toggle_chiral_labels_display
+# ---------------------------------------------------------------------------
+
+
+def _scene_with_atom_items(mock_host, atom_ids):
+    items = {}
+    for aid in atom_ids:
+        it = MagicMock()
+        it.chiral_label = "STALE"
+        items[aid] = it
+    mock_host.init_manager.scene.atom_items = items
+    return items
+
+
+def test_update_chiral_labels_clears_when_disabled(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.show_chiral_labels = False
+    items = _scene_with_atom_items(mock_parser_host, [1, 2])
+
+    view3d.update_chiral_labels()
+
+    assert all(it.chiral_label is None for it in items.values())
+    mock_parser_host.init_manager.scene.update.assert_called()
+
+
+def test_update_chiral_labels_returns_when_no_current_mol(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.show_chiral_labels = True
+    view3d.current_mol = None
+    items = _scene_with_atom_items(mock_parser_host, [1])
+
+    view3d.update_chiral_labels()
+
+    assert items[1].chiral_label is None
+
+
+def test_update_chiral_labels_assigns_rs_to_matching_items(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.show_chiral_labels = True
+    mol = Chem.MolFromSmiles("C[C@H](N)O")
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol, randomSeed=7)
+    # Tag the stereocenter (atom idx 1) with an editor id
+    mol.GetAtomWithIdx(1).SetIntProp("_original_atom_id", 55)
+    view3d.current_mol = mol
+    items = _scene_with_atom_items(mock_parser_host, [55])
+
+    view3d.update_chiral_labels()
+
+    assert items[55].chiral_label in ("R", "S")
+
+
+def test_toggle_chiral_labels_display_on_redraws_and_reports(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.current_mol = MagicMock()
+    with patch.object(view3d, "draw_molecule_3d") as draw:
+        view3d.toggle_chiral_labels_display(True)
+    assert view3d.show_chiral_labels is True
+    draw.assert_called_once()
+    assert "Chiral labels" in str(
+        mock_parser_host.statusBar().showMessage.call_args.args[0]
+    )
+
+
+def test_toggle_chiral_labels_display_off_reports_disabled(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.current_mol = None
+    view3d.toggle_chiral_labels_display(False)
+    assert view3d.show_chiral_labels is False
+    mock_parser_host.statusBar().showMessage.assert_called_with(
+        "Chiral labels disabled."
+    )
+
+
+# ---------------------------------------------------------------------------
+# toggle_atom_info_display / set_atom_index_base
+# ---------------------------------------------------------------------------
+
+
+def test_toggle_atom_info_same_mode_turns_off(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.atom_info_display_mode = "rdkit_index"
+    base_menu = mock_parser_host.init_manager.atom_index_base_menu
+
+    view3d.toggle_atom_info_display("rdkit_index")
+
+    assert view3d.atom_info_display_mode is None
+    base_menu.setEnabled.assert_called_with(False)
+    mock_parser_host.statusBar().showMessage.assert_called_with(
+        "Atom info display disabled."
+    )
+
+
+def test_toggle_atom_info_index_mode_enables_base_menu(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.atom_info_display_mode = None
+    view3d.atom_positions_3d = None  # show_all_atom_info early-returns safely
+    base_menu = mock_parser_host.init_manager.atom_index_base_menu
+
+    view3d.toggle_atom_info_display("rdkit_index")
+
+    assert view3d.atom_info_display_mode == "rdkit_index"
+    base_menu.setEnabled.assert_called_with(True)
+    view3d.plotter.render.assert_called()
+
+
+def test_toggle_atom_info_coords_mode_disables_base_menu(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.atom_info_display_mode = None
+    view3d.atom_positions_3d = None
+    base_menu = mock_parser_host.init_manager.atom_index_base_menu
+
+    view3d.toggle_atom_info_display("coords")
+
+    assert view3d.atom_info_display_mode == "coords"
+    base_menu.setEnabled.assert_called_with(False)
+
+
+def test_set_atom_index_base_refreshes_when_index_mode_active(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.atom_info_display_mode = "rdkit_index"
+    view3d.atom_positions_3d = None
+    with patch.object(view3d, "show_all_atom_info") as show:
+        view3d.set_atom_index_base(1)
+    assert view3d.atom_index_base == 1
+    show.assert_called_once()
+    view3d.plotter.render.assert_called()
+
+
+def test_set_atom_index_base_no_refresh_when_no_index_mode(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.atom_info_display_mode = "symbol"
+    with patch.object(view3d, "show_all_atom_info") as show:
+        view3d.set_atom_index_base(0)
+    assert view3d.atom_index_base == 0
+    show.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# update_atom_id_menu_state — auto-clear stale modes
+# ---------------------------------------------------------------------------
+
+
+def test_menu_state_clears_original_id_mode_when_ids_absent(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.atom_info_display_mode = "original_id"
+    view3d.current_mol = Chem.MolFromSmiles("CC")  # no _original_atom_id props
+
+    with patch.object(view3d, "clear_all_atom_info_labels") as clear:
+        view3d.update_atom_id_menu_state()
+
+    assert view3d.atom_info_display_mode is None
+    clear.assert_called_once()
+
+
+def test_menu_state_clears_xyz_mode_when_not_xyz_derived(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.atom_info_display_mode = "xyz_index"
+    view3d.current_mol = Chem.MolFromSmiles("CC")  # no xyz_unique_id props
+
+    with patch.object(view3d, "clear_all_atom_info_labels") as clear:
+        view3d.update_atom_id_menu_state()
+
+    assert view3d.atom_info_display_mode is None
+    clear.assert_called_once()
+
+
+def test_menu_state_keeps_original_id_mode_when_ids_present(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.atom_info_display_mode = "original_id"
+    mol = Chem.MolFromSmiles("CC")
+    mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", 3)
+    view3d.current_mol = mol
+
+    view3d.update_atom_id_menu_state()
+
+    assert view3d.atom_info_display_mode == "original_id"
