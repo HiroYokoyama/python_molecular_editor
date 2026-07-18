@@ -18,6 +18,8 @@ import sys
 import pytest
 from unittest.mock import MagicMock, patch
 
+from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import QApplication, QTableWidgetItem
 
 # ---------------------------------------------------------------------------
@@ -689,3 +691,408 @@ class TestCancelAndUndoIntegrity:
         dlg._on_optimization_finished("MMFF94s", mock_conf)
 
         assert seen_at_push == [[["Distance", [0, 1], 1.54, 1.0e5]]]
+
+
+# ---------------------------------------------------------------------------
+# ConstrainedOptimizationThread
+# ---------------------------------------------------------------------------
+
+
+class TestOptimizationThread:
+    def test_run_success_emits_finished(self, qapp):
+        from moleditpy.ui.constrained_optimization_dialog import (
+            ConstrainedOptimizationThread,
+        )
+
+        ff = MagicMock()
+        thread = ConstrainedOptimizationThread(ff, max_iters=123)
+        done = []
+        thread.optimization_finished.connect(lambda: done.append(True))
+        thread.run()
+
+        ff.Minimize.assert_called_once_with(maxIts=123)
+        assert done == [True]
+
+    def test_run_error_emits_error(self, qapp):
+        from moleditpy.ui.constrained_optimization_dialog import (
+            ConstrainedOptimizationThread,
+        )
+
+        ff = MagicMock()
+        ff.Minimize.side_effect = RuntimeError("boom")
+        thread = ConstrainedOptimizationThread(ff)
+        errs = []
+        thread.error_occurred.connect(lambda m: errs.append(m))
+        thread.run()
+
+        assert errs and "boom" in errs[0]
+
+
+# ---------------------------------------------------------------------------
+# Force-field combo fallback branches
+# ---------------------------------------------------------------------------
+
+
+class TestForceFieldFallback:
+    def test_legacy_uff_substring(self, make_dialog):
+        dlg = make_dialog(opt_method="OLD_UFF_CONFIG")
+        assert dlg.ff_combo.currentText() == "UFF"
+
+    def test_legacy_mmff94s_substring(self, make_dialog):
+        dlg = make_dialog(opt_method="LEGACY_MMFF94S_SET")
+        assert dlg.ff_combo.currentText() == "MMFF94s"
+
+    def test_legacy_mmff94_substring(self, make_dialog):
+        dlg = make_dialog(opt_method="LEGACY_MMFF94_SET")
+        assert dlg.ff_combo.currentText() == "MMFF94"
+
+    def test_non_string_method_is_caught(self, make_dialog):
+        # optimization_method as int -> .upper() raises -> except path
+        dlg = make_dialog(opt_method=12345)
+        assert dlg.ff_combo.currentText() in {"MMFF94s", "MMFF94", "UFF"}
+
+
+# ---------------------------------------------------------------------------
+# Guard clauses / early returns
+# ---------------------------------------------------------------------------
+
+
+class TestGuardClauses:
+    def test_update_display_more_than_four(self, make_dialog):
+        dlg = make_dialog()
+        dlg.selected_atoms = [0, 1, 2, 3, 4]
+        dlg.update_selection_display()
+        assert "max 4" in dlg.selection_label.text()
+
+    def test_add_constraint_with_one_atom_returns(self, make_dialog):
+        dlg = make_dialog()
+        dlg.selected_atoms = [0]
+        dlg.add_constraint()
+        assert dlg.constraints == []
+
+    def test_remove_constraint_no_selection_returns(self, make_dialog):
+        dlg = make_dialog()
+        dlg.on_atom_picked(0)
+        dlg.on_atom_picked(1)
+        dlg.add_constraint()
+        dlg.constraint_table.clearSelection()
+        dlg.remove_constraint()
+        assert len(dlg.constraints) == 1  # nothing removed
+
+    def test_apply_optimization_no_conformer(self, make_dialog):
+        mol = MagicMock()
+        mol.GetNumConformers.return_value = 0
+        dlg = make_dialog()
+        dlg.mol = mol
+        with patch(
+            "moleditpy.ui.constrained_optimization_dialog.QMessageBox"
+        ) as mb:
+            dlg.apply_optimization()
+        mb.warning.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# show_constraint_labels
+# ---------------------------------------------------------------------------
+
+
+class TestShowConstraintLabels:
+    def _add_angle(self, dlg):
+        dlg.on_atom_picked(2)
+        dlg.on_atom_picked(0)
+        dlg.on_atom_picked(1)
+        dlg.add_constraint()
+
+    def test_no_selection_disables_remove(self, make_dialog):
+        dlg = make_dialog()
+        dlg.constraint_table.clearSelection()
+        dlg.show_constraint_labels()
+        assert not dlg.remove_button.isEnabled()
+
+    def test_angle_labels_selected(self, make_dialog):
+        dlg = make_dialog()
+        dlg.main_window.view_3d_manager.atom_positions_3d = [
+            [0.0, 0.0, 0.0] for _ in range(8)
+        ]
+        self._add_angle(dlg)
+        dlg.constraint_table.selectRow(0)
+        dlg.show_constraint_labels()
+        assert dlg.remove_button.isEnabled()
+        assert dlg.constraint_labels  # a label actor was added
+
+    def test_dihedral_labels_and_3element_fallback(self, make_dialog):
+        dlg = make_dialog()
+        dlg.main_window.view_3d_manager.atom_positions_3d = [
+            [0.0, 0.0, 0.0] for _ in range(8)
+        ]
+        # inject a legacy 3-element dihedral constraint
+        dlg.constraints = [("Dihedral", (2, 0, 1, 5), 60.0)]
+        dlg.constraint_table.blockSignals(True)
+        dlg.constraint_table.insertRow(0)
+        dlg.constraint_table.setItem(0, 0, QTableWidgetItem("Dihedral"))
+        dlg.constraint_table.blockSignals(False)
+        dlg.constraint_table.selectRow(0)
+        dlg.show_constraint_labels()
+        assert dlg.constraint_labels
+
+    def test_positions_none_returns_early(self, make_dialog):
+        dlg = make_dialog()
+        self._add_angle(dlg)
+        dlg.main_window.view_3d_manager.atom_positions_3d = None
+        dlg.constraint_labels = []
+        dlg.constraint_table.selectRow(0)
+        dlg.show_constraint_labels()
+        assert dlg.constraint_labels == []
+
+    def test_clear_labels_suppresses_remove_actor_error(self, make_dialog):
+        dlg = make_dialog()
+        dlg.constraint_labels = [MagicMock()]
+        dlg.main_window.view_3d_manager.plotter.remove_actor.side_effect = RuntimeError(
+            "no actor"
+        )
+        dlg.clear_constraint_labels()
+        assert dlg.constraint_labels == []
+
+
+# ---------------------------------------------------------------------------
+# apply_optimization force-field + constraint plumbing
+# ---------------------------------------------------------------------------
+
+
+class TestApplyOptimizationPlumbing:
+    def _add_all_types(self, dlg):
+        dlg.on_atom_picked(0)
+        dlg.on_atom_picked(1)
+        dlg.add_constraint()
+        dlg.on_atom_picked(2)
+        dlg.on_atom_picked(0)
+        dlg.on_atom_picked(1)
+        dlg.add_constraint()
+        dlg.on_atom_picked(2)
+        dlg.on_atom_picked(0)
+        dlg.on_atom_picked(1)
+        dlg.on_atom_picked(5)
+        dlg.add_constraint()
+
+    @patch("moleditpy.ui.constrained_optimization_dialog.ConstrainedOptimizationThread")
+    def test_mmff_with_all_constraint_types(self, mock_thread, make_dialog):
+        dlg = make_dialog()
+        dlg.ff_combo.setCurrentText("MMFF94s")
+        self._add_all_types(dlg)
+        dlg.apply_optimization()
+        mock_thread.assert_called_once()
+        assert not dlg.optimize_button.isEnabled()
+
+    @patch("moleditpy.ui.constrained_optimization_dialog.ConstrainedOptimizationThread")
+    def test_uff_branch(self, mock_thread, make_dialog):
+        dlg = make_dialog()
+        dlg.ff_combo.setCurrentText("UFF")
+        self._add_all_types(dlg)
+        dlg.apply_optimization()
+        mock_thread.assert_called_once()
+
+    @patch("moleditpy.ui.constrained_optimization_dialog.ConstrainedOptimizationThread")
+    def test_start_failure_reenables_button(self, mock_thread, make_dialog):
+        dlg = make_dialog()
+        mock_thread.return_value.start.side_effect = RuntimeError("cannot start")
+        dlg.apply_optimization()
+        assert dlg.optimize_button.isEnabled()
+
+
+# ---------------------------------------------------------------------------
+# _on_optimization_finished error/edge paths
+# ---------------------------------------------------------------------------
+
+
+class TestFinishedEdgePaths:
+    def _finish(self, dlg):
+        mock_conf = MagicMock()
+        pos = MagicMock()
+        pos.x = pos.y = pos.z = 0.0
+        mock_conf.GetAtomPosition.return_value = pos
+        dlg.main_window.view_3d_manager.atom_positions_3d = {
+            i: [0, 0, 0] for i in range(dlg.mol.GetNumAtoms())
+        }
+        dlg._on_optimization_finished("MMFF94s", mock_conf)
+
+    def test_3element_constraint_serialised(self, make_dialog):
+        dlg = make_dialog()
+        dlg.constraints = [("Distance", (0, 1), 1.54)]  # legacy 3-element
+        dlg.main_window.edit_3d_manager.constraints_3d = []
+        self._finish(dlg)
+        saved = dlg.main_window.edit_3d_manager.constraints_3d
+        assert saved[0][3] == pytest.approx(1.0e5)
+
+    def test_constraint_sync_error_is_caught(self, make_dialog):
+        dlg = make_dialog()
+        dlg.constraints = [("Distance", (0, 1), 1.54, 1.0e5)]
+        dlg.main_window.edit_3d_manager.constraints_3d = []
+        dlg.main_window.state_manager.update_window_title.side_effect = RuntimeError(
+            "title fail"
+        )
+        # should not raise despite the sync error
+        self._finish(dlg)
+        dlg.main_window.view_3d_manager.draw_molecule_3d.assert_called_once()
+
+    def test_outer_draw_error_is_caught(self, make_dialog):
+        dlg = make_dialog()
+        dlg.main_window.view_3d_manager.draw_molecule_3d.side_effect = RuntimeError(
+            "draw fail"
+        )
+        # exception in the main body must be swallowed
+        self._finish(dlg)
+
+
+# ---------------------------------------------------------------------------
+# reject error path + clear_selection + show_selection_labels
+# ---------------------------------------------------------------------------
+
+
+class TestRejectAndSelectionLabels:
+    def test_reject_save_error_is_caught(self, make_dialog):
+        dlg = make_dialog()
+        dlg.constraints = [("Distance", (0, 1), 1.54, 1.0e5)]
+        dlg.main_window.edit_3d_manager.constraints_3d = []
+        dlg.main_window.state_manager.update_window_title.side_effect = RuntimeError(
+            "boom"
+        )
+        dlg.picking_enabled = False
+        dlg.constraint_labels = []
+        dlg.selection_labels = []
+        dlg.reject()  # must not raise
+        assert dlg._closed is True
+
+    def test_clear_selection(self, make_dialog):
+        dlg = make_dialog()
+        dlg.selected_atoms = [0, 1]
+        dlg.clear_selection()
+        assert dlg.selected_atoms == []
+        assert "None" in dlg.selection_label.text()
+
+    def test_show_selection_labels_with_real_positions(self, make_dialog):
+        dlg = make_dialog()
+        dlg.main_window.view_3d_manager.atom_positions_3d = [
+            [0.0, 0.0, 0.0] for _ in range(8)
+        ]
+        dlg.selected_atoms = [0, 1]
+        dlg.selection_labels = []
+        dlg.show_selection_labels()
+        assert dlg.selection_labels  # a label actor added
+
+    def test_show_selection_labels_no_positions(self, make_dialog):
+        dlg = make_dialog()
+        dlg.main_window.view_3d_manager.atom_positions_3d = None
+        dlg.selection_labels = []
+        dlg.selected_atoms = [0]
+        dlg.show_selection_labels()
+        assert dlg.selection_labels == []
+
+
+# ---------------------------------------------------------------------------
+# on_cell_changed additional branches
+# ---------------------------------------------------------------------------
+
+
+class TestCellChangedBranches:
+    def _one_angle(self, make_dialog):
+        dlg = make_dialog()
+        dlg.on_atom_picked(2)
+        dlg.on_atom_picked(0)
+        dlg.on_atom_picked(1)
+        dlg.add_constraint()
+        return dlg
+
+    def _set_text(self, dlg, row, col, text):
+        dlg.constraint_table.blockSignals(True)
+        dlg.constraint_table.item(row, col).setText(text)
+        dlg.constraint_table.blockSignals(False)
+
+    def test_missing_item_returns(self, make_dialog):
+        dlg = make_dialog()
+        # No such row -> item() is None -> early return, no raise
+        dlg.on_cell_changed(9, 2)
+
+    def test_3element_force_column_edit(self, make_dialog):
+        dlg = make_dialog()
+        dlg.constraints = [("Distance", (0, 1), 1.5)]  # legacy 3-element
+        dlg.constraint_table.blockSignals(True)
+        dlg.constraint_table.insertRow(0)
+        dlg.constraint_table.setItem(0, 2, QTableWidgetItem("1.5"))
+        dlg.constraint_table.setItem(0, 3, QTableWidgetItem("1.00e+05"))
+        dlg.constraint_table.blockSignals(False)
+        self._set_text(dlg, 0, 3, "3.0e4")
+        dlg.on_cell_changed(0, 3)
+        assert len(dlg.constraints[0]) == 4
+        assert dlg.constraints[0][3] == pytest.approx(3.0e4)
+
+    def test_invalid_angle_value_reverts_with_2dp(self, make_dialog):
+        dlg = self._one_angle(make_dialog)
+        orig = dlg.constraints[0][2]
+        self._set_text(dlg, 0, 2, "notnum")
+        with patch("moleditpy.ui.constrained_optimization_dialog.QMessageBox"):
+            dlg.on_cell_changed(0, 2)
+        assert dlg.constraints[0][2] == pytest.approx(orig)
+        # value cell reverted to 2-decimal formatting for non-Distance
+        assert dlg.constraint_table.item(0, 2).text() == f"{orig:.2f}"
+
+    def test_invalid_force_value_reverts(self, make_dialog):
+        dlg = self._one_angle(make_dialog)
+        orig_force = dlg.constraints[0][3]
+        self._set_text(dlg, 0, 3, "bogus")
+        with patch("moleditpy.ui.constrained_optimization_dialog.QMessageBox"):
+            dlg.on_cell_changed(0, 3)
+        assert dlg.constraints[0][3] == pytest.approx(orig_force)
+        assert dlg.constraint_table.item(0, 3).text() == f"{orig_force:.2e}"
+
+    def test_index_error_when_no_constraint(self, make_dialog):
+        dlg = make_dialog()
+        # table row without a matching constraint entry -> IndexError path
+        dlg.constraint_table.blockSignals(True)
+        dlg.constraint_table.insertRow(0)
+        dlg.constraint_table.setItem(0, 2, QTableWidgetItem("2.0"))
+        dlg.constraint_table.blockSignals(False)
+        dlg.on_cell_changed(0, 2)  # must not raise
+        assert dlg.constraints == []
+
+
+# ---------------------------------------------------------------------------
+# keyPressEvent
+# ---------------------------------------------------------------------------
+
+
+class TestKeyPressEvent:
+    def _key(self, key):
+        return QKeyEvent(
+            QEvent.Type.KeyPress, key, Qt.KeyboardModifier.NoModifier
+        )
+
+    def test_delete_removes_selected(self, make_dialog):
+        dlg = make_dialog()
+        dlg.on_atom_picked(0)
+        dlg.on_atom_picked(1)
+        dlg.add_constraint()
+        dlg.constraint_table.selectRow(0)
+        dlg.keyPressEvent(self._key(Qt.Key.Key_Delete))
+        assert dlg.constraints == []
+
+    def test_backspace_removes_selected(self, make_dialog):
+        dlg = make_dialog()
+        dlg.on_atom_picked(0)
+        dlg.on_atom_picked(1)
+        dlg.add_constraint()
+        dlg.constraint_table.selectRow(0)
+        dlg.keyPressEvent(self._key(Qt.Key.Key_Backspace))
+        assert dlg.constraints == []
+
+    @patch("moleditpy.ui.constrained_optimization_dialog.ConstrainedOptimizationThread")
+    def test_enter_triggers_optimize(self, mock_thread, make_dialog):
+        dlg = make_dialog()
+        dlg.optimize_button.setEnabled(True)
+        dlg.keyPressEvent(self._key(Qt.Key.Key_Return))
+        mock_thread.assert_called_once()
+
+    def test_other_key_falls_through(self, make_dialog):
+        dlg = make_dialog()
+        # An unrelated key must not raise and not remove anything
+        dlg.keyPressEvent(self._key(Qt.Key.Key_A))
+        assert dlg.constraints == []
