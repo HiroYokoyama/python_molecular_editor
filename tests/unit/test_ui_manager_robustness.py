@@ -563,3 +563,82 @@ def test_enable_3d_edit_actions_toggles_all_actions_and_menus():
     ui._enable_3d_edit_actions(False)
     ui.host.dihedral_action.setEnabled.assert_called_with(False)
     ui.host.align_menu.setEnabled.assert_called_with(False)
+
+
+# ---------------------------------------------------------------------------
+# toggle_3d_edit_mode
+# ---------------------------------------------------------------------------
+
+
+def test_toggle_3d_edit_mode_on_disables_measurement_mode():
+    mgr = _make_ui_manager()
+    host = mgr.host
+    host.edit_3d_manager.measurement_mode = True
+
+    mgr.toggle_3d_edit_mode(True)
+
+    host.init_manager.measurement_action.setChecked.assert_called_once_with(False)
+    host.edit_3d_manager.toggle_measurement_mode.assert_called_once_with(False)
+    host.set_3d_edit_mode.assert_called_once_with(True)
+    host.update_status_message.assert_called_with("3D Drag Mode: ON.")
+    host.init_manager.view_2d.setFocus.assert_called_once()
+
+
+def test_toggle_3d_edit_mode_on_without_active_measurement():
+    mgr = _make_ui_manager()
+    host = mgr.host
+    host.edit_3d_manager.measurement_mode = False
+
+    mgr.toggle_3d_edit_mode(True)
+
+    host.edit_3d_manager.toggle_measurement_mode.assert_not_called()
+    host.set_3d_edit_mode.assert_called_once_with(True)
+
+
+def test_toggle_3d_edit_mode_off_resets_interactor_state():
+    mgr = _make_ui_manager()
+    host = mgr.host
+    style = MagicMock()
+    host.view_3d_manager.plotter.interactor.GetInteractorStyle.return_value = style
+
+    mgr.toggle_3d_edit_mode(False)
+
+    host.set_3d_edit_mode.assert_called_once_with(False)
+    host.update_status_message.assert_called_with("3D Drag Mode: OFF.")
+    style.reset_interactor_state.assert_called_once()
+
+
+def test_toggle_3d_edit_mode_off_suppresses_interactor_error():
+    mgr = _make_ui_manager()
+    host = mgr.host
+    host.view_3d_manager.plotter.interactor.GetInteractorStyle.side_effect = (
+        AttributeError("no interactor")
+    )
+
+    mgr.toggle_3d_edit_mode(False)  # must not raise
+
+    host.update_status_message.assert_called_with("3D Drag Mode: OFF.")
+    host.init_manager.view_2d.setFocus.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# closeEvent delegation
+# ---------------------------------------------------------------------------
+
+
+def test_close_event_accepts_when_handler_allows():
+    mgr = _make_ui_manager()
+    mgr.handle_close_event = MagicMock(return_value=True)
+    event = MagicMock()
+    mgr.closeEvent(event)
+    event.accept.assert_called_once()
+    event.ignore.assert_not_called()
+
+
+def test_close_event_ignores_when_handler_blocks():
+    mgr = _make_ui_manager()
+    mgr.handle_close_event = MagicMock(return_value=False)
+    event = MagicMock()
+    mgr.closeEvent(event)
+    event.ignore.assert_called_once()
+    event.accept.assert_not_called()
