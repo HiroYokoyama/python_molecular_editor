@@ -412,9 +412,7 @@ def test_mouse_move_group_drag_below_threshold_not_moved(app, mock_parser_host):
     assert dlg.mouse_moved_vtk is False
 
 
-def test_mouse_move_group_drag_without_start_pos_returns_early(
-    app, mock_parser_host
-):
+def test_mouse_move_group_drag_without_start_pos_returns_early(app, mock_parser_host):
     style = _style_at(mock_parser_host)
     dlg = _move_dialog(
         is_dragging_group_vtk=True, drag_start_pos_vtk=None, mouse_moved_vtk=False
@@ -428,9 +426,7 @@ def test_mouse_move_group_drag_without_start_pos_returns_early(
     assert dlg.mouse_moved_vtk is False
 
 
-def test_mouse_move_group_rotation_past_threshold_marks_moved(
-    app, mock_parser_host
-):
+def test_mouse_move_group_rotation_past_threshold_marks_moved(app, mock_parser_host):
     style = _style_at(mock_parser_host, pos=(90, 120))
     dlg = _move_dialog(
         is_dragging_group_vtk=False,
@@ -451,9 +447,7 @@ def test_mouse_move_group_rotation_past_threshold_marks_moved(
     mock_super_move.assert_not_called()
 
 
-def test_mouse_move_past_press_threshold_sets_moved_during_drag(
-    app, mock_parser_host
-):
+def test_mouse_move_past_press_threshold_sets_moved_during_drag(app, mock_parser_host):
     mock_parser_host.edit_3d_manager.is_3d_edit_mode = False
     style = _style_at(mock_parser_host, pos=(104, 104))
     style._mouse_press_pos = (100, 100)
@@ -469,9 +463,7 @@ def test_mouse_move_past_press_threshold_sets_moved_during_drag(
     assert style._mouse_moved_during_drag is True
 
 
-def test_mouse_move_within_press_threshold_keeps_flag_clear(
-    app, mock_parser_host
-):
+def test_mouse_move_within_press_threshold_keeps_flag_clear(app, mock_parser_host):
     mock_parser_host.edit_3d_manager.is_3d_edit_mode = False
     style = _style_at(mock_parser_host, pos=(102, 102))
     style._mouse_press_pos = (100, 100)
@@ -577,9 +569,7 @@ def test_mouse_move_outside_edit_mode_shows_arrow_without_picking(
 # ---------------------------------------------------------------------------
 
 
-def test_release_click_only_toggles_group_atom_and_resets_latch(
-    app, mock_parser_host
-):
+def test_release_click_only_toggles_group_atom_and_resets_latch(app, mock_parser_host):
     mock_parser_host.edit_3d_manager.measurement_mode = False
     style = _style_at(mock_parser_host)
     dlg = _move_dialog(
@@ -655,9 +645,7 @@ def test_release_after_group_drag_translates_whole_group(app, mock_parser_host):
     mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
 
 
-def test_release_background_click_deselects_move_group_deferred(
-    app, mock_parser_host
-):
+def test_release_background_click_deselects_move_group_deferred(app, mock_parser_host):
     mock_parser_host.edit_3d_manager.measurement_mode = False
     style = _style_at(mock_parser_host)
     style._mouse_press_pos = (100, 100)
@@ -709,9 +697,7 @@ def test_release_background_click_in_measurement_mode_clears_selection(
     mock_parser_host.edit_3d_manager.clear_measurement_selection.assert_called_once()
 
 
-def test_release_after_camera_drag_does_not_clear_measurement(
-    app, mock_parser_host
-):
+def test_release_after_camera_drag_does_not_clear_measurement(app, mock_parser_host):
     mock_parser_host.edit_3d_manager.measurement_mode = True
     style = _style_at(mock_parser_host)
     style._mouse_press_pos = (100, 100)
@@ -783,9 +769,7 @@ def test_release_after_atom_drag_writes_position_and_defers_redraw(
     mock_parser_host.view_3d_manager.show_all_atom_info.assert_called_once()
 
 
-def test_release_suppressed_after_group_grab_skips_vtk_cleanup(
-    app, mock_parser_host
-):
+def test_release_suppressed_after_group_grab_skips_vtk_cleanup(app, mock_parser_host):
     mock_parser_host.edit_3d_manager.measurement_mode = False
     style = _style_at(mock_parser_host)
     style._suppress_next_left_button_up = True
@@ -826,9 +810,7 @@ def test_release_delegates_to_vtk_and_restores_focus(app, mock_parser_host):
 # ---------------------------------------------------------------------------
 
 
-def test_reset_interactor_state_clears_all_flags_and_cursor(
-    app, mock_parser_host
-):
+def test_reset_interactor_state_clears_all_flags_and_cursor(app, mock_parser_host):
     style = _style_at(mock_parser_host)
     style._is_dragging_atom = True
     style.is_dragging = True

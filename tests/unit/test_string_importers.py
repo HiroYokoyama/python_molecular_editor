@@ -277,16 +277,12 @@ def test_smiles_z_double_bond_maps_stereo_3(mock_parser_host):
 
 
 def _last_status(mock_parser_host):
-    return str(
-        mock_parser_host.statusBar().showMessage.call_args.args[0]
-    )
+    return str(mock_parser_host.statusBar().showMessage.call_args.args[0])
 
 
 def test_smiles_truly_empty_after_strip_reports_empty(mock_parser_host):
     importer = DummyImporter(mock_parser_host)
-    with patch(
-        "moleditpy.ui.string_importers.Chem.MolFromSmiles", return_value=None
-    ):
+    with patch("moleditpy.ui.string_importers.Chem.MolFromSmiles", return_value=None):
         importer.load_from_smiles("   ")
     assert "SMILES string was empty." in _last_status(mock_parser_host)
 
@@ -298,28 +294,20 @@ def test_smiles_parse_runtime_error_reported(mock_parser_host):
         side_effect=RuntimeError("rdkit exploded"),
     ):
         importer.load_from_smiles("CCO")
-    assert "Error parsing SMILES: rdkit exploded" in _last_status(
-        mock_parser_host
-    )
+    assert "Error parsing SMILES: rdkit exploded" in _last_status(mock_parser_host)
 
 
 def test_smiles_placement_error_reported(mock_parser_host):
     importer = DummyImporter(mock_parser_host)
-    importer._placement_center = MagicMock(
-        side_effect=RuntimeError("view gone")
-    )
+    importer._placement_center = MagicMock(side_effect=RuntimeError("view gone"))
     with patch.object(QTimer, "singleShot"):
         importer.load_from_smiles("CCO")
-    assert "Error loading from SMILES: view gone" in _last_status(
-        mock_parser_host
-    )
+    assert "Error loading from SMILES: view gone" in _last_status(mock_parser_host)
 
 
 def test_inchi_truly_empty_after_strip_reports_empty(mock_parser_host):
     importer = DummyImporter(mock_parser_host)
-    with patch(
-        "moleditpy.ui.string_importers.Chem.MolFromInchi", return_value=None
-    ):
+    with patch("moleditpy.ui.string_importers.Chem.MolFromInchi", return_value=None):
         importer.load_from_inchi("   ")
     assert "InChI string was empty." in _last_status(mock_parser_host)
 
@@ -331,18 +319,12 @@ def test_inchi_parse_runtime_error_reported(mock_parser_host):
         side_effect=RuntimeError("rdkit exploded"),
     ):
         importer.load_from_inchi("InChI=1S/CH4/h1H4")
-    assert "Error parsing InChI: rdkit exploded" in _last_status(
-        mock_parser_host
-    )
+    assert "Error parsing InChI: rdkit exploded" in _last_status(mock_parser_host)
 
 
 def test_inchi_placement_error_reported(mock_parser_host):
     importer = DummyImporter(mock_parser_host)
-    importer._placement_center = MagicMock(
-        side_effect=RuntimeError("view gone")
-    )
+    importer._placement_center = MagicMock(side_effect=RuntimeError("view gone"))
     with patch.object(QTimer, "singleShot"):
         importer.load_from_inchi("InChI=1S/CH4/h1H4")
-    assert "Error loading from InChI: view gone" in _last_status(
-        mock_parser_host
-    )
+    assert "Error loading from InChI: view gone" in _last_status(mock_parser_host)

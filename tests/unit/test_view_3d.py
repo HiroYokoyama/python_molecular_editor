@@ -583,7 +583,9 @@ def test_update_chiral_labels_assigns_r_or_s(mock_parser_host):
         atom.SetIntProp("_original_atom_id", atom.GetIdx() + 100)
     view3d.current_mol = mol
 
-    items = {idx + 100: MagicMock(chiral_label=None) for idx in range(mol.GetNumAtoms())}
+    items = {
+        idx + 100: MagicMock(chiral_label=None) for idx in range(mol.GetNumAtoms())
+    }
     mock_parser_host.init_manager.scene.atom_items = items
 
     view3d.update_chiral_labels()
@@ -605,9 +607,7 @@ def test_toggle_atom_info_same_mode_turns_off(mock_parser_host):
     view3d.toggle_atom_info_display("rdkit_index")
 
     assert view3d.atom_info_display_mode is None
-    mock_parser_host.init_manager.show_index_action.setChecked.assert_called_with(
-        False
-    )
+    mock_parser_host.init_manager.show_index_action.setChecked.assert_called_with(False)
     mock_parser_host.init_manager.atom_index_base_menu.setEnabled.assert_called_with(
         False
     )
@@ -626,9 +626,7 @@ def test_toggle_atom_info_new_index_mode_enables_base_menu(mock_parser_host):
     view3d.toggle_atom_info_display("rdkit_index")
 
     assert view3d.atom_info_display_mode == "rdkit_index"
-    mock_parser_host.init_manager.show_index_action.setChecked.assert_called_with(
-        True
-    )
+    mock_parser_host.init_manager.show_index_action.setChecked.assert_called_with(True)
     mock_parser_host.init_manager.show_atom_symbol_action.setChecked.assert_called_with(
         False
     )
@@ -738,9 +736,7 @@ def test_zoom_in_and_out_scale_view(mock_parser_host):
     view3d.zoom_in()
     mock_parser_host.init_manager.view_2d.scale.assert_called_with(1.2, 1.2)
     view3d.zoom_out()
-    mock_parser_host.init_manager.view_2d.scale.assert_called_with(
-        1 / 1.2, 1 / 1.2
-    )
+    mock_parser_host.init_manager.view_2d.scale.assert_called_with(1 / 1.2, 1 / 1.2)
 
 
 def test_reset_zoom_sets_075_transform(mock_parser_host):
@@ -827,9 +823,7 @@ def _labels_view(mock_parser_host, mode, mol=None, base=0):
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = mode
     view3d.atom_index_base = base
-    view3d.atom_positions_3d = np.array(
-        [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=float
-    )
+    view3d.atom_positions_3d = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=float)
     view3d.current_mol = mol
     view3d.plotter = MagicMock()
     return view3d
@@ -973,8 +967,9 @@ def _settings_view(mock_host, **settings):
 
 
 def test_apply_3d_settings_orthographic_sets_parallel_projection(mock_parser_host):
-    view3d = _settings_view(mock_parser_host, projection_mode="Orthographic",
-                            show_3d_axes=False)
+    view3d = _settings_view(
+        mock_parser_host, projection_mode="Orthographic", show_3d_axes=False
+    )
     cam = MagicMock()
     view3d.plotter.renderer.GetActiveCamera.return_value = cam
 
@@ -985,8 +980,9 @@ def test_apply_3d_settings_orthographic_sets_parallel_projection(mock_parser_hos
 
 
 def test_apply_3d_settings_hides_axes_when_disabled(mock_parser_host):
-    view3d = _settings_view(mock_parser_host, show_3d_axes=False,
-                            background_color="#222222")
+    view3d = _settings_view(
+        mock_parser_host, show_3d_axes=False, background_color="#222222"
+    )
     with patch.object(view3d, "draw_molecule_3d"):
         view3d.apply_3d_settings(redraw=False)
 
@@ -1020,8 +1016,9 @@ def test_apply_3d_settings_resets_camera_only_once(mock_parser_host):
 
 
 def test_apply_3d_settings_axes_on_builds_orientation_widget(mock_parser_host):
-    view3d = _settings_view(mock_parser_host, show_3d_axes=True,
-                            background_color="#000000")
+    view3d = _settings_view(
+        mock_parser_host, show_3d_axes=True, background_color="#000000"
+    )
     with (
         patch.object(view3d, "draw_molecule_3d"),
         patch("moleditpy.ui.view_3d_logic.vtk") as mock_vtk,

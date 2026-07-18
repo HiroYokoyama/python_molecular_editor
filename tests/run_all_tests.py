@@ -60,6 +60,24 @@ _KNOWN_CRASH_CODES = frozenset(
 
 _MAX_RETRIES = 3
 
+# Per-suite test counts parsed from each pytest summary line ("N passed ...").
+SUITE_COUNTS = {}
+
+
+def _parse_test_counts(text):
+    """Extract passed/failed/skipped counts from a pytest summary line."""
+    import re
+
+    def grab(word):
+        m = re.search(rf"(\d+) {word}", text)
+        return int(m.group(1)) if m else 0
+
+    return {
+        "passed": grab("passed"),
+        "failed": grab("failed"),
+        "skipped": grab("skipped"),
+    }
+
 
 def _run_once(name, cmd, env):
     """Run a single pytest subprocess and return (returncode, combined_output, duration)."""
@@ -161,6 +179,7 @@ def run_suite(
         max_retries = 1 if exitfirst else _MAX_RETRIES
         for attempt in range(1, max_retries + 1):
             returncode, combined_output, duration = _run_once(name, cmd, env)
+            SUITE_COUNTS[name] = _parse_test_counts(combined_output)
             if returncode == 0:
                 return 0
             if returncode in _KNOWN_CRASH_CODES and attempt < max_retries:
@@ -406,9 +425,26 @@ if __name__ == "__main__":
         ("GUI", GUI_DIR),
     ]:
         status = results.get(name, "SKIPPED")
-        print(f" {name:<12}: {status}")
+        counts = SUITE_COUNTS.get(name)
+        detail = ""
+        if counts:
+            detail = f" ({counts['passed']} passed"
+            if counts["skipped"]:
+                detail += f", {counts['skipped']} skipped"
+            if counts["failed"]:
+                detail += f", {counts['failed']} failed"
+            detail += ")"
+        print(f" {name:<12}: {status}{detail}")
         if status != "PASSED" and status != "SKIPPED":
             all_passed = False
+    total_passed = sum(c["passed"] for c in SUITE_COUNTS.values())
+    if total_passed:
+        total_skipped = sum(c["skipped"] for c in SUITE_COUNTS.values())
+        line = f" {'TOTAL':<12}: {total_passed} passed"
+        if total_skipped:
+            line += f", {total_skipped} skipped"
+        print("-" * 40)
+        print(line)
     print("=" * 40)
 
     if all_passed:

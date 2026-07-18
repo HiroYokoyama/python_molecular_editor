@@ -579,9 +579,7 @@ def test_push_undo_state_detects_constraint_change(monkeypatch):
             "atoms": {},
             "bonds": {},
             "_next_atom_id": 0,
-            "constraints_3d": [
-                list(c) for c in host.edit_3d_manager.constraints_3d
-            ],
+            "constraints_3d": [list(c) for c in host.edit_3d_manager.constraints_3d],
         }
 
     host.state_manager.get_current_state.side_effect = _state
@@ -654,9 +652,7 @@ class TestUndoRedo:
         assert mgr.undo_stack == ["state_1"]
         assert mgr.redo_stack == ["state_2"]
         assert mock_parser_host.is_restoring_state is False
-        mock_parser_host.ui_manager.enable_3d_edit_actions.assert_called_with(
-            False
-        )
+        mock_parser_host.ui_manager.enable_3d_edit_actions.assert_called_with(False)
         mock_parser_host.init_manager.view_2d.setFocus.assert_called()
 
     def test_undo_with_single_state_is_noop(self, mock_parser_host):
@@ -684,9 +680,7 @@ class TestUndoRedo:
         )
         assert mgr.undo_stack == ["state_1", "state_2"]
         assert mgr.redo_stack == []
-        mock_parser_host.ui_manager.enable_3d_edit_actions.assert_called_with(
-            True
-        )
+        mock_parser_host.ui_manager.enable_3d_edit_actions.assert_called_with(True)
 
     def test_redo_with_empty_stack_is_noop(self, mock_parser_host):
         mgr = self._manager(mock_parser_host)
@@ -695,19 +689,13 @@ class TestUndoRedo:
         mgr.redo()
         mock_parser_host.state_manager.set_state_from_data.assert_not_called()
 
-    def test_update_undo_redo_actions_enables_by_stack_depth(
-        self, mock_parser_host
-    ):
+    def test_update_undo_redo_actions_enables_by_stack_depth(self, mock_parser_host):
         mgr = self._manager(mock_parser_host)
         mgr.undo_stack = ["a", "b"]
         mgr.redo_stack = []
         mgr.update_undo_redo_actions()
-        mock_parser_host.init_manager.undo_action.setEnabled.assert_called_with(
-            True
-        )
-        mock_parser_host.init_manager.redo_action.setEnabled.assert_called_with(
-            False
-        )
+        mock_parser_host.init_manager.undo_action.setEnabled.assert_called_with(True)
+        mock_parser_host.init_manager.redo_action.setEnabled.assert_called_with(False)
 
 
 # ---------------------------------------------------------------------------
@@ -832,8 +820,7 @@ def test_detect_chemistry_problems_clean_mol_empty(mock_parser_host):
 
 def _status_texts(mock_parser_host):
     return [
-        str(c.args[0])
-        for c in mock_parser_host.statusBar().showMessage.call_args_list
+        str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list
     ]
 
 
@@ -859,9 +846,7 @@ def test_add_hydrogen_atoms_uses_neighbor_angles(mock_parser_host):
     editor = DummyEditActions(mock_parser_host)
     a1 = editor.scene.create_atom("C", QPointF(0, 0))
     a2 = editor.scene.create_atom("C", QPointF(75, 0))
-    editor.scene.create_bond(
-        editor.scene.atom_items[a1], editor.scene.atom_items[a2]
-    )
+    editor.scene.create_bond(editor.scene.atom_items[a1], editor.scene.atom_items[a2])
 
     with patch(
         "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
@@ -1004,9 +989,7 @@ def test_clean_up_2d_structure_success(mock_parser_host):
     editor = DummyEditActions(mock_parser_host)
     a1 = editor.scene.create_atom("C", QPointF(0, 0))
     a2 = editor.scene.create_atom("C", QPointF(10, 0))
-    editor.scene.create_bond(
-        editor.scene.atom_items[a1], editor.scene.atom_items[a2]
-    )
+    editor.scene.create_bond(editor.scene.atom_items[a1], editor.scene.atom_items[a2])
     mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
     editor.scene.bond_items = {}
 
@@ -1051,9 +1034,7 @@ def test_clean_up_2d_structure_no_positions(mock_parser_host):
     editor = DummyEditActions(mock_parser_host)
     editor.scene.create_atom("C", QPointF(0, 0))
 
-    with patch(
-        "moleditpy.core.mol_geometry.optimize_2d_coords", return_value={}
-    ):
+    with patch("moleditpy.core.mol_geometry.optimize_2d_coords", return_value={}):
         editor.clean_up_2d_structure()
 
     assert any(

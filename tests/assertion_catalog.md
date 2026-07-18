@@ -3612,6 +3612,134 @@ _Chemically valid atoms (incl. charges/radicals) are not flagged._
 
 - assert center not in identify_valence_problems(d.atoms, d.bonds)
 
+### test_calc_angle_deg_zero_length_returns_zero
+_No description provided._
+
+- assert calc_angle_deg([1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]) == 0.0
+
+### test_get_connected_group_respects_exclude_wall
+_No description provided._
+
+- assert get_connected_group(mol, 0, exclude=1) == {0}
+- assert get_connected_group(mol, 0) == {0, 1, 2, 3}
+
+### test_adjust_bond_angle_zero_length_arm_returns_zero
+_No description provided._
+
+- assert result == 0.0
+
+### test_calculate_dihedral_collinear_returns_zero
+_No description provided._
+
+- assert calculate_dihedral(positions, 0, 1, 2, 3) == 0.0
+
+### test_adjust_dihedral_wraps_positive_delta
+_No description provided._
+
+- assert abs((after - target + 180) % 360 - 180) < 1.0
+
+### test_adjust_dihedral_no_op_when_already_at_target
+_No description provided._
+
+- assert adjust_dihedral(positions, 0, 1, 2, 3, current, [3]) == 0.0
+
+### test_adjust_dihedral_degenerate_axis_returns_zero
+_No description provided._
+
+- assert adjust_dihedral(positions, 0, 1, 2, 3, 90.0, [3]) == 0.0
+
+### test_is_problematic_valence_unknown_symbol_is_never_flagged
+_No description provided._
+
+- assert is_problematic_valence('Xx', 99) is False
+
+### test_is_problematic_valence_charged_atom_skips_neutral_only_limit
+_No description provided._
+
+- assert is_problematic_valence('N', 4, charge=1) is False
+
+### test_is_problematic_valence_over_limit_neutral_flagged
+_No description provided._
+
+- assert is_problematic_valence('C', 5, charge=0) is True
+
+### test_identify_valence_problems_heuristic_fallback
+_No description provided._
+
+- assert result == [0]
+
+### test_identify_problems_rdkit_returns_none_for_unknown_symbol
+_No description provided._
+
+- assert _identify_problems_rdkit(atoms, {}) is None
+
+### test_identify_problems_rdkit_detects_overbonded_carbon
+_No description provided._
+
+- assert 0 in result
+
+### test_inject_ez_stereo_no_ez_bonds_returns_original
+_No description provided._
+
+- assert inject_ez_stereo_to_mol_block(block, mol, {(0, 1): {'stereo': 0}}) == block
+
+### test_inject_ez_stereo_appends_when_no_m_end
+_No description provided._
+
+- assert 'M  CFG' in out
+
+### test_resolve_2d_overlaps_skips_bonded_pairs
+_No description provided._
+
+- assert result == []
+
+### test_resolve_2d_overlaps_moves_unbonded_fragment
+_No description provided._
+
+- assert len(result) == 1
+- assert moved_ids == {3}
+- assert vector == (-20, 20)
+
+### test_get_connected_group_revisits_ring_atoms
+_No description provided._
+
+- assert get_connected_group(mol, 0) == {0, 1, 2, 3, 4, 5}
+
+### test_adjust_dihedral_wraps_negative_delta
+_No description provided._
+
+- assert abs((after - target + 180) % 360 - 180) < 1.0
+
+### test_inject_ez_stereo_inserts_cfg_before_m_end
+_No description provided._
+
+- assert cfg_idx < end_idx
+
+### test_identify_problems_rdkit_skips_bond_with_unknown_atom
+_No description provided._
+
+- assert _identify_problems_rdkit(atoms, bonds) == []
+
+### test_resolve_2d_overlaps_splits_group_with_internal_bond
+_No description provided._
+
+- assert result == []
+
+### test_calc_distance_basic
+_No description provided._
+
+- assert calc_distance([0.0, 0.0, 0.0], [3.0, 4.0, 0.0]) == pytest.approx(5.0)
+
+### test_calc_angle_deg_right_angle
+_No description provided._
+
+- assert angle == pytest.approx(90.0)
+
+### test_resolve_2d_overlaps_single_fragment_group_not_moved
+_No description provided._
+
+- assert result == []
+
 ## tests/unit/test_geometry_base_dialog.py
 
 ### TestSyncInputToSlider.test_valid_float_sets_slider
@@ -4739,6 +4867,96 @@ _Atoms without a position are excluded from counts and bond indices._
 - assert counts[:6] == f'{2:3d}{1:3d}'
 - assert 'O' in atom_lines[0] and 'N' in atom_lines[1]
 - assert bond_line[:6] == f'{1:3d}{2:3d}'
+
+### test_set_atom_pos_accepts_raw_tuple
+_No description provided._
+
+- assert (pos.x(), pos.y()) == (5.0, 7.0)
+
+### test_to_mol_block_manual_fallback_charges_positions_stereo
+_No description provided._
+
+- assert block is not None
+- assert 'MoleditPy' in block
+- assert counts.startswith('  7')
+
+### test_to_mol_block_returns_none_when_empty
+_No description provided._
+
+- assert data.to_mol_block() is None
+
+### test_to_rdkit_mol_assigns_z_stereo_on_double_bond
+_No description provided._
+
+- assert mol is not None
+- assert dbond is not None
+- assert dbond.GetStereo() in (Chem.BondStereo.STEREOZ, Chem.BondStereo.STEREOE)
+
+### test_to_rdkit_mol_stereo_label_on_single_bond_is_ignored
+_No description provided._
+
+- assert mol is not None
+
+### test_to_rdkit_mol_ez_falls_back_to_hydrogen_neighbor
+_No description provided._
+
+- assert mol is not None
+
+### test_to_rdkit_mol_ez_with_explicit_stereo_atoms
+_No description provided._
+
+- assert mol is not None
+
+### test_to_rdkit_mol_terminal_double_bond_stereo_skipped
+_No description provided._
+
+- assert mol is not None
+
+### test_to_rdkit_mol_skips_bond_with_unmapped_atom
+_No description provided._
+
+- assert mol is not None
+- assert mol.GetNumBonds() == 1
+
+### test_add_atom_accepts_raw_tuple_position
+_No description provided._
+
+- assert (data.atoms[aid]['pos'].x(), data.atoms[aid]['pos'].y()) == (3.0, 4.0)
+
+### test_set_atom_pos_accepts_qpointf
+_No description provided._
+
+- assert (data.atoms[aid]['pos'].x(), data.atoms[aid]['pos'].y()) == (9.0, 8.0)
+
+### test_to_rdkit_mol_returns_none_for_unknown_symbol
+_No description provided._
+
+- assert data.to_rdkit_mol() is None
+
+### test_to_rdkit_mol_returns_none_on_sanitize_failure
+_No description provided._
+
+- assert data.to_rdkit_mol() is None
+
+### test_to_rdkit_mol_conformer_handles_tuple_and_invalid_pos
+_No description provided._
+
+- assert mol is not None
+
+### test_to_mol_block_manual_fallback_when_moltomolblock_raises
+_No description provided._
+
+- assert block is not None and 'MoleditPy' in block
+
+### test_to_rdkit_mol_3d_without_ez_labels_estimates_from_coords
+_No description provided._
+
+- assert mol is not None
+
+### test_to_rdkit_mol_ez_invalid_stereo_atoms_suppressed
+_No description provided._
+
+- assert mol is not None
 
 ## tests/unit/test_molecule_scene_behavior.py
 
@@ -6697,6 +6915,43 @@ __clear_all_plugin_actions clears the plugin menu._
 __clear_all_plugin_actions removes all plugin_managed tagged actions from all menus._
 
 - sub_menu.removeAction.assert_called_with(tagged)
+
+### TestAddLegacyPluginActions.test_empty_list_adds_disabled_placeholder
+_No description provided._
+
+- assert len(actions) == 1
+- assert actions[0].text() == '(No plugins found)'
+- assert not actions[0].isEnabled()
+
+### TestAddLegacyPluginActions.test_root_plugins_added_sorted_by_name
+_No description provided._
+
+- assert texts == ['Alpha', 'Zeta']
+
+### TestAddLegacyPluginActions.test_categorized_plugin_goes_into_submenu
+_No description provided._
+
+- assert len(submenus) == 1
+- assert submenus[0].title() == 'Tools'
+- assert [a.text() for a in submenus[0].actions()] == ['Doer']
+
+### TestAddLegacyPluginActions.test_nested_category_builds_nested_submenus
+_No description provided._
+
+- assert outer.title() == 'Outer'
+- assert inner.title() == 'Inner'
+- assert [a.text() for a in inner.actions()] == ['Deep']
+
+### TestAddLegacyPluginActions.test_same_category_reuses_single_submenu
+_No description provided._
+
+- assert len(submenus) == 1
+- assert [a.text() for a in submenus[0].actions()] == ['Alpha', 'Beta']
+
+### TestAddLegacyPluginActions.test_triggering_action_runs_plugin
+_No description provided._
+
+- im.host.plugin_manager.run_plugin.assert_called_once_with(plugin['module'], im.host)
 
 ## tests/unit/test_project_io.py
 
@@ -8942,6 +9197,46 @@ _No description provided._
 - ui.host.align_menu.setEnabled.assert_called_with(True)
 - ui.host.dihedral_action.setEnabled.assert_called_with(False)
 - ui.host.align_menu.setEnabled.assert_called_with(False)
+
+### test_toggle_3d_edit_mode_on_disables_measurement_mode
+_No description provided._
+
+- host.init_manager.measurement_action.setChecked.assert_called_once_with(False)
+- host.edit_3d_manager.toggle_measurement_mode.assert_called_once_with(False)
+- host.set_3d_edit_mode.assert_called_once_with(True)
+- host.update_status_message.assert_called_with('3D Drag Mode: ON.')
+- host.init_manager.view_2d.setFocus.assert_called_once()
+
+### test_toggle_3d_edit_mode_on_without_active_measurement
+_No description provided._
+
+- host.edit_3d_manager.toggle_measurement_mode.assert_not_called()
+- host.set_3d_edit_mode.assert_called_once_with(True)
+
+### test_toggle_3d_edit_mode_off_resets_interactor_state
+_No description provided._
+
+- host.set_3d_edit_mode.assert_called_once_with(False)
+- host.update_status_message.assert_called_with('3D Drag Mode: OFF.')
+- style.reset_interactor_state.assert_called_once()
+
+### test_toggle_3d_edit_mode_off_suppresses_interactor_error
+_No description provided._
+
+- host.update_status_message.assert_called_with('3D Drag Mode: OFF.')
+- host.init_manager.view_2d.setFocus.assert_called_once()
+
+### test_close_event_accepts_when_handler_allows
+_No description provided._
+
+- event.accept.assert_called_once()
+- event.ignore.assert_not_called()
+
+### test_close_event_ignores_when_handler_blocks
+_No description provided._
+
+- event.ignore.assert_called_once()
+- event.accept.assert_not_called()
 
 ## tests/unit/test_user_template_dialog.py
 

@@ -2,6 +2,7 @@
 
 import subprocess
 import json
+import re
 import sys
 import os
 import platform
@@ -27,13 +28,48 @@ env["PYTHONPATH"] = f"{SRC}{os.pathsep}{pp}".strip(os.pathsep)
 
 devnull = subprocess.DEVNULL
 
+# Per-suite test counts parsed from each pytest summary line.
+suite_counts = {}
+_counts_cache = os.path.join(BASE, ".test_counts.json")
+
+
+def _parse_counts(text):
+    """Extract passed/failed/skipped/error counts from a pytest summary line."""
+
+    def grab(word):
+        m = re.search(rf"(\d+) {word}", text)
+        return int(m.group(1)) if m else 0
+
+    return {
+        "passed": grab("passed"),
+        "failed": grab("failed"),
+        "skipped": grab("skipped"),
+        "errors": grab("error"),
+    }
+
+
+def _run_counting(label, cmd, run_env):
+    """Run a pytest suite, record its test counts, and return the exit code."""
+    result = subprocess.run(cmd, env=run_env, cwd=ROOT, capture_output=True, text=True)
+    counts = _parse_counts(result.stdout + result.stderr)
+    suite_counts[label] = counts
+    extra = ""
+    if counts["skipped"]:
+        extra += f", {counts['skipped']} skipped"
+    if counts["failed"]:
+        extra += f", {counts['failed']} FAILED"
+    print(f"  -> {label}: {counts['passed']} passed{extra}")
+    return result.returncode
+
+
 if not args_cov.skip_run:
     # Ensure we are in ROOT when running coverage
     print("Running Unit Tests with coverage (headless)...")
     gui_env = env.copy()
     gui_env["MOLEDITPY_HEADLESS"] = "1"
     gui_env["QT_QPA_PLATFORM"] = "offscreen"
-    subprocess.run(
+    _run_counting(
+        "Unit",
         [
             sys.executable,
             "-m",
@@ -44,14 +80,12 @@ if not args_cov.skip_run:
             "--cov-report=",
             "--tb=short",
         ],
-        env=gui_env,
-        cwd=ROOT,
-        stdout=devnull,
-        stderr=devnull,
+        gui_env,
     )
 
     print("Running Integration Tests with coverage (headless)...")
-    subprocess.run(
+    _run_counting(
+        "Integration",
         [
             sys.executable,
             "-m",
@@ -63,10 +97,7 @@ if not args_cov.skip_run:
             "--cov-report=",
             "--tb=short",
         ],
-        env=gui_env,
-        cwd=ROOT,
-        stdout=devnull,
-        stderr=devnull,
+        gui_env,
     )
 
     print("Running E2E Tests with coverage (headless)...")
@@ -82,7 +113,8 @@ if not args_cov.skip_run:
                 stdout=devnull,
                 stderr=devnull,
             )
-    subprocess.run(
+    _run_counting(
+        "E2E",
         [
             sys.executable,
             "-m",
@@ -95,14 +127,12 @@ if not args_cov.skip_run:
             "--cov-report=",
             "--tb=short",
         ],
-        env=gui_env,
-        cwd=ROOT,
-        stdout=devnull,
-        stderr=devnull,
+        gui_env,
     )
 
     print("Running GUI Tests with coverage (headless)...")
-    subprocess.run(
+    _run_counting(
+        "GUI",
         [
             sys.executable,
             "-m",
@@ -115,13 +145,22 @@ if not args_cov.skip_run:
             "--cov-report=",
             "--tb=short",
         ],
-        env=gui_env,
-        cwd=ROOT,
-        stdout=devnull,
-        stderr=devnull,
+        gui_env,
     )
+
+    # Cache counts so a later --skip-run invocation can still report them.
+    try:
+        with open(_counts_cache, "w", encoding="utf-8") as fh:
+            json.dump(suite_counts, fh)
+    except OSError:
+        pass
 else:
     print("Skipping test execution, using existing coverage data...")
+    try:
+        with open(_counts_cache, "r", encoding="utf-8") as fh:
+            suite_counts = json.load(fh)
+    except (OSError, ValueError):
+        suite_counts = {}
 
 # Step 4: Generate reports
 print("Generating coverage reports...")
@@ -213,11 +252,36 @@ markdown_lines.append("")
 
 markdown_lines.extend(build_table(full_files, full_totals, "Coverage Breakdown"))
 
+
+def _status_line(label, key):
+    counts = suite_counts.get(key)
+    if not counts:
+        return f"- **{label}**: PASSED"
+    passed = counts.get("passed", 0)
+    failed = counts.get("failed", 0)
+    skipped = counts.get("skipped", 0)
+    status = "FAILED" if failed else "PASSED"
+    detail = f"{passed} passed"
+    if skipped:
+        detail += f", {skipped} skipped"
+    if failed:
+        detail += f", {failed} failed"
+    return f"- **{label}**: {status} ({detail})"
+
+
+total_passed = sum(c.get("passed", 0) for c in suite_counts.values())
+total_skipped = sum(c.get("skipped", 0) for c in suite_counts.values())
+
 markdown_lines.append("## Test Suite Status")
-markdown_lines.append("- **Unit tests**: PASSED")
-markdown_lines.append("- **Integration tests**: PASSED")
-markdown_lines.append("- **E2E tests**: PASSED")
-markdown_lines.append("- **GUI tests**: PASSED")
+if total_passed:
+    total_line = f"- **Total tests passed**: {total_passed}"
+    if total_skipped:
+        total_line += f" ({total_skipped} skipped)"
+    markdown_lines.append(total_line)
+markdown_lines.append(_status_line("Unit tests", "Unit"))
+markdown_lines.append(_status_line("Integration tests", "Integration"))
+markdown_lines.append(_status_line("E2E tests", "E2E"))
+markdown_lines.append(_status_line("GUI tests", "GUI"))
 markdown_lines.append("")
 markdown_lines.append("[View Detailed HTML Report](coverage_html/index.html)")
 

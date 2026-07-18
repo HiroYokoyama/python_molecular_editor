@@ -155,6 +155,7 @@ def test_style_watchdog_ignores_rubberband_style():
 
     assert plotter.iren.style is not ui._expected_style
 
+
 from unittest.mock import patch
 
 
@@ -192,9 +193,7 @@ def test_set_mode_bond_parses_order_and_stereo():
     ui.set_mode("bond_1_2")
     assert ui.host.init_manager.scene.bond_order == 1
     assert ui.host.init_manager.scene.bond_stereo == 2
-    ui.host.update_status_message.assert_any_call(
-        "Mode: Draw Bond (Order: 1 (Dash))"
-    )
+    ui.host.update_status_message.assert_any_call("Mode: Draw Bond (Order: 1 (Dash))")
 
 
 def test_set_mode_builtin_template_status():
@@ -206,9 +205,7 @@ def test_set_mode_builtin_template_status():
 def test_set_mode_user_template_status():
     ui = _make_ui_manager()
     ui.set_mode("template_user_MyFrag")
-    ui.host.statusBar().showMessage.assert_any_call(
-        "Mode: User Template (MyFrag)"
-    )
+    ui.host.statusBar().showMessage.assert_any_call("Mode: User Template (MyFrag)")
 
 
 def test_set_mode_leaving_template_clears_preview():

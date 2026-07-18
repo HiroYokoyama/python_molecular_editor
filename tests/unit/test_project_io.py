@@ -559,9 +559,7 @@ M  END
 
 def test_load_mol_file_no_path_cancelled_dialog(mock_parser_host):
     io = DummyProjectIo(mock_parser_host)
-    with patch(
-        "PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")
-    ):
+    with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
         io.load_mol_file()
     mock_parser_host.init_manager.scene.create_atom.assert_not_called()
 
@@ -637,9 +635,7 @@ def test_save_as_mol_writes_file(mock_parser_host, tmp_path):
 def test_save_as_mol_cancelled_dialog_writes_nothing(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     mock_parser_host.init_manager.scene.create_atom("C", QPointF(0, 0))
-    with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
-    ):
+    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         io.save_as_mol()
     assert list(tmp_path.iterdir()) == []
 
@@ -663,9 +659,7 @@ def test_save_as_mol_io_error_reports_message(mock_parser_host, tmp_path):
 
 def test_load_mol_file_3d_no_path_cancelled(mock_parser_host):
     io = DummyProjectIo(mock_parser_host)
-    with patch(
-        "PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")
-    ):
+    with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
         io.load_mol_file_for_3d_viewing()
     mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
 
@@ -710,9 +704,9 @@ def test_save_as_xyz_no_current_mol(mock_parser_host):
     io = DummyProjectIo(mock_parser_host)
     mock_parser_host.view_3d_manager.current_mol = None
     io.save_as_xyz()
-    assert "Please generate a 3D structure first" in _status_messages(
-        mock_parser_host
-    )[-1]
+    assert (
+        "Please generate a 3D structure first" in _status_messages(mock_parser_host)[-1]
+    )
 
 
 def test_save_as_xyz_cancelled_dialog_writes_nothing(mock_parser_host, tmp_path):
@@ -721,9 +715,7 @@ def test_save_as_xyz_cancelled_dialog_writes_nothing(mock_parser_host, tmp_path)
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=1)
     mock_parser_host.view_3d_manager.current_mol = mol
-    with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
-    ):
+    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         io.save_as_xyz()
     assert list(tmp_path.iterdir()) == []
 
@@ -789,9 +781,9 @@ def test_load_json_data_corrupted_payload_reports_error(mock_parser_host, tmp_pa
     )
     mock_parser_host.state_manager.load_from_json_data.side_effect = KeyError("atoms")
     io.load_json_data(str(path))
-    assert "Data corruption in PME Project file" in _status_messages(
-        mock_parser_host
-    )[-1]
+    assert (
+        "Data corruption in PME Project file" in _status_messages(mock_parser_host)[-1]
+    )
 
 
 # ---------------------------------------------------------------------------

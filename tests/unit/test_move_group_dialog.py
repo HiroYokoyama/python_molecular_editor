@@ -829,9 +829,7 @@ class TestEventFilter:
         assert dlg.potential_drag is False
         assert dlg.clicked_atom_for_toggle is None
 
-    def test_press_with_existing_group_delegates_to_interactor_style(
-        self, make_dialog
-    ):
+    def test_press_with_existing_group_delegates_to_interactor_style(self, make_dialog):
         dlg, _mol, mw = make_dialog()
         interactor = self._interactor_at(mw, (10, 10))
         dlg.group_atoms = {0, 1}
@@ -912,9 +910,7 @@ class TestEventFilter:
         dlg.group_atoms = {0}
 
         with patch(_PICK, return_value=0):
-            move = _mouse_event(
-                QEvent.Type.MouseMove, button=Qt.MouseButton.NoButton
-            )
+            move = _mouse_event(QEvent.Type.MouseMove, button=Qt.MouseButton.NoButton)
             assert dlg.eventFilter(interactor, move) is False
         mw.view_3d_manager.plotter.setCursor.assert_called_with(
             Qt.CursorShape.OpenHandCursor
@@ -926,9 +922,7 @@ class TestEventFilter:
         dlg.group_atoms = {0}
 
         with patch(_PICK, return_value=None):
-            move = _mouse_event(
-                QEvent.Type.MouseMove, button=Qt.MouseButton.NoButton
-            )
+            move = _mouse_event(QEvent.Type.MouseMove, button=Qt.MouseButton.NoButton)
             dlg.eventFilter(interactor, move)
         mw.view_3d_manager.plotter.setCursor.assert_called_with(
             Qt.CursorShape.ArrowCursor
@@ -945,7 +939,7 @@ class TestEventFilter:
 
         with (
             patch.object(type(dlg), "on_atom_picked") as mock_pick,
-            ):
+        ):
             release = _mouse_event(QEvent.Type.MouseButtonRelease)
             assert dlg.eventFilter(interactor, release) is True
 

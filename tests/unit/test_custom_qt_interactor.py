@@ -53,6 +53,7 @@ def test_release_passes_through_unconditionally(app):
 
         assert mock_release.call_count == 2
 
+
 def _mw_with_view2d():
     mw = MagicMock()
     return mw, mw.init_manager.view_2d

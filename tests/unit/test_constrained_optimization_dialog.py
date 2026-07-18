@@ -784,9 +784,7 @@ class TestGuardClauses:
         mol.GetNumConformers.return_value = 0
         dlg = make_dialog()
         dlg.mol = mol
-        with patch(
-            "moleditpy.ui.constrained_optimization_dialog.QMessageBox"
-        ) as mb:
+        with patch("moleditpy.ui.constrained_optimization_dialog.QMessageBox") as mb:
             dlg.apply_optimization()
         mb.warning.assert_called_once()
 
@@ -1062,9 +1060,7 @@ class TestCellChangedBranches:
 
 class TestKeyPressEvent:
     def _key(self, key):
-        return QKeyEvent(
-            QEvent.Type.KeyPress, key, Qt.KeyboardModifier.NoModifier
-        )
+        return QKeyEvent(QEvent.Type.KeyPress, key, Qt.KeyboardModifier.NoModifier)
 
     def test_delete_removes_selected(self, make_dialog):
         dlg = make_dialog()

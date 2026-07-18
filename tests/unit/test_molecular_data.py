@@ -705,6 +705,7 @@ def test_to_mol_block_manual_fallback_when_moltomolblock_raises():
     data = MolecularData()
     data.add_atom("C", QPointF(0, 0), charge=0)
     import moleditpy.core.molecular_data as md
+
     with patch.object(md.Chem, "MolToMolBlock", side_effect=RuntimeError("boom")):
         block = data.to_mol_block()
     assert block is not None and "MoleditPy" in block

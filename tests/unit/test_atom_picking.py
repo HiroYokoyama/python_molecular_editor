@@ -234,8 +234,7 @@ def test_sequential_falls_back_to_position_count_on_broken_mol():
 
     view_obj = _view()
     assert (
-        pick_atom_index_from_screen_sequential(view_obj, (111, 100), _NoCountMol())
-        == 0
+        pick_atom_index_from_screen_sequential(view_obj, (111, 100), _NoCountMol()) == 0
     )
 
 

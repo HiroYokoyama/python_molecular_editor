@@ -413,9 +413,7 @@ def test_default_path_bare_basename_without_file(mock_parser_host):
 def test_export_stl_cancel_does_nothing(mock_parser_host):
     exporter = DummyExport(mock_parser_host)
     exporter.export_from_3d_view_no_color = MagicMock()
-    with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
-    ):
+    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         exporter.export_stl()
     exporter.export_from_3d_view_no_color.assert_not_called()
 
@@ -431,9 +429,7 @@ def test_export_stl_no_geometry_message(mock_parser_host, tmp_path):
     assert "No 3D geometry to export." in _status_messages(mock_parser_host)
 
 
-def test_export_stl_appends_extension_and_saves_binary(
-    mock_parser_host, tmp_path
-):
+def test_export_stl_appends_extension_and_saves_binary(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     mesh = MagicMock()
     mesh.n_points = 10
@@ -498,9 +494,7 @@ def test_export_color_stl_saves_with_extension(mock_parser_host, tmp_path):
 def test_export_obj_mtl_cancel_does_nothing(mock_parser_host):
     exporter = DummyExport(mock_parser_host)
     exporter.export_from_3d_view_with_colors = MagicMock()
-    with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
-    ):
+    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         exporter.export_obj_mtl()
     exporter.export_from_3d_view_with_colors.assert_not_called()
 
@@ -516,9 +510,7 @@ def test_export_obj_mtl_empty_meshes_message(mock_parser_host, tmp_path):
     assert "No 3D geometry to export." in _status_messages(mock_parser_host)
 
 
-def test_export_obj_mtl_derives_mtl_path_via_splitext(
-    mock_parser_host, tmp_path
-):
+def test_export_obj_mtl_derives_mtl_path_via_splitext(mock_parser_host, tmp_path):
     """Uppercase .OBJ must not produce an .mtl path equal to the .obj path."""
     exporter = DummyExport(mock_parser_host)
     meshes = [{"mesh": MagicMock(), "color": [1, 2, 3], "name": "a"}]
@@ -558,9 +550,7 @@ def test_export_obj_mtl_error_reported(mock_parser_host, tmp_path):
 
 def test_export_3d_png_cancel_dialog_does_nothing(mock_parser_host):
     exporter = DummyExport(mock_parser_host)
-    with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
-    ):
+    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         exporter.export_3d_png()
     mock_parser_host.view_3d_manager.plotter.screenshot.assert_not_called()
 
@@ -697,9 +687,7 @@ class _GetInputMapper:
 
 
 def _host_with_actors(mock_parser_host, actors):
-    mock_parser_host.view_3d_manager.plotter.renderer = SimpleNamespace(
-        actors=actors
-    )
+    mock_parser_host.view_3d_manager.plotter.renderer = SimpleNamespace(actors=actors)
     return mock_parser_host
 
 
@@ -785,9 +773,7 @@ def test_export_with_colors_reads_vtk_getproperty_color(mock_parser_host):
         def GetProperty(self):
             return SimpleNamespace(GetColor=lambda: (0.0, 1.0, 0.0))
 
-    exporter = DummyExport(
-        _host_with_actors(mock_parser_host, {"a": _VtkActor()})
-    )
+    exporter = DummyExport(_host_with_actors(mock_parser_host, {"a": _VtkActor()}))
 
     with patch.object(export_logic_mod.pv, "PolyData", _EmptyPoly):
         result = exporter.export_from_3d_view_with_colors()
@@ -807,9 +793,7 @@ def test_export_with_colors_splits_vertex_colored_glyph_mesh(mock_parser_host):
         mapper=SimpleNamespace(input=mesh),
         prop=SimpleNamespace(color=(0.5, 0.5, 0.5)),
     )
-    exporter = DummyExport(
-        _host_with_actors(mock_parser_host, {"atoms": actor})
-    )
+    exporter = DummyExport(_host_with_actors(mock_parser_host, {"atoms": actor}))
 
     with patch.object(export_logic_mod.pv, "PolyData", _EmptyPoly):
         result = exporter.export_from_3d_view_with_colors()
@@ -894,9 +878,7 @@ def test_export_2d_svg_nothing_to_export(mock_parser_host):
 def test_export_2d_svg_cancel_file_dialog_writes_nothing(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     exporter.data.add_atom("C", QPointF(0, 0))
-    with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
-    ):
+    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         exporter.export_2d_svg()
     assert list(tmp_path.iterdir()) == []
 

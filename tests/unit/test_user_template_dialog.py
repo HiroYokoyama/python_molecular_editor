@@ -63,9 +63,7 @@ class TestTemplateFiles:
         data = dlg.load_template_file(str(path))
         assert data["name"] == "Benzene"
 
-    def test_load_template_file_invalid_json_returns_none(
-        self, make_dialog, tmp_path
-    ):
+    def test_load_template_file_invalid_json_returns_none(self, make_dialog, tmp_path):
         dlg, _mw = make_dialog()
         bad = tmp_path / "bad.pmetmplt"
         bad.write_text("{not json", encoding="utf-8")
@@ -127,18 +125,14 @@ class TestConvertStructureToTemplate:
         assert atoms[1]["charge"] == 1
         assert atoms[2]["charge"] == 0  # default
         assert atoms[1]["x"] == 10.0 and atoms[1]["y"] == 20.0
-        assert data["bonds"] == [
-            {"atom1": 1, "atom2": 2, "order": 2, "stereo": 1}
-        ]
+        assert data["bonds"] == [{"atom1": 1, "atom2": 2, "order": 2, "stereo": 1}]
 
 
 class TestSaveCurrentAsTemplate:
     def test_warns_when_no_structure(self, make_dialog):
         dlg, mw = make_dialog()
         mw.state_manager.data.atoms = {}
-        with patch(
-            "moleditpy.ui.user_template_dialog.QMessageBox.warning"
-        ) as warn:
+        with patch("moleditpy.ui.user_template_dialog.QMessageBox.warning") as warn:
             dlg.save_current_as_template()
         warn.assert_called_once()
 
@@ -166,9 +160,7 @@ class TestSaveCurrentAsTemplate:
                 "moleditpy.ui.user_template_dialog.QInputDialog.getText",
                 return_value=("My Frag", True),
             ),
-            patch(
-                "moleditpy.ui.user_template_dialog.QMessageBox.information"
-            ) as info,
+            patch("moleditpy.ui.user_template_dialog.QMessageBox.information") as info,
         ):
             dlg.save_current_as_template()
 
@@ -219,9 +211,7 @@ class TestDeleteSelectedTemplate:
                 "moleditpy.ui.user_template_dialog.QMessageBox.question",
                 return_value=QMessageBox.StandardButton.Yes,
             ),
-            patch(
-                "moleditpy.ui.user_template_dialog.QMessageBox.information"
-            ),
+            patch("moleditpy.ui.user_template_dialog.QMessageBox.information"),
         ):
             dlg.delete_selected_template()
         assert not path.exists()
