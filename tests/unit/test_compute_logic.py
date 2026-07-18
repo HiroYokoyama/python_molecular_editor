@@ -1217,3 +1217,310 @@ def test_plugin_optimization_false_return_reports_failure(mock_parser_host):
 
     mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
     assert compute.last_successful_optimization_method is None
+
+
+# =============================================================================
+# Additional coverage: small helpers, menus, worker plumbing, error branches
+# =============================================================================
+
+
+def test_reset_active_threads(mock_parser_host):
+    """reset_active_threads empties the tracked thread list."""
+    compute = DummyCompute(mock_parser_host)
+    compute._active_calc_threads = [MagicMock(), MagicMock()]
+    compute.reset_active_threads()
+    assert compute._active_calc_threads == []
+
+
+def test_safe_disconnect_swallows_runtime_error(mock_parser_host):
+    """_safe_disconnect must not propagate a RuntimeError from disconnect()."""
+    compute = DummyCompute(mock_parser_host)
+    signal = MagicMock()
+    signal.disconnect.side_effect = RuntimeError("not connected")
+    compute._safe_disconnect(signal)  # must not raise
+    signal.disconnect.assert_called_once()
+
+
+def test_remove_calculating_text_removes_actor(mock_parser_host):
+    """_remove_calculating_text removes the actor from the plotter renderer."""
+    compute = DummyCompute(mock_parser_host)
+    actor = MagicMock()
+    compute._calculating_text_actor = actor
+    plotter = compute.host.view_3d_manager.plotter
+    compute._remove_calculating_text()
+    plotter.renderer.RemoveActor.assert_called_once_with(actor)
+    assert compute._calculating_text_actor is None
+
+
+def test_set_optimization_method_ignores_empty(mock_parser_host):
+    """An empty method name is a no-op (no status message, no host update)."""
+    compute = DummyCompute(mock_parser_host)
+    compute.host.set_optimization_method = MagicMock()
+    compute.set_optimization_method("")
+    compute.host.set_optimization_method.assert_not_called()
+
+
+def test_set_optimization_method_checks_matching_action(mock_parser_host):
+    """The action matching the chosen method gets checked, others unchecked."""
+    compute = DummyCompute(mock_parser_host)
+    act_mmff = MagicMock()
+    act_uff = MagicMock()
+    compute.host.init_manager.opt3d_actions = {
+        "MMFF_RDKIT": act_mmff,
+        "UFF_RDKIT": act_uff,
+    }
+    compute.set_optimization_method("mmff_rdkit")
+    act_mmff.setChecked.assert_called_with(True)
+    act_uff.setChecked.assert_called_with(False)
+
+
+def test_toggle_intermolecular_interaction_rdkit(mock_parser_host):
+    """Toggling intermolecular interaction stores the flag and reports status."""
+    compute = DummyCompute(mock_parser_host)
+    compute.toggle_intermolecular_interaction_rdkit(True)
+    assert (
+        compute.host.get_settings()["optimize_intermolecular_interaction_rdkit"] is True
+    )
+    assert any("Enabled" in m for m in compute.get_status_messages())
+
+
+def test_show_convert_menu_disabled_button_returns(mock_parser_host):
+    """show_convert_menu bails out when the convert button is disabled."""
+    compute = DummyCompute(mock_parser_host)
+    compute.host.init_manager.convert_button.isEnabled.return_value = False
+    with patch("moleditpy.ui.compute_logic.QMenu") as MockMenu:
+        compute.show_convert_menu(QPointF(0, 0).toPoint())
+    MockMenu.assert_not_called()
+
+
+def test_show_convert_menu_builds_actions(mock_parser_host):
+    """show_convert_menu builds one action per conversion option and execs the menu."""
+    compute = DummyCompute(mock_parser_host)
+    compute.host.init_manager.convert_button.isEnabled.return_value = True
+    with (
+        patch("moleditpy.ui.compute_logic.QMenu") as MockMenu,
+        patch("moleditpy.ui.compute_logic.QAction") as MockAction,
+    ):
+        menu = MockMenu.return_value
+        compute.show_convert_menu(QPointF(1, 2).toPoint())
+    assert MockAction.call_count == 4  # fallback, rdkit, obabel, direct
+    menu.exec.assert_called_once()
+
+
+def test_show_optimize_menu_builds_actions(mock_parser_host):
+    """show_optimize_menu mirrors the registered opt3d actions into a temporary menu."""
+    compute = DummyCompute(mock_parser_host)
+    compute.host.init_manager.optimize_3d_button.isEnabled.return_value = True
+    src = MagicMock()
+    src.text.return_value = "&MMFF94s"
+    src.isEnabled.return_value = True
+    compute.host.init_manager.opt3d_actions = {"MMFF_RDKIT": src}
+    with (
+        patch("moleditpy.ui.compute_logic.QMenu") as MockMenu,
+        patch("moleditpy.ui.compute_logic.QAction") as MockAction,
+    ):
+        menu = MockMenu.return_value
+        compute.show_optimize_menu(QPointF(0, 0).toPoint())
+    MockAction.assert_called_once()
+    menu.exec.assert_called_once()
+
+
+def test_show_optimize_menu_disabled_returns(mock_parser_host):
+    """show_optimize_menu bails out when the optimize button is disabled."""
+    compute = DummyCompute(mock_parser_host)
+    compute.host.init_manager.optimize_3d_button.isEnabled.return_value = False
+    with patch("moleditpy.ui.compute_logic.QMenu") as MockMenu:
+        compute.show_optimize_menu(QPointF(0, 0).toPoint())
+    MockMenu.assert_not_called()
+
+
+def test_trigger_optimize_with_temp_method_schedules_call(mock_parser_host):
+    """_trigger_optimize_with_temp_method schedules optimize on the event loop."""
+    compute = DummyCompute(mock_parser_host)
+    with patch("moleditpy.ui.compute_logic.QTimer.singleShot") as mock_timer:
+        compute._trigger_optimize_with_temp_method("UFF_RDKIT")
+    mock_timer.assert_called_once()
+
+
+def test_optimize_3d_structure_no_current_mol(mock_parser_host):
+    """optimize_3d_structure reports when there is no 3D molecule at all."""
+    compute = DummyCompute(mock_parser_host)
+    compute.host.view_3d_manager.current_mol = None
+    compute.optimize_3d_structure()
+    assert any("No 3D molecule to optimize" in m for m in compute.get_status_messages())
+
+
+def test_handle_chemistry_problems_flags_matched_item(mock_parser_host):
+    """_handle_chemistry_problems flags the 2D scene item for a problem atom."""
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.AddHs(Chem.MolFromSmiles("C"))
+    mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", 7)
+    prob = MagicMock()
+    prob.GetAtomIdx.return_value = 0
+    item = MagicMock()
+    item.has_problem = False
+    compute.host.init_manager.scene.atom_items = {7: item}
+    with patch("moleditpy.ui.compute_logic.QMessageBox.critical"):
+        ComputeManager._handle_chemistry_problems(compute, mol, [prob])
+    assert item.has_problem is True
+    item.update.assert_called_once()
+
+
+def test_setup_mol_block_falls_back_to_rdkit(mock_parser_host):
+    """_setup_mol_block_for_worker uses RDKit generation when data yields no block."""
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.AddHs(Chem.MolFromSmiles("C"))
+    AllChem.Compute2DCoords(mol)
+    with patch.object(compute.data, "to_mol_block", return_value=""):
+        block = ComputeManager._setup_mol_block_for_worker(compute, mol)
+    assert isinstance(block, str) and "V2000" in block
+
+
+def test_start_calculation_worker_wires_callbacks(mock_parser_host):
+    """The real worker plumbing wires finished/error callbacks and cleans up."""
+    compute = DummyCompute(mock_parser_host)
+    with (
+        patch("moleditpy.ui.compute_logic.QThread") as MockThread,
+        patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
+        patch("PyQt6.QtCore.QTimer.singleShot"),
+    ):
+        thread = MockThread.return_value
+        worker = MockWorker.return_value
+        ComputeManager._start_calculation_worker(compute, "block", {"worker_id": 1}, 1)
+        on_finished = worker.finished.connect.call_args[0][0]
+        on_error = worker.error.connect.call_args[0][0]
+
+    assert thread in compute._active_calc_threads
+
+    with patch.object(compute, "on_calculation_finished") as fin:
+        on_finished("result")
+        fin.assert_called_once_with("result")
+    # _cleanup removed the thread and quit it
+    assert thread not in compute._active_calc_threads
+    thread.quit.assert_called()
+
+    # Second callback path (error) — cleanup remove now raises ValueError, suppressed
+    with patch.object(compute, "on_calculation_error") as err:
+        on_error("boom")
+        err.assert_called_once_with("boom")
+
+
+def test_on_calculation_finished_restores_atom_props(mock_parser_host):
+    """Original atom ids stored before conversion are re-applied to the result mol."""
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.AddHs(Chem.MolFromSmiles("C"))
+    compute.original_atom_properties = {0: 42}
+    compute.on_calculation_finished(mol)
+    assert mol.GetAtomWithIdx(0).GetIntProp("_original_atom_id") == 42
+
+
+def test_on_calculation_finished_method_lookup_error_is_safe(mock_parser_host):
+    """A mol whose property access raises is handled without propagating."""
+    compute = DummyCompute(mock_parser_host)
+    mol = MagicMock()
+    mol.HasProp.side_effect = TypeError("bad prop")
+    mol.GetNumAtoms.return_value = 0
+    compute.on_calculation_finished(mol)  # must not raise
+    # Falls through the except; nothing crashes.
+    assert compute.host.view_3d_manager.current_mol is mol
+
+
+def test_on_calculation_error_active_halt_shows_halted(mock_parser_host):
+    """An active worker signalling 'Halt' produces a plain 'Halted' status."""
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"w1"}
+    compute.on_calculation_error(("w1", "Halt"))
+    assert any(m == "Halted" for m in compute.get_status_messages())
+
+
+def test_on_calculation_error_stale_halt_shows_id(mock_parser_host):
+    """A stale worker signalling 'Halt' reports it was ignored with its id."""
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"active"}
+    compute.on_calculation_error(("stale", "Halted"))
+    assert any("Ignored halted worker" in m for m in compute.get_status_messages())
+
+
+def test_on_calculation_error_uff_dialog_exception_is_caught(mock_parser_host):
+    """A TypeError from the UFF retry dialog is swallowed and a critical shown."""
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"w1"}
+    with (
+        patch(
+            "moleditpy.ui.compute_logic.QMessageBox.question",
+            side_effect=TypeError("bad parent"),
+        ),
+        patch("moleditpy.ui.compute_logic.QMessageBox.critical") as mock_critical,
+    ):
+        compute.on_calculation_error(("w1", "MMFF setup failed"))
+    mock_critical.assert_called_once()
+
+
+def test_create_atom_id_mapping_no_mol_returns(mock_parser_host):
+    """create_atom_id_mapping is a no-op when there is no current molecule."""
+    compute = DummyCompute(mock_parser_host)
+    compute.host.view_3d_manager.current_mol = None
+    compute.host.atom_id_to_rdkit_idx_map = {"stale": 1}
+    ComputeManager.create_atom_id_mapping(compute)
+    # Early return leaves the map untouched (not reset to {}).
+    assert compute.host.atom_id_to_rdkit_idx_map == {"stale": 1}
+
+
+def test_create_atom_id_mapping_builds_map(mock_parser_host):
+    """create_atom_id_mapping maps original atom ids to RDKit indices."""
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.AddHs(Chem.MolFromSmiles("CO"))
+    mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", 10)
+    mol.GetAtomWithIdx(1).SetIntProp("_original_atom_id", 20)
+    compute.host.view_3d_manager.current_mol = mol
+    compute.host.atom_id_to_rdkit_idx_map = {}
+    ComputeManager.create_atom_id_mapping(compute)
+    assert compute.host.atom_id_to_rdkit_idx_map[10] == 0
+    assert compute.host.atom_id_to_rdkit_idx_map[20] == 1
+
+
+def test_update_aromatic_rings_sets_rings(mock_parser_host):
+    """update_aromatic_rings detects a benzene ring and forwards it to the scene."""
+    compute = DummyCompute(mock_parser_host)
+    benzene = Chem.MolFromSmiles("c1ccccc1")
+    with patch.object(compute.data, "to_rdkit_mol", return_value=benzene):
+        compute.update_aromatic_rings()
+    compute.host.init_manager.scene.set_aromatic_rings.assert_called_once()
+    rings = compute.host.init_manager.scene.set_aromatic_rings.call_args[0][0]
+    assert len(rings) == 1 and len(rings[0]) == 6
+
+
+def test_update_aromatic_rings_none_mol_is_noop(mock_parser_host):
+    """update_aromatic_rings returns quietly when no mol can be built."""
+    compute = DummyCompute(mock_parser_host)
+    with patch.object(compute.data, "to_rdkit_mol", return_value=None):
+        compute.update_aromatic_rings()
+    compute.host.init_manager.scene.set_aromatic_rings.assert_not_called()
+
+
+def test_select_connected_atoms_expands_selection(mock_parser_host):
+    """select_connected_atoms grows the selection over the bond graph."""
+    compute = DummyCompute(mock_parser_host)
+    a0 = compute.data.add_atom("C", QPointF(0, 0))
+    a1 = compute.data.add_atom("C", QPointF(1, 0))
+    a2 = compute.data.add_atom("C", QPointF(2, 0))
+    compute.data.add_bond(a0, a1, order=1)
+    compute.data.add_bond(a1, a2, order=1)
+
+    scene = compute.host.init_manager.scene
+    sel_item = MagicMock()
+    sel_item.atom_id = a0
+    scene.selectedItems.return_value = [sel_item]
+    items = {aid: MagicMock() for aid in (a0, a1, a2)}
+    scene.atom_items = items
+
+    compute.select_connected_atoms()
+    for aid in (a0, a1, a2):
+        items[aid].setSelected.assert_called_with(True)
+
+
+def test_select_connected_atoms_no_selection_returns(mock_parser_host):
+    """select_connected_atoms is a no-op when nothing is selected."""
+    compute = DummyCompute(mock_parser_host)
+    compute.host.init_manager.scene.selectedItems.return_value = []
+    compute.select_connected_atoms()  # must not raise
