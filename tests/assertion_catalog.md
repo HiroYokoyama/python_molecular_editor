@@ -433,6 +433,101 @@ _Falls back to sequential picking when the camera is unavailable._
 
 - assert pick_atom_index_from_screen(view_obj, (111, 100), _Mol()) == 0
 
+### test_world_to_display_returns_none_on_broken_renderer
+_No description provided._
+
+- assert _world_to_display(_BrokenRenderer(), (0.0, 0.0, 0.0)) is None
+
+### test_projected_radius_none_when_center_unprojectable
+_No description provided._
+
+- assert _projected_radius_px(_BrokenRenderer(), (0, 0, 0), 1.0) is None
+
+### test_atom_world_radius_defaults_to_carbon_on_broken_mol
+_No description provided._
+
+- assert radius == _atom_world_radius(view_obj, _Mol(), 0)
+
+### test_atom_world_radius_survives_missing_settings
+_No description provided._
+
+- assert radius > 0
+
+### test_atom_world_radius_stick_uses_bond_radius_setting
+_No description provided._
+
+- assert _atom_world_radius(view_obj, _Mol(), 0) == 0.25
+
+### test_atom_world_radius_wireframe_is_hairline
+_No description provided._
+
+- assert _atom_world_radius(view_obj, _Mol(), 0) == 0.01
+
+### test_atom_world_radius_cpk_scales_rvdw
+_No description provided._
+
+- assert radius > 2.0
+
+### test_atom_world_radius_style_name_normalized
+_No description provided._
+
+- assert _atom_world_radius(view_obj, _Mol(), 0) == _atom_world_radius(_view(), _Mol(), 0)
+
+### test_sequential_none_when_no_plotter
+_No description provided._
+
+- assert pick_atom_index_from_screen_sequential(view_obj, (0, 0)) is None
+
+### test_sequential_none_when_positions_missing
+_No description provided._
+
+- assert pick_atom_index_from_screen_sequential(view_obj, (0, 0)) is None
+
+### test_sequential_none_when_positions_not_numeric
+_No description provided._
+
+- assert pick_atom_index_from_screen_sequential(view_obj, (0, 0)) is None
+
+### test_sequential_none_when_positions_wrong_shape
+_No description provided._
+
+- assert pick_atom_index_from_screen_sequential(view_obj, (0, 0)) is None
+
+### test_sequential_uses_current_mol_when_mol_omitted
+_No description provided._
+
+- assert pick_atom_index_from_screen_sequential(view_obj, (111, 100)) == 0
+
+### test_sequential_falls_back_to_position_count_on_broken_mol
+_No description provided._
+
+- assert pick_atom_index_from_screen_sequential(view_obj, (111, 100), _NoCountMol()) == 0
+
+### test_vectorized_none_when_positions_empty
+_No description provided._
+
+- assert pick_atom_index_from_screen_vectorized(view_obj, (0, 0), _Mol()) is None
+
+### test_vectorized_none_when_size_unavailable
+_No description provided._
+
+- assert pick_atom_index_from_screen_vectorized(view_obj, (111, 100), _Mol()) is None
+
+### test_vectorized_perspective_projection_path
+_No description provided._
+
+- assert pick_atom_index_from_screen_vectorized(view_obj, (100, 100), _Mol()) == 0
+
+### test_vectorized_pixel_scale_fallback_on_camera_error
+_No description provided._
+
+- assert pick_atom_index_from_screen_vectorized(view_obj, (100, 100), _Mol()) == 0
+
+### test_pick_falls_back_when_vectorized_raises
+_No description provided._
+
+- assert pick_atom_index_from_screen(view_obj, (111, 100), _Mol()) == 0
+
 ## tests/unit/test_atom_placement_logic.py
 
 ### test_placement_0_neighbors
@@ -1456,6 +1551,150 @@ _Verify right-click triggers group rotation and release finalizes it._
 - assert mock_dialog.rotation_start_pos is None
 - mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
 
+### test_mouse_move_group_drag_past_threshold_marks_moved
+_No description provided._
+
+- assert dlg.mouse_moved_vtk is True
+- mock_super_move.assert_not_called()
+
+### test_mouse_move_group_drag_below_threshold_not_moved
+_No description provided._
+
+- assert dlg.mouse_moved_vtk is False
+
+### test_mouse_move_group_drag_without_start_pos_returns_early
+_No description provided._
+
+- assert dlg.mouse_moved_vtk is False
+
+### test_mouse_move_group_rotation_past_threshold_marks_moved
+_No description provided._
+
+- assert dlg.rotation_mouse_moved is True
+- mock_super_move.assert_not_called()
+
+### test_mouse_move_past_press_threshold_sets_moved_during_drag
+_No description provided._
+
+- assert style._mouse_moved_during_drag is True
+
+### test_mouse_move_within_press_threshold_keeps_flag_clear
+_No description provided._
+
+- assert style._mouse_moved_during_drag is False
+
+### test_mouse_move_during_atom_drag_sets_is_dragging_and_skips_camera
+_No description provided._
+
+- assert style.is_dragging is True
+- mock_super_move.assert_not_called()
+
+### test_mouse_move_hover_over_atom_shows_open_hand
+_No description provided._
+
+- mock_super_move.assert_called_once()
+- mock_parser_host.view_3d_manager.plotter.setCursor.assert_called_with(Qt.CursorShape.OpenHandCursor)
+
+### test_mouse_move_hover_over_background_shows_arrow
+_No description provided._
+
+- mock_parser_host.view_3d_manager.plotter.setCursor.assert_called_with(Qt.CursorShape.ArrowCursor)
+
+### test_mouse_move_outside_edit_mode_shows_arrow_without_picking
+_No description provided._
+
+- mock_pick.assert_not_called()
+- mock_parser_host.view_3d_manager.plotter.setCursor.assert_called_with(Qt.CursorShape.ArrowCursor)
+
+### test_release_click_only_toggles_group_atom_and_resets_latch
+_No description provided._
+
+- dlg.on_atom_picked.assert_called_once_with(3)
+- assert dlg.is_dragging_group_vtk is False
+- assert dlg.drag_start_pos_vtk is None
+- assert dlg.mouse_moved_vtk is False
+- assert not hasattr(dlg, 'initial_positions')
+
+### test_release_after_group_drag_translates_whole_group
+_No description provided._
+
+- assert mock_conf.SetAtomPosition.call_count == 2
+- assert np.allclose(mock_parser_host.view_3d_manager.atom_positions_3d, [[1.0, 1.0, 0.0], [3.0, 1.0, 0.0]])
+- assert len(deferred) == 1
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+- mock_parser_host.view_3d_manager.update_chiral_labels.assert_called_once()
+- dlg.show_atom_labels.assert_called_once()
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+
+### test_release_background_click_deselects_move_group_deferred
+_No description provided._
+
+- assert len(deferred) == 1
+- dlg.group_atoms.clear.assert_called_once()
+- dlg.selected_atoms.clear.assert_called_once()
+- dlg.clear_atom_labels.assert_called_once()
+- dlg.update_display.assert_called_once()
+
+### test_release_background_click_in_measurement_mode_clears_selection
+_No description provided._
+
+- assert len(deferred) == 1
+- mock_parser_host.edit_3d_manager.clear_measurement_selection.assert_called_once()
+
+### test_release_after_camera_drag_does_not_clear_measurement
+_No description provided._
+
+- assert deferred == []
+
+### test_release_after_atom_drag_writes_position_and_defers_redraw
+_No description provided._
+
+- assert np.allclose(mock_parser_host.view_3d_manager.atom_positions_3d, [[1.0, 1.0, 0.0]])
+- mock_conf.SetAtomPosition.assert_called_once()
+- assert mock_parser_host.dragged_atom_info is None
+- assert style._is_dragging_atom is False
+- assert style.is_dragging is False
+- assert len(deferred) == 2
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+- mock_parser_host.edit_3d_manager.update_3d_selection_display.assert_called_once()
+- mock_parser_host.view_3d_manager.show_all_atom_info.assert_called_once()
+
+### test_release_suppressed_after_group_grab_skips_vtk_cleanup
+_No description provided._
+
+- mock_super_up.assert_not_called()
+- style.StopState.assert_called()
+- assert style._suppress_next_left_button_up is False
+
+### test_release_delegates_to_vtk_and_restores_focus
+_No description provided._
+
+- mock_super_up.assert_called_once()
+- mock_parser_host.view_3d_manager.plotter.setCursor.assert_called_with(Qt.CursorShape.ArrowCursor)
+- mock_parser_host.init_manager.view_2d.setFocus.assert_called_once()
+
+### test_reset_interactor_state_clears_all_flags_and_cursor
+_No description provided._
+
+- assert style._is_dragging_atom is False
+- assert style.is_dragging is False
+- assert style._mouse_moved_during_drag is False
+- assert style._mouse_press_pos is None
+- assert style._suppress_next_left_button_up is False
+- assert mock_parser_host.dragged_atom_info is None
+- mock_parser_host.view_3d_manager.plotter.setCursor.assert_called_with(Qt.CursorShape.ArrowCursor)
+
+### test_reset_interactor_state_survives_broken_plotter
+_No description provided._
+
+- assert style._is_dragging_atom is False
+
+### test_reset_interactor_state_without_main_window
+_No description provided._
+
+- assert style._is_dragging_atom is False
+
 ## tests/unit/test_custom_qt_interactor.py
 
 ### test_double_click_redispatched_as_plain_press
@@ -1474,6 +1713,73 @@ _No description provided._
 _No description provided._
 
 - assert mock_release.call_count == 2
+
+### test_init_stores_main_window
+_No description provided._
+
+- assert widget.main_window is mw
+
+### test_init_default_main_window_is_none
+_No description provided._
+
+- assert _make_widget().main_window is None
+
+### test_wheel_zooms_then_returns_focus_to_2d_view
+_No description provided._
+
+- mock_wheel.assert_called_once_with(event)
+- view_2d.setFocus.assert_called_once_with()
+
+### test_wheel_without_main_window_still_zooms
+_No description provided._
+
+- assert mock_wheel.call_count == 1
+
+### test_wheel_without_view_2d_does_not_crash
+_No description provided._
+
+
+### test_release_returns_focus_to_2d_view
+_No description provided._
+
+- mock_release.assert_called_once_with(event)
+- view_2d.setFocus.assert_called_once_with()
+
+### test_release_without_main_window_still_forwards
+_No description provided._
+
+- assert mock_release.call_count == 1
+
+### test_release_without_view_2d_does_not_crash
+_No description provided._
+
+
+### test_synthetic_press_preserves_button_position_modifiers
+_No description provided._
+
+- assert forwarded.type() == QEvent.Type.MouseButtonPress
+- assert forwarded.position() == QPointF(12.5, 20.25)
+- assert forwarded.globalPosition() == QPointF(112.5, 120.25)
+- assert forwarded.button() == Qt.MouseButton.RightButton
+- assert forwarded.buttons() == Qt.MouseButton.RightButton
+- assert forwarded.modifiers() == Qt.KeyboardModifier.ShiftModifier
+
+### test_double_click_accepts_event
+_No description provided._
+
+- assert event.isAccepted()
+
+### test_double_click_broken_event_suppressed
+_No description provided._
+
+- mock_press.assert_not_called()
+- event.accept.assert_not_called()
+
+### test_double_click_bad_event_types_suppressed
+_No description provided._
+
+- mock_press.assert_not_called()
+- event.accept.assert_not_called()
 
 ## tests/unit/test_dialog_3d_picking_mixin.py
 
@@ -2322,6 +2628,99 @@ _Two states identical except for constraints_3d must both be pushed._
 - assert len(mgr.undo_stack) == 1
 - assert len(mgr.undo_stack) == 2
 
+### TestRotate2DDialog.test_initial_angle_and_get_angle
+_No description provided._
+
+- assert dlg.get_angle() == 45
+
+### TestRotate2DDialog.test_spin_updates_slider
+_No description provided._
+
+- assert dlg.slider.value() == 90
+
+### TestRotate2DDialog.test_slider_updates_spin
+_No description provided._
+
+- assert dlg.get_angle() == -120
+
+### TestUndoRedo.test_undo_restores_previous_state
+_No description provided._
+
+- mock_parser_host.state_manager.set_state_from_data.assert_called_once_with('state_1')
+- assert mgr.undo_stack == ['state_1']
+- assert mgr.redo_stack == ['state_2']
+- assert mock_parser_host.is_restoring_state is False
+- mock_parser_host.ui_manager.enable_3d_edit_actions.assert_called_with(False)
+- mock_parser_host.init_manager.view_2d.setFocus.assert_called()
+
+### TestUndoRedo.test_undo_with_single_state_is_noop
+_No description provided._
+
+- mock_parser_host.state_manager.set_state_from_data.assert_not_called()
+- assert mgr.undo_stack == ['only_state']
+
+### TestUndoRedo.test_redo_reapplies_undone_state
+_No description provided._
+
+- mock_parser_host.state_manager.set_state_from_data.assert_called_once_with('state_2')
+- assert mgr.undo_stack == ['state_1', 'state_2']
+- assert mgr.redo_stack == []
+- mock_parser_host.ui_manager.enable_3d_edit_actions.assert_called_with(True)
+
+### TestUndoRedo.test_redo_with_empty_stack_is_noop
+_No description provided._
+
+- mock_parser_host.state_manager.set_state_from_data.assert_not_called()
+
+### TestUndoRedo.test_update_undo_redo_actions_enables_by_stack_depth
+_No description provided._
+
+- mock_parser_host.init_manager.undo_action.setEnabled.assert_called_with(True)
+- mock_parser_host.init_manager.redo_action.setEnabled.assert_called_with(False)
+
+### test_paste_fragment_recreates_atoms_and_bonds
+_No description provided._
+
+- assert len(editor.data.atoms) == 2
+- assert len(editor.data.bonds) == 1
+- assert create_bond.call_args.kwargs['bond_order'] == 2
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+- assert any(('Pasted 2 atoms and 1 bonds.' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+- mock_parser_host.ui_manager.activate_select_mode.assert_called_once()
+
+### test_paste_invalid_json_reports_error
+_No description provided._
+
+- assert len(editor.data.atoms) == 0
+- assert any(('Invalid clipboard data format' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+
+### test_paste_foreign_clipboard_format_ignored
+_No description provided._
+
+- assert len(editor.data.atoms) == 0
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
+
+### test_compute_h_counts_none_mol_resets_to_zero
+_No description provided._
+
+- assert set(counts.values()) == {0}
+- assert set(counts.keys()) == set(editor.data.atoms.keys())
+
+### test_compute_h_counts_maps_original_ids
+_No description provided._
+
+- assert counts == {11: 3, 22: 1}
+
+### test_detect_chemistry_problems_flags_overbonded_atom
+_No description provided._
+
+- assert problems == {7: True}
+
+### test_detect_chemistry_problems_clean_mol_empty
+_No description provided._
+
+- assert problems == {}
+
 ## tests/unit/test_export_logic.py
 
 ### test_create_multi_material_obj_advanced
@@ -2406,6 +2805,179 @@ _Test that export_2d_png hides non-atom items and restores them._
 
 - assert other_item.hide.called
 - other_item.setVisible.assert_called_with(True)
+
+### test_default_basename_from_current_file
+_No description provided._
+
+- assert exporter._get_default_basename() == 'benzene'
+
+### test_default_basename_untitled_when_no_file
+_No description provided._
+
+- assert exporter._get_default_basename() == 'untitled'
+
+### test_default_basename_untitled_on_broken_host
+_No description provided._
+
+- assert exporter._get_default_basename() == 'untitled'
+
+### test_default_path_joins_current_directory
+_No description provided._
+
+- assert exporter._get_default_path('.stl') == str(tmp_path / 'benzene.stl')
+
+### test_default_path_bare_basename_without_file
+_No description provided._
+
+- assert exporter._get_default_path('.png') == 'untitled.png'
+
+### test_export_stl_cancel_does_nothing
+_No description provided._
+
+- exporter.export_from_3d_view_no_color.assert_not_called()
+
+### test_export_stl_no_geometry_message
+_No description provided._
+
+- assert 'No 3D geometry to export.' in _status_messages(mock_parser_host)
+
+### test_export_stl_appends_extension_and_saves_binary
+_No description provided._
+
+- mesh.save.assert_called_once_with(chosen + '.stl', binary=True)
+- assert any(('STL exported to' in m for m in _status_messages(mock_parser_host)))
+
+### test_export_stl_save_error_reported
+_No description provided._
+
+- assert any(('Error exporting STL: disk full' in m for m in _status_messages(mock_parser_host)))
+
+### test_export_color_stl_no_geometry_message
+_No description provided._
+
+- assert 'No 3D geometry to export.' in _status_messages(mock_parser_host)
+
+### test_export_color_stl_saves_with_extension
+_No description provided._
+
+- mesh.save.assert_called_once_with(chosen + '.stl', binary=True)
+
+### test_export_obj_mtl_cancel_does_nothing
+_No description provided._
+
+- exporter.export_from_3d_view_with_colors.assert_not_called()
+
+### test_export_obj_mtl_empty_meshes_message
+_No description provided._
+
+- assert 'No 3D geometry to export.' in _status_messages(mock_parser_host)
+
+### test_export_obj_mtl_derives_mtl_path_via_splitext
+_Uppercase .OBJ must not produce an .mtl path equal to the .obj path._
+
+- assert obj_path == chosen
+- assert mtl_path == str(tmp_path / 'model.mtl')
+- assert mtl_path != obj_path
+
+### test_export_obj_mtl_error_reported
+_No description provided._
+
+- assert any(('Error exporting OBJ/MTL: no view' in m for m in _status_messages(mock_parser_host)))
+
+### test_export_3d_png_cancel_dialog_does_nothing
+_No description provided._
+
+- mock_parser_host.view_3d_manager.plotter.screenshot.assert_not_called()
+
+### test_export_3d_png_cancel_background_question
+_No description provided._
+
+- mock_parser_host.view_3d_manager.plotter.screenshot.assert_not_called()
+- assert any(('Export cancelled.' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+
+### test_export_3d_png_transparent_screenshot_appends_extension
+_No description provided._
+
+- mock_parser_host.view_3d_manager.plotter.screenshot.assert_called_once_with(chosen + '.png', transparent_background=True)
+
+### test_export_3d_png_opaque_background_choice
+_No description provided._
+
+- mock_parser_host.view_3d_manager.plotter.screenshot.assert_called_once_with(chosen, transparent_background=False)
+
+### test_export_3d_png_screenshot_error_reported
+_No description provided._
+
+- assert any(('Error exporting 3D PNG: no render window' in m for m in _status_messages(mock_parser_host)))
+
+### test_export_from_3d_view_no_color_merges_actor_meshes
+_No description provided._
+
+- assert combined is mesh_a
+- assert combined.merged == [mesh_b]
+
+### test_export_from_3d_view_no_color_uses_vtk_getinput_fallback
+_No description provided._
+
+- assert combined is mesh
+
+### test_export_from_3d_view_no_color_none_on_broken_plotter
+_No description provided._
+
+- assert exporter.export_from_3d_view_no_color() is None
+
+### test_export_from_3d_view_merges_like_no_color
+_No description provided._
+
+- assert combined is mesh_a
+- assert combined.merged == [mesh_b]
+
+### test_export_from_3d_view_none_on_broken_plotter
+_No description provided._
+
+- assert exporter.export_from_3d_view() is None
+
+### test_export_with_colors_reads_pyvista_prop_color
+_No description provided._
+
+- assert len(result) == 1
+- assert result[0]['color'] == [127, 63, 255]
+- assert result[0]['mesh'] is mesh
+- assert result[0]['type'] == 'display_actor'
+
+### test_export_with_colors_reads_vtk_getproperty_color
+_No description provided._
+
+- assert len(result) == 1
+- assert result[0]['color'] == [0, 255, 0]
+
+### test_export_with_colors_splits_vertex_colored_glyph_mesh
+_No description provided._
+
+- assert len(result) == 2
+- assert colors == [[0, 0, 255], [255, 0, 0]]
+- assert all((e['name'].startswith('atoms_color_') for e in result))
+- assert all((e['mesh'].n_points == 2 for e in result))
+
+### test_export_with_colors_empty_on_broken_plotter
+_No description provided._
+
+- assert exporter.export_from_3d_view_with_colors() == []
+
+### test_export_2d_png_nothing_to_export
+_No description provided._
+
+- assert 'Nothing to export.' in _status_messages(mock_parser_host)
+
+### test_export_2d_png_cancel_background_question
+_No description provided._
+
+- assert any(('Export cancelled.' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+
+### test_export_2d_png_reports_unresolvable_bounds
+_No description provided._
+
+- assert any(('Could not determine molecule bounds' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
 
 ## tests/unit/test_geometry.py
 
@@ -3749,6 +4321,71 @@ _Double-clicking an atom in charge_minus mode decrements its charge._
 
 - assert item.charge == -1
 
+### TestRestoreAtomsAndBonds.test_restores_atoms_and_bonds_from_state
+_No description provided._
+
+- assert set(scene.atom_items.keys()) == {1, 2}
+- assert (1, 2) in scene.bond_items
+- assert scene.data.atoms[2]['charge'] == -1
+- assert scene.data.atoms[2]['radical'] == 1
+- assert scene.data.bonds[1, 2]['order'] == 2
+- assert len(scene.atom_items[1].bonds) == 1
+- assert len(scene.atom_items[2].bonds) == 1
+
+### TestRestoreAtomsAndBonds.test_skips_bond_when_endpoint_atom_missing
+_No description provided._
+
+- assert scene.bond_items == {}
+- assert 1 in scene.atom_items
+
+### TestRestoreFromJson.test_restores_from_json_lists
+_No description provided._
+
+- assert set(scene.atom_items.keys()) == {1, 2}
+- assert scene.data.atoms[2]['charge'] == 1
+- assert scene.data.bonds[1, 2]['stereo'] == 2
+- assert (1, 2) in scene.bond_items
+
+### TestRestoreFromJson.test_json_skips_bond_with_unknown_atom
+_No description provided._
+
+- assert scene.bond_items == {}
+
+### TestUpdateRingInfo2D.test_noop_when_no_atoms
+_No description provided._
+
+
+### TestUpdateRingInfo2D.test_marks_ring_bonds_and_sets_center
+_No description provided._
+
+- assert all((b.is_in_ring for b in scene.bond_items.values()))
+- assert all((b.ring_center is not None for b in scene.bond_items.values()))
+
+### TestUpdateRingInfo2D.test_acyclic_bonds_not_marked
+_No description provided._
+
+- assert not scene.bond_items[1, 2].is_in_ring
+
+### TestRefreshModeState.test_updates_template_preview_when_cursor_in_viewport
+_No description provided._
+
+- scene.update_template_preview.assert_called_once_with(QPointF(10, 20))
+
+### TestRefreshModeState.test_no_preview_when_cursor_outside_viewport
+_No description provided._
+
+- scene.update_template_preview.assert_not_called()
+
+### TestRefreshModeState.test_no_preview_when_not_template_mode
+_No description provided._
+
+- scene.update_template_preview.assert_not_called()
+
+### TestLeaveEvent.test_hides_template_preview
+_No description provided._
+
+- scene.template_preview.hide.assert_called_once()
+
 ## tests/unit/test_move_group_dialog.py
 
 ### TestOnAtomPicked.test_picks_entire_connected_component
@@ -4000,6 +4637,95 @@ _Re-picking the same atom deselects the entire connected group._
 - assert len(dlg.group_atoms) == 0
 - assert 0 not in dlg.selected_atoms
 
+### TestEventFilter.test_no_plotter_returns_false
+_No description provided._
+
+- assert dlg.eventFilter(MagicMock(), event) is False
+
+### TestEventFilter.test_double_click_resets_drag_state
+_No description provided._
+
+- assert dlg.eventFilter(interactor, event) is False
+- assert dlg.is_dragging_group is False
+- assert dlg.drag_start_pos is None
+- assert dlg.potential_drag is False
+- assert dlg.clicked_atom_for_toggle is None
+
+### TestEventFilter.test_press_with_existing_group_delegates_to_interactor_style
+_No description provided._
+
+- assert dlg.eventFilter(interactor, event) is False
+
+### TestEventFilter.test_press_on_atom_selects_group_and_consumes_release
+_No description provided._
+
+- assert len(dlg.group_atoms) == mol.GetNumAtoms()
+- assert dlg._consume_next_left_release is True
+- assert dlg.eventFilter(interactor, release) is True
+- assert dlg._consume_next_left_release is False
+- assert dlg.eventFilter(interactor, press) is True
+
+### TestEventFilter.test_press_on_background_returns_false
+_No description provided._
+
+- assert dlg.group_atoms == set()
+- assert dlg.eventFilter(interactor, event) is False
+
+### TestEventFilter.test_move_past_threshold_starts_group_drag
+_No description provided._
+
+- assert dlg.eventFilter(interactor, move) is True
+- assert dlg.is_dragging_group is True
+- assert dlg.potential_drag is False
+- mw.view_3d_manager.plotter.setCursor.assert_called_with(Qt.CursorShape.ClosedHandCursor)
+
+### TestEventFilter.test_move_below_threshold_keeps_potential_drag
+_No description provided._
+
+- assert dlg.eventFilter(interactor, move) is False
+- assert dlg.is_dragging_group is False
+- assert dlg.potential_drag is True
+
+### TestEventFilter.test_move_while_dragging_marks_movement
+_No description provided._
+
+- assert dlg.eventFilter(interactor, move) is True
+- assert dlg.mouse_moved_during_drag is True
+
+### TestEventFilter.test_hover_over_group_atom_shows_open_hand
+_No description provided._
+
+- mw.view_3d_manager.plotter.setCursor.assert_called_with(Qt.CursorShape.OpenHandCursor)
+- assert dlg.eventFilter(interactor, move) is False
+
+### TestEventFilter.test_hover_outside_group_shows_arrow
+_No description provided._
+
+- mw.view_3d_manager.plotter.setCursor.assert_called_with(Qt.CursorShape.ArrowCursor)
+
+### TestEventFilter.test_release_click_only_toggles_clicked_atom
+_No description provided._
+
+- mock_pick.assert_called_once_with(0)
+- assert dlg.potential_drag is False
+- assert dlg.drag_start_pos is None
+- assert dlg.clicked_atom_for_toggle is None
+- mw.view_3d_manager.plotter.setCursor.assert_called_with(Qt.CursorShape.ArrowCursor)
+- assert dlg.eventFilter(interactor, release) is True
+
+### TestEventFilter.test_release_after_real_drag_does_not_toggle
+_No description provided._
+
+- mock_pick.assert_not_called()
+- assert dlg.is_dragging_group is False
+- assert dlg.drag_start_pos is None
+- assert dlg.eventFilter(interactor, release) is True
+
+### TestEventFilter.test_release_without_pending_drag_returns_false
+_No description provided._
+
+- assert dlg.eventFilter(interactor, release) is False
+
 ## tests/unit/test_move_selected_atoms_dialog.py
 
 ### TestOnAtomPicked.test_picks_atom_individually_no_bfs
@@ -4215,6 +4941,45 @@ _Restore must go through iren.style so pyvista bookkeeping tracks it._
 - plotter.disable_picking.assert_called_once()
 - assert plotter.iren.style is sentinel
 - plotter.interactor.SetInteractorStyle.assert_not_called()
+
+### test_on_rectangle_picked_ignores_object_without_viewport
+_No description provided._
+
+- assert dlg.selected_atoms == {3}
+
+### test_on_rectangle_picked_small_box_clears_selection
+_No description provided._
+
+- clear.assert_called_once()
+
+### test_on_rectangle_picked_selects_atoms_inside_box
+_No description provided._
+
+- assert dlg.selected_atoms == {0}
+- show.assert_called_once()
+- upd.assert_called_once()
+
+### test_on_rectangle_picked_no_atoms_inside_box_leaves_selection
+_No description provided._
+
+- assert dlg.selected_atoms == set()
+- show.assert_not_called()
+
+### test_on_rectangle_picked_none_plotter_guard
+_No description provided._
+
+- assert dlg.selected_atoms == set()
+
+### test_reject_turns_off_active_box_selection
+_No description provided._
+
+- btn.setChecked.assert_called_once_with(False)
+- toggle.assert_called_once_with(False)
+
+### test_reject_when_box_selection_inactive
+_No description provided._
+
+- toggle.assert_not_called()
 
 ## tests/unit/test_optimization_method_restore.py
 
@@ -5487,6 +6252,145 @@ _Verify handling of I/O errors during load._
 - io.statusBar().showMessage.assert_called()
 - assert 'Invalid project file format' in msg
 
+### test_load_mol_file_no_path_cancelled_dialog
+_No description provided._
+
+- mock_parser_host.init_manager.scene.create_atom.assert_not_called()
+
+### test_load_mol_file_missing_file_reports_error
+_No description provided._
+
+- assert 'File not found' in _status_messages(mock_parser_host)[-1]
+
+### test_load_mol_file_imports_atoms_and_bonds
+_No description provided._
+
+- assert len(mock_parser_host.state_manager.data.atoms) == 3
+- assert len(mock_parser_host.state_manager.data.bonds) == 2
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+- assert 'Successfully imported' in _status_messages(mock_parser_host)[-1]
+
+### test_load_mol_file_places_relative_to_existing_atoms
+_No description provided._
+
+- assert len(mock_parser_host.state_manager.data.atoms) == 4
+
+### test_load_mol_file_invalid_block_reports_error
+_No description provided._
+
+- assert 'MOL Import Error' not in ''.join(_status_messages(mock_parser_host))
+- assert 'Error loading file' in _status_messages(mock_parser_host)[-1]
+
+### test_save_as_mol_no_data
+_No description provided._
+
+- assert mock_parser_host.state_manager.data.atoms == {}
+- assert 'Error: No 2D data to save.' in _status_messages(mock_parser_host)
+
+### test_save_as_mol_writes_file
+_No description provided._
+
+- assert out_path.exists()
+- assert 'MoleditPy Ver.' in out_path.read_text(encoding='utf-8')
+- assert '2D data saved to' in _status_messages(mock_parser_host)[-1]
+
+### test_save_as_mol_cancelled_dialog_writes_nothing
+_No description provided._
+
+- assert list(tmp_path.iterdir()) == []
+
+### test_save_as_mol_io_error_reports_message
+_No description provided._
+
+- assert 'Error saving MOL' in _status_messages(mock_parser_host)[-1]
+
+### test_load_mol_file_3d_no_path_cancelled
+_No description provided._
+
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+
+### test_load_mol_file_3d_unsaved_changes_blocks
+_No description provided._
+
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+
+### test_load_mol_file_3d_success_draws_molecule
+_No description provided._
+
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+- mock_parser_host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+- assert mock_parser_host.is_xyz_derived is False
+- assert mock_parser_host.init_manager.current_file_path == str(path)
+
+### test_load_mol_file_3d_failure_reports_error
+_No description provided._
+
+- mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+- assert '3D MOL Load failed' in _status_messages(mock_parser_host)[-1]
+
+### test_save_as_xyz_no_current_mol
+_No description provided._
+
+- assert 'Please generate a 3D structure first' in _status_messages(mock_parser_host)[-1]
+
+### test_save_as_xyz_cancelled_dialog_writes_nothing
+_No description provided._
+
+- assert list(tmp_path.iterdir()) == []
+
+### test_save_as_xyz_writes_charge_and_multiplicity
+_No description provided._
+
+- assert text.splitlines()[0] == str(mol.GetNumAtoms())
+- assert 'chrg = -1' in text.splitlines()[1]
+- assert 'Successfully saved to' in _status_messages(mock_parser_host)[-1]
+
+### test_save_as_xyz_io_error_reports_message
+_No description provided._
+
+- assert 'Error saving XYZ' in _status_messages(mock_parser_host)[-1]
+
+### test_load_json_data_file_not_found
+_No description provided._
+
+- assert 'File not found' in _status_messages(mock_parser_host)[-1]
+
+### test_load_json_data_invalid_json_syntax
+_No description provided._
+
+- assert 'Invalid JSON format' in _status_messages(mock_parser_host)[-1]
+
+### test_load_json_data_corrupted_payload_reports_error
+_No description provided._
+
+- assert 'Data corruption in PME Project file' in _status_messages(mock_parser_host)[-1]
+
+### test_set_get_mol_prop_int_roundtrip
+_No description provided._
+
+- assert io._get_mol_prop(mol, 'my_int') == 7
+
+### test_set_get_mol_prop_float_roundtrip
+_No description provided._
+
+- assert io._get_mol_prop(mol, 'my_float') == 3.5
+
+### test_set_get_mol_prop_string_roundtrip
+_No description provided._
+
+- assert io._get_mol_prop(mol, 'my_str') == 'hello'
+
+### test_get_mol_prop_missing_returns_default
+_No description provided._
+
+- assert io._get_mol_prop(mol, 'absent', default='fallback') == 'fallback'
+
+### test_set_mol_prop_safe_module_helper
+_No description provided._
+
+- assert mol.GetIntProp('k_int') == 5
+- assert mol.GetDoubleProp('k_float') == 2.25
+
 ## tests/unit/test_properties.py
 
 ### test_analysis_window_regular_mol
@@ -5716,6 +6620,107 @@ _Regression: pressing W on an already-wedge bond flips its direction_
 - assert (1, 0) in data.bonds and (0, 1) not in data.bonds
 - assert bond.atom1 is a2 and bond.atom2 is a1
 - win.edit_actions_manager.push_undo_state.assert_called_once()
+
+### test_key_z_toggles_hovered_double_bond_to_z_isomer
+_No description provided._
+
+- assert data.bonds[0, 1]['stereo'] == 3
+- assert bond.stereo == 3
+- win.edit_actions_manager.push_undo_state.assert_called_once()
+- event.accept.assert_called_once()
+
+### test_key_e_toggles_hovered_double_bond_to_e_isomer
+_No description provided._
+
+- assert data.bonds[0, 1]['stereo'] == 4
+- win.edit_actions_manager.push_undo_state.assert_called_once()
+
+### test_key_1_from_selected_atom_creates_new_atom_and_bond
+_No description provided._
+
+- assert len(data.atoms) == 2
+- assert len(data.bonds) == len(before_bonds) + 1
+- win.edit_actions_manager.push_undo_state.assert_called_once()
+
+### test_key_3_bonds_to_existing_nearby_atom_without_new_atom
+_No description provided._
+
+- assert len(data.atoms) == 2
+- assert (0, 1) in data.bonds
+- assert data.bonds[0, 1]['order'] == 3
+- win.edit_actions_manager.push_undo_state.assert_called_once()
+
+### test_key_delete_aborts_active_temp_line_placement
+_No description provided._
+
+- assert scene.temp_line is None
+- assert scene.start_atom is None
+- assert scene.start_pos is None
+- assert scene.initial_positions_in_event == {}
+- event.accept.assert_called_once()
+
+### test_key_delete_removes_selected_atom_and_pushes_undo
+_No description provided._
+
+- assert 1 not in scene.atom_items
+- data.remove_atom.assert_called_once_with(1)
+- win.edit_actions_manager.push_undo_state.assert_called_once()
+- win.statusBar().showMessage.assert_any_call('Deleted selected items.')
+
+### test_key_delete_clears_scene_when_no_atoms_remain
+_No description provided._
+
+- assert scene.temp_line is None
+- assert scene.start_atom is None
+- event.accept.assert_called_once()
+
+### test_key_space_switches_to_select_mode_when_not_already
+_No description provided._
+
+- win.ui_manager.activate_select_mode.assert_called_once()
+- win.edit_actions_manager.select_all.assert_not_called()
+- event.accept.assert_called_once()
+
+### test_key_space_selects_all_when_already_in_select_mode
+_No description provided._
+
+- win.edit_actions_manager.select_all.assert_called_once()
+- win.ui_manager.activate_select_mode.assert_not_called()
+
+### test_key_press_noop_when_not_2d_editable
+_No description provided._
+
+- win.edit_actions_manager.select_all.assert_not_called()
+
+### test_find_atom_near_returns_none_for_none_pos
+_No description provided._
+
+- assert scene.find_atom_near(None) is None
+
+### test_find_atom_near_finds_close_atom
+_No description provided._
+
+- assert found is a1
+
+### test_find_atom_near_returns_none_when_out_of_tolerance
+_No description provided._
+
+- assert scene.find_atom_near(QPointF(500, 500), tol=14.0) is None
+
+### test_update_bond_stereo_noop_for_none_bond
+_No description provided._
+
+
+### test_update_bond_stereo_noop_for_single_bond
+_No description provided._
+
+- assert bond.stereo == 0
+
+### test_update_bond_stereo_warns_when_bond_missing_from_model
+_No description provided._
+
+- win.statusBar().showMessage.assert_called_once()
+- assert 'not found in model' in win.statusBar().showMessage.call_args.args[0]
 
 ## tests/unit/test_scene_interactions.py
 
@@ -6452,6 +7457,88 @@ _Invalid InChI should show error, not crash._
 - mock_parser_host.statusBar().showMessage.assert_called()
 - assert last_msg.startswith('Invalid InChI:')
 
+### test_smiles_dialog_ok_loads
+_No description provided._
+
+- importer.load_from_smiles.assert_called_once_with('CCO')
+
+### test_smiles_dialog_cancel_does_not_load
+_No description provided._
+
+- importer.load_from_smiles.assert_not_called()
+
+### test_smiles_dialog_empty_text_does_not_load
+_No description provided._
+
+- importer.load_from_smiles.assert_not_called()
+
+### test_inchi_dialog_ok_loads
+_No description provided._
+
+- importer.load_from_inchi.assert_called_once_with('InChI=1S/CH4/h1H4')
+
+### test_inchi_dialog_cancel_does_not_load
+_No description provided._
+
+- importer.load_from_inchi.assert_not_called()
+
+### test_placement_center_offsets_right_of_existing_atoms
+_Second import must land 80px right of the rightmost atom at mean y._
+
+- assert center.x() == 190.0
+- assert center.y() == 30.0
+
+### test_placement_center_supports_tuple_positions
+_No description provided._
+
+- assert center.x() == 130.0
+- assert center.y() == 10.0
+
+### test_placement_center_uses_viewport_when_empty
+_No description provided._
+
+- assert center == QPointF(7.0, 8.0)
+
+### test_smiles_e_double_bond_maps_stereo_4
+_No description provided._
+
+- assert 4 in stereos
+
+### test_smiles_z_double_bond_maps_stereo_3
+_No description provided._
+
+- assert 3 in stereos
+
+### test_smiles_truly_empty_after_strip_reports_empty
+_No description provided._
+
+- assert 'SMILES string was empty.' in _last_status(mock_parser_host)
+
+### test_smiles_parse_runtime_error_reported
+_No description provided._
+
+- assert 'Error parsing SMILES: rdkit exploded' in _last_status(mock_parser_host)
+
+### test_smiles_placement_error_reported
+_No description provided._
+
+- assert 'Error loading from SMILES: view gone' in _last_status(mock_parser_host)
+
+### test_inchi_truly_empty_after_strip_reports_empty
+_No description provided._
+
+- assert 'InChI string was empty.' in _last_status(mock_parser_host)
+
+### test_inchi_parse_runtime_error_reported
+_No description provided._
+
+- assert 'Error parsing InChI: rdkit exploded' in _last_status(mock_parser_host)
+
+### test_inchi_placement_error_reported
+_No description provided._
+
+- assert 'Error loading from InChI: view gone' in _last_status(mock_parser_host)
+
 ## tests/unit/test_system_utils.py
 
 ### TestWindowsTheme.test_windows_dark_when_val_zero
@@ -7055,6 +8142,346 @@ _pyvista's temporary box-selection style must not be fought by the watchdog._
 
 - assert plotter.iren.style is not ui._expected_style
 
+### test_set_mode_tuple_becomes_bond_mode
+_No description provided._
+
+- assert ui.host.init_manager.scene.mode == 'bond_2_1'
+- assert ui.host.init_manager.scene.bond_order == 2
+- assert ui.host.init_manager.scene.bond_stereo == 1
+
+### test_set_mode_atom_sets_symbol_and_cross_cursor
+_No description provided._
+
+- assert ui.host.init_manager.scene.current_atom_symbol == 'N'
+- ui.host.init_manager.view_2d.setCursor.assert_called_with(Qt.CursorShape.CrossCursor)
+- ui.host.init_manager.view_2d.setDragMode.assert_called_with(QGraphicsView.DragMode.NoDrag)
+- ui.host.update_status_message.assert_any_call('Mode: Draw Atom (N)')
+
+### test_set_mode_bond_parses_order_and_stereo
+_No description provided._
+
+- assert ui.host.init_manager.scene.bond_order == 1
+- assert ui.host.init_manager.scene.bond_stereo == 2
+- ui.host.update_status_message.assert_any_call('Mode: Draw Bond (Order: 1 (Dash))')
+
+### test_set_mode_builtin_template_status
+_No description provided._
+
+- ui.host.statusBar().showMessage.assert_any_call('Mode: Benzene Template')
+
+### test_set_mode_user_template_status
+_No description provided._
+
+- ui.host.statusBar().showMessage.assert_any_call('Mode: User Template (MyFrag)')
+
+### test_set_mode_leaving_template_clears_preview
+_No description provided._
+
+- ui.host.init_manager.scene.clear_template_preview.assert_called_once()
+
+### test_set_mode_charge_modes_status
+_No description provided._
+
+- ui.host.statusBar().showMessage.assert_any_call('Mode: Increase Charge (Click on Atom)')
+- ui.host.statusBar().showMessage.assert_any_call('Mode: Decrease Charge (Click on Atom)')
+
+### test_set_mode_radical_status
+_No description provided._
+
+- ui.host.update_status_message.assert_any_call('Mode: Toggle Radical (Click on Atom)')
+
+### test_set_mode_select_uses_rubber_band
+_No description provided._
+
+- ui.host.init_manager.view_2d.setDragMode.assert_called_with(QGraphicsView.DragMode.RubberBandDrag)
+- ui.host.update_status_message.assert_any_call('Mode: Select')
+
+### test_set_mode_and_update_toolbar_checks_matching_action
+_No description provided._
+
+- atom_action.setChecked.assert_called_with(True)
+- select_action.setChecked.assert_called_with(False)
+- btn.setStyleSheet.assert_called_with('')
+
+### test_set_mode_and_update_toolbar_user_template_highlight
+_No description provided._
+
+- template_action.setChecked.assert_called_with(True)
+- assert 'background-color' in btn.setStyleSheet.call_args.args[0]
+
+### test_activate_select_mode_checks_select_action
+_No description provided._
+
+- assert ui.host.init_manager.scene.mode == 'select'
+- select_action.setChecked.assert_called_with(True)
+
+### test_set_atom_from_periodic_table
+_No description provided._
+
+- assert ui.host.init_manager.scene.mode == 'atom_Fe'
+- assert ui.host.init_manager.scene.current_atom_symbol == 'Fe'
+
+### test_drag_enter_accepts_known_extension
+_No description provided._
+
+- event.acceptProposedAction.assert_called_once()
+
+### test_drag_enter_ignores_unknown_extension_without_plugins
+_No description provided._
+
+- event.ignore.assert_called_once()
+- event.acceptProposedAction.assert_not_called()
+
+### test_drag_enter_accepts_unknown_extension_with_plugin_handler
+_No description provided._
+
+- event.acceptProposedAction.assert_called_once()
+
+### test_drag_enter_ignores_null_mime
+_No description provided._
+
+- event.ignore.assert_called_once()
+
+### test_drop_project_file_opens_project
+_No description provided._
+
+- ui.host.io_manager.open_project_file.assert_called_once_with(file_path='C:/mols/session.pmeprj')
+- event.acceptProposedAction.assert_called_once()
+
+### test_drop_mol_file_on_2d_loads_into_editor
+_No description provided._
+
+- ui.host.io_manager.load_mol_file.assert_called_once_with(file_path='C:/mols/mol.sdf')
+
+### test_drop_mol_file_on_3d_loads_for_viewing
+_No description provided._
+
+- ui.host.io_manager.load_mol_file_for_3d_viewing.assert_called_once_with(file_path='C:/mols/mol.mol')
+- ui.host.io_manager.load_mol_file.assert_not_called()
+
+### test_drop_xyz_loads_for_3d_viewing
+_No description provided._
+
+- ui.host.io_manager.load_xyz_for_3d_viewing.assert_called_once_with(file_path='C:/mols/geom.xyz')
+
+### test_drop_plugin_handler_wins_over_builtin
+_No description provided._
+
+- handler.assert_called_once_with('C:/mols/mol.mol')
+- ui.host.io_manager.load_mol_file.assert_not_called()
+- event.acceptProposedAction.assert_called_once()
+
+### test_drop_broken_plugin_handler_falls_through_to_builtin
+_No description provided._
+
+- ui.host.io_manager.load_xyz_for_3d_viewing.assert_called_once()
+
+### test_drop_unsupported_extension_reports_status
+_No description provided._
+
+- event.ignore.assert_called_once()
+- assert any(('Unsupported file type' in str(c.args[0]) for c in ui.host.statusBar().showMessage.call_args_list))
+
+### test_drop_without_local_file_ignored
+_No description provided._
+
+- event.ignore.assert_called_once()
+
+### test_minimize_2d_panel_collapses_left
+_No description provided._
+
+- ui.host.init_manager.splitter.setSizes.assert_called_once_with([0, 1200])
+
+### test_minimize_2d_panel_noop_when_already_minimized
+_No description provided._
+
+- ui.host.init_manager.splitter.setSizes.assert_not_called()
+
+### test_restore_2d_panel_only_when_hidden
+_No description provided._
+
+- ui.host.init_manager.splitter.setSizes.assert_called_once_with([600, 600])
+- ui.host.init_manager.splitter.setSizes.assert_not_called()
+
+### test_set_panel_layout_splits_width_by_percent
+_No description provided._
+
+- ui.host.init_manager.splitter.setSizes.assert_called_once_with([300, 700])
+- assert any(('Panel layout set to 30% : 70%' in str(c.args[0]) for c in ui.host.statusBar().showMessage.call_args_list))
+
+### test_set_panel_layout_rejects_bad_percentages
+_No description provided._
+
+- ui.host.init_manager.splitter.setSizes.assert_not_called()
+
+### test_set_panel_layout_uses_default_width_when_zero
+_No description provided._
+
+- ui.host.init_manager.splitter.setSizes.assert_called_once_with([600, 600])
+
+### test_toggle_2d_panel_restores_when_hidden
+_No description provided._
+
+- ui.host.ui_manager.restore_2d_panel.assert_called_once()
+
+### test_toggle_2d_panel_minimizes_when_visible
+_No description provided._
+
+- ui.host.ui_manager.minimize_2d_panel.assert_called_once()
+
+### test_toggle_2d_panel_empty_sizes_noop
+_No description provided._
+
+- ui.host.ui_manager.restore_2d_panel.assert_not_called()
+- ui.host.ui_manager.minimize_2d_panel.assert_not_called()
+
+### test_enter_3d_viewer_ui_mode_disables_2d_tools
+_No description provided._
+
+- assert ui.is_2d_editable is False
+- ui.host.init_manager.cleanup_button.setEnabled.assert_called_with(False)
+- ui.host.init_manager.convert_button.setEnabled.assert_called_with(False)
+- action.setEnabled.assert_called_with(False)
+- ui.enable_3d_features.assert_called_once_with(True)
+
+### test_restore_ui_for_editing_reenables_2d_tools
+_No description provided._
+
+- assert ui.is_2d_editable is True
+- ui.host.init_manager.cleanup_button.setEnabled.assert_called_with(True)
+- action.setEnabled.assert_called_with(True)
+- ui._enable_3d_edit_actions.assert_called_once_with(False)
+
+### test_enable_3d_edit_actions_toggles_all_actions_and_menus
+_No description provided._
+
+- ui.host.translation_action.setEnabled.assert_called_with(True)
+- ui.host.align_menu.setEnabled.assert_called_with(True)
+- ui.host.dihedral_action.setEnabled.assert_called_with(False)
+- ui.host.align_menu.setEnabled.assert_called_with(False)
+
+## tests/unit/test_user_template_dialog.py
+
+### TestTemplateFiles.test_get_template_directory_created_on_demand
+_No description provided._
+
+- assert result == os.path.join(str(tmp_path), 'user-templates')
+- assert os.path.isdir(result)
+
+### TestTemplateFiles.test_load_template_file_valid_json
+_No description provided._
+
+- assert data['name'] == 'Benzene'
+
+### TestTemplateFiles.test_load_template_file_invalid_json_returns_none
+_No description provided._
+
+- assert dlg.load_template_file(str(bad)) is None
+
+### TestTemplateFiles.test_save_template_file_roundtrip
+_No description provided._
+
+- assert dlg.save_template_file(str(path), _template_payload()) is True
+- assert json.loads(path.read_text(encoding='utf-8'))['name'] == 'Benzene'
+
+### TestTemplateFiles.test_save_template_file_bad_path_returns_false
+_No description provided._
+
+- assert dlg.save_template_file(str(bad_path), {}) is False
+
+### TestLoadUserTemplates.test_loads_only_pmetmplt_files
+_No description provided._
+
+- assert names == ['One', 'Two']
+- assert t['filename'].endswith('.pmetmplt')
+- assert os.path.exists(t['filepath'])
+
+### TestLoadUserTemplates.test_grid_gets_one_widget_per_template
+_No description provided._
+
+- assert dlg.template_layout.count() == 2
+
+### TestLoadUserTemplates.test_corrupt_file_skipped
+_No description provided._
+
+- assert [t['name'] for t in dlg.user_templates] == ['Good']
+
+### TestConvertStructureToTemplate.test_converts_atoms_and_bonds
+_No description provided._
+
+- assert data['format'] == 'PME Template'
+- assert data['name'] == 'MyFrag'
+- assert atoms[1]['symbol'] == 'N'
+- assert atoms[1]['charge'] == 1
+- assert atoms[2]['charge'] == 0
+- assert atoms[1]['x'] == 10.0 and atoms[1]['y'] == 20.0
+- assert data['bonds'] == [{'atom1': 1, 'atom2': 2, 'order': 2, 'stereo': 1}]
+
+### TestSaveCurrentAsTemplate.test_warns_when_no_structure
+_No description provided._
+
+- warn.assert_called_once()
+
+### TestSaveCurrentAsTemplate.test_cancelled_name_dialog_saves_nothing
+_No description provided._
+
+- assert list((tmp_path / 'user-templates').glob('*.pmetmplt')) == []
+
+### TestSaveCurrentAsTemplate.test_saves_named_template_and_reloads
+_No description provided._
+
+- assert saved.exists()
+- assert json.loads(saved.read_text(encoding='utf-8'))['name'] == 'My Frag'
+- info.assert_called_once()
+- assert [t['name'] for t in dlg.user_templates] == ['My Frag']
+
+### TestSaveCurrentAsTemplate.test_overwrite_declined_keeps_existing_file
+_No description provided._
+
+- assert existing.read_text(encoding='utf-8') == original_content
+
+### TestDeleteSelectedTemplate.test_noop_without_selection
+_No description provided._
+
+- question.assert_not_called()
+
+### TestDeleteSelectedTemplate.test_confirmed_delete_removes_file_and_resets
+_No description provided._
+
+- assert not path.exists()
+- assert dlg.selected_template is None
+- assert not dlg.delete_button.isEnabled()
+
+### TestDeleteSelectedTemplate.test_declined_delete_keeps_file
+_No description provided._
+
+- assert path.exists()
+
+### TestTemplateModeLifecycle.test_use_template_activates_and_selects
+_No description provided._
+
+- dlg._activate_template_mode.assert_called_once_with(payload)
+- assert dlg.selected_template is payload
+
+### TestTemplateModeLifecycle.test_cleanup_template_mode_resets_scene_and_mode
+_No description provided._
+
+- assert dlg.selected_template is None
+- assert not dlg.delete_button.isEnabled()
+- mw.ui_manager.set_mode_and_update_toolbar.assert_called_with('atom_C')
+- assert scene.mode == 'atom_C'
+- assert scene.current_atom_symbol == 'C'
+- assert scene.user_template_data is None
+- assert scene.template_context == {}
+- scene.clear_template_preview.assert_called_once()
+- scene.template_preview.hide.assert_called_once()
+- scene.update.assert_called()
+
+### TestTemplateModeLifecycle.test_close_event_triggers_cleanup
+_No description provided._
+
+- dlg.cleanup_template_mode.assert_called_once()
+
 ## tests/unit/test_utils_sip.py
 
 ### test_sip_isdeleted_safe_valid_obj
@@ -7180,6 +8607,256 @@ _Verify color override API functions._
 - view3d.draw_molecule_3d.assert_called()
 - assert view3d._plugin_color_overrides[0] == '#00FF00'
 - assert view3d.draw_molecule_3d.call_count == 2
+
+### test_plotter_property_roundtrip
+_No description provided._
+
+- assert view3d.plotter is sentinel
+- assert view3d.plotter is None
+
+### test_cleanup_clears_and_closes_plotter
+_No description provided._
+
+- plotter.clear.assert_called_once()
+- plotter.close.assert_called_once()
+- assert view3d.current_mol is None
+
+### test_cleanup_without_plotter
+_No description provided._
+
+- assert view3d.current_mol is None
+
+### test_set_3d_style_same_style_is_noop
+_No description provided._
+
+- mock_parser_host.edit_3d_manager.clear_3d_selection.assert_not_called()
+
+### test_set_3d_style_disables_edit_modes_and_redraws
+_No description provided._
+
+- mock_parser_host.init_manager.measurement_action.setChecked.assert_called_with(False)
+- mock_parser_host.edit_3d_manager.toggle_measurement_mode.assert_called_once_with(False)
+- mock_parser_host.ui_manager.toggle_3d_edit_mode.assert_called_once_with(False)
+- mock_parser_host.edit_3d_manager.clear_3d_selection.assert_called_once()
+- assert view3d.current_3d_style == 'stick'
+- view3d.draw_molecule_3d.assert_called_once_with(view3d.current_mol)
+
+### test_set_3d_style_without_molecule_skips_redraw
+_No description provided._
+
+- view3d.draw_molecule_3d.assert_not_called()
+
+### test_draw_molecule_3d_uses_plugin_custom_style
+_No description provided._
+
+- handler.assert_called_once_with(mock_parser_host, mol)
+- view3d.draw_standard_3d_style.assert_not_called()
+
+### test_draw_molecule_3d_broken_plugin_falls_back_to_standard
+_No description provided._
+
+- view3d.draw_standard_3d_style.assert_called_once_with(mol)
+
+### test_draw_molecule_3d_standard_when_style_not_custom
+_No description provided._
+
+- view3d.draw_standard_3d_style.assert_called_once_with(mol)
+
+### test_toggle_chiral_labels_on_redraws_and_reports
+_No description provided._
+
+- assert view3d.show_chiral_labels is True
+- view3d.draw_molecule_3d.assert_called_once()
+- assert any(('Chiral labels' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+
+### test_toggle_chiral_labels_off_reports_disabled
+_No description provided._
+
+- assert view3d.show_chiral_labels is False
+- assert any(('Chiral labels disabled.' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+
+### test_update_chiral_labels_disabled_clears_items
+_No description provided._
+
+- assert item.chiral_label is None
+- mock_parser_host.init_manager.scene.update.assert_called()
+
+### test_update_chiral_labels_assigns_r_or_s
+_No description provided._
+
+- assert labels & {'R', 'S'}
+
+### test_toggle_atom_info_same_mode_turns_off
+_No description provided._
+
+- assert view3d.atom_info_display_mode is None
+- mock_parser_host.init_manager.show_index_action.setChecked.assert_called_with(False)
+- mock_parser_host.init_manager.atom_index_base_menu.setEnabled.assert_called_with(False)
+- assert any(('Atom info display disabled.' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+
+### test_toggle_atom_info_new_index_mode_enables_base_menu
+_No description provided._
+
+- assert view3d.atom_info_display_mode == 'rdkit_index'
+- mock_parser_host.init_manager.show_index_action.setChecked.assert_called_with(True)
+- mock_parser_host.init_manager.show_atom_symbol_action.setChecked.assert_called_with(False)
+- mock_parser_host.init_manager.atom_index_base_menu.setEnabled.assert_called_with(True)
+- view3d.show_all_atom_info.assert_called_once()
+- view3d.plotter.render.assert_called_once()
+
+### test_toggle_atom_info_symbol_mode_disables_base_menu
+_No description provided._
+
+- mock_parser_host.init_manager.atom_index_base_menu.setEnabled.assert_called_with(False)
+- assert any(('Displaying: Element Symbol' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+
+### test_set_atom_index_base_syncs_checkmarks
+_No description provided._
+
+- assert view3d.atom_index_base == 1
+- mock_parser_host.init_manager.atom_index_base_0_action.setChecked.assert_called_with(False)
+- mock_parser_host.init_manager.atom_index_base_1_action.setChecked.assert_called_with(True)
+
+### test_set_atom_index_base_refreshes_active_index_labels
+_No description provided._
+
+- view3d.clear_all_atom_info_labels.assert_called_once()
+- view3d.show_all_atom_info.assert_called_once()
+- view3d.plotter.render.assert_called_once()
+
+### test_is_xyz_derived_molecule_detects_property
+_No description provided._
+
+- assert view3d.is_xyz_derived_molecule() is True
+
+### test_is_xyz_derived_molecule_false_cases
+_No description provided._
+
+- assert view3d.is_xyz_derived_molecule() is False
+- assert view3d.is_xyz_derived_molecule() is False
+
+### test_has_original_atom_ids
+_No description provided._
+
+- assert view3d.has_original_atom_ids() is False
+- assert view3d.has_original_atom_ids() is True
+
+### test_update_atom_id_menu_state_enables_matching_actions
+_No description provided._
+
+- mock_parser_host.init_manager.show_original_id_action.setEnabled.assert_called_with(False)
+- mock_parser_host.init_manager.show_xyz_index_action.setEnabled.assert_called_with(True)
+
+### test_zoom_in_and_out_scale_view
+_No description provided._
+
+- mock_parser_host.init_manager.view_2d.scale.assert_called_with(1.2, 1.2)
+- mock_parser_host.init_manager.view_2d.scale.assert_called_with(1 / 1.2, 1 / 1.2)
+
+### test_reset_zoom_sets_075_transform
+_No description provided._
+
+- assert transform.m11() == 0.75
+- assert transform.m22() == 0.75
+
+### test_fit_to_view_empty_scene_resets_zoom
+_No description provided._
+
+- view3d.reset_zoom.assert_called_once()
+
+### test_fit_to_view_fits_visible_items
+_No description provided._
+
+- view3d.reset_zoom.assert_not_called()
+- mock_parser_host.init_manager.view_2d.fitInView.assert_called_once()
+- assert padded.width() == pytest.approx(110.0)
+- assert padded.height() == pytest.approx(55.0)
+
+### test_setup_3d_hover_only_refreshes_when_mode_active
+_No description provided._
+
+- view3d.show_all_atom_info.assert_not_called()
+- view3d.show_all_atom_info.assert_called_once()
+
+### test_update_atom_color_override_set_and_clear
+_No description provided._
+
+- assert view3d._plugin_color_overrides == {2: '#ff0000'}
+- assert view3d._plugin_color_overrides == {}
+- assert view3d.draw_molecule_3d.call_count == 2
+
+### test_update_bond_color_override_set_and_clear
+_No description provided._
+
+- assert view3d._plugin_bond_color_overrides == {1: '#00ff00'}
+- assert view3d._plugin_bond_color_overrides == {}
+- view3d.draw_molecule_3d.assert_not_called()
+
+### test_show_all_atom_info_noop_without_mode
+_No description provided._
+
+- view3d.plotter.add_point_labels.assert_not_called()
+
+### test_show_all_atom_info_noop_without_positions
+_No description provided._
+
+- view3d.plotter.add_point_labels.assert_not_called()
+
+### test_show_all_atom_info_rdkit_index_respects_base
+_No description provided._
+
+- assert calls == {'atom_labels_rdkit': ['1', '2']}
+- assert view3d.atom_label_legend_names == ['legend_rdkit']
+- assert view3d.plotter.add_text.call_args.args[0] == 'RDKit'
+
+### test_show_all_atom_info_original_id_only_labels_tagged_atoms
+_No description provided._
+
+- assert calls == {'atom_labels_id': ['42']}
+- assert view3d.atom_label_legend_names == ['legend_id']
+
+### test_show_all_atom_info_xyz_index_mixes_with_rdkit_fallback
+_No description provided._
+
+- assert calls['atom_labels_xyz'] == ['11']
+- assert calls['atom_labels_rdkit'] == ['2']
+- assert set(view3d.atom_label_legend_names) == {'legend_rdkit', 'legend_xyz'}
+
+### test_show_all_atom_info_coords_formats_positions
+_No description provided._
+
+- assert calls['atom_labels_other'] == ['(1.00,2.00,3.00)', '(4.00,5.00,6.00)']
+- assert view3d.atom_label_legend_names == []
+
+### test_show_all_atom_info_symbol_mode
+_No description provided._
+
+- assert _label_calls(view3d)['atom_labels_other'] == ['C', 'O']
+
+### test_show_all_atom_info_symbol_mode_without_mol_uses_placeholder
+_No description provided._
+
+- assert _label_calls(view3d)['atom_labels_other'] == ['?', '?']
+
+### test_clear_labels_removes_list_of_actors_and_legends
+_No description provided._
+
+- assert actor_a in removed and actor_b in removed
+- assert 'legend_rdkit' in removed and 'legend_xyz' in removed
+- assert view3d.current_atom_info_labels is None
+- assert view3d.atom_label_legend_names == []
+
+### test_clear_labels_handles_single_actor
+_No description provided._
+
+- view3d.plotter.remove_actor.assert_any_call(actor)
+- assert view3d.current_atom_info_labels is None
+
+### test_clear_labels_survives_remove_actor_failure
+_No description provided._
+
+- assert view3d.current_atom_info_labels is None
+- assert view3d.atom_label_legend_names == []
 
 ## tests/unit/test_worker_robustness.py
 
