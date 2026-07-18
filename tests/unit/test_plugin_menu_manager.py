@@ -621,3 +621,74 @@ class TestClearAllPluginActions:
         pmm._clear_all_plugin_actions(plugin_menu)
 
         sub_menu.removeAction.assert_called_with(tagged)
+
+
+# ---------------------------------------------------------------------------
+# _add_legacy_plugin_actions — categorized run()-plugin menu building
+# ---------------------------------------------------------------------------
+
+import os
+
+
+def _legacy_plugin(name, category=None):
+    mod = MagicMock()  # MagicMock has a `run` attribute -> treated as legacy
+    p = {"name": name, "module": mod}
+    if category is not None:
+        p["category"] = category
+    return p
+
+
+class TestAddLegacyPluginActions:
+    def test_empty_list_adds_disabled_placeholder(self, im, pmm):
+        menu = QMenu()
+        pmm._add_legacy_plugin_actions(menu, [])
+        actions = menu.actions()
+        assert len(actions) == 1
+        assert actions[0].text() == "(No plugins found)"
+        assert not actions[0].isEnabled()
+
+    def test_root_plugins_added_sorted_by_name(self, im, pmm):
+        menu = QMenu()
+        pmm._add_legacy_plugin_actions(
+            menu, [_legacy_plugin("Zeta"), _legacy_plugin("Alpha")]
+        )
+        texts = [a.text() for a in menu.actions()]
+        assert texts == ["Alpha", "Zeta"]
+
+    def test_categorized_plugin_goes_into_submenu(self, im, pmm):
+        menu = QMenu()
+        pmm._add_legacy_plugin_actions(menu, [_legacy_plugin("Doer", "Tools")])
+        submenus = [a.menu() for a in menu.actions() if a.menu()]
+        assert len(submenus) == 1
+        assert submenus[0].title() == "Tools"
+        assert [a.text() for a in submenus[0].actions()] == ["Doer"]
+
+    def test_nested_category_builds_nested_submenus(self, im, pmm):
+        menu = QMenu()
+        pmm._add_legacy_plugin_actions(
+            menu, [_legacy_plugin("Deep", f"Outer{os.sep}Inner")]
+        )
+        outer = next(a.menu() for a in menu.actions() if a.menu())
+        assert outer.title() == "Outer"
+        inner = next(a.menu() for a in outer.actions() if a.menu())
+        assert inner.title() == "Inner"
+        assert [a.text() for a in inner.actions()] == ["Deep"]
+
+    def test_same_category_reuses_single_submenu(self, im, pmm):
+        menu = QMenu()
+        pmm._add_legacy_plugin_actions(
+            menu,
+            [_legacy_plugin("Beta", "Tools"), _legacy_plugin("Alpha", "Tools")],
+        )
+        submenus = [a.menu() for a in menu.actions() if a.menu()]
+        assert len(submenus) == 1  # one shared submenu, not two
+        assert [a.text() for a in submenus[0].actions()] == ["Alpha", "Beta"]
+
+    def test_triggering_action_runs_plugin(self, im, pmm):
+        menu = QMenu()
+        plugin = _legacy_plugin("Runner")
+        pmm._add_legacy_plugin_actions(menu, [plugin])
+        menu.actions()[0].trigger()
+        im.host.plugin_manager.run_plugin.assert_called_once_with(
+            plugin["module"], im.host
+        )
