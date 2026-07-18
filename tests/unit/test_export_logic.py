@@ -878,3 +878,131 @@ def test_export_2d_png_reports_unresolvable_bounds(mock_parser_host, tmp_path):
         "Could not determine molecule bounds" in str(c.args[0])
         for c in mock_parser_host.statusBar().showMessage.call_args_list
     )
+
+
+# ---------------------------------------------------------------------------
+# export_2d_svg — guards, cancel, extension, hide/restore, error paths
+# ---------------------------------------------------------------------------
+
+
+def test_export_2d_svg_nothing_to_export(mock_parser_host):
+    exporter = DummyExport(mock_parser_host)
+    exporter.export_2d_svg()
+    assert "Nothing to export." in _status_messages(mock_parser_host)
+
+
+def test_export_2d_svg_cancel_file_dialog_writes_nothing(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    exporter.data.add_atom("C", QPointF(0, 0))
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+    ):
+        exporter.export_2d_svg()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_export_2d_svg_cancel_background_question(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    exporter.data.add_atom("C", QPointF(0, 0))
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(str(tmp_path / "out.svg"), ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.Cancel,
+        ),
+    ):
+        exporter.export_2d_svg()
+    assert any(
+        "Export cancelled." in str(c.args[0])
+        for c in mock_parser_host.statusBar().showMessage.call_args_list
+    )
+
+
+def test_export_2d_svg_appends_extension_and_hides_non_mol_items(
+    mock_parser_host, tmp_path
+):
+    exporter = DummyExport(mock_parser_host)
+    exporter.data.add_atom("C", QPointF(0, 0))
+    mol_item = MagicMock(spec=AtomItem)
+    mol_item.__class__ = AtomItem
+    mol_item.isVisible.return_value = True
+    mol_item.sceneBoundingRect.return_value = QRectF(0, 0, 80, 60)
+    non_mol = MagicMock()  # not an AtomItem/BondItem
+    non_mol.isVisible.return_value = True
+    exporter.scene.items.return_value = [mol_item, non_mol]
+
+    no_ext = str(tmp_path / "drawing")  # no .svg suffix
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(no_ext, ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.No,
+        ),
+    ):
+        exporter.export_2d_svg()
+
+    assert (tmp_path / "drawing.svg").exists()
+    non_mol.hide.assert_called_once()  # non-molecular item hidden for export
+    non_mol.setVisible.assert_called_with(True)  # and restored afterward
+
+
+def test_export_2d_svg_unresolvable_bounds_reports_and_restores(
+    mock_parser_host, tmp_path
+):
+    exporter = DummyExport(mock_parser_host)
+    exporter.data.add_atom("C", QPointF(0, 0))
+    non_mol = MagicMock()  # only a non-molecular item -> no bounds
+    non_mol.isVisible.return_value = True
+    exporter.scene.items.return_value = [non_mol]
+
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(str(tmp_path / "out.svg"), ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.Yes,
+        ),
+    ):
+        exporter.export_2d_svg()
+
+    assert any(
+        "Could not determine molecule bounds" in str(c.args[0])
+        for c in mock_parser_host.statusBar().showMessage.call_args_list
+    )
+    non_mol.setVisible.assert_called_with(True)
+
+
+def test_export_2d_svg_reports_render_exception(mock_parser_host, tmp_path):
+    exporter = DummyExport(mock_parser_host)
+    exporter.data.add_atom("C", QPointF(0, 0))
+    mol_item = MagicMock(spec=AtomItem)
+    mol_item.__class__ = AtomItem
+    mol_item.isVisible.return_value = True
+    mol_item.sceneBoundingRect.return_value = QRectF(0, 0, 80, 60)
+    exporter.scene.items.return_value = [mol_item]
+    exporter.scene.render.side_effect = RuntimeError("render boom")
+
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(str(tmp_path / "out.svg"), ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.Yes,
+        ),
+    ):
+        exporter.export_2d_svg()
+
+    assert any(
+        "error occurred during SVG export" in str(c.args[0])
+        for c in mock_parser_host.statusBar().showMessage.call_args_list
+    )
