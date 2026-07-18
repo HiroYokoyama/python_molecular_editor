@@ -495,3 +495,139 @@ def test_legacy_version_handling(dummy_window):
     with MagicMock() as mock_msg:
         mw.warning_message_box = mock_msg
         mw.load_from_json_data(json_data)
+
+
+# =============================================================================
+# check_unsaved_changes
+# =============================================================================
+
+from unittest.mock import patch
+from PyQt6.QtWidgets import QMessageBox
+
+
+def test_check_unsaved_changes_no_changes_returns_true(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = False
+    assert sm.check_unsaved_changes() is True
+
+
+def test_check_unsaved_changes_empty_document_returns_true(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = True
+    mock_parser_host.view_3d_manager.current_mol = None
+    assert not sm.data.atoms
+    assert sm.check_unsaved_changes() is True
+
+
+def test_check_unsaved_changes_no_choice_returns_true(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = True
+    _add_atom(mock_parser_host, "C", 0, 0)
+    with patch(
+        "moleditpy.ui.app_state.QMessageBox.question",
+        return_value=QMessageBox.StandardButton.No,
+    ):
+        assert sm.check_unsaved_changes() is True
+
+
+def test_check_unsaved_changes_cancel_returns_false(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = True
+    _add_atom(mock_parser_host, "C", 0, 0)
+    with patch(
+        "moleditpy.ui.app_state.QMessageBox.question",
+        return_value=QMessageBox.StandardButton.Cancel,
+    ):
+        assert sm.check_unsaved_changes() is False
+
+
+def test_check_unsaved_changes_save_untitled_uses_save_as(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = True
+    _add_atom(mock_parser_host, "C", 0, 0)
+    mock_parser_host.init_manager.current_file_path = ""
+
+    def _mark_saved(*a, **k):
+        sm.has_unsaved_changes = False
+
+    mock_parser_host.io_manager.save_project_as.side_effect = _mark_saved
+    with patch(
+        "moleditpy.ui.app_state.QMessageBox.question",
+        return_value=QMessageBox.StandardButton.Yes,
+    ):
+        result = sm.check_unsaved_changes()
+
+    mock_parser_host.io_manager.save_project_as.assert_called_once()
+    mock_parser_host.io_manager.save_project.assert_not_called()
+    assert result is True  # save cleared the dirty flag
+
+
+def test_check_unsaved_changes_save_existing_pmeprj_uses_save(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = True
+    _add_atom(mock_parser_host, "C", 0, 0)
+    mock_parser_host.init_manager.current_file_path = "C:/tmp/mol.pmeprj"
+    with patch(
+        "moleditpy.ui.app_state.QMessageBox.question",
+        return_value=QMessageBox.StandardButton.Yes,
+    ):
+        result = sm.check_unsaved_changes()
+
+    mock_parser_host.io_manager.save_project.assert_called_once()
+    mock_parser_host.io_manager.save_project_as.assert_not_called()
+    # Dirty flag never cleared (mock save is a no-op) -> save deemed unsuccessful
+    assert result is False
+
+
+# =============================================================================
+# update_window_title
+# =============================================================================
+
+
+def test_update_window_title_untitled_dirty_marks_asterisk(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = True
+    mock_parser_host.init_manager.current_file_path = ""
+    sm.update_window_title()
+    title = mock_parser_host.setWindowTitle.call_args.args[0]
+    assert title.startswith("*Untitled - MoleditPy")
+
+
+def test_update_window_title_named_file_clean(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = False
+    mock_parser_host.init_manager.current_file_path = "C:/tmp/benzene.pmeprj"
+    sm.update_window_title()
+    title = mock_parser_host.setWindowTitle.call_args.args[0]
+    assert title.startswith("benzene.pmeprj - MoleditPy")
+    assert not title.startswith("*")
+
+
+def test_update_window_title_named_file_dirty_marks_asterisk(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = True
+    mock_parser_host.init_manager.current_file_path = "C:/tmp/benzene.pmeprj"
+    sm.update_window_title()
+    title = mock_parser_host.setWindowTitle.call_args.args[0]
+    assert title.startswith("*benzene.pmeprj - MoleditPy")
+
+
+# =============================================================================
+# update_realtime_info
+# =============================================================================
+
+
+def test_update_realtime_info_empty_clears_label(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    sm.update_realtime_info()
+    mock_parser_host.update_formula_label.assert_called_with("")
+
+
+def test_update_realtime_info_reports_formula_and_atom_count(mock_parser_host):
+    sm = _make_state_manager(mock_parser_host)
+    c1 = _add_atom(mock_parser_host, "C", 0, 0)
+    o1 = _add_atom(mock_parser_host, "O", 50, 0)
+    _add_bond(mock_parser_host, c1, o1, order=1)
+    sm.update_realtime_info()
+    msg = mock_parser_host.update_formula_label.call_args.args[0]
+    assert "Formula:" in msg and "Atoms:" in msg
