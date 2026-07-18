@@ -485,3 +485,166 @@ class TestDoubleClickChargeRadical:
             scene.mouseDoubleClickEvent(_event(QPointF(100, 100)))
 
         assert item.charge == -1
+
+
+# ---------------------------------------------------------------------------
+# restore_atoms_and_bonds — undo/redo dict-of-dicts restoration
+# ---------------------------------------------------------------------------
+
+
+class TestRestoreAtomsAndBonds:
+    def test_restores_atoms_and_bonds_from_state(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        raw_atoms = {
+            1: {"symbol": "C", "pos": (0.0, 0.0), "charge": 0, "radical": 0},
+            2: {"symbol": "O", "pos": (50.0, 0.0), "charge": -1, "radical": 1},
+        }
+        raw_bonds = {(1, 2): {"order": 2, "stereo": 0}}
+
+        scene.restore_atoms_and_bonds(raw_atoms, raw_bonds)
+
+        assert set(scene.atom_items.keys()) == {1, 2}
+        assert (1, 2) in scene.bond_items
+        assert scene.data.atoms[2]["charge"] == -1
+        assert scene.data.atoms[2]["radical"] == 1
+        assert scene.data.bonds[(1, 2)]["order"] == 2
+        # Bond registered on both endpoint items
+        assert len(scene.atom_items[1].bonds) == 1
+        assert len(scene.atom_items[2].bonds) == 1
+
+    def test_skips_bond_when_endpoint_atom_missing(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        raw_atoms = {1: {"symbol": "C", "pos": (0.0, 0.0)}}
+        raw_bonds = {(1, 99): {"order": 1, "stereo": 0}}
+
+        scene.restore_atoms_and_bonds(raw_atoms, raw_bonds)
+
+        assert scene.bond_items == {}
+        assert 1 in scene.atom_items
+
+
+# ---------------------------------------------------------------------------
+# restore_atoms_and_bonds_from_json — PMEPRJ list-of-dicts restoration
+# ---------------------------------------------------------------------------
+
+
+class TestRestoreFromJson:
+    def test_restores_from_json_lists(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        atoms_2d = [
+            {"id": 1, "symbol": "C", "x": 0.0, "y": 0.0},
+            {"id": 2, "symbol": "N", "x": 50.0, "y": 0.0, "charge": 1},
+        ]
+        bonds_2d = [{"atom1": 1, "atom2": 2, "order": 1, "stereo": 2}]
+
+        scene.restore_atoms_and_bonds_from_json(atoms_2d, bonds_2d)
+
+        assert set(scene.atom_items.keys()) == {1, 2}
+        assert scene.data.atoms[2]["charge"] == 1
+        assert scene.data.bonds[(1, 2)]["stereo"] == 2
+        assert (1, 2) in scene.bond_items
+
+    def test_json_skips_bond_with_unknown_atom(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        atoms_2d = [{"id": 1, "symbol": "C", "x": 0.0, "y": 0.0}]
+        bonds_2d = [{"atom1": 1, "atom2": 7, "order": 1}]
+
+        scene.restore_atoms_and_bonds_from_json(atoms_2d, bonds_2d)
+
+        assert scene.bond_items == {}
+
+
+# ---------------------------------------------------------------------------
+# update_ring_info_2d
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateRingInfo2D:
+    def test_noop_when_no_atoms(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.update_ring_info_2d()  # must not raise
+
+    def test_marks_ring_bonds_and_sets_center(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        # Cyclopropane: three carbons forming a triangle
+        raw_atoms = {
+            1: {"symbol": "C", "pos": (0.0, 0.0)},
+            2: {"symbol": "C", "pos": (50.0, 0.0)},
+            3: {"symbol": "C", "pos": (25.0, 43.0)},
+        }
+        raw_bonds = {
+            (1, 2): {"order": 1, "stereo": 0},
+            (2, 3): {"order": 1, "stereo": 0},
+            (1, 3): {"order": 1, "stereo": 0},
+        }
+        scene.restore_atoms_and_bonds(raw_atoms, raw_bonds)
+
+        scene.update_ring_info_2d()
+
+        assert all(b.is_in_ring for b in scene.bond_items.values())
+        assert all(b.ring_center is not None for b in scene.bond_items.values())
+
+    def test_acyclic_bonds_not_marked(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        raw_atoms = {
+            1: {"symbol": "C", "pos": (0.0, 0.0)},
+            2: {"symbol": "C", "pos": (50.0, 0.0)},
+        }
+        raw_bonds = {(1, 2): {"order": 1, "stereo": 0}}
+        scene.restore_atoms_and_bonds(raw_atoms, raw_bonds)
+
+        scene.update_ring_info_2d()
+
+        assert not scene.bond_items[(1, 2)].is_in_ring
+
+
+# ---------------------------------------------------------------------------
+# refresh_mode_state / leaveEvent
+# ---------------------------------------------------------------------------
+
+
+class TestRefreshModeState:
+    def test_updates_template_preview_when_cursor_in_viewport(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.mode = "template_benzene"
+        scene.update_template_preview = MagicMock()
+        view = scene.views()[0]
+        view.isVisible.return_value = True
+        view.viewport().rect().contains.return_value = True
+        view.mapToScene.return_value = QPointF(10, 20)
+
+        scene.refresh_mode_state()
+
+        scene.update_template_preview.assert_called_once_with(QPointF(10, 20))
+
+    def test_no_preview_when_cursor_outside_viewport(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.mode = "template_benzene"
+        scene.update_template_preview = MagicMock()
+        view = scene.views()[0]
+        view.isVisible.return_value = True
+        view.viewport().rect().contains.return_value = False
+
+        scene.refresh_mode_state()
+
+        scene.update_template_preview.assert_not_called()
+
+    def test_no_preview_when_not_template_mode(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.mode = "select"
+        scene.update_template_preview = MagicMock()
+        view = scene.views()[0]
+        view.isVisible.return_value = True
+        view.viewport().rect().contains.return_value = True
+
+        scene.refresh_mode_state()
+
+        scene.update_template_preview.assert_not_called()
+
+
+class TestLeaveEvent:
+    def test_hides_template_preview(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.template_preview = MagicMock()
+        scene.leaveEvent(MagicMock())
+        scene.template_preview.hide.assert_called_once()
