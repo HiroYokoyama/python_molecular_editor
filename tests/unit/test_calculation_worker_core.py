@@ -441,3 +441,95 @@ def test_optimize_only_mmff_unsupported_emits_error():
     assert len(error_captor.emitted_values) > 0, "Error signal expected"
     err_msg = str(error_captor.emitted_values[0])
     assert "MMFF" in err_msg.upper() or "failed" in err_msg.lower()
+
+
+# ---------------------------------------------------------------------------
+# Pure module-level helpers
+# ---------------------------------------------------------------------------
+
+from moleditpy.ui.calculation_worker import (
+    _resolve_method_key,
+    _parse_explicit_stereo,
+    _apply_explicit_stereo,
+    _iterative_optimize_obabel,
+)
+
+
+@pytest.mark.parametrize(
+    "method, expected",
+    [
+        ("UFF", "UFF"),
+        ("uff optimize", "UFF"),
+        ("GAFF", "GAFF"),
+        ("Ghemical", "GHEMICAL"),
+        ("MMFF94", "MMFF94"),
+        ("MMFF94S", "MMFF94s"),
+        ("mmff94s", "MMFF94s"),
+        ("something else", "MMFF94s"),
+    ],
+)
+def test_resolve_method_key(method, expected):
+    assert _resolve_method_key(method) == expected
+
+
+def test_parse_explicit_stereo_z_and_e():
+    mol_block = "\n".join(
+        [
+            "header",
+            "M  CFG  1   2   1",  # bond idx 1 -> Z
+            "M  CFG  1   3   2",  # bond idx 2 -> E
+            "M  END",
+        ]
+    )
+    result = _parse_explicit_stereo(mol_block)
+    assert result == {
+        1: Chem.BondStereo.STEREOZ,
+        2: Chem.BondStereo.STEREOE,
+    }
+
+
+def test_parse_explicit_stereo_ignores_short_line():
+    result = _parse_explicit_stereo("M  CFG  1\nM  END")
+    assert result == {}
+
+
+def test_parse_explicit_stereo_skips_non_integer_fields():
+    # int(parts[3]) raises ValueError -> the line is skipped
+    result = _parse_explicit_stereo("M  CFG  1   x   y")
+    assert result == {}
+
+
+def test_apply_explicit_stereo_sets_double_bond_stereo():
+    mol = Chem.MolFromSmiles("CC=CC")  # double bond at index 1
+    _apply_explicit_stereo(mol, {1: Chem.BondStereo.STEREOZ})
+    bond = mol.GetBondWithIdx(1)
+    assert bond.GetStereo() == Chem.BondStereo.STEREOZ
+    assert bond.GetStereoAtoms()[0] == 0  # methyl carbons chosen as stereo atoms
+    assert bond.GetStereoAtoms()[1] == 3
+
+
+def test_apply_explicit_stereo_ignores_out_of_range_bond():
+    mol = Chem.MolFromSmiles("CC=CC")
+    _apply_explicit_stereo(mol, {99: Chem.BondStereo.STEREOE})  # no such bond
+    assert mol.GetBondWithIdx(1).GetStereo() == Chem.BondStereo.STEREONONE
+
+
+def test_apply_explicit_stereo_skips_single_bond():
+    mol = Chem.MolFromSmiles("CCC")  # only single bonds
+    _apply_explicit_stereo(mol, {0: Chem.BondStereo.STEREOZ})
+    assert mol.GetBondWithIdx(0).GetStereo() == Chem.BondStereo.STEREONONE
+
+
+def test_iterative_optimize_obabel_unavailable_reports_and_returns_false():
+    mol = Chem.MolFromSmiles("CC")
+    AllChem.EmbedMolecule(Chem.AddHs(mol), randomSeed=1)
+    messages = []
+    with patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", False):
+        result = _iterative_optimize_obabel(
+            mol,
+            "UFF",
+            check_halted_cb=lambda: False,
+            safe_status_cb=messages.append,
+        )
+    assert result is False
+    assert any("OpenBabel" in m for m in messages)
