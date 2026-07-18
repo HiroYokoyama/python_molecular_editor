@@ -823,3 +823,286 @@ def test_detect_chemistry_problems_clean_mol_empty(mock_parser_host):
     mol = Chem.MolFromSmiles("CCO")
     problems = editor._detect_chemistry_problems(mol)
     assert problems == {}
+
+
+# ---------------------------------------------------------------------------
+# add_hydrogen_atoms
+# ---------------------------------------------------------------------------
+
+
+def _status_texts(mock_parser_host):
+    return [
+        str(c.args[0])
+        for c in mock_parser_host.statusBar().showMessage.call_args_list
+    ]
+
+
+def test_add_hydrogen_atoms_lone_carbon_adds_four(mock_parser_host):
+    """A lone carbon gains its four implicit hydrogens as new H atoms + bonds."""
+    editor = DummyEditActions(mock_parser_host)
+    editor.scene.create_atom("C", QPointF(0, 0))
+
+    with patch(
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+    ):
+        editor.add_hydrogen_atoms()
+
+    symbols = [a["symbol"] for a in editor.data.atoms.values()]
+    assert symbols.count("H") == 4
+    assert editor.scene.create_bond.call_count == 4
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+    assert any("Added 4 hydrogen atoms." in t for t in _status_texts(mock_parser_host))
+
+
+def test_add_hydrogen_atoms_uses_neighbor_angles(mock_parser_host):
+    """Both carbons of ethane get their three implicit hydrogens (neighbor-gap path)."""
+    editor = DummyEditActions(mock_parser_host)
+    a1 = editor.scene.create_atom("C", QPointF(0, 0))
+    a2 = editor.scene.create_atom("C", QPointF(75, 0))
+    editor.scene.create_bond(
+        editor.scene.atom_items[a1], editor.scene.atom_items[a2]
+    )
+
+    with patch(
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+    ):
+        editor.add_hydrogen_atoms()
+
+    symbols = [a["symbol"] for a in editor.data.atoms.values()]
+    assert symbols.count("H") == 6
+    assert any("Added 6 hydrogen atoms." in t for t in _status_texts(mock_parser_host))
+
+
+def test_add_hydrogen_atoms_no_molecule(mock_parser_host):
+    """With no atoms, to_rdkit_mol yields nothing and a status message is shown."""
+    editor = DummyEditActions(mock_parser_host)
+
+    editor.add_hydrogen_atoms()
+
+    assert any(
+        "No molecule available to compute hydrogens." in t
+        for t in _status_texts(mock_parser_host)
+    )
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
+
+
+def test_add_hydrogen_atoms_no_implicit_h(mock_parser_host):
+    """A saturated O=O has no implicit hydrogens to add."""
+    editor = DummyEditActions(mock_parser_host)
+    o1 = editor.scene.create_atom("O", QPointF(0, 0))
+    o2 = editor.scene.create_atom("O", QPointF(50, 0))
+    editor.scene.create_bond(
+        editor.scene.atom_items[o1], editor.scene.atom_items[o2], bond_order=2
+    )
+
+    with patch(
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+    ):
+        editor.add_hydrogen_atoms()
+
+    assert [a["symbol"] for a in editor.data.atoms.values()].count("H") == 0
+    assert any(
+        "No implicit hydrogens found to add." in t
+        for t in _status_texts(mock_parser_host)
+    )
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# remove_hydrogen_atoms
+# ---------------------------------------------------------------------------
+
+
+def test_remove_hydrogen_atoms_deletes_and_counts(mock_parser_host):
+    """Deleting hydrogens (via a real delete side-effect) reports the exact count."""
+    editor = DummyEditActions(mock_parser_host)
+    c = editor.scene.create_atom("C", QPointF(0, 0))
+    h1 = editor.scene.create_atom("H", QPointF(75, 0))
+    h2 = editor.scene.create_atom("H", QPointF(-75, 0))
+    editor.scene.create_bond(editor.scene.atom_items[c], editor.scene.atom_items[h1])
+    editor.scene.create_bond(editor.scene.atom_items[c], editor.scene.atom_items[h2])
+
+    def fake_delete(items):
+        for it in items:
+            editor.data.atoms.pop(it.atom_id, None)
+            editor.scene.atom_items.pop(it.atom_id, None)
+        return True
+
+    editor.scene.delete_items.side_effect = fake_delete
+
+    with patch(
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+    ):
+        editor.remove_hydrogen_atoms()
+
+    assert [a["symbol"] for a in editor.data.atoms.values()] == ["C"]
+    assert any(
+        "Removed 2 hydrogen atoms." in t for t in _status_texts(mock_parser_host)
+    )
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+
+
+def test_remove_hydrogen_atoms_none_present(mock_parser_host):
+    """No hydrogen atoms present yields an informative no-op message."""
+    editor = DummyEditActions(mock_parser_host)
+    editor.scene.create_atom("C", QPointF(0, 0))
+    editor.scene.create_atom("O", QPointF(50, 0))
+
+    with patch(
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+    ):
+        editor.remove_hydrogen_atoms()
+
+    assert any(
+        "No hydrogen atoms found to remove." in t
+        for t in _status_texts(mock_parser_host)
+    )
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
+
+
+def test_remove_hydrogen_atoms_count_unknown(mock_parser_host):
+    """delete_items succeeds but data is unchanged -> 'count unknown' branch."""
+    editor = DummyEditActions(mock_parser_host)
+    editor.scene.create_atom("H", QPointF(0, 0))
+    editor.scene.delete_items.return_value = True
+
+    with patch(
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+    ):
+        editor.remove_hydrogen_atoms()
+
+    assert any(
+        "Removed hydrogen atoms (count unknown)." in t
+        for t in _status_texts(mock_parser_host)
+    )
+
+
+def test_remove_hydrogen_atoms_all_deletions_fail(mock_parser_host):
+    """When every deletion attempt fails, the failure message is shown."""
+    editor = DummyEditActions(mock_parser_host)
+    editor.scene.create_atom("H", QPointF(0, 0))
+    editor.scene.delete_items.return_value = False
+
+    with patch(
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+    ):
+        editor.remove_hydrogen_atoms()
+
+    assert any(
+        "Failed to remove hydrogen atoms or none found." in t
+        for t in _status_texts(mock_parser_host)
+    )
+
+
+# ---------------------------------------------------------------------------
+# clean_up_2d_structure
+# ---------------------------------------------------------------------------
+
+
+def test_clean_up_2d_structure_success(mock_parser_host):
+    """A valid molecule is re-laid-out: positions are updated and undo is pushed."""
+    editor = DummyEditActions(mock_parser_host)
+    a1 = editor.scene.create_atom("C", QPointF(0, 0))
+    a2 = editor.scene.create_atom("C", QPointF(10, 0))
+    editor.scene.create_bond(
+        editor.scene.atom_items[a1], editor.scene.atom_items[a2]
+    )
+    mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+    editor.scene.bond_items = {}
+
+    with patch(
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+    ):
+        editor.clean_up_2d_structure()
+
+    assert editor.scene.atom_items[a1].setPos.called
+    assert any(
+        "2D structure optimization successful." in t
+        for t in _status_texts(mock_parser_host)
+    )
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+    mock_parser_host.init_manager.view_2d.setFocus.assert_called()
+
+
+def test_clean_up_2d_structure_no_atoms(mock_parser_host):
+    """Cleanup with an empty editor reports 'No atoms to optimize'."""
+    editor = DummyEditActions(mock_parser_host)
+
+    editor.clean_up_2d_structure()
+
+    assert any(
+        "Error: No atoms to optimize." in t for t in _status_texts(mock_parser_host)
+    )
+    editor.scene.clear_all_problem_flags.assert_called()
+
+
+def test_clean_up_2d_structure_rdkit_conversion_fails(mock_parser_host):
+    """An RDKit-unconvertible symbol routes to the chemistry-problem fallback."""
+    editor = DummyEditActions(mock_parser_host)
+    editor.scene.create_atom("Xx", QPointF(0, 0))
+
+    editor.clean_up_2d_structure()
+
+    mock_parser_host.compute_manager.check_chemistry_problems_fallback.assert_called_once()
+
+
+def test_clean_up_2d_structure_no_positions(mock_parser_host):
+    """When optimize_2d_coords yields nothing, the failure message is shown."""
+    editor = DummyEditActions(mock_parser_host)
+    editor.scene.create_atom("C", QPointF(0, 0))
+
+    with patch(
+        "moleditpy.core.mol_geometry.optimize_2d_coords", return_value={}
+    ):
+        editor.clean_up_2d_structure()
+
+    assert any(
+        "Optimization failed to generate coordinates." in t
+        for t in _status_texts(mock_parser_host)
+    )
+
+
+# ---------------------------------------------------------------------------
+# _apply_ui_h_counts / update_implicit_hydrogens
+# ---------------------------------------------------------------------------
+
+
+def test_apply_ui_h_counts_updates_items(mock_parser_host):
+    """Matching token: implicit-H count and problem flag are written and item.update() runs."""
+    editor = DummyEditActions(mock_parser_host)
+    aid = editor.scene.create_atom("C", QPointF(0, 0))
+    item = editor.scene.atom_items[aid]
+    item.implicit_h_count = 0
+    item.has_problem = False
+    mock_parser_host.ih_update_counter = 7
+
+    with patch(
+        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
+    ):
+        editor._apply_ui_h_counts({aid: 3}, {aid: True}, 7)
+
+    assert item.implicit_h_count == 3
+    assert item.has_problem is True
+    item.update.assert_called()
+
+
+def test_apply_ui_h_counts_stale_token_bails(mock_parser_host):
+    """A stale token aborts before touching any item."""
+    editor = DummyEditActions(mock_parser_host)
+    aid = editor.scene.create_atom("C", QPointF(0, 0))
+    item = editor.scene.atom_items[aid]
+    mock_parser_host.ih_update_counter = 10
+
+    editor._apply_ui_h_counts({aid: 3}, {}, 9)
+
+    item.update.assert_not_called()
+
+
+def test_update_implicit_hydrogens_empty_is_noop(mock_parser_host):
+    """With no atoms, update_implicit_hydrogens returns without scheduling work."""
+    editor = DummyEditActions(mock_parser_host)
+
+    with patch("PyQt6.QtCore.QTimer.singleShot") as single_shot:
+        editor.update_implicit_hydrogens()
+
+    single_shot.assert_not_called()
