@@ -789,6 +789,49 @@ _optimize_only with unsupported MMFF (props=None) emits an error signal, not suc
 - assert len(error_captor.emitted_values) > 0
 - assert 'MMFF' in err_msg.upper() or 'failed' in err_msg.lower()
 
+### test_resolve_method_key
+_No description provided._
+
+- assert _resolve_method_key(method) == expected
+
+### test_parse_explicit_stereo_z_and_e
+_No description provided._
+
+- assert result == {1: Chem.BondStereo.STEREOZ, 2: Chem.BondStereo.STEREOE}
+
+### test_parse_explicit_stereo_ignores_short_line
+_No description provided._
+
+- assert result == {}
+
+### test_parse_explicit_stereo_skips_non_integer_fields
+_No description provided._
+
+- assert result == {}
+
+### test_apply_explicit_stereo_sets_double_bond_stereo
+_No description provided._
+
+- assert bond.GetStereo() == Chem.BondStereo.STEREOZ
+- assert bond.GetStereoAtoms()[0] == 0
+- assert bond.GetStereoAtoms()[1] == 3
+
+### test_apply_explicit_stereo_ignores_out_of_range_bond
+_No description provided._
+
+- assert mol.GetBondWithIdx(1).GetStereo() == Chem.BondStereo.STEREONONE
+
+### test_apply_explicit_stereo_skips_single_bond
+_No description provided._
+
+- assert mol.GetBondWithIdx(0).GetStereo() == Chem.BondStereo.STEREONONE
+
+### test_iterative_optimize_obabel_unavailable_reports_and_returns_false
+_No description provided._
+
+- assert result is False
+- assert any(('OpenBabel' in m for m in messages))
+
 ## tests/unit/test_color_settings_dialog.py
 
 ### test_color_settings_dialog_initialization
@@ -3385,6 +3428,39 @@ _No description provided._
 _No description provided._
 
 - assert any(('Could not determine molecule bounds' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+
+### test_export_2d_svg_nothing_to_export
+_No description provided._
+
+- assert 'Nothing to export.' in _status_messages(mock_parser_host)
+
+### test_export_2d_svg_cancel_file_dialog_writes_nothing
+_No description provided._
+
+- assert list(tmp_path.iterdir()) == []
+
+### test_export_2d_svg_cancel_background_question
+_No description provided._
+
+- assert any(('Export cancelled.' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+
+### test_export_2d_svg_appends_extension_and_hides_non_mol_items
+_No description provided._
+
+- assert (tmp_path / 'drawing.svg').exists()
+- non_mol.hide.assert_called_once()
+- non_mol.setVisible.assert_called_with(True)
+
+### test_export_2d_svg_unresolvable_bounds_reports_and_restores
+_No description provided._
+
+- assert any(('Could not determine molecule bounds' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
+- non_mol.setVisible.assert_called_with(True)
+
+### test_export_2d_svg_reports_render_exception
+_No description provided._
+
+- assert any(('error occurred during SVG export' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
 
 ## tests/unit/test_geometry.py
 

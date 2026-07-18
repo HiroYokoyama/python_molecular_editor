@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **88.33%**
+- **Overall Project Coverage**: **88.50%**
 
 ### Coverage Breakdown
 
@@ -25,7 +25,7 @@
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     81 |      4 |   95.1% |
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    366 |     56 |   84.7% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    238 |     17 |   92.9% |
-| moleditpy\src\moleditpy\ui\calculation_worker.py        |    583 |    102 |   82.5% |
+| moleditpy\src\moleditpy\ui\calculation_worker.py        |    583 |     90 |   84.6% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    166 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    431 |      7 |   98.4% |
 | moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py |    480 |     24 |   95.0% |
@@ -36,7 +36,7 @@
 | moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    268 |     32 |   88.1% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    221 |     32 |   85.5% |
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    821 |    130 |   84.2% |
-| moleditpy\src\moleditpy\ui\export_logic.py              |    520 |    100 |   80.8% |
+| moleditpy\src\moleditpy\ui\export_logic.py              |    520 |     85 |   83.7% |
 | moleditpy\src\moleditpy\ui\geometry_base_dialog.py      |     52 |      1 |   98.1% |
 | moleditpy\src\moleditpy\ui\io_logic.py                  |    694 |     77 |   88.9% |
 | moleditpy\src\moleditpy\ui\main_window.py               |    195 |     13 |   93.3% |
@@ -67,7 +67,7 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     39 |      0 |  100.0% |
-| **TOTAL** | **16187** | **1889** | **88.33%** |
+| **TOTAL** | **16187** | **1862** | **88.50%** |
 
 ## Test Suite Status
 - **Unit tests**: PASSED
