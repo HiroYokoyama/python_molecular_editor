@@ -860,3 +860,101 @@ def test_box_selection_off_restores_style_via_pyvista(make_dialog):
     plotter.disable_picking.assert_called_once()
     assert plotter.iren.style is sentinel
     plotter.interactor.SetInteractorStyle.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# on_rectangle_picked — PyVista box-selection callback
+# ---------------------------------------------------------------------------
+
+
+class _Selection:
+    def __init__(self, viewport):
+        self.viewport = viewport
+
+
+def test_on_rectangle_picked_ignores_object_without_viewport(make_dialog):
+    dlg, _mol, _mw = make_dialog()
+    dlg.selected_atoms.add(3)
+    dlg.on_rectangle_picked(object())  # no .viewport attribute
+    assert dlg.selected_atoms == {3}  # untouched
+
+
+def test_on_rectangle_picked_small_box_clears_selection(make_dialog):
+    dlg, _mol, _mw = make_dialog()
+    dlg.selected_atoms.update({0, 1})
+    with patch.object(type(dlg), "clear_selection") as clear:
+        # 10x10 box is below the 15px click threshold
+        dlg.on_rectangle_picked(_Selection((100, 100, 110, 110)))
+    clear.assert_called_once()
+
+
+def test_on_rectangle_picked_selects_atoms_inside_box(make_dialog):
+    dlg, _mol, mw = make_dialog()
+    renderer = mw.view_3d_manager.plotter.renderer
+    n_atoms = len(mw.view_3d_manager.atom_positions_3d)
+    # Atom 0 maps inside the box; all others map far outside it.
+    display_points = [(50.0, 50.0, 0.0)] + [(9999.0, 9999.0, 0.0)] * (n_atoms - 1)
+    renderer.GetDisplayPoint.side_effect = display_points
+
+    with (
+        patch.object(type(dlg), "show_atom_labels") as show,
+        patch.object(type(dlg), "update_display") as upd,
+    ):
+        dlg.on_rectangle_picked(_Selection((0, 0, 100, 100)))
+
+    assert dlg.selected_atoms == {0}
+    show.assert_called_once()
+    upd.assert_called_once()
+
+
+def test_on_rectangle_picked_no_atoms_inside_box_leaves_selection(make_dialog):
+    dlg, _mol, mw = make_dialog()
+    renderer = mw.view_3d_manager.plotter.renderer
+    n_atoms = len(mw.view_3d_manager.atom_positions_3d)
+    renderer.GetDisplayPoint.side_effect = [(9999.0, 9999.0, 0.0)] * n_atoms
+
+    with (
+        patch.object(type(dlg), "show_atom_labels") as show,
+        patch.object(type(dlg), "update_display"),
+    ):
+        dlg.on_rectangle_picked(_Selection((0, 0, 100, 100)))
+
+    assert dlg.selected_atoms == set()
+    show.assert_not_called()  # nothing added -> no relabel
+
+
+def test_on_rectangle_picked_none_plotter_guard(make_dialog):
+    dlg, _mol, mw = make_dialog()
+    mw.view_3d_manager.plotter = None
+    dlg.on_rectangle_picked(_Selection((0, 0, 100, 100)))  # must not raise
+    assert dlg.selected_atoms == set()
+
+
+# ---------------------------------------------------------------------------
+# reject — restore interactor when closing mid box-selection
+# ---------------------------------------------------------------------------
+
+
+def test_reject_turns_off_active_box_selection(make_dialog):
+    dlg, _mol, _mw = make_dialog()
+    btn = MagicMock()
+    btn.isChecked.return_value = True
+    dlg.widgets["box_select_btn"] = btn
+
+    with patch.object(type(dlg), "toggle_box_selection") as toggle:
+        dlg.reject()
+
+    btn.setChecked.assert_called_once_with(False)
+    toggle.assert_called_once_with(False)
+
+
+def test_reject_when_box_selection_inactive(make_dialog):
+    dlg, _mol, _mw = make_dialog()
+    btn = MagicMock()
+    btn.isChecked.return_value = False
+    dlg.widgets["box_select_btn"] = btn
+
+    with patch.object(type(dlg), "toggle_box_selection") as toggle:
+        dlg.reject()
+
+    toggle.assert_not_called()
