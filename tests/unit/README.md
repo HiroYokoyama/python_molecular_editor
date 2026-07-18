@@ -2,6 +2,10 @@
 
 This directory contains standalone unit tests for the core scientific logic and application modules of MoleditPy.
 
+### A note on `_extended` file names
+
+A few files carry an `_extended` suffix (`test_scene_extended.py`, `test_scene_extended_logic.py`, `test_main_window_export_extended.py`). These are **second-pass coverage files** that test a component already exercised elsewhere; the suffix is historical and there is **no matching base file** (e.g. there is no `test_scene.py`). They are kept as separate files on purpose: each uses a distinct fixture strategy (for example `MockMainWindow(ExportManager, QMainWindow)` vs. the shared `mock_parser_host`), so folding them into the primary file would place two incompatible fixture setups in one module for no functional gain. Add new tests to whichever file already shares your target's fixtures rather than renaming or merging these.
+
 ## Test Descriptions
 
 ### Unit Test Coverage & Logic Justification
@@ -36,7 +40,7 @@ This directory contains standalone unit tests for the core scientific logic and 
 | **`test_main_window_init_coverage.py`** | **Initialization Stability** | Verifies the cold-start stability and registration of core application modules. |
 | **`test_io.py`** | **IOManager File Operations** | Focused unit tests for `IOManager` file I/O entry points. |
 | **`test_scene_advanced.py`** | **Advanced Scene Mouse Interactions** | Verifies advanced `MoleculeScene` mouse interaction sequences. |
-| **`test_scene_extended_logic.py`** | **Scene Extended Logic** | Verifies advanced 2D-scene event handlers.<br>• **E/Z Toggle**: Tests stereo-bond cycling on double bonds.<br>• **Bond Inversion**: Validates the direction-reversal action for wedge/dash bonds.<br>• **Template Preview**: Confirms benzene ghost-preview rotation selects the best angle. |
+| **`test_scene_extended_logic.py`** | **Scene Extended Logic** | Verifies advanced 2D-scene event handlers.<br>• **E/Z Toggle**: Tests stereo-bond cycling on double bonds.<br>• **Bond Inversion**: Validates the direction-reversal action for wedge/dash bonds.<br>• **Template Preview**: Confirms benzene ghost-preview rotation selects the best angle.<br>• **Keyboard Ops**: Covers hover Z/E stereo, 1/2/3 bond-from-atom creation (new vs. snap-to-existing), Delete/Backspace (temp-line abort, atom removal, scene clear), and Space mode-switch vs. select-all.<br>• **Spatial Queries**: Exercises `find_atom_near` and `update_bond_stereo` guard paths. |
 | **`test_about_dialog.py`** | **About Dialog** | Verifies `AboutDialog` initialization and edge-case interactions.<br>• **Initialization**: Confirms title and image label are set correctly.<br>• **Easter Egg**: Validates right-click triggers the hidden `clear_all` + SMILES load sequence.<br>• **Input Guard**: Ensures left-clicks are silently ignored. |
 | **`test_atom_placement_logic.py`** | **Atom Placement Geometry** | Verifies the bond-aware positioning algorithm for new atoms.<br>• **Neighbor Cases**: Tests placement geometry for 0–3 existing neighbors.<br>• **Fallback Logic**: Validates balanced vs. unbalanced geometry selection. |
 | **`test_benzene_placement_shortcut.py`** | **Benzene Shortcut (Key_4)** | Verifies the `Key_4` shortcut behavior for single-click benzene placement.<br>• **Atom/Bond Target**: Confirms one-shot placement when hovering over an atom or bond.<br>• **Empty Space**: Validates mode-switch behavior when no target is under cursor. |
