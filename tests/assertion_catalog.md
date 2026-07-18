@@ -1192,6 +1192,147 @@ _A callback returning False reports failure without redrawing._
 - mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
 - assert compute.last_successful_optimization_method is None
 
+### test_reset_active_threads
+_reset_active_threads empties the tracked thread list._
+
+- assert compute._active_calc_threads == []
+
+### test_safe_disconnect_swallows_runtime_error
+__safe_disconnect must not propagate a RuntimeError from disconnect()._
+
+- signal.disconnect.assert_called_once()
+
+### test_remove_calculating_text_removes_actor
+__remove_calculating_text removes the actor from the plotter renderer._
+
+- plotter.renderer.RemoveActor.assert_called_once_with(actor)
+- assert compute._calculating_text_actor is None
+
+### test_set_optimization_method_ignores_empty
+_An empty method name is a no-op (no status message, no host update)._
+
+- compute.host.set_optimization_method.assert_not_called()
+
+### test_set_optimization_method_checks_matching_action
+_The action matching the chosen method gets checked, others unchecked._
+
+- act_mmff.setChecked.assert_called_with(True)
+- act_uff.setChecked.assert_called_with(False)
+
+### test_toggle_intermolecular_interaction_rdkit
+_Toggling intermolecular interaction stores the flag and reports status._
+
+- assert compute.host.get_settings()['optimize_intermolecular_interaction_rdkit'] is True
+- assert any(('Enabled' in m for m in compute.get_status_messages()))
+
+### test_show_convert_menu_disabled_button_returns
+_show_convert_menu bails out when the convert button is disabled._
+
+- MockMenu.assert_not_called()
+
+### test_show_convert_menu_builds_actions
+_show_convert_menu builds one action per conversion option and execs the menu._
+
+- assert MockAction.call_count == 4
+- menu.exec.assert_called_once()
+
+### test_show_optimize_menu_builds_actions
+_show_optimize_menu mirrors the registered opt3d actions into a temporary menu._
+
+- MockAction.assert_called_once()
+- menu.exec.assert_called_once()
+
+### test_show_optimize_menu_disabled_returns
+_show_optimize_menu bails out when the optimize button is disabled._
+
+- MockMenu.assert_not_called()
+
+### test_trigger_optimize_with_temp_method_schedules_call
+__trigger_optimize_with_temp_method schedules optimize on the event loop._
+
+- mock_timer.assert_called_once()
+
+### test_optimize_3d_structure_no_current_mol
+_optimize_3d_structure reports when there is no 3D molecule at all._
+
+- assert any(('No 3D molecule to optimize' in m for m in compute.get_status_messages()))
+
+### test_handle_chemistry_problems_flags_matched_item
+__handle_chemistry_problems flags the 2D scene item for a problem atom._
+
+- assert item.has_problem is True
+- item.update.assert_called_once()
+
+### test_setup_mol_block_falls_back_to_rdkit
+__setup_mol_block_for_worker uses RDKit generation when data yields no block._
+
+- assert isinstance(block, str) and 'V2000' in block
+
+### test_start_calculation_worker_wires_callbacks
+_The real worker plumbing wires finished/error callbacks and cleans up._
+
+- assert thread in compute._active_calc_threads
+- assert thread not in compute._active_calc_threads
+- thread.quit.assert_called()
+- fin.assert_called_once_with('result')
+- err.assert_called_once_with('boom')
+
+### test_on_calculation_finished_restores_atom_props
+_Original atom ids stored before conversion are re-applied to the result mol._
+
+- assert mol.GetAtomWithIdx(0).GetIntProp('_original_atom_id') == 42
+
+### test_on_calculation_finished_method_lookup_error_is_safe
+_A mol whose property access raises is handled without propagating._
+
+- assert compute.host.view_3d_manager.current_mol is mol
+
+### test_on_calculation_error_active_halt_shows_halted
+_An active worker signalling 'Halt' produces a plain 'Halted' status._
+
+- assert any((m == 'Halted' for m in compute.get_status_messages()))
+
+### test_on_calculation_error_stale_halt_shows_id
+_A stale worker signalling 'Halt' reports it was ignored with its id._
+
+- assert any(('Ignored halted worker' in m for m in compute.get_status_messages()))
+
+### test_on_calculation_error_uff_dialog_exception_is_caught
+_A TypeError from the UFF retry dialog is swallowed and a critical shown._
+
+- mock_critical.assert_called_once()
+
+### test_create_atom_id_mapping_no_mol_returns
+_create_atom_id_mapping is a no-op when there is no current molecule._
+
+- assert compute.host.atom_id_to_rdkit_idx_map == {'stale': 1}
+
+### test_create_atom_id_mapping_builds_map
+_create_atom_id_mapping maps original atom ids to RDKit indices._
+
+- assert compute.host.atom_id_to_rdkit_idx_map[10] == 0
+- assert compute.host.atom_id_to_rdkit_idx_map[20] == 1
+
+### test_update_aromatic_rings_sets_rings
+_update_aromatic_rings detects a benzene ring and forwards it to the scene._
+
+- compute.host.init_manager.scene.set_aromatic_rings.assert_called_once()
+- assert len(rings) == 1 and len(rings[0]) == 6
+
+### test_update_aromatic_rings_none_mol_is_noop
+_update_aromatic_rings returns quietly when no mol can be built._
+
+- compute.host.init_manager.scene.set_aromatic_rings.assert_not_called()
+
+### test_select_connected_atoms_expands_selection
+_select_connected_atoms grows the selection over the bond graph._
+
+- items[aid].setSelected.assert_called_with(True)
+
+### test_select_connected_atoms_no_selection_returns
+_select_connected_atoms is a no-op when nothing is selected._
+
+
 ## tests/unit/test_constants.py
 
 ### test_constants_version_from_metadata
@@ -1480,6 +1621,181 @@ _Closing without touching constraints must not create an undo entry._
 _The undo snapshot must capture the constraints used for the run._
 
 - assert seen_at_push == [[['Distance', [0, 1], 1.54, 100000.0]]]
+
+### TestOptimizationThread.test_run_success_emits_finished
+_No description provided._
+
+- ff.Minimize.assert_called_once_with(maxIts=123)
+- assert done == [True]
+
+### TestOptimizationThread.test_run_error_emits_error
+_No description provided._
+
+- assert errs and 'boom' in errs[0]
+
+### TestForceFieldFallback.test_legacy_uff_substring
+_No description provided._
+
+- assert dlg.ff_combo.currentText() == 'UFF'
+
+### TestForceFieldFallback.test_legacy_mmff94s_substring
+_No description provided._
+
+- assert dlg.ff_combo.currentText() == 'MMFF94s'
+
+### TestForceFieldFallback.test_legacy_mmff94_substring
+_No description provided._
+
+- assert dlg.ff_combo.currentText() == 'MMFF94'
+
+### TestForceFieldFallback.test_non_string_method_is_caught
+_No description provided._
+
+- assert dlg.ff_combo.currentText() in {'MMFF94s', 'MMFF94', 'UFF'}
+
+### TestGuardClauses.test_update_display_more_than_four
+_No description provided._
+
+- assert 'max 4' in dlg.selection_label.text()
+
+### TestGuardClauses.test_add_constraint_with_one_atom_returns
+_No description provided._
+
+- assert dlg.constraints == []
+
+### TestGuardClauses.test_remove_constraint_no_selection_returns
+_No description provided._
+
+- assert len(dlg.constraints) == 1
+
+### TestGuardClauses.test_apply_optimization_no_conformer
+_No description provided._
+
+- mb.warning.assert_called_once()
+
+### TestShowConstraintLabels.test_no_selection_disables_remove
+_No description provided._
+
+- assert not dlg.remove_button.isEnabled()
+
+### TestShowConstraintLabels.test_angle_labels_selected
+_No description provided._
+
+- assert dlg.remove_button.isEnabled()
+- assert dlg.constraint_labels
+
+### TestShowConstraintLabels.test_dihedral_labels_and_3element_fallback
+_No description provided._
+
+- assert dlg.constraint_labels
+
+### TestShowConstraintLabels.test_positions_none_returns_early
+_No description provided._
+
+- assert dlg.constraint_labels == []
+
+### TestShowConstraintLabels.test_clear_labels_suppresses_remove_actor_error
+_No description provided._
+
+- assert dlg.constraint_labels == []
+
+### TestApplyOptimizationPlumbing.test_mmff_with_all_constraint_types
+_No description provided._
+
+- mock_thread.assert_called_once()
+- assert not dlg.optimize_button.isEnabled()
+
+### TestApplyOptimizationPlumbing.test_uff_branch
+_No description provided._
+
+- mock_thread.assert_called_once()
+
+### TestApplyOptimizationPlumbing.test_start_failure_reenables_button
+_No description provided._
+
+- assert dlg.optimize_button.isEnabled()
+
+### TestFinishedEdgePaths.test_3element_constraint_serialised
+_No description provided._
+
+- assert saved[0][3] == pytest.approx(100000.0)
+
+### TestFinishedEdgePaths.test_constraint_sync_error_is_caught
+_No description provided._
+
+- dlg.main_window.view_3d_manager.draw_molecule_3d.assert_called_once()
+
+### TestFinishedEdgePaths.test_outer_draw_error_is_caught
+_No description provided._
+
+
+### TestRejectAndSelectionLabels.test_reject_save_error_is_caught
+_No description provided._
+
+- assert dlg._closed is True
+
+### TestRejectAndSelectionLabels.test_clear_selection
+_No description provided._
+
+- assert dlg.selected_atoms == []
+- assert 'None' in dlg.selection_label.text()
+
+### TestRejectAndSelectionLabels.test_show_selection_labels_with_real_positions
+_No description provided._
+
+- assert dlg.selection_labels
+
+### TestRejectAndSelectionLabels.test_show_selection_labels_no_positions
+_No description provided._
+
+- assert dlg.selection_labels == []
+
+### TestCellChangedBranches.test_missing_item_returns
+_No description provided._
+
+
+### TestCellChangedBranches.test_3element_force_column_edit
+_No description provided._
+
+- assert len(dlg.constraints[0]) == 4
+- assert dlg.constraints[0][3] == pytest.approx(30000.0)
+
+### TestCellChangedBranches.test_invalid_angle_value_reverts_with_2dp
+_No description provided._
+
+- assert dlg.constraints[0][2] == pytest.approx(orig)
+- assert dlg.constraint_table.item(0, 2).text() == f'{orig:.2f}'
+
+### TestCellChangedBranches.test_invalid_force_value_reverts
+_No description provided._
+
+- assert dlg.constraints[0][3] == pytest.approx(orig_force)
+- assert dlg.constraint_table.item(0, 3).text() == f'{orig_force:.2e}'
+
+### TestCellChangedBranches.test_index_error_when_no_constraint
+_No description provided._
+
+- assert dlg.constraints == []
+
+### TestKeyPressEvent.test_delete_removes_selected
+_No description provided._
+
+- assert dlg.constraints == []
+
+### TestKeyPressEvent.test_backspace_removes_selected
+_No description provided._
+
+- assert dlg.constraints == []
+
+### TestKeyPressEvent.test_enter_triggers_optimize
+_No description provided._
+
+- mock_thread.assert_called_once()
+
+### TestKeyPressEvent.test_other_key_falls_through
+_No description provided._
+
+- assert dlg.constraints == []
 
 ## tests/unit/test_custom_interactor_style.py
 
@@ -2720,6 +3036,97 @@ _No description provided._
 _No description provided._
 
 - assert problems == {}
+
+### test_add_hydrogen_atoms_lone_carbon_adds_four
+_A lone carbon gains its four implicit hydrogens as new H atoms + bonds._
+
+- assert symbols.count('H') == 4
+- assert editor.scene.create_bond.call_count == 4
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+- assert any(('Added 4 hydrogen atoms.' in t for t in _status_texts(mock_parser_host)))
+
+### test_add_hydrogen_atoms_uses_neighbor_angles
+_Both carbons of ethane get their three implicit hydrogens (neighbor-gap path)._
+
+- assert symbols.count('H') == 6
+- assert any(('Added 6 hydrogen atoms.' in t for t in _status_texts(mock_parser_host)))
+
+### test_add_hydrogen_atoms_no_molecule
+_With no atoms, to_rdkit_mol yields nothing and a status message is shown._
+
+- assert any(('No molecule available to compute hydrogens.' in t for t in _status_texts(mock_parser_host)))
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
+
+### test_add_hydrogen_atoms_no_implicit_h
+_A saturated O=O has no implicit hydrogens to add._
+
+- assert [a['symbol'] for a in editor.data.atoms.values()].count('H') == 0
+- assert any(('No implicit hydrogens found to add.' in t for t in _status_texts(mock_parser_host)))
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
+
+### test_remove_hydrogen_atoms_deletes_and_counts
+_Deleting hydrogens (via a real delete side-effect) reports the exact count._
+
+- assert [a['symbol'] for a in editor.data.atoms.values()] == ['C']
+- assert any(('Removed 2 hydrogen atoms.' in t for t in _status_texts(mock_parser_host)))
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+
+### test_remove_hydrogen_atoms_none_present
+_No hydrogen atoms present yields an informative no-op message._
+
+- assert any(('No hydrogen atoms found to remove.' in t for t in _status_texts(mock_parser_host)))
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
+
+### test_remove_hydrogen_atoms_count_unknown
+_delete_items succeeds but data is unchanged -> 'count unknown' branch._
+
+- assert any(('Removed hydrogen atoms (count unknown).' in t for t in _status_texts(mock_parser_host)))
+
+### test_remove_hydrogen_atoms_all_deletions_fail
+_When every deletion attempt fails, the failure message is shown._
+
+- assert any(('Failed to remove hydrogen atoms or none found.' in t for t in _status_texts(mock_parser_host)))
+
+### test_clean_up_2d_structure_success
+_A valid molecule is re-laid-out: positions are updated and undo is pushed._
+
+- assert editor.scene.atom_items[a1].setPos.called
+- assert any(('2D structure optimization successful.' in t for t in _status_texts(mock_parser_host)))
+- mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+- mock_parser_host.init_manager.view_2d.setFocus.assert_called()
+
+### test_clean_up_2d_structure_no_atoms
+_Cleanup with an empty editor reports 'No atoms to optimize'._
+
+- assert any(('Error: No atoms to optimize.' in t for t in _status_texts(mock_parser_host)))
+- editor.scene.clear_all_problem_flags.assert_called()
+
+### test_clean_up_2d_structure_rdkit_conversion_fails
+_An RDKit-unconvertible symbol routes to the chemistry-problem fallback._
+
+- mock_parser_host.compute_manager.check_chemistry_problems_fallback.assert_called_once()
+
+### test_clean_up_2d_structure_no_positions
+_When optimize_2d_coords yields nothing, the failure message is shown._
+
+- assert any(('Optimization failed to generate coordinates.' in t for t in _status_texts(mock_parser_host)))
+
+### test_apply_ui_h_counts_updates_items
+_Matching token: implicit-H count and problem flag are written and item.update() runs._
+
+- assert item.implicit_h_count == 3
+- assert item.has_problem is True
+- item.update.assert_called()
+
+### test_apply_ui_h_counts_stale_token_bails
+_A stale token aborts before touching any item._
+
+- item.update.assert_not_called()
+
+### test_update_implicit_hydrogens_empty_is_noop
+_With no atoms, update_implicit_hydrogens returns without scheduling work._
+
+- single_shot.assert_not_called()
 
 ## tests/unit/test_export_logic.py
 
@@ -8857,6 +9264,118 @@ _No description provided._
 
 - assert view3d.current_atom_info_labels is None
 - assert view3d.atom_label_legend_names == []
+
+### test_apply_3d_settings_orthographic_sets_parallel_projection
+_No description provided._
+
+- cam.SetParallelProjection.assert_called_once_with(True)
+
+### test_apply_3d_settings_hides_axes_when_disabled
+_No description provided._
+
+- view3d.plotter.hide_axes.assert_called_once()
+- view3d.plotter.set_background.assert_called_with('#222222')
+
+### test_apply_3d_settings_redraw_true_draws_molecule
+_No description provided._
+
+- draw.assert_called_once_with(view3d.current_mol)
+
+### test_apply_3d_settings_redraw_false_skips_draw
+_No description provided._
+
+- draw.assert_not_called()
+
+### test_apply_3d_settings_resets_camera_only_once
+_No description provided._
+
+- view3d.plotter.reset_camera.assert_not_called()
+- assert view3d._camera_initialized is True
+
+### test_apply_3d_settings_axes_on_builds_orientation_widget
+_No description provided._
+
+- mock_vtk.vtkOrientationMarkerWidget.assert_called_once()
+- assert view3d.axes_widget is not None
+
+### test_update_chiral_labels_clears_when_disabled
+_No description provided._
+
+- assert all((it.chiral_label is None for it in items.values()))
+- mock_parser_host.init_manager.scene.update.assert_called()
+
+### test_update_chiral_labels_returns_when_no_current_mol
+_No description provided._
+
+- assert items[1].chiral_label is None
+
+### test_update_chiral_labels_assigns_rs_to_matching_items
+_No description provided._
+
+- assert items[55].chiral_label in ('R', 'S')
+
+### test_toggle_chiral_labels_display_on_redraws_and_reports
+_No description provided._
+
+- assert view3d.show_chiral_labels is True
+- draw.assert_called_once()
+- assert 'Chiral labels' in str(mock_parser_host.statusBar().showMessage.call_args.args[0])
+
+### test_toggle_chiral_labels_display_off_reports_disabled
+_No description provided._
+
+- assert view3d.show_chiral_labels is False
+- mock_parser_host.statusBar().showMessage.assert_called_with('Chiral labels disabled.')
+
+### test_toggle_atom_info_same_mode_turns_off
+_No description provided._
+
+- assert view3d.atom_info_display_mode is None
+- base_menu.setEnabled.assert_called_with(False)
+- mock_parser_host.statusBar().showMessage.assert_called_with('Atom info display disabled.')
+
+### test_toggle_atom_info_index_mode_enables_base_menu
+_No description provided._
+
+- assert view3d.atom_info_display_mode == 'rdkit_index'
+- base_menu.setEnabled.assert_called_with(True)
+- view3d.plotter.render.assert_called()
+
+### test_toggle_atom_info_coords_mode_disables_base_menu
+_No description provided._
+
+- assert view3d.atom_info_display_mode == 'coords'
+- base_menu.setEnabled.assert_called_with(False)
+
+### test_set_atom_index_base_refreshes_when_index_mode_active
+_No description provided._
+
+- assert view3d.atom_index_base == 1
+- show.assert_called_once()
+- view3d.plotter.render.assert_called()
+
+### test_set_atom_index_base_no_refresh_when_no_index_mode
+_No description provided._
+
+- assert view3d.atom_index_base == 0
+- show.assert_not_called()
+
+### test_menu_state_clears_original_id_mode_when_ids_absent
+_No description provided._
+
+- assert view3d.atom_info_display_mode is None
+- clear.assert_called_once()
+
+### test_menu_state_clears_xyz_mode_when_not_xyz_derived
+_No description provided._
+
+- assert view3d.atom_info_display_mode is None
+- clear.assert_called_once()
+
+### test_menu_state_keeps_original_id_mode_when_ids_present
+_No description provided._
+
+- assert view3d.atom_info_display_mode == 'original_id'
 
 ## tests/unit/test_worker_robustness.py
 
