@@ -648,3 +648,112 @@ class TestLeaveEvent:
         scene.template_preview = MagicMock()
         scene.leaveEvent(MagicMock())
         scene.template_preview.hide.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# mousePressEvent — right-button mode handlers
+# ---------------------------------------------------------------------------
+
+
+def _rclick(pos=QPointF(10, 10)):
+    return _event(pos=pos, button=Qt.MouseButton.RightButton)
+
+
+class TestRightClickPress:
+    def test_radical_mode_resets_radical(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.mode = "radical"
+        aid = scene.create_atom("C", QPointF(10, 10))
+        item = scene.atom_items[aid]
+        item.radical = 2
+        scene.data.atoms[aid]["radical"] = 2
+
+        ev = _rclick()
+        with patch.object(MoleculeScene, "itemAt", return_value=item):
+            scene.mousePressEvent(ev)
+
+        assert item.radical == 0
+        assert scene.data.atoms[aid]["radical"] == 0
+        ev.accept.assert_called_once()
+
+    def test_charge_mode_resets_charge(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.mode = "charge_plus"
+        aid = scene.create_atom("N", QPointF(10, 10))
+        item = scene.atom_items[aid]
+        item.charge = 1
+        scene.data.atoms[aid]["charge"] = 1
+
+        ev = _rclick()
+        with patch.object(MoleculeScene, "itemAt", return_value=item):
+            scene.mousePressEvent(ev)
+
+        assert item.charge == 0
+        assert scene.data.atoms[aid]["charge"] == 0
+
+    def test_bond25_right_click_clears_ez_label(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.mode = "bond_2_5"
+        a1 = scene.create_atom("C", QPointF(0, 0))
+        a2 = scene.create_atom("C", QPointF(50, 0))
+        scene.create_bond(scene.atom_items[a1], scene.atom_items[a2], bond_order=2)
+        bond = scene.bond_items[(a1, a2)]
+        bond.order = 2
+        bond.stereo = 3  # currently Z
+        bond.set_stereo = MagicMock()
+        scene.data.bonds[(a1, a2)]["stereo"] = 3
+
+        ev = _rclick()
+        with patch.object(MoleculeScene, "itemAt", return_value=bond):
+            scene.mousePressEvent(ev)
+
+        bond.set_stereo.assert_called_once_with(0)
+        assert scene.data.bonds[(a1, a2)]["stereo"] == 0
+        mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+
+    def test_delete_mode_right_click_removes_atom(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.mode = "delete"
+        aid = scene.create_atom("C", QPointF(10, 10))
+        item = scene.atom_items[aid]
+
+        ev = _rclick()
+        with (
+            patch.object(MoleculeScene, "itemAt", return_value=item),
+            patch.object(scene, "delete_items", return_value=True) as del_items,
+        ):
+            scene.mousePressEvent(ev)
+
+        del_items.assert_called_once()
+        assert item in del_items.call_args.args[0]
+        mock_parser_host.edit_actions_manager.push_undo_state.assert_called_once()
+
+    def test_right_click_multi_selection_deletes_all(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.mode = "delete"
+        a1 = scene.create_atom("C", QPointF(0, 0))
+        a2 = scene.create_atom("C", QPointF(50, 0))
+        it1, it2 = scene.atom_items[a1], scene.atom_items[a2]
+        scene.selectedItems = MagicMock(return_value=[it1, it2])
+
+        ev = _rclick()
+        with (
+            patch.object(MoleculeScene, "itemAt", return_value=it1),
+            patch.object(scene, "delete_items", return_value=True) as del_items,
+        ):
+            scene.mousePressEvent(ev)
+
+        deleted = del_items.call_args.args[0]
+        assert it1 in deleted and it2 in deleted
+        ev.accept.assert_called_once()
+
+    def test_right_click_empty_space_is_noop(self, mock_parser_host):
+        scene = _scene(mock_parser_host)
+        scene.mode = "delete"
+
+        ev = _rclick()
+        with patch.object(MoleculeScene, "itemAt", return_value=None):
+            scene.mousePressEvent(ev)
+
+        ev.accept.assert_not_called()
+        mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
