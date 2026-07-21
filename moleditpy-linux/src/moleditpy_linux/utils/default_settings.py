@@ -19,6 +19,8 @@ DEFAULT_SETTINGS = {
     "specular_power": 20,
     "light_intensity": 1.0,
     "show_3d_axes": True,
+    # Camera rotation speed multiplier for the 3D scene (window-size independent).
+    "mouse_rotation_sensitivity": 1.0,
     # --- 3D Model Parameters (Ball and Stick) ---
     "ball_stick_atom_scale": 1.0,
     "ball_stick_bond_radius": 0.1,

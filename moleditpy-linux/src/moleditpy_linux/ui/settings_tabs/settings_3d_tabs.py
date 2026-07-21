@@ -78,6 +78,16 @@ class Settings3DSceneTab(SettingsTabBase):
         self.projection_combo.addItems(["Perspective", "Orthographic"])
         form_layout.addRow("Projection Mode:", self.projection_combo)
 
+        # Camera rotation speed (0.10x–3.00x). Speed is normalized to a fixed
+        # reference canvas size, so it stays constant regardless of window size.
+        self.rotation_sens_slider, self.rotation_sens_label = self._create_slider(
+            10, 300, 100.0
+        )
+        form_layout.addRow(
+            "Mouse Rotation Speed:",
+            self._wrap_layout(self.rotation_sens_slider, self.rotation_sens_label),
+        )
+
     def _select_color(self) -> None:
         color = QColorDialog.getColor(QColor(self.current_bg_color), self)
         if color.isValid():
@@ -111,6 +121,9 @@ class Settings3DSceneTab(SettingsTabBase):
         if idx >= 0:
             self.projection_combo.setCurrentIndex(idx)
 
+        sens_val = settings_dict.get("mouse_rotation_sensitivity", 1.0)
+        self.rotation_sens_slider.setValue(int(sens_val * 100))
+
     def get_settings(self) -> dict[str, Any]:
         return {
             "background_color": self.current_bg_color,
@@ -120,6 +133,7 @@ class Settings3DSceneTab(SettingsTabBase):
             "specular": self.specular_slider.value() / 100.0,
             "specular_power": self.spec_power_slider.value(),
             "projection_mode": self.projection_combo.currentText(),
+            "mouse_rotation_sensitivity": self.rotation_sens_slider.value() / 100.0,
         }
 
 
