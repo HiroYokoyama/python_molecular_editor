@@ -1,6 +1,7 @@
 """Unit tests for CustomInteractorStyle 3D event handling."""
 
 import numpy as np
+import pytest
 
 from unittest.mock import MagicMock, patch
 from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
@@ -850,3 +851,57 @@ def test_reset_interactor_state_without_main_window(app):
     style.reset_interactor_state()  # must not raise
 
     assert style._is_dragging_atom is False
+
+
+def _rotation_style(sensitivity=1.0, motion_factor=10.0):
+    """A style wired for _rotate_size_independent with a fake camera."""
+    host = MagicMock()
+    host.get_settings.return_value = {"mouse_rotation_sensitivity": sensitivity}
+    style = CustomInteractorStyle(host)
+
+    camera = MagicMock()
+    renderer = MagicMock()
+    renderer.GetActiveCamera.return_value = camera
+    interactor = MagicMock()
+    interactor.GetEventPosition.return_value = (130, 120)
+    interactor.GetLastEventPosition.return_value = (100, 100)  # dx=30, dy=20
+    interactor.GetLightFollowCamera.return_value = False
+
+    style.GetCurrentRenderer = MagicMock(return_value=renderer)
+    style.GetInteractor = MagicMock(return_value=interactor)
+    style.GetMotionFactor = MagicMock(return_value=motion_factor)
+    style.GetAutoAdjustCameraClippingRange = MagicMock(return_value=True)
+    return style, camera
+
+
+def test_rotation_speed_is_window_size_independent(app):
+    """The applied azimuth/elevation depend only on mouse delta, motion factor,
+    sensitivity and a fixed reference size — never on the live render size."""
+    from moleditpy.ui.custom_interactor_style import _ROTATION_REFERENCE_SIZE
+
+    style, camera = _rotation_style(sensitivity=1.0, motion_factor=10.0)
+    style._rotate_size_independent()
+
+    delta = -20.0 / _ROTATION_REFERENCE_SIZE * 10.0 * 1.0
+    camera.Azimuth.assert_called_once_with(30 * delta)
+    camera.Elevation.assert_called_once_with(20 * delta)
+    camera.OrthogonalizeViewUp.assert_called_once()
+
+
+def test_rotation_speed_scales_with_sensitivity(app):
+    """Doubling the sensitivity setting doubles the rotation applied."""
+    s1, cam1 = _rotation_style(sensitivity=1.0)
+    s1._rotate_size_independent()
+    s2, cam2 = _rotation_style(sensitivity=2.0)
+    s2._rotate_size_independent()
+
+    az1 = cam1.Azimuth.call_args[0][0]
+    az2 = cam2.Azimuth.call_args[0][0]
+    assert az2 == pytest.approx(az1 * 2.0)
+
+
+def test_rotation_handles_missing_renderer(app):
+    """No renderer yet (early startup) must not raise."""
+    style, _ = _rotation_style()
+    style.GetCurrentRenderer = MagicMock(return_value=None)
+    style._rotate_size_independent()  # must not raise

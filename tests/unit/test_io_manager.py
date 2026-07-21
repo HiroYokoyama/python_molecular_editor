@@ -552,3 +552,210 @@ class TestPromptForChargeInlineValidation:
             le.text.return_value = "-2"
             validator()
             dlg.accept.assert_called_once()
+
+
+# ===========================================================================
+# Tests for XYZ dummy/pseudo-atom handling (any XYZ must load cleanly)
+# ===========================================================================
+
+
+class TestXyzDummyAtoms:
+    """A dummy/pseudo atom label must map to the RDKit wildcard (*) without
+    the load appearing to fail. Regression: probing the periodic table with a
+    non-element label used to make RDKit print an 'Element 'Xx' not found'
+    violation to stderr, which reads as a load failure."""
+
+    def _io(self):
+        host = DummyHost()
+        host.init_manager.settings = {
+            "skip_chemistry_checks": False,
+            "always_ask_charge": False,
+        }
+        return IOManager(host)
+
+    @pytest.mark.parametrize("label", ["Xx", "XX", "X1", "Bq", "DA", "Q", "LP"])
+    def test_dummy_label_normalizes_to_wildcard(self, qapp, label):
+        io = self._io()
+        symbol, is_dummy = io._normalize_xyz_symbol(label)
+        assert symbol == "*"
+        assert is_dummy is True
+
+    @pytest.mark.parametrize(
+        "label,expected", [("C", "C"), ("fe", "Fe"), ("og", "Og"), ("H", "H")]
+    )
+    def test_real_element_preserved(self, qapp, label, expected):
+        io = self._io()
+        symbol, is_dummy = io._normalize_xyz_symbol(label)
+        assert symbol == expected
+        assert is_dummy is False
+
+    def test_dummy_atom_xyz_loads_to_mol(self, qapp):
+        io = self._io()
+        xyz = "3\n\nXx 0 0 0\nC 0 0 1.0\nO 0 1.2 0\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol is not None
+        assert mol.GetNumAtoms() == 3
+        assert mol.GetAtomWithIdx(0).GetSymbol() == "*"
+        # binary round-trips (used for undo/redo and .pmeprj persistence)
+        assert Chem.Mol(mol.ToBinary()).GetNumAtoms() == 3
+
+    def test_normalize_does_not_emit_rdkit_violation(self, qapp, tmp_path):
+        """Normalizing a non-element label must not print a C++ periodic-table
+        violation to stderr — that stderr noise is the user-visible symptom."""
+        io = self._io()
+        # Capture at the file-descriptor level: RDKit's C++ logger writes to the
+        # underlying stderr fd, not Python's sys.stderr.
+        err_path = tmp_path / "stderr.txt"
+        saved_fd = os.dup(2)
+        with open(err_path, "w") as fh:
+            os.dup2(fh.fileno(), 2)
+            try:
+                for label in ["Xx", "XX", "X1", "Bq", "Zz", "Qq"]:
+                    io._normalize_xyz_symbol(label)
+            finally:
+                os.dup2(saved_fd, 2)
+                os.close(saved_fd)
+        captured = err_path.read_text()
+        assert "not found" not in captured, captured
+        assert "Violation" not in captured, captured
+
+
+class TestXyzLoadRobustness:
+    """Any structurally-parseable XYZ must yield a molecule (never None),
+    even when bond perception fails or the atom-count header is wrong."""
+
+    def _io(self, **settings):
+        host = DummyHost()
+        base = {"skip_chemistry_checks": False, "always_ask_charge": False}
+        base.update(settings)
+        host.init_manager.settings = base
+        return IOManager(host)
+
+    def test_bond_estimation_failure_still_loads_atoms(self, qapp):
+        io = self._io()
+        io.estimate_bonds_from_distances = MagicMock(
+            side_effect=RuntimeError("bond perception blew up")
+        )
+        xyz = "3\n\nXx 0 0 0\nC 0 0 1.0\nO 0 1.2 0\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol is not None
+        assert mol.GetNumAtoms() == 3
+        assert mol.GetNumBonds() == 0
+
+    def test_truncated_atom_count_loads_available_rows(self, qapp):
+        io = self._io()
+        # header claims 5 atoms, only 2 rows present
+        xyz = "5\n\nXx 0 0 0\nC 0 0 1.0\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol is not None
+        assert mol.GetNumAtoms() == 2
+
+    def test_skip_checks_with_bond_failure_loads(self, qapp):
+        io = self._io(skip_chemistry_checks=True)
+        io.estimate_bonds_from_distances = MagicMock(
+            side_effect=ValueError("bad geometry")
+        )
+        xyz = "2\n\nC 0 0 0\nO 0 0 1.2\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol is not None
+        assert mol.GetNumAtoms() == 2
+
+
+class TestXyzGhostAtomColumns:
+    """Ghost-atom rows may carry a separator/label column, e.g. 'XX : x y z'.
+    Coordinates must be read from the numeric columns, not blindly from
+    parts[1..3] (which would hit the ':' and fail the whole file)."""
+
+    def _io(self):
+        host = DummyHost()
+        host.init_manager.settings = {
+            "skip_chemistry_checks": False,
+            "always_ask_charge": False,
+        }
+        return IOManager(host)
+
+    def test_extract_coords_skips_separator_column(self, qapp):
+        io = self._io()
+        assert io._extract_xyz_coords([":", "1", "2", "3"]) == (1.0, 2.0, 3.0)
+        assert io._extract_xyz_coords(["1", "2", "3"]) == (1.0, 2.0, 3.0)
+        # trailing extra column (e.g. a charge) is ignored
+        assert io._extract_xyz_coords(["1", "2", "3", "0.5"]) == (1.0, 2.0, 3.0)
+        # too few numbers -> None (caller raises a clear per-line error)
+        assert io._extract_xyz_coords(["1", "2"]) is None
+
+    def test_mixed_standard_and_ghost_columns_load(self, qapp):
+        io = self._io()
+        xyz = (
+            "5\n\n"
+            "C   -53.9 38.9 -0.9\n"
+            "H   -51.6 42.7  1.1\n"
+            "XX : -80.5 39.9 -3.0\n"
+            "XX : -19.6 38.8 -3.2\n"
+            "XX : -51.7 36.8 -1.6\n"
+        )
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol is not None
+        assert mol.GetNumAtoms() == 5
+        symbols = [mol.GetAtomWithIdx(i).GetSymbol() for i in range(5)]
+        assert symbols == ["C", "H", "*", "*", "*"]
+        # the ghost atoms kept their real coordinates (not shifted by the ':')
+        pos2 = mol.GetConformer().GetAtomPosition(2)
+        assert round(pos2.x, 1) == -80.5
+        assert round(pos2.z, 1) == -3.0
+
+
+class TestXyzNonStandardWarning:
+    """A non-standard column layout loads successfully but must be flagged: the
+    parser records a count property and load_xyz_for_3d_viewing surfaces it on
+    the status bar. Standard files stay silent."""
+
+    def _io(self):
+        host = DummyHost()
+        host.init_manager.settings = {
+            "skip_chemistry_checks": False,
+            "always_ask_charge": False,
+        }
+        return IOManager(host), host
+
+    def test_is_numeric_token(self, qapp):
+        io, _ = self._io()
+        assert io._is_numeric_token("1.5") is True
+        assert io._is_numeric_token("-3.0e2") is True
+        assert io._is_numeric_token(":") is False
+        assert io._is_numeric_token("XX") is False
+
+    def test_parser_records_nonstandard_row_count(self, qapp):
+        io, _ = self._io()
+        xyz = "3\n\nC 0 0 0\nXX : 1 0 0\nXX : 0 1 0\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol.HasProp("_xyz_nonstandard_rows")
+        assert mol.GetIntProp("_xyz_nonstandard_rows") == 2
+
+    def test_parser_no_property_for_standard_file(self, qapp):
+        io, _ = self._io()
+        xyz = "2\n\nC 0 0 0\nO 0 0 1.2\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert not mol.HasProp("_xyz_nonstandard_rows")
+
+    def test_status_bar_warns_on_nonstandard(self, qapp, tmp_path):
+        io, host = self._io()
+        xyz = tmp_path / "ghost.xyz"
+        xyz.write_text("3\n\nC 0 0 0\nXX : 1 0 0\nXX : 0 1 0\n")
+        with patch("moleditpy.ui.io_logic.QTimer"), patch(
+            "moleditpy.ui.io_logic.QMessageBox"
+        ):
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert any("non-standard columns in 2 row" in m for m in msgs), msgs
+
+    def test_status_bar_silent_on_standard(self, qapp, tmp_path):
+        io, host = self._io()
+        xyz = tmp_path / "std.xyz"
+        xyz.write_text("2\n\nC 0 0 0\nO 0 0 1.2\n")
+        with patch("moleditpy.ui.io_logic.QTimer"), patch(
+            "moleditpy.ui.io_logic.QMessageBox"
+        ):
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert msgs
+        assert all("non-standard" not in m for m in msgs), msgs

@@ -420,6 +420,19 @@ class StateManager:
                             # Skip property access if atom data is inconsistent
                             original_id = None
 
+                        # Implicit/explicit H counts raise on an unsanitized mol
+                        # (e.g. an XYZ import whose valences never passed
+                        # sanitization). Default to 0 so the structure still saves
+                        # and round-trips via the binary rather than being dropped.
+                        try:
+                            num_explicit_hs = atom.GetNumExplicitHs()
+                        except (RuntimeError, ValueError):
+                            num_explicit_hs = 0
+                        try:
+                            num_implicit_hs = atom.GetNumImplicitHs()
+                        except (RuntimeError, ValueError):
+                            num_implicit_hs = 0
+
                         atom_3d = {
                             "index": i,
                             "symbol": atom.GetSymbol(),
@@ -428,8 +441,8 @@ class StateManager:
                             "y": pos.y,
                             "z": pos.z,
                             "formal_charge": atom.GetFormalCharge(),
-                            "num_explicit_hs": atom.GetNumExplicitHs(),
-                            "num_implicit_hs": atom.GetNumImplicitHs(),
+                            "num_explicit_hs": num_explicit_hs,
+                            "num_implicit_hs": num_implicit_hs,
                             # include original editor atom id when available for round-trip
                             "original_id": original_id,
                         }
@@ -462,17 +475,21 @@ class StateManager:
                     "constraints_3d": json_safe_constraints,
                 }
 
-                # Molecular info
-                json_data["molecular_info"] = {
-                    "num_atoms": self.host.view_3d_manager.current_mol.GetNumAtoms(),
-                    "num_bonds": self.host.view_3d_manager.current_mol.GetNumBonds(),
-                    "molecular_weight": Descriptors.MolWt(
-                        self.host.view_3d_manager.current_mol
-                    ),
-                    "formula": rdMolDescriptors.CalcMolFormula(
-                        self.host.view_3d_manager.current_mol
-                    ),
-                }
+                # Molecular info — MolWt/CalcMolFormula can raise on an
+                # unsanitized mol; keep it optional so it never blocks the save.
+                try:
+                    json_data["molecular_info"] = {
+                        "num_atoms": self.host.view_3d_manager.current_mol.GetNumAtoms(),
+                        "num_bonds": self.host.view_3d_manager.current_mol.GetNumBonds(),
+                        "molecular_weight": Descriptors.MolWt(
+                            self.host.view_3d_manager.current_mol
+                        ),
+                        "formula": rdMolDescriptors.CalcMolFormula(
+                            self.host.view_3d_manager.current_mol
+                        ),
+                    }
+                except (AttributeError, RuntimeError, ValueError, TypeError) as e:
+                    logging.warning("Could not compute molecular info: %s", e)
 
                 # Identifiers (SMILES/InChI)
                 try:

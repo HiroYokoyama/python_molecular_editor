@@ -25,6 +25,16 @@ from .atom_picking import pick_atom_index_from_screen
 
 from rdkit import Geometry
 
+# VTK's trackball state id for camera rotation (VTKIS_ROTATE); the enum is not
+# exposed to Python, so the literal is used with this name for clarity.
+_VTKIS_ROTATE = 1
+
+# Reference 3D-canvas size (px) that camera rotation speed is normalized to.
+# VTK's stock Rotate divides motion by the live render size, so rotation slows
+# as the canvas grows; normalizing to a fixed reference makes the speed
+# window-size independent and matches the feel at the default window size.
+_ROTATION_REFERENCE_SIZE = 640.0
+
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     """VTK interactor style extending trackball-camera with 3D atom drag and measurement."""
@@ -80,6 +90,43 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             except (AttributeError, RuntimeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError
                 logging.debug("Suppressed non-critical error", exc_info=True)
+
+    def _rotate_size_independent(self) -> None:
+        """Rotate the camera at a speed that does not depend on canvas size.
+
+        Mirrors vtkInteractorStyleTrackballCamera::Rotate but normalizes the
+        per-pixel azimuth/elevation to a fixed reference size instead of the
+        live render size, and scales by the user's rotation-sensitivity setting.
+        """
+        renderer = self.GetCurrentRenderer()
+        interactor = self.GetInteractor()
+        if renderer is None or interactor is None:
+            return
+
+        dx = interactor.GetEventPosition()[0] - interactor.GetLastEventPosition()[0]
+        dy = interactor.GetEventPosition()[1] - interactor.GetLastEventPosition()[1]
+
+        sensitivity = 1.0
+        mw = self.main_window
+        if mw is not None:
+            try:
+                sensitivity = float(
+                    mw.get_settings().get("mouse_rotation_sensitivity", 1.0)
+                )
+            except (AttributeError, TypeError, ValueError):
+                sensitivity = 1.0
+
+        delta = -20.0 / _ROTATION_REFERENCE_SIZE * self.GetMotionFactor() * sensitivity
+        camera = renderer.GetActiveCamera()
+        camera.Azimuth(dx * delta)
+        camera.Elevation(dy * delta)
+        camera.OrthogonalizeViewUp()
+
+        if self.GetAutoAdjustCameraClippingRange():
+            renderer.ResetCameraClippingRange()
+        if interactor.GetLightFollowCamera():
+            renderer.UpdateLightsGeometryToFollowCamera()
+        interactor.Render()
 
     def _stop_vtk_left_button_state(self) -> None:
         """Clear VTK's button/drag state after a custom-handled left click."""
@@ -501,8 +548,14 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             # Custom atom drag
             self.is_dragging = True
         else:
-            # Delegate camera rotation to parent
-            super().OnMouseMove()
+            # Camera interaction. VTK's built-in Rotate divides mouse motion by
+            # the live render size, so rotation slows as the canvas grows. Handle
+            # the rotate state ourselves for window-size-independent speed;
+            # delegate pan/dolly/spin to the parent unchanged.
+            if self.GetState() == _VTKIS_ROTATE:
+                self._rotate_size_independent()
+            else:
+                super().OnMouseMove()
 
             # Update cursor display
             is_edit_active = (
