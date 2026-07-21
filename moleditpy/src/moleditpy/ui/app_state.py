@@ -654,7 +654,9 @@ class StateManager:
                                                 ValueError,
                                                 TypeError,
                                                 IndexError,
-                                            ):  # [RDKIT GUARD] RDKit atom property assignment may fail on invalid ids; skip silently.
+                                            ):
+                                                # [RDKIT GUARD] property set may
+                                                # fail on invalid ids; skip.
                                                 logging.debug(
                                                     "Suppressed non-critical error",
                                                     exc_info=True,

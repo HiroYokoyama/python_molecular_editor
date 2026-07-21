@@ -24,7 +24,8 @@ def _get_version() -> str:
 
         try:
             return version("MoleditPy")
-        except PackageNotFoundError:  # [OPTIONAL] Package not installed in editable mode; fall through to pyproject.toml.
+        except PackageNotFoundError:
+            # [OPTIONAL] Not installed in editable mode; fall through to pyproject.toml.
             logging.debug("Suppressed non-critical error", exc_info=True)
     except ImportError:
         logging.debug("Suppressed non-critical error", exc_info=True)

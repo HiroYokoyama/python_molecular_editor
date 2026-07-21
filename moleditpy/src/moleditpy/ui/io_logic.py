@@ -176,7 +176,8 @@ class IOManager:
         atoms_data = []
         has_dummy_atoms = False
         nonstandard_rows = 0
-        atom_lines = lines[atom_start : atom_start + num_atoms]
+        atom_end = atom_start + num_atoms
+        atom_lines = lines[atom_start:atom_end]
         if len(atom_lines) < num_atoms:
             # Header count exceeds the rows present (truncated / miscounted file).
             # Load the atoms that are actually there rather than refusing the
