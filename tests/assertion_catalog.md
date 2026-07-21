@@ -292,6 +292,15 @@ _Test full project serialization/deserialization (PMEPRJ)._
 - assert mw.compute_manager.last_successful_optimization_method == 'MMFF94s'
 - assert mw._preserved_plugin_data['TestPlugin']['val'] == 42
 
+### test_pmeprj_saves_unsanitized_3d_mol
+_An unsanitized 3D mol (e.g. bad-valence XYZ import) must still save and_
+
+- assert isinstance(json_data.get('3d_structure'), dict)
+- assert json_data['3d_structure'].get('mol_binary_base64')
+- assert len(json_data['3d_structure']['atoms']) == mol.GetNumAtoms()
+- assert mw.view_3d_manager.current_mol is not None
+- assert mw.view_3d_manager.current_mol.GetNumAtoms() == mol.GetNumAtoms()
+
 ### test_undo_state_binary_roundtrip
 _Test the internal binary state serialization used for Undo/Redo._
 
@@ -2114,6 +2123,22 @@ _No description provided._
 _No description provided._
 
 - assert style._is_dragging_atom is False
+
+### test_rotation_speed_is_window_size_independent
+_The applied azimuth/elevation depend only on mouse delta, motion factor,_
+
+- camera.Azimuth.assert_called_once_with(30 * delta)
+- camera.Elevation.assert_called_once_with(20 * delta)
+- camera.OrthogonalizeViewUp.assert_called_once()
+
+### test_rotation_speed_scales_with_sensitivity
+_Doubling the sensitivity setting doubles the rotation applied._
+
+- assert az2 == pytest.approx(az1 * 2.0)
+
+### test_rotation_handles_missing_renderer
+_No renderer yet (early startup) must not raise._
+
 
 ## tests/unit/test_custom_qt_interactor.py
 
@@ -4236,6 +4261,98 @@ _No description provided._
 - dlg.accept.assert_not_called()
 - assert any(('Invalid charge' in m for m in msgs))
 - dlg.accept.assert_called_once()
+
+### TestXyzDummyAtoms.test_dummy_label_normalizes_to_wildcard
+_No description provided._
+
+- assert symbol == '*'
+- assert is_dummy is True
+
+### TestXyzDummyAtoms.test_real_element_preserved
+_No description provided._
+
+- assert symbol == expected
+- assert is_dummy is False
+
+### TestXyzDummyAtoms.test_dummy_atom_xyz_loads_to_mol
+_No description provided._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 3
+- assert mol.GetAtomWithIdx(0).GetSymbol() == '*'
+- assert Chem.Mol(mol.ToBinary()).GetNumAtoms() == 3
+
+### TestXyzDummyAtoms.test_normalize_does_not_emit_rdkit_violation
+_Normalizing a non-element label must not print a C++ periodic-table_
+
+- assert 'not found' not in captured
+- assert 'Violation' not in captured
+
+### TestXyzLoadRobustness.test_bond_estimation_failure_still_loads_atoms
+_No description provided._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 3
+- assert mol.GetNumBonds() == 0
+
+### TestXyzLoadRobustness.test_truncated_atom_count_loads_available_rows
+_No description provided._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 2
+
+### TestXyzLoadRobustness.test_skip_checks_with_bond_failure_loads
+_No description provided._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 2
+
+### TestXyzGhostAtomColumns.test_extract_coords_skips_separator_column
+_No description provided._
+
+- assert io._extract_xyz_coords([':', '1', '2', '3']) == (1.0, 2.0, 3.0)
+- assert io._extract_xyz_coords(['1', '2', '3']) == (1.0, 2.0, 3.0)
+- assert io._extract_xyz_coords(['1', '2', '3', '0.5']) == (1.0, 2.0, 3.0)
+- assert io._extract_xyz_coords(['1', '2']) is None
+
+### TestXyzGhostAtomColumns.test_mixed_standard_and_ghost_columns_load
+_No description provided._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 5
+- assert symbols == ['C', 'H', '*', '*', '*']
+- assert round(pos2.x, 1) == -80.5
+- assert round(pos2.z, 1) == -3.0
+
+### TestXyzNonStandardWarning.test_is_numeric_token
+_No description provided._
+
+- assert io._is_numeric_token('1.5') is True
+- assert io._is_numeric_token('-3.0e2') is True
+- assert io._is_numeric_token(':') is False
+- assert io._is_numeric_token('XX') is False
+
+### TestXyzNonStandardWarning.test_parser_records_nonstandard_row_count
+_No description provided._
+
+- assert mol.HasProp('_xyz_nonstandard_rows')
+- assert mol.GetIntProp('_xyz_nonstandard_rows') == 2
+
+### TestXyzNonStandardWarning.test_parser_no_property_for_standard_file
+_No description provided._
+
+- assert not mol.HasProp('_xyz_nonstandard_rows')
+
+### TestXyzNonStandardWarning.test_status_bar_warns_on_nonstandard
+_No description provided._
+
+- assert any(('non-standard columns in 2 row' in m for m in msgs))
+
+### TestXyzNonStandardWarning.test_status_bar_silent_on_standard
+_No description provided._
+
+- assert msgs
+- assert all(('non-standard' not in m for m in msgs))
 
 ## tests/unit/test_items_visual.py
 
@@ -7773,6 +7890,12 @@ _Settings round-trip: update_ui then get_settings recovers the original values._
 - assert abs(result['light_intensity'] - DEFAULT_SETTINGS['light_intensity']) < 0.01
 - assert abs(result['specular'] - DEFAULT_SETTINGS['specular']) < 0.01
 - assert result['specular_power'] == DEFAULT_SETTINGS['specular_power']
+- assert abs(result['mouse_rotation_sensitivity'] - DEFAULT_SETTINGS['mouse_rotation_sensitivity']) < 0.01
+
+### test_scene_tab_rotation_sensitivity_roundtrip
+_A custom rotation-sensitivity value survives update_ui -> get_settings._
+
+- assert abs(tab.get_settings()['mouse_rotation_sensitivity'] - 2.5) < 0.01
 
 ### test_scene_tab_pick_color_valid
 __select_color updates current_bg_color when a valid color is chosen._

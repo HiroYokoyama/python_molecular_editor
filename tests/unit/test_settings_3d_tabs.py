@@ -50,6 +50,7 @@ def test_scene_tab_get_settings_keys(app):
         "specular",
         "specular_power",
         "projection_mode",
+        "mouse_rotation_sensitivity",
     }
     assert expected_keys == set(result.keys())
 
@@ -65,6 +66,20 @@ def test_scene_tab_roundtrip(app):
     assert abs(result["light_intensity"] - DEFAULT_SETTINGS["light_intensity"]) < 0.01
     assert abs(result["specular"] - DEFAULT_SETTINGS["specular"]) < 0.01
     assert result["specular_power"] == DEFAULT_SETTINGS["specular_power"]
+    assert (
+        abs(
+            result["mouse_rotation_sensitivity"]
+            - DEFAULT_SETTINGS["mouse_rotation_sensitivity"]
+        )
+        < 0.01
+    )
+
+
+def test_scene_tab_rotation_sensitivity_roundtrip(app):
+    """A custom rotation-sensitivity value survives update_ui -> get_settings."""
+    tab = Settings3DSceneTab(DEFAULT_SETTINGS)
+    tab.update_ui({**DEFAULT_SETTINGS, "mouse_rotation_sensitivity": 2.5})
+    assert abs(tab.get_settings()["mouse_rotation_sensitivity"] - 2.5) < 0.01
 
 
 @patch("moleditpy.ui.settings_tabs.settings_3d_tabs.QColorDialog.getColor")

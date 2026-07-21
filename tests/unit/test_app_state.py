@@ -418,6 +418,50 @@ def test_pmeprj_serialization_roundtrip(dummy_window):
     assert mw._preserved_plugin_data["TestPlugin"]["val"] == 42
 
 
+def _make_unsanitized_mol_with_conformer():
+    """Build a mol that fails sanitization (over-valent C) with 3D coords.
+
+    Mirrors an XYZ import whose valences never passed sanitization: calling
+    GetNumImplicitHs() on such atoms raises a RuntimeError.
+    """
+    rw = Chem.RWMol()
+    c = rw.AddAtom(Chem.Atom(6))
+    for _ in range(5):  # carbon with five bonds -> invalid valence
+        h = rw.AddAtom(Chem.Atom(1))
+        rw.AddBond(c, h, Chem.BondType.SINGLE)
+    mol = rw.GetMol()
+    conf = Chem.Conformer(mol.GetNumAtoms())
+    for i in range(mol.GetNumAtoms()):
+        conf.SetAtomPosition(i, (float(i), 0.0, 0.0))
+    mol.AddConformer(conf)
+    return mol
+
+
+def test_pmeprj_saves_unsanitized_3d_mol(dummy_window):
+    """An unsanitized 3D mol (e.g. bad-valence XYZ import) must still save and
+    restore its 3D structure — previously GetNumImplicitHs() raised mid-loop and
+    the whole 3d_structure block was silently dropped."""
+    mw = dummy_window
+    mol = _make_unsanitized_mol_with_conformer()
+
+    # Sanity: the atom-Hs access that used to break the save really does raise.
+    with pytest.raises(RuntimeError):
+        mol.GetAtomWithIdx(0).GetNumImplicitHs()
+
+    mw.view_3d_manager.current_mol = mol
+    json_data = mw.create_json_data()
+
+    assert isinstance(json_data.get("3d_structure"), dict)
+    assert json_data["3d_structure"].get("mol_binary_base64")
+    assert len(json_data["3d_structure"]["atoms"]) == mol.GetNumAtoms()
+
+    mw.view_3d_manager.current_mol = None
+    mw.load_from_json_data(json_data)
+
+    assert mw.view_3d_manager.current_mol is not None
+    assert mw.view_3d_manager.current_mol.GetNumAtoms() == mol.GetNumAtoms()
+
+
 def test_undo_state_binary_roundtrip(dummy_window):
     """Test the internal binary state serialization used for Undo/Redo."""
     mw = dummy_window

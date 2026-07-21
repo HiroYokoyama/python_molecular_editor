@@ -35,7 +35,12 @@ from PyQt6.QtWidgets import (
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry, rdMolTransforms, Descriptors
 
-from ..utils.constants import COVALENT_RADII, DUMMY_XYZ_SYMBOLS, VERSION
+from ..utils.constants import (
+    COVALENT_RADII,
+    DUMMY_XYZ_SYMBOLS,
+    VALID_ELEMENT_SYMBOLS,
+    VERSION,
+)
 
 
 class IOManager:
@@ -97,6 +102,38 @@ class IOManager:
         lines[3] = self.fix_mol_counts_line(lines[3])
         return "\n".join(lines)
 
+    @staticmethod
+    def _is_numeric_token(token: str) -> bool:
+        """True if *token* parses as a float."""
+        try:
+            float(token)
+            return True
+        except ValueError:
+            return False
+
+    @staticmethod
+    def _extract_xyz_coords(tokens: list[str]) -> Optional[Tuple[float, float, float]]:
+        """Return the first three float-parseable tokens as (x, y, z).
+
+        Skips non-numeric separator/label columns so ghost-atom rows like
+        ``XX : x y z`` (a colon in the second column) parse the same as a
+        standard ``symbol x y z`` row. Returns None if fewer than three numbers
+        are present.
+        """
+        nums: list[float] = []
+        for tok in tokens:
+            try:
+                nums.append(float(tok))
+            except ValueError:
+                if nums:
+                    break  # trailing non-numeric column after the coordinates
+                continue  # leading label/separator column before the coordinates
+            if len(nums) == 3:
+                break
+        if len(nums) == 3:
+            return (nums[0], nums[1], nums[2])
+        return None
+
     def _normalize_xyz_symbol(self, raw_symbol: str) -> Tuple[str, bool]:
         """Return the RDKit symbol for an XYZ atom and whether it is a dummy."""
         stripped = raw_symbol.strip()
@@ -105,11 +142,11 @@ class IOManager:
         if stripped.upper() in DUMMY_XYZ_SYMBOLS:
             return "*", True
         symbol = stripped.capitalize()
-        try:
-            atomic_num = Chem.GetPeriodicTable().GetAtomicNumber(symbol)
-        except (RuntimeError, ValueError, TypeError):
-            return "*", True
-        if atomic_num <= 0:
+        # Membership test rather than GetAtomicNumber(symbol): the latter makes
+        # RDKit's C++ layer print an "Element 'Xx' not found" violation to
+        # stderr for any dummy/pseudo label even though we catch the exception,
+        # which users read as a failed load.
+        if symbol not in VALID_ELEMENT_SYMBOLS:
             return "*", True
         return symbol, False
 
@@ -138,9 +175,19 @@ class IOManager:
 
         atoms_data = []
         has_dummy_atoms = False
-        atom_lines = lines[atom_start : atom_start + num_atoms]
+        nonstandard_rows = 0
+        atom_end = atom_start + num_atoms
+        atom_lines = lines[atom_start:atom_end]
         if len(atom_lines) < num_atoms:
-            raise ValueError("XYZ file format error: fewer atom rows than expected")
+            # Header count exceeds the rows present (truncated / miscounted file).
+            # Load the atoms that are actually there rather than refusing the
+            # whole file, so any parseable XYZ still opens.
+            logging.warning(
+                "XYZ declares %d atoms but only %d rows present; loading %d.",
+                num_atoms,
+                len(atom_lines),
+                len(atom_lines),
+            )
 
         for i, line in enumerate(atom_lines):
             parts = line.split()
@@ -149,9 +196,15 @@ class IOManager:
             raw_symbol = parts[0]
             symbol, is_dummy = self._normalize_xyz_symbol(raw_symbol)
             has_dummy_atoms = has_dummy_atoms or is_dummy
-            atoms_data.append(
-                (symbol, float(parts[1]), float(parts[2]), float(parts[3]))
-            )
+            coords = self._extract_xyz_coords(parts[1:])
+            if coords is None:
+                raise ValueError(f"Invalid atom data at line {atom_start + i + 1}")
+            # Standard rows put coordinates in the first three columns after the
+            # symbol; a non-numeric first column means an extra separator/label
+            # (e.g. the ':' in "XX : x y z") was skipped — flag it for the user.
+            if not self._is_numeric_token(parts[1]):
+                nonstandard_rows += 1
+            atoms_data.append((symbol, *coords))
 
         if not atoms_data:
             raise ValueError("No valid atoms found in XYZ file")
@@ -162,6 +215,8 @@ class IOManager:
             atom = Chem.Atom(symbol)
             atom.SetIntProp("xyz_unique_id", i)
             if atom.GetAtomicNum() == 0:
+                # Ghost/dummy rows (e.g. "XX : x y z") load as the wildcard "*";
+                # stash the real label token so it is kept for round-tripping.
                 atom.SetProp("xyz_original_symbol", atom_lines[i].split()[0])
             mol.AddAtom(atom)
             conf.SetAtomPosition(i, rdGeometry.Point3D(x, y, z))
@@ -190,7 +245,16 @@ class IOManager:
                 _set_prop(candidate, "_xyz_charge", charge_val)
                 return candidate
             else:
-                self.estimate_bonds_from_distances(mol)
+                # Distance-based bonding is best-effort: a failure here must not
+                # lose the molecule. The skip/dummy path only needs atoms and
+                # coordinates, so fall back to a bond-free structure so that any
+                # parseable XYZ still loads.
+                try:
+                    self.estimate_bonds_from_distances(mol)
+                except (RuntimeError, ValueError, TypeError, AttributeError) as e:
+                    logging.warning(
+                        "Bond estimation failed; loading atoms without bonds: %s", e
+                    )
                 candidate = mol.GetMol()
                 _set_prop(candidate, "_xyz_charge", charge_val)
                 return candidate
@@ -240,6 +304,8 @@ class IOManager:
 
         if final_mol:
             final_mol.xyz_atom_data = atoms_data
+            if nonstandard_rows:
+                _set_prop(final_mol, "_xyz_nonstandard_rows", nonstandard_rows)
         return final_mol
 
     def _report_load_error(self, title: str, message: str) -> None:
@@ -866,9 +932,17 @@ class IOManager:
             self.host.view_3d_manager.update_atom_id_menu_state()
 
             if self.host.statusBar():
-                self.host.statusBar().showMessage(
-                    f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
-                )
+                message = f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
+                nonstandard = 0
+                with suppress_log(AttributeError, KeyError, RuntimeError, TypeError):
+                    if mol.HasProp("_xyz_nonstandard_rows"):
+                        nonstandard = mol.GetIntProp("_xyz_nonstandard_rows")
+                if nonstandard:
+                    message += (
+                        f" (non-standard columns in {nonstandard} row(s); "
+                        "coordinates read from the numeric columns)"
+                    )
+                self.host.statusBar().showMessage(message)
             self.host.set_current_file_path(file_path)
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()

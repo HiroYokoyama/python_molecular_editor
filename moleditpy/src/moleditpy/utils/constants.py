@@ -24,7 +24,8 @@ def _get_version() -> str:
 
         try:
             return version("MoleditPy")
-        except PackageNotFoundError:  # [OPTIONAL] Package not installed in editable mode; fall through to pyproject.toml.
+        except PackageNotFoundError:
+            # [OPTIONAL] Not installed in editable mode; fall through to pyproject.toml.
             logging.debug("Suppressed non-critical error", exc_info=True)
     except ImportError:
         logging.debug("Suppressed non-critical error", exc_info=True)
@@ -209,6 +210,13 @@ DEFAULT_CPK_COLORS = {
 
 
 pt = Chem.GetPeriodicTable()
+# Real element symbols (H..Og). Membership-test against this instead of calling
+# GetAtomicNumber() on an unknown label: probing the periodic table with a
+# non-element makes RDKit's C++ layer print an alarming "Element 'Xx' not found"
+# violation to stderr even when the Python exception is caught.
+VALID_ELEMENT_SYMBOLS: frozenset[str] = frozenset(
+    pt.GetElementSymbol(i) for i in range(1, 119)
+)
 # 0.3-scaled vdW radii for 3D display only — not physical values
 VDW_DISPLAY_RADII = {pt.GetElementSymbol(i): pt.GetRvdw(i) * 0.3 for i in range(1, 119)}
 # Deprecated alias kept for external plugins
