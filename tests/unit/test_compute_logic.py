@@ -1552,18 +1552,23 @@ def test_handle_chemistry_problems_defers_set_focus(mock_parser_host):
 
     with (
         patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
-        patch("moleditpy.ui.compute_logic.QTimer.singleShot", side_effect=capture_singleshot),
+        patch(
+            "moleditpy.ui.compute_logic.QTimer.singleShot",
+            side_effect=capture_singleshot,
+        ),
     ):
         compute._handle_chemistry_problems(mol, [problem])
 
     # A deferred call must have been scheduled targeting view_2d.setFocus
     view_2d = compute.host.init_manager.view_2d
-    assert any(
-        cb == view_2d.setFocus for _delay, cb in singleshot_calls
-    ), "setFocus on view_2d was not scheduled via QTimer.singleShot"
+    assert any(cb == view_2d.setFocus for _delay, cb in singleshot_calls), (
+        "setFocus on view_2d was not scheduled via QTimer.singleShot"
+    )
 
 
-def test_handle_chemistry_problems_sets_focus_immediately_absent_timer(mock_parser_host):
+def test_handle_chemistry_problems_sets_focus_immediately_absent_timer(
+    mock_parser_host,
+):
     """When QTimer.singleShot fires synchronously (delay=0 executed right away),
     view_2d.setFocus is ultimately called — verify the callback is the right target.
     """
@@ -1582,7 +1587,10 @@ def test_handle_chemistry_problems_sets_focus_immediately_absent_timer(mock_pars
 
     with (
         patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
-        patch("moleditpy.ui.compute_logic.QTimer.singleShot", side_effect=immediate_singleshot),
+        patch(
+            "moleditpy.ui.compute_logic.QTimer.singleShot",
+            side_effect=immediate_singleshot,
+        ),
     ):
         compute._handle_chemistry_problems(mol, [problem])
 
@@ -1603,14 +1611,17 @@ def test_on_calculation_error_defers_set_focus_to_view_2d(mock_parser_host):
 
     with (
         patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
-        patch("moleditpy.ui.compute_logic.QTimer.singleShot", side_effect=capture_singleshot),
+        patch(
+            "moleditpy.ui.compute_logic.QTimer.singleShot",
+            side_effect=capture_singleshot,
+        ),
     ):
         compute.on_calculation_error(("w1", "RDKit 3D conversion failed"))
 
     view_2d = compute.host.init_manager.view_2d
-    assert any(
-        cb == view_2d.setFocus for _delay, cb in singleshot_calls
-    ), "setFocus on view_2d was not scheduled via QTimer.singleShot in on_calculation_error"
+    assert any(cb == view_2d.setFocus for _delay, cb in singleshot_calls), (
+        "setFocus on view_2d was not scheduled via QTimer.singleShot in on_calculation_error"
+    )
 
 
 def test_on_calculation_error_focus_fires_when_timer_executes(mock_parser_host):
@@ -1623,7 +1634,10 @@ def test_on_calculation_error_focus_fires_when_timer_executes(mock_parser_host):
 
     with (
         patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
-        patch("moleditpy.ui.compute_logic.QTimer.singleShot", side_effect=immediate_singleshot),
+        patch(
+            "moleditpy.ui.compute_logic.QTimer.singleShot",
+            side_effect=immediate_singleshot,
+        ),
     ):
         compute.on_calculation_error(("w2", "Embed failed"))
 
@@ -1644,14 +1658,17 @@ def test_on_calculation_error_halt_restores_focus(mock_parser_host):
 
     with (
         patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
-        patch("moleditpy.ui.compute_logic.QTimer.singleShot", side_effect=capture_singleshot),
+        patch(
+            "moleditpy.ui.compute_logic.QTimer.singleShot",
+            side_effect=capture_singleshot,
+        ),
     ):
         compute.on_calculation_error(("w3", "Halt"))
 
     view_2d = compute.host.init_manager.view_2d
-    assert any(
-        cb == view_2d.setFocus for _delay, cb in singleshot_calls
-    ), "setFocus on view_2d must be scheduled even after a Halt"
+    assert any(cb == view_2d.setFocus for _delay, cb in singleshot_calls), (
+        "setFocus on view_2d must be scheduled even after a Halt"
+    )
 
 
 def test_chemistry_problems_focus_not_called_directly(mock_parser_host):
@@ -1671,10 +1688,11 @@ def test_chemistry_problems_focus_not_called_directly(mock_parser_host):
     # Do NOT execute the timer callback — capture it without firing
     with (
         patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
-        patch("moleditpy.ui.compute_logic.QTimer.singleShot"),  # no-op — callback never fires
+        patch(
+            "moleditpy.ui.compute_logic.QTimer.singleShot"
+        ),  # no-op — callback never fires
     ):
         compute._handle_chemistry_problems(mol, [problem])
 
     # If setFocus was called synchronously it would appear here; it must not.
     compute.host.init_manager.view_2d.setFocus.assert_not_called()
-

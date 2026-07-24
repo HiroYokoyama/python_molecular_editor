@@ -149,3 +149,105 @@ def test_keyboard_other_keys_use_bond_snapping_distance(app):
     assert len(scene.find_atom_near_args) == 1
     pos, tol = scene.find_atom_near_args[0]
     assert tol == 8.0
+
+
+# ---------------------------------------------------------------------------
+# Ring template bond-length tests
+# ---------------------------------------------------------------------------
+
+import math
+from moleditpy.utils.constants import DEFAULT_BOND_LENGTH
+
+
+def _edge_lengths(points):
+    """Return a list of distances between consecutive points (cyclic)."""
+    n = len(points)
+    return [
+        math.hypot(
+            points[(i + 1) % n].x() - points[i].x(),
+            points[(i + 1) % n].y() - points[i].y(),
+        )
+        for i in range(n)
+    ]
+
+
+class _FreeTemplateMixin(TemplateMixin):
+    """Minimal TemplateMixin subclass that captures placed points."""
+
+    def __init__(self, n: int):
+        self.mode = f"template_{n}"
+        self.template_preview = MagicMock()
+        self.views = MagicMock(return_value=[MagicMock()])
+        self.settings = {}
+        self.captured_points = None
+
+    def get_setting(self, key, default=None):
+        return self.settings.get(key, default)
+
+    def find_atom_near(self, pos, tol=14.0):
+        return None  # no snap target → free placement
+
+    def items(self, *args):
+        return []  # no snap target → free placement
+
+
+def _free_ring_points(n: int) -> list:
+    """Call update_template_preview with no snap target and return points."""
+    scene = _FreeTemplateMixin(n)
+    scene.update_template_preview(QPointF(0, 0))
+    return scene.template_preview.set_geometry.call_args[0][0]
+
+
+def _assert_all_edges_equal_bond_length(n: int, tol: float = 1e-6) -> None:
+    points = _free_ring_points(n)
+    assert len(points) == n, f"{n}-ring: expected {n} points, got {len(points)}"
+    for length in _edge_lengths(points):
+        assert abs(length - DEFAULT_BOND_LENGTH) < tol, (
+            f"{n}-ring edge {length:.4f} != DEFAULT_BOND_LENGTH {DEFAULT_BOND_LENGTH}"
+        )
+
+
+def test_free_ring_3_bond_length(app):
+    """3-ring (cyclopropane) free placement: all edges == DEFAULT_BOND_LENGTH."""
+    _assert_all_edges_equal_bond_length(3)
+
+
+def test_free_ring_4_bond_length(app):
+    """4-ring free placement: all edges == DEFAULT_BOND_LENGTH."""
+    _assert_all_edges_equal_bond_length(4)
+
+
+def test_free_ring_5_bond_length(app):
+    """5-ring free placement: all edges == DEFAULT_BOND_LENGTH."""
+    _assert_all_edges_equal_bond_length(5)
+
+
+def test_free_ring_6_bond_length(app):
+    """6-ring (benzene) free placement: all edges == DEFAULT_BOND_LENGTH (regression guard)."""
+    _assert_all_edges_equal_bond_length(6)
+
+
+def test_free_ring_7_bond_length(app):
+    """7-ring free placement: all edges == DEFAULT_BOND_LENGTH."""
+    _assert_all_edges_equal_bond_length(7)
+
+
+def test_free_ring_8_bond_length(app):
+    """8-ring free placement: all edges == DEFAULT_BOND_LENGTH."""
+    _assert_all_edges_equal_bond_length(8)
+
+
+def test_free_ring_9_bond_length(app):
+    """9-ring free placement: all edges == DEFAULT_BOND_LENGTH."""
+    _assert_all_edges_equal_bond_length(9)
+
+
+def test_free_ring_circumradius_formula():
+    """Circumradius R = L / (2·sin(π/n)) gives correct edge for each ring size."""
+    L = DEFAULT_BOND_LENGTH
+    for n in range(3, 10):
+        R = L / (2 * math.sin(math.pi / n))
+        angle_step = 2 * math.pi / n
+        # Two adjacent vertices on the unit circle separated by angle_step
+        edge = 2 * R * math.sin(angle_step / 2)
+        assert abs(edge - L) < 1e-9, f"n={n}: computed edge {edge} != {L}"

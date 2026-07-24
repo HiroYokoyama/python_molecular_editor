@@ -8940,6 +8940,46 @@ _Non-template key presses use bond_snapping_distance_2d for atom snap._
 - assert len(scene.find_atom_near_args) == 1
 - assert tol == 8.0
 
+### test_free_ring_3_bond_length
+_3-ring (cyclopropane) free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(3)
+
+### test_free_ring_4_bond_length
+_4-ring free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(4)
+
+### test_free_ring_5_bond_length
+_5-ring free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(5)
+
+### test_free_ring_6_bond_length
+_6-ring (benzene) free placement: all edges == DEFAULT_BOND_LENGTH (regression guard)._
+
+- _assert_all_edges_equal_bond_length(6)
+
+### test_free_ring_7_bond_length
+_7-ring free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(7)
+
+### test_free_ring_8_bond_length
+_8-ring free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(8)
+
+### test_free_ring_9_bond_length
+_9-ring free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(9)
+
+### test_free_ring_circumradius_formula
+_Circumradius R = L / (2·sin(π/n)) gives correct edge for each ring size._
+
+- assert abs(edge - L) < 1e-09
+
 ## tests/unit/test_translation_dialog.py
 
 ### TestTabSwitching.test_tab_change_clears_selection
