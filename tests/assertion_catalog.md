@@ -1446,6 +1446,36 @@ _select_connected_atoms grows the selection over the bond graph._
 _select_connected_atoms is a no-op when nothing is selected._
 
 
+### test_handle_chemistry_problems_defers_set_focus
+__handle_chemistry_problems must schedule a deferred setFocus on view_2d_
+
+- assert any((cb == view_2d.setFocus for _delay, cb in singleshot_calls))
+
+### test_handle_chemistry_problems_sets_focus_immediately_absent_timer
+_When QTimer.singleShot fires synchronously (delay=0 executed right away),_
+
+- compute.host.init_manager.view_2d.setFocus.assert_called()
+
+### test_on_calculation_error_defers_set_focus_to_view_2d
+_on_calculation_error must schedule a deferred setFocus on view_2d after_
+
+- assert any((cb == view_2d.setFocus for _delay, cb in singleshot_calls))
+
+### test_on_calculation_error_focus_fires_when_timer_executes
+_When the deferred QTimer callback fires, view_2d.setFocus is called._
+
+- compute.host.init_manager.view_2d.setFocus.assert_called()
+
+### test_on_calculation_error_halt_restores_focus
+_A 'Halt' error still schedules a deferred setFocus so the 2D editor_
+
+- assert any((cb == view_2d.setFocus for _delay, cb in singleshot_calls))
+
+### test_chemistry_problems_focus_not_called_directly
+__handle_chemistry_problems must NOT call view_2d.setFocus() directly_
+
+- compute.host.init_manager.view_2d.setFocus.assert_not_called()
+
 ## tests/unit/test_constants.py
 
 ### test_constants_version_from_metadata

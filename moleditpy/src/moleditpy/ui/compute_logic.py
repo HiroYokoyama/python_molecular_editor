@@ -455,7 +455,8 @@ class ComputeManager:
                 if item:
                     item.has_problem = True
                     item.update()
-        self.host.init_manager.view_2d.setFocus()
+        # Defer so Qt finishes routing the modal result before restoring focus.
+        QTimer.singleShot(0, self.host.init_manager.view_2d.setFocus)
 
     def _setup_mol_block_for_worker(self, mol: Chem.Mol) -> str:
         mol_block = self.host.state_manager.data.to_mol_block()
@@ -616,6 +617,9 @@ class ComputeManager:
 
         with suppress_log(TypeError, RuntimeError):
             QMessageBox.critical(self.host, "Calculation Error", msg)
+
+        # Restore 2D editor focus so keyboard shortcuts remain active.
+        QTimer.singleShot(0, self.host.init_manager.view_2d.setFocus)
 
     def create_atom_id_mapping(self) -> None:
         """Map 2D atom IDs to 3D RDKit indices."""

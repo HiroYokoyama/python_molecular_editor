@@ -1524,3 +1524,157 @@ def test_select_connected_atoms_no_selection_returns(mock_parser_host):
     compute = DummyCompute(mock_parser_host)
     compute.host.init_manager.scene.selectedItems.return_value = []
     compute.select_connected_atoms()  # must not raise
+
+
+# ---------------------------------------------------------------------------
+# Focus-restore tests (2D editor regains focus after conversion errors)
+# ---------------------------------------------------------------------------
+
+
+def test_handle_chemistry_problems_defers_set_focus(mock_parser_host):
+    """_handle_chemistry_problems must schedule a deferred setFocus on view_2d
+    via QTimer.singleShot so that Qt finishes routing the modal-dialog result
+    before focus is stolen back from the Convert button.
+    """
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
+    atom = mol.GetAtomWithIdx(0)
+    atom.SetIntProp("_original_atom_id", 1)
+
+    problem = MagicMock()
+    problem.GetAtomIdx.return_value = 0
+
+    singleshot_calls = []
+
+    def capture_singleshot(delay, callback):
+        singleshot_calls.append((delay, callback))
+
+    with (
+        patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
+        patch("moleditpy.ui.compute_logic.QTimer.singleShot", side_effect=capture_singleshot),
+    ):
+        compute._handle_chemistry_problems(mol, [problem])
+
+    # A deferred call must have been scheduled targeting view_2d.setFocus
+    view_2d = compute.host.init_manager.view_2d
+    assert any(
+        cb == view_2d.setFocus for _delay, cb in singleshot_calls
+    ), "setFocus on view_2d was not scheduled via QTimer.singleShot"
+
+
+def test_handle_chemistry_problems_sets_focus_immediately_absent_timer(mock_parser_host):
+    """When QTimer.singleShot fires synchronously (delay=0 executed right away),
+    view_2d.setFocus is ultimately called — verify the callback is the right target.
+    """
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
+    atom = mol.GetAtomWithIdx(0)
+    atom.SetIntProp("_original_atom_id", 1)
+
+    problem = MagicMock()
+    problem.GetAtomIdx.return_value = 0
+
+    # Execute the callback immediately to simulate the timer firing
+    def immediate_singleshot(delay, callback):
+        callback()
+
+    with (
+        patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
+        patch("moleditpy.ui.compute_logic.QTimer.singleShot", side_effect=immediate_singleshot),
+    ):
+        compute._handle_chemistry_problems(mol, [problem])
+
+    compute.host.init_manager.view_2d.setFocus.assert_called()
+
+
+def test_on_calculation_error_defers_set_focus_to_view_2d(mock_parser_host):
+    """on_calculation_error must schedule a deferred setFocus on view_2d after
+    showing the error dialog, so keyboard shortcuts in the 2D editor are restored.
+    """
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"w1"}
+
+    singleshot_calls = []
+
+    def capture_singleshot(delay, callback):
+        singleshot_calls.append((delay, callback))
+
+    with (
+        patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
+        patch("moleditpy.ui.compute_logic.QTimer.singleShot", side_effect=capture_singleshot),
+    ):
+        compute.on_calculation_error(("w1", "RDKit 3D conversion failed"))
+
+    view_2d = compute.host.init_manager.view_2d
+    assert any(
+        cb == view_2d.setFocus for _delay, cb in singleshot_calls
+    ), "setFocus on view_2d was not scheduled via QTimer.singleShot in on_calculation_error"
+
+
+def test_on_calculation_error_focus_fires_when_timer_executes(mock_parser_host):
+    """When the deferred QTimer callback fires, view_2d.setFocus is called."""
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"w2"}
+
+    def immediate_singleshot(delay, callback):
+        callback()
+
+    with (
+        patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
+        patch("moleditpy.ui.compute_logic.QTimer.singleShot", side_effect=immediate_singleshot),
+    ):
+        compute.on_calculation_error(("w2", "Embed failed"))
+
+    compute.host.init_manager.view_2d.setFocus.assert_called()
+
+
+def test_on_calculation_error_halt_restores_focus(mock_parser_host):
+    """A 'Halt' error still schedules a deferred setFocus so the 2D editor
+    remains keyboard-accessible after the user halts a conversion.
+    """
+    compute = DummyCompute(mock_parser_host)
+    compute.active_worker_ids = {"w3"}
+
+    singleshot_calls = []
+
+    def capture_singleshot(delay, callback):
+        singleshot_calls.append((delay, callback))
+
+    with (
+        patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
+        patch("moleditpy.ui.compute_logic.QTimer.singleShot", side_effect=capture_singleshot),
+    ):
+        compute.on_calculation_error(("w3", "Halt"))
+
+    view_2d = compute.host.init_manager.view_2d
+    assert any(
+        cb == view_2d.setFocus for _delay, cb in singleshot_calls
+    ), "setFocus on view_2d must be scheduled even after a Halt"
+
+
+def test_chemistry_problems_focus_not_called_directly(mock_parser_host):
+    """_handle_chemistry_problems must NOT call view_2d.setFocus() directly
+    (synchronously); only the deferred QTimer path is allowed.
+    This guards against regression to the pre-fix synchronous call.
+    """
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    mol = Chem.AddHs(mol)
+    atom = mol.GetAtomWithIdx(0)
+    atom.SetIntProp("_original_atom_id", 1)
+
+    problem = MagicMock()
+    problem.GetAtomIdx.return_value = 0
+
+    # Do NOT execute the timer callback — capture it without firing
+    with (
+        patch("moleditpy.ui.compute_logic.QMessageBox.critical"),
+        patch("moleditpy.ui.compute_logic.QTimer.singleShot"),  # no-op — callback never fires
+    ):
+        compute._handle_chemistry_problems(mol, [problem])
+
+    # If setFocus was called synchronously it would appear here; it must not.
+    compute.host.init_manager.view_2d.setFocus.assert_not_called()
+
