@@ -254,7 +254,7 @@ You can select the display style from the **3D Style** dropdown menu on the righ
 
 ### 5.5. 3D Measurement Function ("3D Select" Mode)
 
-1.  Click the **3D Select** button on the main toolbar to enable measurement mode.
+1.  Click the **3D Select** button on the main toolbar to enable selection and measurement.
 
 2.  Click atoms in the 3D view to select them. Selected atoms are displayed with red labels in order (1, 2, 3, 4).
 
@@ -430,6 +430,7 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
     * Light intensity
     * Surface shininess (Specular) and its intensity (Specular Power)
     * Camera projection mode (Perspective / Orthographic)
+    * Mouse rotation sensitivity (speed multiplier for 3D view rotation)
 * **Display Style Tabs (Ball & Stick, CPK, Wireframe, Stick):**
     * Atom size/radius scale
     * Bond radius
@@ -528,7 +529,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 4.3
+  * **Version:** 4.4
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
