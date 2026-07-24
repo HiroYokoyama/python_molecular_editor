@@ -55,6 +55,7 @@ cover/
 # Coverage artifacts from print_cov.py
 cov_combined.json
 coverage_html/
+.test_counts.json
 # Test output files
 test_output*.txt
 tmp/

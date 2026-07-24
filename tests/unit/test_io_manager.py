@@ -741,8 +741,9 @@ class TestXyzNonStandardWarning:
         io, host = self._io()
         xyz = tmp_path / "ghost.xyz"
         xyz.write_text("3\n\nC 0 0 0\nXX : 1 0 0\nXX : 0 1 0\n")
-        with patch("moleditpy.ui.io_logic.QTimer"), patch(
-            "moleditpy.ui.io_logic.QMessageBox"
+        with (
+            patch("moleditpy.ui.io_logic.QTimer"),
+            patch("moleditpy.ui.io_logic.QMessageBox"),
         ):
             io.load_xyz_for_3d_viewing(file_path=str(xyz))
         msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
@@ -752,8 +753,9 @@ class TestXyzNonStandardWarning:
         io, host = self._io()
         xyz = tmp_path / "std.xyz"
         xyz.write_text("2\n\nC 0 0 0\nO 0 0 1.2\n")
-        with patch("moleditpy.ui.io_logic.QTimer"), patch(
-            "moleditpy.ui.io_logic.QMessageBox"
+        with (
+            patch("moleditpy.ui.io_logic.QTimer"),
+            patch("moleditpy.ui.io_logic.QMessageBox"),
         ):
             io.load_xyz_for_3d_viewing(file_path=str(xyz))
         msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]

@@ -1446,6 +1446,36 @@ _select_connected_atoms grows the selection over the bond graph._
 _select_connected_atoms is a no-op when nothing is selected._
 
 
+### test_handle_chemistry_problems_defers_set_focus
+__handle_chemistry_problems must schedule a deferred setFocus on view_2d_
+
+- assert any((cb == view_2d.setFocus for _delay, cb in singleshot_calls))
+
+### test_handle_chemistry_problems_sets_focus_immediately_absent_timer
+_When QTimer.singleShot fires synchronously (delay=0 executed right away),_
+
+- compute.host.init_manager.view_2d.setFocus.assert_called()
+
+### test_on_calculation_error_defers_set_focus_to_view_2d
+_on_calculation_error must schedule a deferred setFocus on view_2d after_
+
+- assert any((cb == view_2d.setFocus for _delay, cb in singleshot_calls))
+
+### test_on_calculation_error_focus_fires_when_timer_executes
+_When the deferred QTimer callback fires, view_2d.setFocus is called._
+
+- compute.host.init_manager.view_2d.setFocus.assert_called()
+
+### test_on_calculation_error_halt_restores_focus
+_A 'Halt' error still schedules a deferred setFocus so the 2D editor_
+
+- assert any((cb == view_2d.setFocus for _delay, cb in singleshot_calls))
+
+### test_chemistry_problems_focus_not_called_directly
+__handle_chemistry_problems must NOT call view_2d.setFocus() directly_
+
+- compute.host.init_manager.view_2d.setFocus.assert_not_called()
+
 ## tests/unit/test_constants.py
 
 ### test_constants_version_from_metadata
@@ -8909,6 +8939,46 @@ _Non-template key presses use bond_snapping_distance_2d for atom snap._
 
 - assert len(scene.find_atom_near_args) == 1
 - assert tol == 8.0
+
+### test_free_ring_3_bond_length
+_3-ring (cyclopropane) free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(3)
+
+### test_free_ring_4_bond_length
+_4-ring free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(4)
+
+### test_free_ring_5_bond_length
+_5-ring free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(5)
+
+### test_free_ring_6_bond_length
+_6-ring (benzene) free placement: all edges == DEFAULT_BOND_LENGTH (regression guard)._
+
+- _assert_all_edges_equal_bond_length(6)
+
+### test_free_ring_7_bond_length
+_7-ring free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(7)
+
+### test_free_ring_8_bond_length
+_8-ring free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(8)
+
+### test_free_ring_9_bond_length
+_9-ring free placement: all edges == DEFAULT_BOND_LENGTH._
+
+- _assert_all_edges_equal_bond_length(9)
+
+### test_free_ring_circumradius_formula
+_Circumradius R = L / (2·sin(π/n)) gives correct edge for each ring size._
+
+- assert abs(edge - L) < 1e-09
 
 ## tests/unit/test_translation_dialog.py
 

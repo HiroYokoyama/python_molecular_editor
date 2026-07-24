@@ -426,11 +426,12 @@ class TemplateMixin:
         else:
             angle_step = 2 * math.pi / n
             start_angle = -math.pi / 2 if n % 2 != 0 else -math.pi / 2 - angle_step / 2
+            circumradius = bond_len / (2 * math.sin(math.pi / n))
             points = [
                 pos
                 + QPointF(
-                    bond_len * math.cos(start_angle + i * angle_step),
-                    bond_len * math.sin(start_angle + i * angle_step),
+                    circumradius * math.cos(start_angle + i * angle_step),
+                    circumradius * math.sin(start_angle + i * angle_step),
                 )
                 for i in range(n)
             ]
