@@ -54,7 +54,7 @@ This application combines a modern GUI built with **PyQt6**, powerful cheminform
       * **Mirror:** Create a mirror image of the molecule across a selected plane (XY, XZ, or YZ).
       * **Set Bond Length, Angle, & Dihedral Angle:** Set precise numerical values for distances, angles, and torsional angles.
       * **Constrained Optimization:** Perform force field optimization (MMFF/UFF) while applying fixed constraints to specific distances, angles, or dihedral angles.
-  * **3D Measurement Tools:** A dedicated "Measure" mode allows you to click on atoms in the 3D view to instantly measure and display:
+  * **3D Measurement Tools:** The "Select" mode allows you to click on atoms in the 3D view to instantly measure and display:
       * **Distance** (between 2 atoms)
       * **Angle** (between 3 atoms)
       * **Dihedral Angle** (between 4 atoms)
@@ -190,7 +190,7 @@ Additionally, please cite the plugins you used.
       * **鏡像作成:** 選択した平面 (XY, XZ, YZ) に対して分子の鏡像を作成します。
       * **結合長・角度・二面角:** 原子を選択し、目標値を入力することで、距離、角度、ねじれ角を正確に設定します。
       * **制約付き最適化:** 特定の距離、角度、二面角を固定したまま、力場計算 (MMFF/UFF) による構造最適化を実行します。
-  * **3D測定ツール:** 専用の「Measure」モードで3Dビュー内の原子をクリックするだけで、以下の値を即座に測定・表示します。
+  * **3D測定ツール:** 「Select」モードで3Dビュー内の原子をクリックするだけで、以下の値を即座に測定・表示します。
       * **距離** (2原子間)
       * **角度** (3原子間)
       * **二面角** (4原子間)
