@@ -12,13 +12,13 @@ DOI: 10.5281/zenodo.17268532
 
 # --- Constants ---
 
-# Dialog classes that drive group drag / rotate gestures in the 3D view.
-MOVE_DIALOG_TYPES = ("MoveGroupDialog", "MoveSelectedAtomsDialog")
-
 import logging
 import os
 from PyQt6.QtGui import QColor, QFont
 from rdkit import Chem
+
+# Dialog classes that drive group drag / rotate gestures in the 3D view.
+MOVE_DIALOG_TYPES = ("MoveGroupDialog", "MoveSelectedAtomsDialog")
 
 
 def _get_version() -> str:

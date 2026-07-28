@@ -501,18 +501,32 @@ def test_show_atom_labels_camera_restore(qapp):
 
 class TestInit:
     def test_preselected_atoms_triggers_on_atom_picked(self, make_dialog, qapp):
-        """Passing preselected_atoms to __init__ pre-selects the connected group via BFS."""
+        """Passing preselected_atoms to __init__ pre-selects the connected group via BFS.
+
+        Runs the real highlight/label path: preselection used to happen before
+        __init__ had built the actor state and the widgets, so it raised.
+        """
         from moleditpy.ui.move_group_dialog import MoveGroupDialog
 
         mol = _ethane()
         mw = _make_main_window(mol)
-        with (
-            patch.object(MoveGroupDialog, "show_atom_labels"),
-            patch.object(MoveGroupDialog, "clear_atom_labels"),
-            patch.object(MoveGroupDialog, "update_display"),
-        ):
+        with patch("moleditpy.ui.move_group_dialog.pv", MagicMock()):
             dlg = MoveGroupDialog(mol, mw, preselected_atoms=[0])
         assert len(dlg.group_atoms) == mol.GetNumAtoms()
+        assert dlg.selected_atoms == {0}
+        assert "atoms" in dlg.selection_label.text()
+        dlg.picking_enabled = False
+        dlg.close()
+
+    def test_preselected_atoms_highlight_the_group(self, make_dialog, qapp):
+        """The preselected group is highlighted in the 3D view during __init__."""
+        from moleditpy.ui.move_group_dialog import MoveGroupDialog
+
+        mol = _ethane()
+        mw = _make_main_window(mol)
+        with patch("moleditpy.ui.move_group_dialog.pv", MagicMock()):
+            dlg = MoveGroupDialog(mol, mw, preselected_atoms=[0])
+        assert mw.view_3d_manager.plotter.add_mesh.called
         dlg.picking_enabled = False
         dlg.close()
 
@@ -718,7 +732,7 @@ class TestAtomLabels:
             dlg.clear_atom_labels()  # should not raise
 
 
-class TestEventFilter:
+class TestEventFilterBasics:
     def _make_event(self, event_type):
         ev = MagicMock()
         ev.type.return_value = event_type
