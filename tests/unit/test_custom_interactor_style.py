@@ -1037,6 +1037,7 @@ def test_rotate_group_follow_mouse_on_right_click(app):
 
 
 def test_left_click_in_group_starts_drag(app):
+    """Left-clicking an atom in the selected group starts group drag."""
     host = MagicMock()
     style = CustomInteractorStyle(host)
     mock_interactor = MagicMock()
@@ -1061,6 +1062,7 @@ def test_left_click_in_group_starts_drag(app):
 
 
 def test_left_click_outside_group_triggers_bfs(app):
+    """Left-clicking outside the selected group triggers BFS selection."""
     host = MagicMock()
     style = CustomInteractorStyle(host)
     mock_interactor = MagicMock()
@@ -1096,6 +1098,7 @@ def test_left_click_outside_group_triggers_bfs(app):
 
 
 def test_do_realtime_group_translate(app):
+    """Real-time group translation updates conformer coordinates."""
     host = MagicMock()
     style = CustomInteractorStyle(host)
     move_group_dialog = _move_dialog(group_atoms={0, 1}, drag_atom_idx_vtk=0)
@@ -1124,6 +1127,7 @@ def test_do_realtime_group_translate(app):
 
 
 def test_do_realtime_group_rotate(app):
+    """Real-time group rotation applies the rotation matrix and updates coordinates."""
     host = MagicMock()
     style = CustomInteractorStyle(host)
     move_group_dialog = _move_dialog(group_atoms={0, 1}, rotation_atom_idx=0)

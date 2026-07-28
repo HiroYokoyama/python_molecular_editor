@@ -2170,6 +2170,57 @@ _Doubling the sensitivity setting doubles the rotation applied._
 _No renderer yet (early startup) must not raise._
 
 
+### test_realtime_drag_enabled_setting
+__realtime_drag_enabled reads realtime_3d_drag from settings._
+
+- assert style._realtime_drag_enabled() is False
+- assert style._realtime_drag_enabled() is True
+
+### test_do_realtime_atom_drag_updates_positions
+__do_realtime_atom_drag updates atom_positions_3d, conformer, and fires plugin event._
+
+- assert host.view_3d_manager.atom_positions_3d[0].tolist() == [1.0, 2.0, 3.0]
+- conf.SetAtomPosition.assert_called_once()
+- host.plugin_manager.invoke_atom_drag_handlers.assert_called_once_with('move', [0], {0: (1.0, 2.0, 3.0)})
+
+### test_rotate_group_follow_mouse_setting
+_Test group rotation matrix computation for rotate_group_follow_mouse True vs False._
+
+- assert rot_mat_delta is not None
+- assert rot_mat_follow is not None
+
+### test_rotate_group_follow_mouse_on_right_click
+_rotate_group_follow_mouse=True requires atom click, False allows display click._
+
+- assert getattr(move_group_dialog, 'is_rotating_group_vtk', False) is False
+- assert move_group_dialog.is_rotating_group_vtk is True
+
+### test_left_click_in_group_starts_drag
+_No description provided._
+
+- assert move_group_dialog.is_dragging_group_vtk is True
+- assert move_group_dialog.drag_atom_idx_vtk == 0
+
+### test_left_click_outside_group_triggers_bfs
+_No description provided._
+
+- assert move_group_dialog.group_atoms == {2, 3}
+- assert 2 in move_group_dialog.selected_atoms
+- assert len(deferred) == 1
+- move_group_dialog.show_atom_labels.assert_called_once()
+
+### test_do_realtime_group_translate
+_No description provided._
+
+- assert conf.SetAtomPosition.call_count == 2
+- assert len(deferred) == 1
+
+### test_do_realtime_group_rotate
+_No description provided._
+
+- assert conf.SetAtomPosition.call_count == 2
+- assert len(deferred) == 1
+
 ## tests/unit/test_custom_qt_interactor.py
 
 ### test_double_click_redispatched_as_plain_press
@@ -6301,6 +6352,12 @@ _Test PluginContext initialization._
 _Each PluginContext API call delegates to the corresponding manager method._
 
 
+### TestPluginInterface.test_is_dragging_atom_property
+_is_dragging_atom property delegates to manager.is_dragging_atom._
+
+- assert ctx.is_dragging_atom is True
+- mock_manager.is_dragging_atom.assert_called_once()
+
 ### TestPluginInterface.test_get_3d_controller
 _Test get_3d_controller returns a controller linked to main window._
 
@@ -6777,6 +6834,25 @@ _A ZIP with one top-level folder still extracts directly (Case A)._
 _Plugins inside hidden directories like .git must not be loaded._
 
 - assert all((p['name'] != 'Sneaky' for p in plugins))
+
+### test_register_and_invoke_atom_drag_handlers
+_Verify registration and invocation of atom drag handlers._
+
+- assert len(pm.atom_drag_handlers) == 1
+- assert pm.atom_drag_handlers[0]['plugin'] == 'TestPlugin'
+- callback.assert_called_once_with('move', [0, 1], {0: (1.0, 2.0, 3.0)})
+
+### test_invoke_atom_drag_handlers_exception_handling
+_Faulty drag handler should not raise exception._
+
+- bad_cb.assert_called_once()
+- good_cb.assert_called_once()
+
+### test_is_dragging_atom_status
+_Verify is_dragging_atom status calculation._
+
+- assert pm.is_dragging_atom() is False
+- assert pm.is_dragging_atom() is True
 
 ## tests/unit/test_plugin_manager_window.py
 
