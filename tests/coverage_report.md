@@ -44,7 +44,7 @@
 | moleditpy\src\moleditpy\ui\mirror_dialog.py             |     72 |      7 |   90.3% |
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |   1000 |    143 |   85.7% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    614 |     82 |   86.6% |
-| moleditpy\src\moleditpy\ui\move_group_dialog.py         |    386 |     42 |   89.1% |
+| moleditpy\src\moleditpy\ui\move_group_dialog.py         |    386 |     41 |   89.4% |
 | moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py |    464 |     44 |   90.5% |
 | moleditpy\src\moleditpy\ui\periodic_table_dialog.py     |     37 |      2 |   94.6% |
 | moleditpy\src\moleditpy\ui\planarize_dialog.py          |    112 |      9 |   92.0% |
@@ -67,11 +67,11 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     39 |      0 |  100.0% |
-| **TOTAL** | **16560** | **1746** | **89.46%** |
+| **TOTAL** | **16560** | **1745** | **89.46%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2042 (1 skipped)
-- **Unit tests**: PASSED (1858 passed)
+- **Total tests passed**: 2047 (1 skipped)
+- **Unit tests**: PASSED (1863 passed)
 - **Integration tests**: PASSED (75 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (75 passed)

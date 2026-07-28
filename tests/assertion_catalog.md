@@ -1249,7 +1249,7 @@ _Test early exits in trigger_conversion (empty mol, etc.)._
 ### test_check_chemistry_problems_fallback
 _Test the manual valence check when RDKit fails._
 
-- assert mock_item.has_problem == True
+- assert mock_item.has_problem
 - assert any(('chemistry problems found' in msg for msg in msgs))
 
 ### test_trigger_conversion_happy_path
@@ -1279,7 +1279,7 @@ _Test on_calculation_error with correct message formatting._
 _Test trigger_conversion detects and flags chemistry problems (valence)._
 
 - assert any(('chemistry problems found' in msg for msg in msgs))
-- assert mock_item.has_problem == True
+- assert mock_item.has_problem
 
 ### test_trigger_conversion_fragment_message_exact
 _Test verification of the exact status bar message for multiple fragments._
@@ -3125,15 +3125,15 @@ _remove_dialog_from_list is a no-op when the dialog is not in the list._
 ### test_calculate_and_display_3_atoms_includes_angle
 _Three selected atoms produces both a distance and an angle measurement._
 
-- assert any(('Angle' in l for l in lines))
-- assert any(('Distance' in l for l in lines))
+- assert any(('Angle' in line for line in lines))
+- assert any(('Distance' in line for line in lines))
 
 ### test_calculate_and_display_4_atoms_includes_dihedral
 _Four selected atoms produces distance, angle, and dihedral measurements._
 
-- assert any(('Dihedral' in l for l in lines))
-- assert any(('Angle' in l for l in lines))
-- assert any(('Distance' in l for l in lines))
+- assert any(('Dihedral' in line for line in lines))
+- assert any(('Angle' in line for line in lines))
+- assert any(('Distance' in line for line in lines))
 
 ### test_calculate_and_display_1_atom_does_nothing
 _One selected atom does not trigger any measurement display._
@@ -5653,6 +5653,13 @@ _show_atom_labels restores the camera position after adding highlight meshes._
 _Passing preselected_atoms to __init__ pre-selects the connected group via BFS._
 
 - assert len(dlg.group_atoms) == mol.GetNumAtoms()
+- assert dlg.selected_atoms == {0}
+- assert 'atoms' in dlg.selection_label.text()
+
+### TestInit.test_preselected_atoms_highlight_the_group
+_The preselected group is highlighted in the 3D view during __init__._
+
+- assert mw.view_3d_manager.plotter.add_mesh.called
 
 ### TestInit.test_no_preselected_atoms_leaves_group_empty
 _Without preselected_atoms the group_atoms set is empty on init._
@@ -5739,24 +5746,24 @@ _clear_atom_labels removes the highlight actor from the plotter and sets it to N
 _clear_atom_labels does not raise when the plotter is None._
 
 
-### TestEventFilter.test_returns_false_when_plotter_is_none
+### TestEventFilterBasics.test_returns_false_when_plotter_is_none
 _eventFilter returns False immediately when the plotter is None._
 
 - assert result is False
 
-### TestEventFilter.test_returns_false_when_mol_is_none
+### TestEventFilterBasics.test_returns_false_when_mol_is_none
 _eventFilter returns False immediately when the molecule is None._
 
 - assert result is False
 
-### TestEventFilter.test_double_click_resets_state_and_returns_false
+### TestEventFilterBasics.test_double_click_resets_state_and_returns_false
 _A double-click resets dragging flags and returns False._
 
 - assert result is False
 - assert dlg.is_dragging_group is False
 - assert dlg.potential_drag is False
 
-### TestEventFilter.test_non_interactor_obj_delegates_to_super
+### TestEventFilterBasics.test_non_interactor_obj_delegates_to_super
 _Events on objects other than the plotter interactor use base behaviour._
 
 - assert result is False
@@ -10216,13 +10223,6 @@ _No description provided._
 
 - assert view3d.show_chiral_labels is False
 - mock_parser_host.statusBar().showMessage.assert_called_with('Chiral labels disabled.')
-
-### test_toggle_atom_info_same_mode_turns_off
-_No description provided._
-
-- assert view3d.atom_info_display_mode is None
-- base_menu.setEnabled.assert_called_with(False)
-- mock_parser_host.statusBar().showMessage.assert_called_with('Atom info display disabled.')
 
 ### test_toggle_atom_info_index_mode_enables_base_menu
 _No description provided._
