@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 
 class PluginContext:
@@ -352,6 +352,23 @@ class PluginContext:
             callback: Function with no arguments that resets plugin state.
         """
         self._manager.register_document_reset_handler(self._plugin_name, callback)
+
+    def register_atom_drag_handler(self, callback: Callable) -> None:
+        """Register a handler called during 3D atom or group dragging.
+
+        The callback receives:
+            event_type (str): ``"start"``, ``"move"``, or ``"end"``.
+            atom_indices (List[int]): RDKit atom indices being dragged.
+            positions (dict[int, tuple[float, float, float]]):
+                Current 3D positions of the dragged atoms.
+                Empty dict on ``"start"``.
+        """
+        self._manager.register_atom_drag_handler(self._plugin_name, callback)
+
+    @property
+    def is_dragging_atom(self) -> bool:
+        """Return True if an atom or group is currently being dragged in 3D."""
+        return self._manager.is_dragging_atom()  # type: ignore[no-any-return]
 
     def get_setting(self, key: str, default: Any = None) -> Any:
         """

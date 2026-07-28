@@ -37,6 +37,7 @@ class Settings3DSceneTab(SettingsTabBase):
         self.bg_button: Any = None
         self.light_checkbox: Any = None
         self.projection_combo: Any = None
+        self.realtime_drag_checkbox: Any = None
         self.current_bg_color = default_settings["background_color"]
         self._setup_ui()
 
@@ -88,6 +89,9 @@ class Settings3DSceneTab(SettingsTabBase):
             self._wrap_layout(self.rotation_sens_slider, self.rotation_sens_label),
         )
 
+        self.realtime_drag_checkbox = QCheckBox()
+        form_layout.addRow("Real-time 3D Drag:", self.realtime_drag_checkbox)
+
     def _select_color(self) -> None:
         color = QColorDialog.getColor(QColor(self.current_bg_color), self)
         if color.isValid():
@@ -123,6 +127,7 @@ class Settings3DSceneTab(SettingsTabBase):
 
         sens_val = settings_dict.get("mouse_rotation_sensitivity", 1.0)
         self.rotation_sens_slider.setValue(int(sens_val * 100))
+        self.realtime_drag_checkbox.setChecked(settings_dict.get("realtime_3d_drag", True))
 
     def get_settings(self) -> dict[str, Any]:
         return {
@@ -134,6 +139,7 @@ class Settings3DSceneTab(SettingsTabBase):
             "specular_power": self.spec_power_slider.value(),
             "projection_mode": self.projection_combo.currentText(),
             "mouse_rotation_sensitivity": self.rotation_sens_slider.value() / 100.0,
+            "realtime_3d_drag": self.realtime_drag_checkbox.isChecked(),
         }
 
 

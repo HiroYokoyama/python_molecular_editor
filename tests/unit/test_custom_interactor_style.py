@@ -905,3 +905,51 @@ def test_rotation_handles_missing_renderer(app):
     style, _ = _rotation_style()
     style.GetCurrentRenderer = MagicMock(return_value=None)
     style._rotate_size_independent()  # must not raise
+
+
+# =============================================================================
+# Real-Time Atom & Group Dragging
+# =============================================================================
+
+
+def test_realtime_drag_enabled_setting(app):
+    """_realtime_drag_enabled reads realtime_3d_drag from settings."""
+    host = MagicMock()
+    host.get_settings.return_value = {"realtime_3d_drag": False}
+    style = CustomInteractorStyle(host)
+    assert style._realtime_drag_enabled() is False
+
+    host.get_settings.return_value = {"realtime_3d_drag": True}
+    assert style._realtime_drag_enabled() is True
+
+
+def test_do_realtime_atom_drag_updates_positions(app):
+    """_do_realtime_atom_drag updates atom_positions_3d, conformer, and fires plugin event."""
+    host = MagicMock()
+    style = CustomInteractorStyle(host)
+
+    host.dragged_atom_info = {"id": 0}
+    mol = MagicMock()
+    conf = MagicMock()
+    mol.GetNumConformers.return_value = 1
+    mol.GetConformer.return_value = conf
+    conf.GetAtomPosition.return_value = MagicMock(x=0.0, y=0.0, z=0.0)
+
+    host.view_3d_manager.current_mol = mol
+    host.view_3d_manager.atom_positions_3d = np.array([[0.0, 0.0, 0.0]])
+    host.plugin_manager.invoke_atom_drag_handlers = MagicMock()
+
+    style._world_to_display_depth = MagicMock(return_value=0.5)
+    style._display_to_world = MagicMock(return_value=(1.0, 2.0, 3.0))
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (50, 50)
+    style.GetInteractor = MagicMock(return_value=mock_interactor)
+
+    style._do_realtime_atom_drag(host)
+
+    assert host.view_3d_manager.atom_positions_3d[0].tolist() == [1.0, 2.0, 3.0]
+    conf.SetAtomPosition.assert_called_once()
+    host.plugin_manager.invoke_atom_drag_handlers.assert_called_once_with(
+        "move", [0], {0: (1.0, 2.0, 3.0)}
+    )
+

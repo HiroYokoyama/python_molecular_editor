@@ -274,6 +274,25 @@ Register a handler for files dropped onto the main 2D/3D editor window. **This i
 - **callback** (`Callable[[str], bool]`): Function that receives the dropped file path. Must return `True` if it successfully handled the file, `False` to pass to the next handler.
 - **priority** (`int`): Handlers with higher priority are checked first. Use negative values (e.g., `-1`) for fallback handlers that run only when nothing else claims the file.
 
+#### `register_atom_drag_handler(callback)`
+Register a callback to receive real-time notifications during 3D atom or group dragging (single atom drag, group translate, group rotate).
+- **callback** (`Callable[[str, List[int], Dict[int, Tuple[float, float, float]]], None]`): Function receiving `(event_type, atom_indices, positions)`.
+  - `event_type`: `"start"`, `"move"`, or `"end"`.
+  - `atom_indices`: List of RDKit atom indices being dragged.
+  - `positions`: Dictionary mapping RDKit atom index to current `(x, y, z)` 3D tuple. Empty dict on `"start"`.
+
+```python
+def on_atom_drag(event_type, indices, positions):
+    if event_type == "move":
+        print(f"Dragging atoms {indices}: {positions}")
+
+context.register_atom_drag_handler(on_atom_drag)
+```
+
+#### `is_dragging_atom` (Property)
+Check whether an atom or group is currently being dragged in the 3D viewport.
+- **Returns** (`bool`): `True` if dragging is active, `False` otherwise.
+
 ---
 
 ### 2.3 Molecular State & Undo

@@ -51,6 +51,7 @@ def test_scene_tab_get_settings_keys(app):
         "specular_power",
         "projection_mode",
         "mouse_rotation_sensitivity",
+        "realtime_3d_drag",
     }
     assert expected_keys == set(result.keys())
 

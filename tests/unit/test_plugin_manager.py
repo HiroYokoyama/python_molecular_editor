@@ -825,3 +825,47 @@ def test_discover_plugins_skips_dot_directories(tmp_path):
     pm.plugin_dir = str(plugin_dir)
     plugins = pm.discover_plugins()
     assert all(p["name"] != "Sneaky" for p in plugins)
+
+
+# =============================================================================
+# Atom Drag Handlers & Status
+# =============================================================================
+
+
+def test_register_and_invoke_atom_drag_handlers():
+    """Verify registration and invocation of atom drag handlers."""
+    pm = PluginManager()
+    callback = MagicMock()
+    pm.register_atom_drag_handler("TestPlugin", callback)
+
+    assert len(pm.atom_drag_handlers) == 1
+    assert pm.atom_drag_handlers[0]["plugin"] == "TestPlugin"
+
+    pm.invoke_atom_drag_handlers("move", [0, 1], {0: (1.0, 2.0, 3.0)})
+    callback.assert_called_once_with("move", [0, 1], {0: (1.0, 2.0, 3.0)})
+
+
+def test_invoke_atom_drag_handlers_exception_handling():
+    """Faulty drag handler should not raise exception."""
+    pm = PluginManager()
+    bad_cb = MagicMock(side_effect=RuntimeError("Plugin error"))
+    good_cb = MagicMock()
+    pm.register_atom_drag_handler("BadPlugin", bad_cb)
+    pm.register_atom_drag_handler("GoodPlugin", good_cb)
+
+    pm.invoke_atom_drag_handlers("end", [0], {})
+    bad_cb.assert_called_once()
+    good_cb.assert_called_once()
+
+
+def test_is_dragging_atom_status():
+    """Verify is_dragging_atom status calculation."""
+    mw = MagicMock()
+    pm = PluginManager(main_window=mw)
+
+    mw.dragged_atom_info = None
+    assert pm.is_dragging_atom() is False
+
+    mw.dragged_atom_info = {"id": 0}
+    assert pm.is_dragging_atom() is True
+
