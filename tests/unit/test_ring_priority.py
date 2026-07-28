@@ -76,9 +76,8 @@ def test_ring_priority_smaller_wins():
     # Calculate ring centers manually
     # Ring 0 (atoms 0,1,2,3,4,5) - 6-ring
     six_ring_atoms = [0, 1, 2, 3, 4, 5]
-    six_center_x = sum(data.atoms[i]["pos"][0] for i in six_ring_atoms) / 6
-    six_center_y = sum(data.atoms[i]["pos"][1] for i in six_ring_atoms) / 6
-    six_center = (six_center_x, six_center_y)
+    sum(data.atoms[i]["pos"][0] for i in six_ring_atoms) / 6
+    sum(data.atoms[i]["pos"][1] for i in six_ring_atoms) / 6
 
     # Ring 1 (atoms 3,4,6,7,8) - 5-ring
     five_ring_atoms = [3, 4, 6, 7, 8]

@@ -144,6 +144,8 @@ The `context` object passed to `initialize(context)` is your safe proxy to the a
 | **3D** | `register_3d_style(name, cb)` | Custom visualization mode |
 | **3D** | `register_optimization_method(name, cb)` | Custom geometry optimizer |
 | **3D** | `plotter` | Direct PyVista plotter access |
+| **3D** | `register_atom_drag_handler(cb)` | Observe live 3D atom / group dragging |
+| **3D** | `is_dragging_atom` | True while a 3D drag gesture is in progress |
 | **Project** | `register_save_handler(cb)` | Save plugin data to `.pmeprj` |
 | **Project** | `register_load_handler(cb)` | Restore plugin data from `.pmeprj` |
 | **Project** | `register_document_reset_handler(cb)` | Reset on File > New |
@@ -273,6 +275,27 @@ context.register_file_opener(".xyz", fallback, priority=-1)     # last resort
 Register a handler for files dropped onto the main 2D/3D editor window. **This is distinct from `register_file_opener`** — drop handlers are only triggered by drag-and-drop, not by the Import menu or command-line file arguments. Register both if you need both paths.
 - **callback** (`Callable[[str], bool]`): Function that receives the dropped file path. Must return `True` if it successfully handled the file, `False` to pass to the next handler.
 - **priority** (`int`): Handlers with higher priority are checked first. Use negative values (e.g., `-1`) for fallback handlers that run only when nothing else claims the file.
+
+#### `register_atom_drag_handler(callback)`
+Register a callback to receive real-time notifications during 3D atom or group dragging (single atom drag, group translate, group rotate).
+- **callback** (`Callable[[str, List[int], Dict[int, Tuple[float, float, float]]], None]`): Function receiving `(event_type, atom_indices, positions)`.
+  - `event_type`: `"start"`, `"move"`, or `"end"`.
+  - `atom_indices`: List of RDKit atom indices being dragged.
+  - `positions`: Dictionary mapping RDKit atom index to current `(x, y, z)` 3D tuple. Empty dict on `"start"`; on `"end"` it holds the final coordinates.
+
+`"end"` is always delivered exactly once for every `"start"`, including when the gesture is cancelled or its mouse-release is lost. `"move"` is throttled to roughly 30 fps and is not emitted at all when the user disables **Real-time 3D Drag** in Settings, or when the molecule has more than 300 atoms (the per-frame scene rebuild is skipped for large structures). `"start"` and `"end"` are always emitted regardless.
+
+```python
+def on_atom_drag(event_type, indices, positions):
+    if event_type == "move":
+        print(f"Dragging atoms {indices}: {positions}")
+
+context.register_atom_drag_handler(on_atom_drag)
+```
+
+#### `is_dragging_atom` (Property)
+Check whether an atom or group is currently being dragged in the 3D viewport.
+- **Returns** (`bool`): `True` if dragging is active, `False` otherwise.
 
 ---
 

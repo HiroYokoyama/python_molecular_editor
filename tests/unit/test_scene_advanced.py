@@ -238,7 +238,7 @@ def test_atom_fusing_enabled(scene_setup, monkeypatch):
     scene, window, view, data = scene_setup
 
     # Create existing atom at (0, 0)
-    a1_id = scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("C", QPointF(0, 0))
 
     # Enable fusing
     window.init_manager.settings = {
@@ -265,7 +265,7 @@ def test_atom_fusing_disabled(scene_setup, monkeypatch):
     scene, window, view, data = scene_setup
 
     # Create existing atom at (0, 0)
-    a1_id = scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("C", QPointF(0, 0))
 
     # Disable fusing (by setting snapping distance to 0)
     window.init_manager.settings = {

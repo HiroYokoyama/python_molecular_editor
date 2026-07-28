@@ -583,8 +583,8 @@ def test_calculate_and_display_3_atoms_includes_angle(app):
         mgr.calculate_and_display_measurements()
 
     lines = mock_disp.call_args[0][0]
-    assert any("Angle" in l for l in lines)
-    assert any("Distance" in l for l in lines)
+    assert any("Angle" in line for line in lines)
+    assert any("Distance" in line for line in lines)
 
 
 def test_calculate_and_display_4_atoms_includes_dihedral(app):
@@ -605,9 +605,9 @@ def test_calculate_and_display_4_atoms_includes_dihedral(app):
         mgr.calculate_and_display_measurements()
 
     lines = mock_disp.call_args[0][0]
-    assert any("Dihedral" in l for l in lines)
-    assert any("Angle" in l for l in lines)
-    assert any("Distance" in l for l in lines)
+    assert any("Dihedral" in line for line in lines)
+    assert any("Angle" in line for line in lines)
+    assert any("Distance" in line for line in lines)
 
 
 def test_calculate_and_display_1_atom_does_nothing(app):

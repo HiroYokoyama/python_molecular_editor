@@ -394,7 +394,6 @@ def test_show_atom_labels_for_clears_then_adds(app):
 def test_show_atom_labels_for_empty_list_clears_all(app):
     """show_atom_labels_for with an empty list removes all existing labels."""
     dlg, mw = _make_dlg(app)
-    plotter = mw.view_3d_manager.plotter
     dlg.selection_labels = [MagicMock()]
 
     dlg.show_atom_labels_for([])

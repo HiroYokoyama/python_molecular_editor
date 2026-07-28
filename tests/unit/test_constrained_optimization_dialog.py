@@ -242,9 +242,7 @@ class TestAddConstraint:
         dlg.on_atom_picked(1)
 
         with patch.object(dlg, "_QDialog__init__", create=True):
-            with patch(
-                "moleditpy.ui.constrained_optimization_dialog.QMessageBox"
-            ) as mb:
+            with patch("moleditpy.ui.constrained_optimization_dialog.QMessageBox"):
                 dlg.add_constraint()
 
         assert len(dlg.constraints) == 1

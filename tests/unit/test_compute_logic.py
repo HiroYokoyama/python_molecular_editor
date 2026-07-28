@@ -718,7 +718,7 @@ def test_app_state_radical_and_constraint_preservation(mock_parser_host):
 
     # Setup initial state with radical and constraint
     pos = QPointF(10, 20)
-    aid = compute.data.add_atom("C", pos, radical=2)
+    compute.data.add_atom("C", pos, radical=2)
 
     compute.constraints_3d = [("DISTANCE", (0, 1), 1.5, 1e5)]
 
@@ -851,7 +851,7 @@ def test_check_chemistry_problems_fallback(mock_parser_host):
     }
 
     compute.check_chemistry_problems_fallback()
-    assert mock_item.has_problem == True
+    assert mock_item.has_problem
     msgs = compute.get_status_messages()
     assert any("chemistry problems found" in msg for msg in msgs)
 
@@ -967,7 +967,7 @@ def test_trigger_conversion_chemistry_problem_detection(mock_parser_host):
     assert any("chemistry problems found" in msg for msg in msgs)
 
     # Verify the item was flagged
-    assert mock_item.has_problem == True
+    assert mock_item.has_problem
 
     # Explicit cleanup to prevent potential crash during teardown
     compute.data.atoms.clear()

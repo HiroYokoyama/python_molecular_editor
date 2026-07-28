@@ -294,7 +294,7 @@ def test_scene_bond_snapping_distance(
     mock_parser_host.init_manager.settings = {"bond_snapping_distance_2d": 25.0}
 
     id1 = scene.create_atom("C", QPointF(0, 0))
-    a1 = scene.atom_items[id1]
+    scene.atom_items[id1]
 
     # Press near A1 but not exactly on it (within 25.0 tolerance)
     with patch.object(scene, "find_atom_near") as mock_find_near:

@@ -37,6 +37,8 @@ class Settings3DSceneTab(SettingsTabBase):
         self.bg_button: Any = None
         self.light_checkbox: Any = None
         self.projection_combo: Any = None
+        self.realtime_drag_checkbox: Any = None
+        self.rotate_group_follow_mouse_checkbox: Any = None
         self.current_bg_color = default_settings["background_color"]
         self._setup_ui()
 
@@ -88,6 +90,24 @@ class Settings3DSceneTab(SettingsTabBase):
             self._wrap_layout(self.rotation_sens_slider, self.rotation_sens_label),
         )
 
+        self.realtime_drag_checkbox = QCheckBox()
+        self.realtime_drag_checkbox.setToolTip(
+            "Update the structure continuously while dragging an atom or group.\n"
+            "When off, the move is applied only on mouse release.\n"
+            "Structures larger than 300 atoms always use release-only updates."
+        )
+        form_layout.addRow("Real-time 3D Drag:", self.realtime_drag_checkbox)
+
+        self.rotate_group_follow_mouse_checkbox = QCheckBox()
+        self.rotate_group_follow_mouse_checkbox.setToolTip(
+            "On: right-drag rotation must start on an atom of the group,\n"
+            "and that atom follows the cursor.\n"
+            "Off: right-dragging anywhere on the 3D view rotates the group."
+        )
+        form_layout.addRow(
+            "Rotate Groups: Follow Mouse:", self.rotate_group_follow_mouse_checkbox
+        )
+
     def _select_color(self) -> None:
         color = QColorDialog.getColor(QColor(self.current_bg_color), self)
         if color.isValid():
@@ -123,6 +143,12 @@ class Settings3DSceneTab(SettingsTabBase):
 
         sens_val = settings_dict.get("mouse_rotation_sensitivity", 1.0)
         self.rotation_sens_slider.setValue(int(sens_val * 100))
+        self.realtime_drag_checkbox.setChecked(
+            settings_dict.get("realtime_3d_drag", True)
+        )
+        self.rotate_group_follow_mouse_checkbox.setChecked(
+            settings_dict.get("rotate_group_follow_mouse", False)
+        )
 
     def get_settings(self) -> dict[str, Any]:
         return {
@@ -134,6 +160,8 @@ class Settings3DSceneTab(SettingsTabBase):
             "specular_power": self.spec_power_slider.value(),
             "projection_mode": self.projection_combo.currentText(),
             "mouse_rotation_sensitivity": self.rotation_sens_slider.value() / 100.0,
+            "realtime_3d_drag": self.realtime_drag_checkbox.isChecked(),
+            "rotate_group_follow_mouse": self.rotate_group_follow_mouse_checkbox.isChecked(),
         }
 
 

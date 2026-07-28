@@ -123,6 +123,12 @@ class TestPluginInterface:
                     "hello", 1000
                 ),
             ),
+            (
+                lambda ctx, cb: ctx.register_atom_drag_handler(cb),
+                lambda mgr, cb: mgr.register_atom_drag_handler.assert_called_once_with(
+                    "TestPlugin", cb
+                ),
+            ),
         ],
         ids=[
             "add_menu_action",
@@ -141,6 +147,7 @@ class TestPluginInterface:
             "register_window",
             "get_window",
             "show_status_message",
+            "register_atom_drag_handler",
         ],
     )
     def test_delegates_to_manager(self, mock_manager, invoke, check):
@@ -149,6 +156,13 @@ class TestPluginInterface:
         ctx = PluginContext(mock_manager, "TestPlugin")
         invoke(ctx, cb)
         check(mock_manager, cb)
+
+    def test_is_dragging_atom_property(self, mock_manager):
+        """is_dragging_atom property delegates to manager.is_dragging_atom."""
+        mock_manager.is_dragging_atom.return_value = True
+        ctx = PluginContext(mock_manager, "TestPlugin")
+        assert ctx.is_dragging_atom is True
+        mock_manager.is_dragging_atom.assert_called_once()
 
     def test_get_3d_controller(self, mock_manager, mock_main_window):
         """Test get_3d_controller returns a controller linked to main window."""

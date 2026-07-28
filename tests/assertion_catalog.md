@@ -476,6 +476,33 @@ _Test boundingRect expansion for E/Z labels_
 - assert rect_stereo.width() >= rect_no_stereo.width()
 - assert rect_stereo.height() >= rect_no_stereo.height()
 
+### TestAtomDragPropagation.test_atom_reports_position_changes
+_Qt only calls itemChange for moves when ItemSendsGeometryChanges is set._
+
+- assert bool(atom.flags() & QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+
+### TestAtomDragPropagation.test_bond_follows_dragged_atom_immediately
+_Moving an atom repositions its bonds without waiting for a redraw._
+
+- assert bond.pos() == atom1.pos()
+
+### TestAtomDragPropagation.test_bond_geometry_follows_far_atom
+_Moving the far end leaves the bond anchored but restretches its line._
+
+- assert bond.pos() == atom1.pos()
+- assert bond.get_line_in_local_coords().p2() != before.p2()
+
+### TestAtomDragPropagation.test_bond_is_never_dragged_itself
+_The bond must not be movable: its position only derives from atom1._
+
+- assert not bool(bond.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+
+### TestAtomDragPropagation.test_multi_atom_move_keeps_bond_attached_to_both_ends
+_Dragging a whole selection keeps the bond spanning both atoms._
+
+- assert bond.pos() == atom1.pos()
+- assert bond.get_line_in_local_coords().length() == pytest.approx(length_before, abs=1e-06)
+
 ## tests/unit/test_atom_picking.py
 
 ### test_pick_atom_index_from_screen_hits_projected_atom_edge
@@ -1222,7 +1249,7 @@ _Test early exits in trigger_conversion (empty mol, etc.)._
 ### test_check_chemistry_problems_fallback
 _Test the manual valence check when RDKit fails._
 
-- assert mock_item.has_problem == True
+- assert mock_item.has_problem
 - assert any(('chemistry problems found' in msg for msg in msgs))
 
 ### test_trigger_conversion_happy_path
@@ -1252,7 +1279,7 @@ _Test on_calculation_error with correct message formatting._
 _Test trigger_conversion detects and flags chemistry problems (valence)._
 
 - assert any(('chemistry problems found' in msg for msg in msgs))
-- assert mock_item.has_problem == True
+- assert mock_item.has_problem
 
 ### test_trigger_conversion_fragment_message_exact
 _Test verification of the exact status bar message for multiple fragments._
@@ -2170,6 +2197,163 @@ _Doubling the sensitivity setting doubles the rotation applied._
 _No renderer yet (early startup) must not raise._
 
 
+### test_realtime_drag_enabled_setting
+__realtime_drag_enabled reads realtime_3d_drag from settings._
+
+- assert style._realtime_drag_enabled() is False
+- assert style._realtime_drag_enabled() is True
+
+### test_do_realtime_atom_drag_updates_positions
+__do_realtime_atom_drag updates atom_positions_3d, conformer, and fires plugin event._
+
+- assert host.view_3d_manager.atom_positions_3d[0].tolist() == [1.0, 2.0, 3.0]
+- conf.SetAtomPosition.assert_called_once()
+- host.plugin_manager.invoke_atom_drag_handlers.assert_called_once_with('move', [0], {0: (1.0, 2.0, 3.0)})
+
+### test_rotate_group_follow_mouse_setting
+_Test group rotation matrix computation for rotate_group_follow_mouse True vs False._
+
+- assert rot_mat_delta is not None
+- assert rot_mat_follow is not None
+
+### test_rotate_group_follow_mouse_on_right_click
+_rotate_group_follow_mouse=True requires atom click, False allows display click._
+
+- assert getattr(move_group_dialog, 'is_rotating_group_vtk', False) is False
+- assert move_group_dialog.is_rotating_group_vtk is True
+
+### test_left_click_in_group_starts_drag
+_Left-clicking an atom in the selected group starts group drag._
+
+- assert move_group_dialog.is_dragging_group_vtk is True
+- assert move_group_dialog.drag_atom_idx_vtk == 0
+
+### test_left_click_outside_group_triggers_bfs
+_Left-clicking outside the selected group triggers BFS selection._
+
+- assert move_group_dialog.group_atoms == {2, 3}
+- assert 2 in move_group_dialog.selected_atoms
+- assert len(deferred) == 1
+- move_group_dialog.show_atom_labels.assert_called_once()
+
+### test_do_realtime_group_translate
+_Real-time group translation updates conformer coordinates._
+
+- assert conf.SetAtomPosition.call_count == 2
+- assert len(deferred) == 1
+
+### test_do_realtime_group_rotate
+_Real-time group rotation applies the rotation matrix and updates coordinates._
+
+- assert conf.SetAtomPosition.call_count == 2
+- assert len(deferred) == 1
+
+### test_end_drag_event_reports_final_positions
+_The 'end' event carries the final coordinates of the dragged atoms._
+
+- assert _drag_events(host) == [('start', [0, 1], {}), ('end', [0, 1], {0: (0.0, 0.0, 0.0), 1: (2.0, 0.0, 0.0)})]
+
+### test_end_drag_event_is_emitted_once
+_A second _end_drag_event without a new gesture emits nothing._
+
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_end_drag_event_without_start_is_silent
+_No 'end' is emitted when no gesture was ever started._
+
+- assert _drag_events(host) == []
+
+### test_right_click_without_moving_still_ends_drag
+_A right-click that never moves emits 'end' to match its 'start'._
+
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_aborted_group_drag_ends_and_pushes_undo
+_A lost mouse-release still ends the drag and records the moved geometry._
+
+- assert move_group_dialog.is_dragging_group_vtk is False
+- host.edit_actions_manager.push_undo_state.assert_called_once()
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_aborted_unmoved_drag_does_not_push_undo
+_An aborted gesture that never moved leaves the undo stack alone._
+
+- host.edit_actions_manager.push_undo_state.assert_not_called()
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_reset_interactor_state_ends_active_drag
+_Forcing a state reset closes any drag still open toward plugins._
+
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_new_gesture_closes_an_orphaned_one
+_A right press never resets state, so a new start must close the old gesture._
+
+- assert [(e[0], e[1]) for e in _drag_events(host)] == [('start', [0]), ('end', [0]), ('start', [1]), ('end', [1])]
+
+### test_abort_without_active_gesture_pushes_no_undo
+_Dialog flags left by something else must not fabricate an undo entry._
+
+- host.edit_actions_manager.push_undo_state.assert_not_called()
+- assert _drag_events(host) == []
+
+### test_should_drag_redraw_respects_setting
+_Real-time frames are suppressed when the setting is off._
+
+- assert style._should_drag_redraw() is True
+- assert style._should_drag_redraw() is False
+
+### test_should_drag_redraw_waits_for_pending_frame
+_No new frame is started while a deferred redraw is still queued._
+
+- assert style._should_drag_redraw() is False
+- assert style._drag_redraw_pending is False
+- assert style._should_drag_redraw() is False
+
+### test_realtime_atom_drag_frame_gates_the_next_one
+_A queued drag frame blocks further frames until it has rendered._
+
+- assert style._drag_redraw_pending is False
+- assert host.view_3d_manager.draw_molecule_3d.call_count == 1
+- assert style._should_drag_redraw() is False
+
+### test_group_rotation_scales_with_sensitivity
+_Group rotation honours the mouse rotation sensitivity setting._
+
+- assert _angle(2.0) == pytest.approx(2 * _angle(1.0), rel=1e-06)
+
+### test_realtime_drag_allowed_up_to_the_size_limit
+_A molecule at the limit still gets real-time frames._
+
+- assert style._molecule_too_large_for_realtime() is False
+- assert style._should_drag_redraw() is True
+
+### test_realtime_drag_skipped_above_the_size_limit
+_Past the limit the per-frame scene rebuild is skipped entirely._
+
+- assert style._molecule_too_large_for_realtime() is True
+- assert style._realtime_drag_active() is False
+- assert style._should_drag_redraw() is False
+
+### test_large_molecule_drag_emits_no_move_events
+_No real-time frame means no coordinate writes and no 'move' events._
+
+- assert [e[0] for e in _drag_events(host)] == []
+- mock_single_shot.assert_not_called()
+- host.view_3d_manager.current_mol.GetConformer.assert_not_called()
+
+### test_aborted_large_molecule_drag_pushes_no_undo
+_Nothing was moved mid-gesture, so an aborted drag needs no undo entry._
+
+- host.edit_actions_manager.push_undo_state.assert_not_called()
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_unreadable_atom_count_keeps_realtime_drag
+_An unreadable atom count must not silently disable real-time drag._
+
+- assert style._molecule_too_large_for_realtime() is False
+- assert style._molecule_too_large_for_realtime() is False
+
 ## tests/unit/test_custom_qt_interactor.py
 
 ### test_double_click_redispatched_as_plain_press
@@ -2941,15 +3125,15 @@ _remove_dialog_from_list is a no-op when the dialog is not in the list._
 ### test_calculate_and_display_3_atoms_includes_angle
 _Three selected atoms produces both a distance and an angle measurement._
 
-- assert any(('Angle' in l for l in lines))
-- assert any(('Distance' in l for l in lines))
+- assert any(('Angle' in line for line in lines))
+- assert any(('Distance' in line for line in lines))
 
 ### test_calculate_and_display_4_atoms_includes_dihedral
 _Four selected atoms produces distance, angle, and dihedral measurements._
 
-- assert any(('Dihedral' in l for l in lines))
-- assert any(('Angle' in l for l in lines))
-- assert any(('Distance' in l for l in lines))
+- assert any(('Dihedral' in line for line in lines))
+- assert any(('Angle' in line for line in lines))
+- assert any(('Distance' in line for line in lines))
 
 ### test_calculate_and_display_1_atom_does_nothing
 _One selected atom does not trigger any measurement display._
@@ -5469,6 +5653,13 @@ _show_atom_labels restores the camera position after adding highlight meshes._
 _Passing preselected_atoms to __init__ pre-selects the connected group via BFS._
 
 - assert len(dlg.group_atoms) == mol.GetNumAtoms()
+- assert dlg.selected_atoms == {0}
+- assert 'atoms' in dlg.selection_label.text()
+
+### TestInit.test_preselected_atoms_highlight_the_group
+_The preselected group is highlighted in the 3D view during __init__._
+
+- assert mw.view_3d_manager.plotter.add_mesh.called
 
 ### TestInit.test_no_preselected_atoms_leaves_group_empty
 _Without preselected_atoms the group_atoms set is empty on init._
@@ -5555,24 +5746,24 @@ _clear_atom_labels removes the highlight actor from the plotter and sets it to N
 _clear_atom_labels does not raise when the plotter is None._
 
 
-### TestEventFilter.test_returns_false_when_plotter_is_none
+### TestEventFilterBasics.test_returns_false_when_plotter_is_none
 _eventFilter returns False immediately when the plotter is None._
 
 - assert result is False
 
-### TestEventFilter.test_returns_false_when_mol_is_none
+### TestEventFilterBasics.test_returns_false_when_mol_is_none
 _eventFilter returns False immediately when the molecule is None._
 
 - assert result is False
 
-### TestEventFilter.test_double_click_resets_state_and_returns_false
+### TestEventFilterBasics.test_double_click_resets_state_and_returns_false
 _A double-click resets dragging flags and returns False._
 
 - assert result is False
 - assert dlg.is_dragging_group is False
 - assert dlg.potential_drag is False
 
-### TestEventFilter.test_non_interactor_obj_delegates_to_super
+### TestEventFilterBasics.test_non_interactor_obj_delegates_to_super
 _Events on objects other than the plotter interactor use base behaviour._
 
 - assert result is False
@@ -6301,6 +6492,12 @@ _Test PluginContext initialization._
 _Each PluginContext API call delegates to the corresponding manager method._
 
 
+### TestPluginInterface.test_is_dragging_atom_property
+_is_dragging_atom property delegates to manager.is_dragging_atom._
+
+- assert ctx.is_dragging_atom is True
+- mock_manager.is_dragging_atom.assert_called_once()
+
 ### TestPluginInterface.test_get_3d_controller
 _Test get_3d_controller returns a controller linked to main window._
 
@@ -6777,6 +6974,42 @@ _A ZIP with one top-level folder still extracts directly (Case A)._
 _Plugins inside hidden directories like .git must not be loaded._
 
 - assert all((p['name'] != 'Sneaky' for p in plugins))
+
+### test_register_and_invoke_atom_drag_handlers
+_Verify registration and invocation of atom drag handlers._
+
+- assert len(pm.atom_drag_handlers) == 1
+- assert pm.atom_drag_handlers[0]['plugin'] == 'TestPlugin'
+- callback.assert_called_once_with('move', [0, 1], {0: (1.0, 2.0, 3.0)})
+
+### test_invoke_atom_drag_handlers_exception_handling
+_Faulty drag handler should not raise exception._
+
+- bad_cb.assert_called_once()
+- good_cb.assert_called_once()
+
+### test_is_dragging_atom_status
+_Verify is_dragging_atom status calculation._
+
+- assert pm.is_dragging_atom() is False
+- assert pm.is_dragging_atom() is True
+
+### test_discover_plugins_clears_atom_drag_handlers
+_Rediscovery drops handlers of the previous load so they cannot fire twice._
+
+- assert pm.atom_drag_handlers == []
+
+### test_is_dragging_atom_reports_group_gestures
+_A group translate / rotate counts as dragging, like a single atom does._
+
+- assert pm.is_dragging_atom() is False
+- assert pm.is_dragging_atom() is True
+- assert pm.is_dragging_atom() is True
+
+### test_is_dragging_atom_ignores_unrelated_windows
+_Windows that are not move dialogs never report a drag._
+
+- assert pm.is_dragging_atom() is False
 
 ## tests/unit/test_plugin_manager_window.py
 
@@ -9990,13 +10223,6 @@ _No description provided._
 
 - assert view3d.show_chiral_labels is False
 - mock_parser_host.statusBar().showMessage.assert_called_with('Chiral labels disabled.')
-
-### test_toggle_atom_info_same_mode_turns_off
-_No description provided._
-
-- assert view3d.atom_info_display_mode is None
-- base_menu.setEnabled.assert_called_with(False)
-- mock_parser_host.statusBar().showMessage.assert_called_with('Atom info display disabled.')
 
 ### test_toggle_atom_info_index_mode_enables_base_menu
 _No description provided._

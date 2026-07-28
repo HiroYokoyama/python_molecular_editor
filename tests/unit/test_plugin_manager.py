@@ -180,8 +180,13 @@ def test_register_file_opener():
 def test_register_file_opener_priority():
     """Higher priority opener should replace lower priority one in sorted order."""
     pm = PluginManager()
-    cb_low = lambda: "low"
-    cb_high = lambda: "high"
+
+    def cb_low():
+        return "low"
+
+    def cb_high():
+        return "high"
+
     pm.register_file_opener("Plugin1", ".xyz", cb_low, priority=0)
     pm.register_file_opener("Plugin2", ".xyz", cb_high, priority=10)
     # It's a list, sorted by priority descending
@@ -825,3 +830,95 @@ def test_discover_plugins_skips_dot_directories(tmp_path):
     pm.plugin_dir = str(plugin_dir)
     plugins = pm.discover_plugins()
     assert all(p["name"] != "Sneaky" for p in plugins)
+
+
+# =============================================================================
+# Atom Drag Handlers & Status
+# =============================================================================
+
+
+def test_register_and_invoke_atom_drag_handlers():
+    """Verify registration and invocation of atom drag handlers."""
+    pm = PluginManager()
+    callback = MagicMock()
+    pm.register_atom_drag_handler("TestPlugin", callback)
+
+    assert len(pm.atom_drag_handlers) == 1
+    assert pm.atom_drag_handlers[0]["plugin"] == "TestPlugin"
+
+    pm.invoke_atom_drag_handlers("move", [0, 1], {0: (1.0, 2.0, 3.0)})
+    callback.assert_called_once_with("move", [0, 1], {0: (1.0, 2.0, 3.0)})
+
+
+def test_invoke_atom_drag_handlers_exception_handling():
+    """Faulty drag handler should not raise exception."""
+    pm = PluginManager()
+    bad_cb = MagicMock(side_effect=RuntimeError("Plugin error"))
+    good_cb = MagicMock()
+    pm.register_atom_drag_handler("BadPlugin", bad_cb)
+    pm.register_atom_drag_handler("GoodPlugin", good_cb)
+
+    pm.invoke_atom_drag_handlers("end", [0], {})
+    bad_cb.assert_called_once()
+    good_cb.assert_called_once()
+
+
+def test_is_dragging_atom_status():
+    """Verify is_dragging_atom status calculation."""
+    mw = MagicMock()
+    pm = PluginManager(main_window=mw)
+
+    mw.dragged_atom_info = None
+    assert pm.is_dragging_atom() is False
+
+    mw.dragged_atom_info = {"id": 0}
+    assert pm.is_dragging_atom() is True
+
+
+def test_discover_plugins_clears_atom_drag_handlers(tmp_path):
+    """Rediscovery drops handlers of the previous load so they cannot fire twice."""
+    pm = PluginManager()
+    pm.plugin_dir = str(tmp_path)
+    pm.register_atom_drag_handler("StalePlugin", MagicMock())
+
+    pm.discover_plugins()
+
+    assert pm.atom_drag_handlers == []
+
+
+def test_is_dragging_atom_reports_group_gestures():
+    """A group translate / rotate counts as dragging, like a single atom does."""
+    mw = MagicMock()
+    mw.dragged_atom_info = None
+    pm = PluginManager(main_window=mw)
+
+    dialog = MagicMock()
+    type(dialog).__name__ = "MoveGroupDialog"
+    dialog.is_dragging_group_vtk = False
+    dialog.is_rotating_group_vtk = False
+
+    with patch("moleditpy.plugins.plugin_manager.QApplication") as mock_qapp:
+        mock_qapp.topLevelWidgets.return_value = [dialog]
+        assert pm.is_dragging_atom() is False
+
+        dialog.is_rotating_group_vtk = True
+        assert pm.is_dragging_atom() is True
+
+        dialog.is_rotating_group_vtk = False
+        dialog.is_dragging_group_vtk = True
+        assert pm.is_dragging_atom() is True
+
+
+def test_is_dragging_atom_ignores_unrelated_windows():
+    """Windows that are not move dialogs never report a drag."""
+    mw = MagicMock()
+    mw.dragged_atom_info = None
+    pm = PluginManager(main_window=mw)
+
+    other = MagicMock()
+    type(other).__name__ = "SomePluginWindow"
+    other.is_dragging_group_vtk = True
+
+    with patch("moleditpy.plugins.plugin_manager.QApplication") as mock_qapp:
+        mock_qapp.topLevelWidgets.return_value = [other]
+        assert pm.is_dragging_atom() is False
