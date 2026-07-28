@@ -39,6 +39,26 @@ _ROTATION_REFERENCE_SIZE = 640.0
 # Minimum seconds between real-time drag redraws (~30 fps).
 _DRAG_REDRAW_INTERVAL = 0.033
 
+# Radians of group rotation per pixel of mouse travel, before the user's
+# rotation-sensitivity multiplier.
+_GROUP_ROTATION_RADIANS_PER_PIXEL = 0.008
+
+
+def _rodrigues_matrix(axis: np.ndarray, angle: float) -> np.ndarray:
+    """Return the rotation matrix for `angle` radians about `axis` (Rodrigues)."""
+    norm = float(np.linalg.norm(axis))
+    if norm < 1e-6 or abs(angle) < 1e-6:
+        return np.eye(3)
+    unit = axis / norm
+    k_mat = np.array(
+        [
+            [0.0, -unit[2], unit[1]],
+            [unit[2], 0.0, -unit[0]],
+            [-unit[1], unit[0], 0.0],
+        ]
+    )
+    return np.eye(3) + np.sin(angle) * k_mat + (1.0 - np.cos(angle)) * (k_mat @ k_mat)
+
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     """VTK interactor style extending trackball-camera with 3D atom drag and measurement."""
@@ -54,6 +74,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._suppress_next_left_button_up = False
         # Throttle for real-time drag redraws
         self._last_drag_redraw_time: float = 0.0
+        self._drag_redraw_pending = False
+        # Atoms of the drag gesture currently reported to plugins, if any
+        self._active_drag_atoms: Optional[List[int]] = None
 
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)  # type: ignore[arg-type]
         # self.AddObserver("LeftButtonDoubleClickEvent", self.on_left_button_down)
@@ -75,6 +98,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         except (AttributeError, RuntimeError):
             # Safe defensive fallback catching AttributeError, RuntimeError
             logging.debug("Suppressed non-critical error", exc_info=True)
+
+        self._end_drag_event()
 
         # Reset all custom flags
         self._is_dragging_atom = False
@@ -147,10 +172,88 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if invoke is not None:
             try:
                 invoke(event_type, atom_indices, positions)
-            except Exception:  # plugins have full app access; never let them crash the drag
-                logging.warning(
-                    "invoke_atom_drag_handlers raised", exc_info=True
-                )
+            # Plugin faults are already isolated per handler by the manager.
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                logging.warning("invoke_atom_drag_handlers raised", exc_info=True)
+
+    def _current_positions(
+        self, atom_indices: List[int]
+    ) -> Dict[int, Tuple[float, float, float]]:
+        """Read the current conformer coordinates of the given atoms."""
+        positions: Dict[int, Tuple[float, float, float]] = {}
+        try:
+            mol = self.main_window.view_3d_manager.current_mol
+            if mol is None or mol.GetNumConformers() == 0:
+                return positions
+            conf = mol.GetConformer()
+            for idx in atom_indices:
+                pos = conf.GetAtomPosition(idx)
+                positions[idx] = (float(pos.x), float(pos.y), float(pos.z))
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            logging.debug("Suppressed non-critical error", exc_info=True)
+        return positions
+
+    def _begin_drag_event(self, atom_indices: Any) -> None:
+        """Report the start of a drag gesture and arm the redraw throttle."""
+        atoms = [int(idx) for idx in atom_indices]
+        self._active_drag_atoms = atoms
+        self._last_drag_redraw_time = 0.0
+        self._drag_redraw_pending = False
+        self._invoke_drag_handlers("start", list(atoms), {})
+
+    def _end_drag_event(self) -> None:
+        """Report the end of the active drag gesture exactly once.
+
+        Every exit path (normal release, aborted gesture, forced reset) routes
+        through here so a plugin can never be left believing a drag is still
+        in progress.
+        """
+        atoms = self._active_drag_atoms
+        self._active_drag_atoms = None
+        self._drag_redraw_pending = False
+        if atoms is None:
+            return
+        self._invoke_drag_handlers("end", list(atoms), self._current_positions(atoms))
+
+    def _should_drag_redraw(self) -> bool:
+        """Return True when a real-time drag frame may be rendered now.
+
+        Skips while a previous deferred redraw is still queued so a scene that
+        rebuilds slower than the throttle interval cannot pile up frames.
+        """
+        if not self._realtime_drag_enabled():
+            return False
+        if self._drag_redraw_pending:
+            return False
+        return time.monotonic() - self._last_drag_redraw_time >= _DRAG_REDRAW_INTERVAL
+
+    def _finish_drag_redraw(self) -> None:
+        """Release the redraw gate once a deferred drag frame has rendered."""
+        self._drag_redraw_pending = False
+        self._last_drag_redraw_time = time.monotonic()
+
+    def _abort_active_drag(self, moved: bool) -> None:
+        """Close out a gesture whose release event was lost.
+
+        Real-time dragging has already written the new geometry, so a moved
+        gesture still needs an undo entry even though it never reached the
+        release handler.
+        """
+        if moved and self._realtime_drag_enabled():
+            self._push_undo_after_aborted_drag()
+        self._end_drag_event()
+
+    def _push_undo_after_aborted_drag(self) -> None:
+        """Record geometry left behind by a gesture whose release was lost.
+
+        Real-time dragging mutates the conformer on every frame, so an aborted
+        gesture would otherwise leave the molecule moved with nothing on the
+        undo stack.
+        """
+        try:
+            self.main_window.edit_actions_manager.push_undo_state()
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            logging.debug("Suppressed non-critical error", exc_info=True)
 
     def _realtime_drag_enabled(self) -> bool:
         """Return True if real-time drag redraw is enabled in settings."""
@@ -161,6 +264,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             return bool(mw.get_settings().get("realtime_3d_drag", True))
         except (AttributeError, RuntimeError, TypeError):
             return True
+
+    def _rotation_sensitivity(self) -> float:
+        """Return the user's rotation-speed multiplier, shared by camera and group rotation."""
+        mw = self.main_window
+        if mw is None:
+            return 1.0
+        try:
+            return float(mw.get_settings().get("mouse_rotation_sensitivity", 1.0))
+        except (AttributeError, TypeError, ValueError):
+            return 1.0
 
     def _rotate_size_independent(self) -> None:
         """Rotate the camera at a speed that does not depend on canvas size.
@@ -177,17 +290,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         dx = interactor.GetEventPosition()[0] - interactor.GetLastEventPosition()[0]
         dy = interactor.GetEventPosition()[1] - interactor.GetLastEventPosition()[1]
 
-        sensitivity = 1.0
-        mw = self.main_window
-        if mw is not None:
-            try:
-                sensitivity = float(
-                    mw.get_settings().get("mouse_rotation_sensitivity", 1.0)
-                )
-            except (AttributeError, TypeError, ValueError):
-                sensitivity = 1.0
-
-        delta = -20.0 / _ROTATION_REFERENCE_SIZE * self.GetMotionFactor() * sensitivity
+        delta = (
+            -20.0
+            / _ROTATION_REFERENCE_SIZE
+            * self.GetMotionFactor()
+            * self._rotation_sensitivity()
+        )
         camera = renderer.GetActiveCamera()
         camera.Azimuth(dx * delta)
         camera.Elevation(dy * delta)
@@ -268,10 +376,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     mw.view_3d_manager.plotter.setCursor(
                         Qt.CursorShape.ClosedHandCursor
                     )
-                    self._last_drag_redraw_time = 0.0
-                    self._invoke_drag_handlers(
-                        "start", list(move_group_dialog.group_atoms), {}
-                    )
+                    self._begin_drag_event(move_group_dialog.group_atoms)
                     self._suppress_next_left_button_up = True
                     return  # Disable camera rotation
                 else:
@@ -433,10 +538,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             mw.view_3d_manager.plotter.setCursor(
                                 Qt.CursorShape.ClosedHandCursor
                             )
-                            self._last_drag_redraw_time = 0.0
-                            self._invoke_drag_handlers(
-                                "start", [int(closest_atom_idx)], {}
-                            )
+                            self._begin_drag_event([int(closest_atom_idx)])
                             self._suppress_next_left_button_up = True
                             return  # Prevent camera rotation
 
@@ -487,12 +589,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
             # If follow_mouse is True, require clicking directly on an atom in the group.
             # If follow_mouse is False (default), allow right-clicking anywhere on display.
-            if (
-                not follow_mouse
-                or (
-                    clicked_atom_idx is not None
-                    and clicked_atom_idx in move_group_dialog.group_atoms
-                )
+            if not follow_mouse or (
+                clicked_atom_idx is not None
+                and clicked_atom_idx in move_group_dialog.group_atoms
             ):
                 move_group_dialog.is_rotating_group_vtk = True
                 move_group_dialog.rotation_start_pos = click_pos
@@ -517,10 +616,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 move_group_dialog.group_centroid = centroid
 
                 mw.view_3d_manager.plotter.setCursor(Qt.CursorShape.ClosedHandCursor)
-                self._last_drag_redraw_time = 0.0
-                self._invoke_drag_handlers(
-                    "start", list(move_group_dialog.group_atoms), {}
-                )
+                self._begin_drag_event(move_group_dialog.group_atoms)
                 return  # Disable camera rotation
 
         # Standard right-click
@@ -544,6 +640,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             return
 
         if self._is_dragging_atom and not left_held:
+            self._abort_active_drag(self.is_dragging)
             self.reset_interactor_state()
 
         if not any_held:
@@ -560,16 +657,20 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     getattr(move_group_dialog, "is_dragging_group_vtk", False)
                     and not left_held
                 ):
+                    moved = getattr(move_group_dialog, "mouse_moved_vtk", False)
                     move_group_dialog.is_dragging_group_vtk = False
                     move_group_dialog.drag_start_pos_vtk = None
                     move_group_dialog.mouse_moved_vtk = False
+                    self._abort_active_drag(moved)
                 if (
                     getattr(move_group_dialog, "is_rotating_group_vtk", False)
                     and not right_held
                 ):
+                    moved = getattr(move_group_dialog, "rotation_mouse_moved", False)
                     move_group_dialog.is_rotating_group_vtk = False
                     move_group_dialog.rotation_start_pos = None
                     move_group_dialog.rotation_mouse_moved = False
+                    self._abort_active_drag(moved)
             except (AttributeError, RuntimeError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
                 logging.debug("Suppressed non-critical error", exc_info=True)
@@ -613,13 +714,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
             if (
                 move_group_dialog.mouse_moved_vtk
-                and self._realtime_drag_enabled()
                 and hasattr(move_group_dialog, "initial_positions")
+                and self._should_drag_redraw()
             ):
-                now = time.monotonic()
-                if now - self._last_drag_redraw_time >= _DRAG_REDRAW_INTERVAL:
-                    self._last_drag_redraw_time = now
-                    self._do_realtime_group_translate(mw, move_group_dialog, current_pos)
+                self._do_realtime_group_translate(mw, move_group_dialog, current_pos)
 
             return  # Disable camera rotation
 
@@ -641,14 +739,11 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
             if (
                 move_group_dialog.rotation_mouse_moved
-                and self._realtime_drag_enabled()
                 and hasattr(move_group_dialog, "initial_positions")
                 and hasattr(move_group_dialog, "group_centroid")
+                and self._should_drag_redraw()
             ):
-                now = time.monotonic()
-                if now - self._last_drag_redraw_time >= _DRAG_REDRAW_INTERVAL:
-                    self._last_drag_redraw_time = now
-                    self._do_realtime_group_rotate(mw, move_group_dialog, current_pos)
+                self._do_realtime_group_rotate(mw, move_group_dialog, current_pos)
 
             return  # Disable camera rotation
 
@@ -666,11 +761,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         if self._is_dragging_atom and mw.dragged_atom_info is not None:
             # Custom atom drag
             self.is_dragging = True
-            if self._realtime_drag_enabled():
-                now = time.monotonic()
-                if now - self._last_drag_redraw_time >= _DRAG_REDRAW_INTERVAL:
-                    self._last_drag_redraw_time = now
-                    self._do_realtime_atom_drag(mw)
+            if self._should_drag_redraw():
+                self._do_realtime_atom_drag(mw)
         else:
             # Camera interaction. VTK's built-in Rotate divides mouse motion by
             # the live render size, so rotation slows as the canvas grows. Handle
@@ -707,9 +799,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     def _do_realtime_atom_drag(self, mw: Any) -> None:
         """Update the dragged atom's position and redraw during mouse-move."""
         try:
-            atom_id = (
-                mw.dragged_atom_info.get("id") if mw.dragged_atom_info else None
-            )
+            atom_id = mw.dragged_atom_info.get("id") if mw.dragged_atom_info else None
             if atom_id is None:
                 return
             if not (
@@ -735,16 +825,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if new_world is None:
                 return
 
+            conf.SetAtomPosition(
+                atom_id,
+                Geometry.Point3D(
+                    float(new_world[0]), float(new_world[1]), float(new_world[2])
+                ),
+            )
             if isinstance(
                 mw.view_3d_manager.atom_positions_3d, (list, np.ndarray)
             ) and atom_id < len(mw.view_3d_manager.atom_positions_3d):
                 mw.view_3d_manager.atom_positions_3d[atom_id] = list(new_world)
-                conf.SetAtomPosition(
-                    atom_id,
-                    Geometry.Point3D(
-                        float(new_world[0]), float(new_world[1]), float(new_world[2])
-                    ),
-                )
 
             _rt_mol = mw.view_3d_manager.current_mol
 
@@ -753,7 +843,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     mw.view_3d_manager.draw_molecule_3d(_rt_mol)
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     logging.debug("Suppressed non-critical error", exc_info=True)
+                finally:
+                    self._finish_drag_redraw()
 
+            self._drag_redraw_pending = True
             QTimer.singleShot(0, _deferred_rt_atom)
             self._invoke_drag_handlers(
                 "move",
@@ -811,7 +904,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     _rt_dlg.show_atom_labels()
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     logging.debug("Suppressed non-critical error", exc_info=True)
+                finally:
+                    self._finish_drag_redraw()
 
+            self._drag_redraw_pending = True
             QTimer.singleShot(0, _deferred_rt_grp)
             self._invoke_drag_handlers(
                 "move", list(move_group_dialog.group_atoms), new_positions
@@ -842,29 +938,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if view_up_norm > 1e-6:
                 view_up = view_up / view_up_norm
 
-            angle_y = float(dx) * 0.008
-            angle_x = -float(dy) * 0.008
-
-            def _rodrigues(axis: np.ndarray, angle: float) -> np.ndarray:
-                norm = np.linalg.norm(axis)
-                if norm < 1e-6 or abs(angle) < 1e-6:
-                    return np.eye(3)
-                axis = axis / norm
-                k_mat = np.array(
-                    [
-                        [0.0, -axis[2], axis[1]],
-                        [axis[2], 0.0, -axis[0]],
-                        [-axis[1], axis[0], 0.0],
-                    ]
-                )
-                return np.eye(3) + np.sin(angle) * k_mat + (1.0 - np.cos(angle)) * (k_mat @ k_mat)
-
-            rot_y = _rodrigues(view_up, angle_y)
-            rot_x = _rodrigues(right, angle_x)
+            speed = _GROUP_ROTATION_RADIANS_PER_PIXEL * self._rotation_sensitivity()
+            rot_y = _rodrigues_matrix(view_up, float(dx) * speed)
+            rot_x = _rodrigues_matrix(right, -float(dy) * speed)
             return rot_x @ rot_y
         except (AttributeError, RuntimeError, TypeError, ValueError):
+            logging.debug("Suppressed non-critical error", exc_info=True)
             return None
-
 
     def _get_group_rotation_matrix(
         self, mw: Any, move_group_dialog: Any, current_pos: Any
@@ -887,7 +967,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         iter(move_group_dialog.group_atoms)
                     )
                 grabbed_atom_idx = move_group_dialog.rotation_atom_idx
-                grabbed_initial_pos = move_group_dialog.initial_positions[grabbed_atom_idx]
+                grabbed_initial_pos = move_group_dialog.initial_positions[
+                    grabbed_atom_idx
+                ]
 
                 depth_z = self._world_to_display_depth(
                     renderer,
@@ -920,17 +1002,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 rotation_axis /= axis_norm
 
                 cos_angle = float(np.clip(np.dot(v1_n, v2_n), -1.0, 1.0))
-                angle = np.arccos(cos_angle)
-                k_mat = np.array(
-                    [
-                        [0.0, -rotation_axis[2], rotation_axis[1]],
-                        [rotation_axis[2], 0.0, -rotation_axis[0]],
-                        [-rotation_axis[1], rotation_axis[0], 0.0],
-                    ]
-                )
-                return np.eye(3) + np.sin(angle) * k_mat + (1.0 - np.cos(angle)) * (k_mat @ k_mat)
+                return _rodrigues_matrix(rotation_axis, float(np.arccos(cos_angle)))
             return self._compute_delta_rotation_matrix(renderer, start_pos, current_pos)
         except (AttributeError, RuntimeError, TypeError, ValueError):
+            logging.debug("Suppressed non-critical error", exc_info=True)
             return None
 
     def _do_realtime_group_rotate(
@@ -938,7 +1013,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     ) -> None:
         """Rotate group atoms around their centroid and redraw during mouse-move."""
         try:
-            rot_matrix = self._get_group_rotation_matrix(mw, move_group_dialog, current_pos)
+            rot_matrix = self._get_group_rotation_matrix(
+                mw, move_group_dialog, current_pos
+            )
             if rot_matrix is None:
                 return
 
@@ -971,7 +1048,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     _rt_dlg.show_atom_labels()
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     logging.debug("Suppressed non-critical error", exc_info=True)
+                finally:
+                    self._finish_drag_redraw()
 
+            self._drag_redraw_pending = True
             QTimer.singleShot(0, _deferred_rt_rot)
             self._invoke_drag_handlers(
                 "move", list(move_group_dialog.group_atoms), new_positions
@@ -980,7 +1060,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             logging.debug("Suppressed non-critical error", exc_info=True)
 
     def on_left_button_up(self, obj: Any, event: Any) -> None:
-
         """
         Handle click release and reset state.
         """
@@ -1089,9 +1168,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         mw.edit_actions_manager.push_undo_state()
 
                     QTimer.singleShot(0, _deferred_group_redraw)
-                    self._invoke_drag_handlers(
-                        "end", list(move_group_dialog.group_atoms), {}
-                    )
                 except (AttributeError, RuntimeError, TypeError, ValueError):
                     logging.warning("Error finalizing group drag", exc_info=True)
             else:
@@ -1102,6 +1178,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         move_group_dialog.on_atom_picked(clicked_atom)
                     except (AttributeError, RuntimeError, TypeError, ValueError):
                         logging.warning("Error in toggle", exc_info=True)
+            self._end_drag_event()
 
         # Background click: deselect Move Group
         if move_group_dialog and not getattr(
@@ -1248,12 +1325,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
 
                     QTimer.singleShot(0, _deferred_atom_redraw)
 
-            _dragged_atom_id = (
-                mw.dragged_atom_info.get("id") if mw.dragged_atom_info else None
-            )
+            self._end_drag_event()
             mw.dragged_atom_info = None
-            if _dragged_atom_id is not None:
-                self._invoke_drag_handlers("end", [_dragged_atom_id], {})
             self._stop_vtk_left_button_state()
 
             if self.is_dragging:
@@ -1345,15 +1418,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     conf = mw.view_3d_manager.current_mol.GetConformer()
                     centroid = move_group_dialog.group_centroid
 
-                    start_pos = getattr(move_group_dialog, "rotation_start_pos", None)
                     rot_matrix = self._get_group_rotation_matrix(
                         mw, move_group_dialog, current_pos
                     )
                     if rot_matrix is not None:
                         for atom_idx in move_group_dialog.group_atoms:
-                            initial_pos = move_group_dialog.initial_positions[
-                                atom_idx
-                            ]
+                            initial_pos = move_group_dialog.initial_positions[atom_idx]
                             relative_pos = initial_pos - centroid
                             rotated_pos = rot_matrix @ relative_pos
                             new_pos = rotated_pos + centroid
@@ -1376,9 +1446,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         mw.edit_actions_manager.push_undo_state()
                 except (AttributeError, RuntimeError, TypeError, ValueError):
                     logging.warning("Error finalizing group rotation", exc_info=True)
-                self._invoke_drag_handlers(
-                    "end", list(move_group_dialog.group_atoms), {}
-                )
+            self._end_drag_event()
 
             # Reset state
             move_group_dialog.is_rotating_group_vtk = False

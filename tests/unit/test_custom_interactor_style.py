@@ -981,7 +981,9 @@ def test_rotate_group_follow_mouse_setting(app):
     }
 
     # False -> delta rotation matrix
-    rot_mat_delta = style._get_group_rotation_matrix(host, move_group_dialog, (120, 100))
+    rot_mat_delta = style._get_group_rotation_matrix(
+        host, move_group_dialog, (120, 100)
+    )
     assert rot_mat_delta is not None
 
     # True -> follow mouse rotation matrix
@@ -989,7 +991,9 @@ def test_rotate_group_follow_mouse_setting(app):
     move_group_dialog.rotation_atom_idx = 0
     style._world_to_display_depth = MagicMock(return_value=0.5)
     style._display_to_world = MagicMock(return_value=(2.0, 1.0, 0.0))
-    rot_mat_follow = style._get_group_rotation_matrix(host, move_group_dialog, (120, 100))
+    rot_mat_follow = style._get_group_rotation_matrix(
+        host, move_group_dialog, (120, 100)
+    )
     assert rot_mat_follow is not None
 
 
@@ -1043,20 +1047,23 @@ def test_left_click_in_group_starts_drag(app):
     mock_interactor = MagicMock()
     mock_interactor.GetEventPosition.return_value = (100, 100)
     style.GetInteractor = MagicMock(return_value=mock_interactor)
-    
+
     move_group_dialog = _move_dialog(group_atoms={0, 1})
     host.view_3d_manager.current_mol = MagicMock()
     conf = MagicMock()
     conf.GetAtomPosition.return_value = MagicMock(x=0.0, y=0.0, z=0.0)
     host.view_3d_manager.current_mol.GetConformer.return_value = conf
-    
+
     with (
         patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
-        patch("moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen", return_value=0)
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=0,
+        ),
     ):
         mock_qapp.topLevelWidgets.return_value = [move_group_dialog]
         style.on_left_button_down(None, None)
-        
+
     assert move_group_dialog.is_dragging_group_vtk is True
     assert move_group_dialog.drag_atom_idx_vtk == 0
 
@@ -1070,7 +1077,7 @@ def test_left_click_outside_group_triggers_bfs(app):
     mock_interactor.GetControlKey.return_value = False
     mock_interactor.GetAltKey.return_value = False
     style.GetInteractor = MagicMock(return_value=mock_interactor)
-    
+
     move_group_dialog = _move_dialog(group_atoms={0, 1}, selected_atoms=set())
     host.view_3d_manager.current_mol = MagicMock()
     host.view_3d_manager.current_mol.GetNumBonds.return_value = 1
@@ -1078,17 +1085,23 @@ def test_left_click_outside_group_triggers_bfs(app):
     bond.GetBeginAtomIdx.return_value = 2
     bond.GetEndAtomIdx.return_value = 3
     host.view_3d_manager.current_mol.GetBondWithIdx.return_value = bond
-    
+
     deferred = []
     with (
         patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
-        patch("moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen", return_value=2),
-        patch("moleditpy.ui.custom_interactor_style.QTimer.singleShot", side_effect=lambda _ms, fn: deferred.append(fn))
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=2,
+        ),
+        patch(
+            "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+            side_effect=lambda _ms, fn: deferred.append(fn),
+        ),
     ):
         mock_qapp.topLevelWidgets.return_value = [move_group_dialog]
         mock_qapp.keyboardModifiers.return_value = Qt.KeyboardModifier.NoModifier
         style.on_left_button_down(None, None)
-        
+
     # BFS should connect 2 and 3
     assert move_group_dialog.group_atoms == {2, 3}
     assert 2 in move_group_dialog.selected_atoms
@@ -1102,25 +1115,31 @@ def test_do_realtime_group_translate(app):
     host = MagicMock()
     style = CustomInteractorStyle(host)
     move_group_dialog = _move_dialog(group_atoms={0, 1}, drag_atom_idx_vtk=0)
-    move_group_dialog.initial_positions = {0: np.array([0.0, 0.0, 0.0]), 1: np.array([2.0, 0.0, 0.0])}
-    
+    move_group_dialog.initial_positions = {
+        0: np.array([0.0, 0.0, 0.0]),
+        1: np.array([2.0, 0.0, 0.0]),
+    }
+
     renderer = MagicMock()
     renderer.GetDisplayPoint.return_value = (100.0, 100.0, 0.5)
     renderer.GetWorldPoint.return_value = (1.0, 1.0, 0.0, 1.0)
     host.view_3d_manager.plotter.renderer = renderer
-    
+
     conf = MagicMock()
     host.view_3d_manager.current_mol = MagicMock()
     host.view_3d_manager.current_mol.GetConformer.return_value = conf
     host.view_3d_manager.atom_positions_3d = np.zeros((2, 3))
-    
+
     style._world_to_display_depth = MagicMock(return_value=0.5)
     style._display_to_world = MagicMock(return_value=(1.0, 1.0, 0.0))
-    
+
     deferred = []
-    with patch("moleditpy.ui.custom_interactor_style.QTimer.singleShot", side_effect=lambda _ms, fn: deferred.append(fn)):
+    with patch(
+        "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+        side_effect=lambda _ms, fn: deferred.append(fn),
+    ):
         style._do_realtime_group_translate(host, move_group_dialog, (120, 120))
-        
+
     assert conf.SetAtomPosition.call_count == 2
     assert len(deferred) == 1
     deferred[0]()
@@ -1131,24 +1150,250 @@ def test_do_realtime_group_rotate(app):
     host = MagicMock()
     style = CustomInteractorStyle(host)
     move_group_dialog = _move_dialog(group_atoms={0, 1}, rotation_atom_idx=0)
-    move_group_dialog.initial_positions = {0: np.array([0.0, 0.0, 0.0]), 1: np.array([2.0, 0.0, 0.0])}
+    move_group_dialog.initial_positions = {
+        0: np.array([0.0, 0.0, 0.0]),
+        1: np.array([2.0, 0.0, 0.0]),
+    }
     move_group_dialog.group_centroid = np.array([1.0, 0.0, 0.0])
-    
+
     renderer = MagicMock()
     host.view_3d_manager.plotter.renderer = renderer
-    
+
     conf = MagicMock()
     host.view_3d_manager.current_mol = MagicMock()
     host.view_3d_manager.current_mol.GetConformer.return_value = conf
     host.view_3d_manager.atom_positions_3d = np.zeros((2, 3))
-    
+
     style._get_group_rotation_matrix = MagicMock(return_value=np.eye(3))
-    
+
     deferred = []
-    with patch("moleditpy.ui.custom_interactor_style.QTimer.singleShot", side_effect=lambda _ms, fn: deferred.append(fn)):
+    with patch(
+        "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+        side_effect=lambda _ms, fn: deferred.append(fn),
+    ):
         style._do_realtime_group_rotate(host, move_group_dialog, (120, 120))
-        
+
     assert conf.SetAtomPosition.call_count == 2
     assert len(deferred) == 1
     deferred[0]()
 
+
+# =============================================================================
+# Drag Event Lifecycle (start / move / end)
+# =============================================================================
+
+
+def _drag_host(positions=((0.0, 0.0, 0.0), (2.0, 0.0, 0.0))):
+    """Host whose conformer reports fixed coordinates and records plugin events."""
+    host = MagicMock()
+    host.get_settings.return_value = {"realtime_3d_drag": True}
+    conf = MagicMock()
+    conf.GetAtomPosition.side_effect = lambda idx: MagicMock(
+        x=positions[idx][0], y=positions[idx][1], z=positions[idx][2]
+    )
+    mol = MagicMock()
+    mol.GetNumConformers.return_value = 1
+    mol.GetConformer.return_value = conf
+    host.view_3d_manager.current_mol = mol
+    host.plugin_manager.invoke_atom_drag_handlers = MagicMock()
+    return host
+
+
+def _drag_events(host):
+    """Positional args of every plugin drag event the host received."""
+    return [c[0] for c in host.plugin_manager.invoke_atom_drag_handlers.call_args_list]
+
+
+def test_end_drag_event_reports_final_positions(app):
+    """The 'end' event carries the final coordinates of the dragged atoms."""
+    host = _drag_host()
+    style = CustomInteractorStyle(host)
+
+    style._begin_drag_event([0, 1])
+    style._end_drag_event()
+
+    assert _drag_events(host) == [
+        ("start", [0, 1], {}),
+        ("end", [0, 1], {0: (0.0, 0.0, 0.0), 1: (2.0, 0.0, 0.0)}),
+    ]
+
+
+def test_end_drag_event_is_emitted_once(app):
+    """A second _end_drag_event without a new gesture emits nothing."""
+    host = _drag_host()
+    style = CustomInteractorStyle(host)
+
+    style._begin_drag_event([0])
+    style._end_drag_event()
+    style._end_drag_event()
+
+    assert [e[0] for e in _drag_events(host)] == ["start", "end"]
+
+
+def test_end_drag_event_without_start_is_silent(app):
+    """No 'end' is emitted when no gesture was ever started."""
+    host = _drag_host()
+    style = CustomInteractorStyle(host)
+
+    style._end_drag_event()
+
+    assert _drag_events(host) == []
+
+
+def test_right_click_without_moving_still_ends_drag(app):
+    """A right-click that never moves emits 'end' to match its 'start'."""
+    host = _drag_host()
+    move_group_dialog = _move_dialog(group_atoms={0, 1}, rotation_mouse_moved=False)
+    host.get_settings.return_value = {"rotate_group_follow_mouse": False}
+
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (200, 200)
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=None,
+        ),
+    ):
+        mock_qapp.topLevelWidgets.return_value = [move_group_dialog]
+        style = CustomInteractorStyle(host)
+        style.GetInteractor = MagicMock(return_value=mock_interactor)
+        style.OnRightButtonUp = MagicMock()
+        style.on_right_button_down(None, None)
+        move_group_dialog.rotation_mouse_moved = False
+        style.on_right_button_up(None, None)
+
+    assert [e[0] for e in _drag_events(host)] == ["start", "end"]
+
+
+def test_aborted_group_drag_ends_and_pushes_undo(app):
+    """A lost mouse-release still ends the drag and records the moved geometry."""
+    host = _drag_host()
+    move_group_dialog = _move_dialog(
+        group_atoms={0, 1},
+        is_dragging_group_vtk=True,
+        mouse_moved_vtk=True,
+        is_rotating_group_vtk=False,
+    )
+    style = CustomInteractorStyle(host)
+    style._begin_drag_event([0, 1])
+
+    with patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp:
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.NoButton
+        style.GetState = MagicMock(return_value=0)
+        style._heal_stuck_pointer_state(move_group_dialog)
+
+    assert move_group_dialog.is_dragging_group_vtk is False
+    host.edit_actions_manager.push_undo_state.assert_called_once()
+    assert [e[0] for e in _drag_events(host)] == ["start", "end"]
+
+
+def test_aborted_unmoved_drag_does_not_push_undo(app):
+    """An aborted gesture that never moved leaves the undo stack alone."""
+    host = _drag_host()
+    move_group_dialog = _move_dialog(
+        group_atoms={0, 1},
+        is_rotating_group_vtk=True,
+        rotation_mouse_moved=False,
+        is_dragging_group_vtk=False,
+    )
+    style = CustomInteractorStyle(host)
+    style._begin_drag_event([0, 1])
+
+    with patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp:
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.NoButton
+        style.GetState = MagicMock(return_value=0)
+        style._heal_stuck_pointer_state(move_group_dialog)
+
+    host.edit_actions_manager.push_undo_state.assert_not_called()
+    assert [e[0] for e in _drag_events(host)] == ["start", "end"]
+
+
+def test_reset_interactor_state_ends_active_drag(app):
+    """Forcing a state reset closes any drag still open toward plugins."""
+    host = _drag_host()
+    style = CustomInteractorStyle(host)
+    style.StopState = MagicMock()
+    style._begin_drag_event([0])
+
+    style.reset_interactor_state()
+
+    assert [e[0] for e in _drag_events(host)] == ["start", "end"]
+
+
+# =============================================================================
+# Real-Time Drag Throttle
+# =============================================================================
+
+
+def test_should_drag_redraw_respects_setting(app):
+    """Real-time frames are suppressed when the setting is off."""
+    host = _drag_host()
+    style = CustomInteractorStyle(host)
+    assert style._should_drag_redraw() is True
+
+    host.get_settings.return_value = {"realtime_3d_drag": False}
+    assert style._should_drag_redraw() is False
+
+
+def test_should_drag_redraw_waits_for_pending_frame(app):
+    """No new frame is started while a deferred redraw is still queued."""
+    host = _drag_host()
+    style = CustomInteractorStyle(host)
+
+    style._drag_redraw_pending = True
+    assert style._should_drag_redraw() is False
+
+    style._finish_drag_redraw()
+    assert style._drag_redraw_pending is False
+    # The throttle interval starts counting only once the frame has rendered.
+    assert style._should_drag_redraw() is False
+
+
+def test_realtime_atom_drag_frame_gates_the_next_one(app):
+    """A queued drag frame blocks further frames until it has rendered."""
+    host = _drag_host()
+    style = CustomInteractorStyle(host)
+    host.dragged_atom_info = {"id": 0}
+    host.view_3d_manager.atom_positions_3d = np.zeros((1, 3))
+    style._world_to_display_depth = MagicMock(return_value=0.5)
+    style._display_to_world = MagicMock(return_value=(1.0, 2.0, 3.0))
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (50, 50)
+    style.GetInteractor = MagicMock(return_value=mock_interactor)
+
+    deferred = []
+    with patch(
+        "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+        side_effect=lambda _ms, fn: deferred.append(fn),
+    ):
+        style._do_realtime_atom_drag(host)
+        assert style._should_drag_redraw() is False
+        deferred[0]()
+
+    assert style._drag_redraw_pending is False
+    assert host.view_3d_manager.draw_molecule_3d.call_count == 1
+
+
+# =============================================================================
+# Group Rotation Sensitivity
+# =============================================================================
+
+
+def test_group_rotation_scales_with_sensitivity(app):
+    """Group rotation honours the mouse rotation sensitivity setting."""
+    host = _drag_host()
+    renderer = MagicMock()
+    camera = MagicMock()
+    camera.GetViewUp.return_value = (0.0, 1.0, 0.0)
+    camera.GetDirectionOfProjection.return_value = (0.0, 0.0, -1.0)
+    renderer.GetActiveCamera.return_value = camera
+    style = CustomInteractorStyle(host)
+
+    def _angle(sensitivity):
+        host.get_settings.return_value = {"mouse_rotation_sensitivity": sensitivity}
+        mat = style._compute_delta_rotation_matrix(renderer, (100, 100), (140, 100))
+        return float(np.arccos((np.trace(mat) - 1.0) / 2.0))
+
+    assert _angle(2.0) == pytest.approx(2 * _angle(1.0), rel=1e-6)
