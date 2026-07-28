@@ -431,7 +431,7 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
     * Surface shininess (Specular) and its intensity (Specular Power)
     * Camera projection mode (Perspective / Orthographic)
     * Mouse rotation sensitivity (speed multiplier for 3D view rotation)
-    * Real-time 3D Drag (update the structure continuously while dragging an atom or group; turn it off to only apply the move on mouse release)
+    * Real-time 3D Drag (update the structure continuously while dragging an atom or group; turn it off to only apply the move on mouse release). Structures larger than 300 atoms always use release-only updates, since redrawing them every frame would be slower than the drag itself.
     * Rotate Groups: Follow Mouse (when on, right-drag rotation must start on an atom of the group and that atom follows the cursor; when off — the default — right-dragging anywhere rotates the group)
 * **Display Style Tabs (Ball & Stick, CPK, Wireframe, Stick):**
     * Atom size/radius scale

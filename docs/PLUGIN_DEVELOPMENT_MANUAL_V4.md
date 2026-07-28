@@ -283,7 +283,7 @@ Register a callback to receive real-time notifications during 3D atom or group d
   - `atom_indices`: List of RDKit atom indices being dragged.
   - `positions`: Dictionary mapping RDKit atom index to current `(x, y, z)` 3D tuple. Empty dict on `"start"`; on `"end"` it holds the final coordinates.
 
-`"end"` is always delivered exactly once for every `"start"`, including when the gesture is cancelled or its mouse-release is lost. `"move"` is throttled to roughly 30 fps and is not emitted at all when the user disables **Real-time 3D Drag** in Settings.
+`"end"` is always delivered exactly once for every `"start"`, including when the gesture is cancelled or its mouse-release is lost. `"move"` is throttled to roughly 30 fps and is not emitted at all when the user disables **Real-time 3D Drag** in Settings, or when the molecule has more than 300 atoms (the per-frame scene rebuild is skipped for large structures). `"start"` and `"end"` are always emitted regardless.
 
 ```python
 def on_atom_drag(event_type, indices, positions):

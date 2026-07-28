@@ -4,7 +4,10 @@ import numpy as np
 import pytest
 
 from unittest.mock import MagicMock, patch
-from moleditpy.ui.custom_interactor_style import CustomInteractorStyle
+from moleditpy.ui.custom_interactor_style import (
+    _REALTIME_DRAG_MAX_ATOMS,
+    CustomInteractorStyle,
+)
 from PyQt6.QtCore import Qt
 
 _VTK_BASE = "vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera"
@@ -1397,3 +1400,94 @@ def test_group_rotation_scales_with_sensitivity(app):
         return float(np.arccos((np.trace(mat) - 1.0) / 2.0))
 
     assert _angle(2.0) == pytest.approx(2 * _angle(1.0), rel=1e-6)
+
+
+# =============================================================================
+# Real-Time Drag Size Limit
+# =============================================================================
+
+
+def _sized_host(num_atoms):
+    """Drag host whose molecule reports *num_atoms* atoms."""
+    host = _drag_host()
+    host.view_3d_manager.current_mol.GetNumAtoms.return_value = num_atoms
+    return host
+
+
+def test_realtime_drag_allowed_up_to_the_size_limit(app):
+    """A molecule at the limit still gets real-time frames."""
+    host = _sized_host(_REALTIME_DRAG_MAX_ATOMS)
+    style = CustomInteractorStyle(host)
+
+    assert style._molecule_too_large_for_realtime() is False
+    assert style._should_drag_redraw() is True
+
+
+def test_realtime_drag_skipped_above_the_size_limit(app):
+    """Past the limit the per-frame scene rebuild is skipped entirely."""
+    host = _sized_host(_REALTIME_DRAG_MAX_ATOMS + 1)
+    style = CustomInteractorStyle(host)
+
+    assert style._molecule_too_large_for_realtime() is True
+    assert style._realtime_drag_active() is False
+    assert style._should_drag_redraw() is False
+
+
+def test_large_molecule_drag_emits_no_move_events(app):
+    """No real-time frame means no coordinate writes and no 'move' events."""
+    host = _sized_host(_REALTIME_DRAG_MAX_ATOMS + 50)
+    style = CustomInteractorStyle(host)
+    host.dragged_atom_info = {"id": 0}
+    host._is_dragging_atom = True
+    style._is_dragging_atom = True
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (50, 50)
+    style.GetInteractor = MagicMock(return_value=mock_interactor)
+    style._mouse_press_pos = (50, 50)
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.QTimer.singleShot"
+        ) as mock_single_shot,
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.LeftButton
+        style.on_mouse_move(None, None)
+
+    assert [e[0] for e in _drag_events(host)] == []
+    mock_single_shot.assert_not_called()
+    host.view_3d_manager.current_mol.GetConformer.assert_not_called()
+
+
+def test_aborted_large_molecule_drag_pushes_no_undo(app):
+    """Nothing was moved mid-gesture, so an aborted drag needs no undo entry."""
+    host = _sized_host(_REALTIME_DRAG_MAX_ATOMS + 1)
+    move_group_dialog = _move_dialog(
+        group_atoms={0, 1},
+        is_dragging_group_vtk=True,
+        mouse_moved_vtk=True,
+        is_rotating_group_vtk=False,
+    )
+    style = CustomInteractorStyle(host)
+    style._begin_drag_event([0, 1])
+
+    with patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp:
+        mock_qapp.mouseButtons.return_value = Qt.MouseButton.NoButton
+        style.GetState = MagicMock(return_value=0)
+        style._heal_stuck_pointer_state(move_group_dialog)
+
+    host.edit_actions_manager.push_undo_state.assert_not_called()
+    assert [e[0] for e in _drag_events(host)] == ["start", "end"]
+
+
+def test_unreadable_atom_count_keeps_realtime_drag(app):
+    """An unreadable atom count must not silently disable real-time drag."""
+    host = _drag_host()
+    host.view_3d_manager.current_mol.GetNumAtoms.side_effect = RuntimeError("gone")
+    style = CustomInteractorStyle(host)
+
+    assert style._molecule_too_large_for_realtime() is False
+
+    host.view_3d_manager.current_mol = None
+    assert style._molecule_too_large_for_realtime() is False

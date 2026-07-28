@@ -93,7 +93,8 @@ class Settings3DSceneTab(SettingsTabBase):
         self.realtime_drag_checkbox = QCheckBox()
         self.realtime_drag_checkbox.setToolTip(
             "Update the structure continuously while dragging an atom or group.\n"
-            "When off, the move is applied only on mouse release."
+            "When off, the move is applied only on mouse release.\n"
+            "Structures larger than 300 atoms always use release-only updates."
         )
         form_layout.addRow("Real-time 3D Drag:", self.realtime_drag_checkbox)
 

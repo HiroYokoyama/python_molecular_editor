@@ -39,6 +39,10 @@ _ROTATION_REFERENCE_SIZE = 640.0
 # Minimum seconds between real-time drag redraws (~30 fps).
 _DRAG_REDRAW_INTERVAL = 0.033
 
+# Largest molecule that still gets real-time drag feedback. Each frame is a
+# full scene rebuild, so beyond this the move is applied on release only.
+_REALTIME_DRAG_MAX_ATOMS = 300
+
 # Radians of group rotation per pixel of mouse travel, before the user's
 # rotation-sensitivity multiplier.
 _GROUP_ROTATION_RADIANS_PER_PIXEL = 0.008
@@ -215,13 +219,35 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             return
         self._invoke_drag_handlers("end", list(atoms), self._current_positions(atoms))
 
+    def _realtime_drag_active(self) -> bool:
+        """Return True when real-time drag is both enabled and affordable here.
+
+        Every frame rebuilds the whole 3D scene, so past a few hundred atoms
+        the rebuild costs more than the throttle interval and dragging feels
+        worse with it than without; the move is then applied on release only.
+        """
+        if not self._realtime_drag_enabled():
+            return False
+        return not self._molecule_too_large_for_realtime()
+
+    def _molecule_too_large_for_realtime(self) -> bool:
+        """Return True when the molecule exceeds the real-time drag size limit."""
+        try:
+            mol = self.main_window.view_3d_manager.current_mol
+            if mol is None:
+                return False
+            return int(mol.GetNumAtoms()) > _REALTIME_DRAG_MAX_ATOMS
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            logging.debug("Suppressed non-critical error", exc_info=True)
+            return False
+
     def _should_drag_redraw(self) -> bool:
         """Return True when a real-time drag frame may be rendered now.
 
         Skips while a previous deferred redraw is still queued so a scene that
         rebuilds slower than the throttle interval cannot pile up frames.
         """
-        if not self._realtime_drag_enabled():
+        if not self._realtime_drag_active():
             return False
         if self._drag_redraw_pending:
             return False
@@ -239,7 +265,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         gesture still needs an undo entry even though it never reached the
         release handler.
         """
-        if moved and self._realtime_drag_enabled():
+        if moved and self._realtime_drag_active():
             self._push_undo_after_aborted_drag()
         self._end_drag_event()
 

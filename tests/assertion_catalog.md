@@ -2284,6 +2284,38 @@ _Group rotation honours the mouse rotation sensitivity setting._
 
 - assert _angle(2.0) == pytest.approx(2 * _angle(1.0), rel=1e-06)
 
+### test_realtime_drag_allowed_up_to_the_size_limit
+_A molecule at the limit still gets real-time frames._
+
+- assert style._molecule_too_large_for_realtime() is False
+- assert style._should_drag_redraw() is True
+
+### test_realtime_drag_skipped_above_the_size_limit
+_Past the limit the per-frame scene rebuild is skipped entirely._
+
+- assert style._molecule_too_large_for_realtime() is True
+- assert style._realtime_drag_active() is False
+- assert style._should_drag_redraw() is False
+
+### test_large_molecule_drag_emits_no_move_events
+_No real-time frame means no coordinate writes and no 'move' events._
+
+- assert [e[0] for e in _drag_events(host)] == []
+- mock_single_shot.assert_not_called()
+- host.view_3d_manager.current_mol.GetConformer.assert_not_called()
+
+### test_aborted_large_molecule_drag_pushes_no_undo
+_Nothing was moved mid-gesture, so an aborted drag needs no undo entry._
+
+- host.edit_actions_manager.push_undo_state.assert_not_called()
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_unreadable_atom_count_keeps_realtime_drag
+_An unreadable atom count must not silently disable real-time drag._
+
+- assert style._molecule_too_large_for_realtime() is False
+- assert style._molecule_too_large_for_realtime() is False
+
 ## tests/unit/test_custom_qt_interactor.py
 
 ### test_double_click_redispatched_as_plain_press

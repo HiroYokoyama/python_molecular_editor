@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **89.42%**
+- **Overall Project Coverage**: **89.43%**
 
 ### Coverage Breakdown
 
@@ -29,7 +29,7 @@
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    166 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    432 |      7 |   98.4% |
 | moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py |    480 |     24 |   95.0% |
-| moleditpy\src\moleditpy\ui\custom_interactor_style.py   |    781 |    121 |   84.5% |
+| moleditpy\src\moleditpy\ui\custom_interactor_style.py   |    795 |    121 |   84.8% |
 | moleditpy\src\moleditpy\ui\custom_qt_interactor.py      |     24 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    137 |     19 |   86.1% |
 | moleditpy\src\moleditpy\ui\dialog_logic.py              |    230 |     25 |   89.1% |
@@ -67,11 +67,11 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     39 |      0 |  100.0% |
-| **TOTAL** | **16567** | **1753** | **89.42%** |
+| **TOTAL** | **16581** | **1753** | **89.43%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2030 (1 skipped)
-- **Unit tests**: PASSED (1846 passed)
+- **Total tests passed**: 2035 (1 skipped)
+- **Unit tests**: PASSED (1851 passed)
 - **Integration tests**: PASSED (75 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (75 passed)
