@@ -53,11 +53,6 @@ class MoveGroupDialog(BasePickingDialog):
         self.selected_atoms: set[int] = set()
         self.group_atoms: set[int] = set()  # All atoms connected to selected atoms
 
-        # Add preselected atoms
-        if preselected_atoms:
-            # For MoveGroup, we pick the first atom and select its connected group
-            self.on_atom_picked(preselected_atoms[0])
-
         self.clicked_atom_for_toggle: Optional[int] = None
         # State for group movement (used by CustomInteractorStyle)
         self.initial_positions: dict = {}
@@ -81,6 +76,11 @@ class MoveGroupDialog(BasePickingDialog):
         self.highlight_actor: Optional[pv.Actor] = None
 
         self.init_ui()
+
+        # After init_ui: picking an atom highlights it and updates the labels,
+        # which needs both the actor state and the widgets to exist.
+        if preselected_atoms:
+            self.on_atom_picked(preselected_atoms[0])
 
     def init_ui(self) -> None:
         """Build the move-group dialog with atom picker, translate/rotate inputs, and controls."""

@@ -23,8 +23,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox
 
+from ..utils.constants import MOVE_DIALOG_TYPES
 from .plugin_interface import PluginContext
 
 
@@ -95,6 +96,7 @@ class PluginManager:
         self.load_handlers: Dict[str, Callable] = {}
         self.custom_3d_styles: Dict[str, Dict[str, Any]] = {}
         self.document_reset_handlers: List[Dict[str, Any]] = []
+        self.atom_drag_handlers: List[Dict[str, Any]] = []
         self.plugin_windows: Dict[
             str, Dict[str, Any]
         ] = {}  # Map of plugin_name -> {window_id -> window}
@@ -247,6 +249,7 @@ class PluginManager:
         self.load_handlers = {}
         self.custom_3d_styles = {}
         self.document_reset_handlers = []
+        self.atom_drag_handlers = []
 
         if not os.path.exists(self.plugin_dir):
             return []
@@ -558,6 +561,10 @@ class PluginManager:
             {"plugin": plugin_name, "callback": callback}
         )
 
+    def register_atom_drag_handler(self, plugin_name: str, callback: Callable) -> None:
+        """Register a handler called during 3D atom/group dragging."""
+        self.atom_drag_handlers.append({"plugin": plugin_name, "callback": callback})
+
     # --- New API Implementation ---
     def show_status_message(self, message: str, timeout: int = 3000) -> None:
         """Display a message in the MainWindow status bar."""
@@ -652,6 +659,48 @@ class PluginManager:
                     e,
                     exc_info=True,
                 )
+
+    def invoke_atom_drag_handlers(
+        self,
+        event_type: str,
+        atom_indices: List[int],
+        positions: Dict[int, tuple],
+    ) -> None:
+        """Call all registered atom drag handlers."""
+        for handler in self.atom_drag_handlers:
+            try:
+                handler["callback"](event_type, atom_indices, positions)
+            except Exception as e:  # plugins have full app access; catch everything to keep the drag alive
+                logging.warning(
+                    "Error in atom drag handler for %s: %s",
+                    handler["plugin"],
+                    e,
+                    exc_info=True,
+                )
+
+    def is_dragging_atom(self) -> bool:
+        """Return True if an atom or group is currently being dragged in 3D."""
+        mw = self.main_window
+        if mw is None:
+            return False
+        if getattr(mw, "dragged_atom_info", None) is not None:
+            return True
+        return self._is_dragging_group()
+
+    @staticmethod
+    def _is_dragging_group() -> bool:
+        """Return True while a Move Group / Move Selected Atoms gesture is active."""
+        try:
+            for widget in QApplication.topLevelWidgets():
+                if type(widget).__name__ not in MOVE_DIALOG_TYPES:
+                    continue
+                if getattr(widget, "is_dragging_group_vtk", False) or getattr(
+                    widget, "is_rotating_group_vtk", False
+                ):
+                    return True
+        except (AttributeError, RuntimeError, TypeError):
+            logging.debug("Suppressed non-critical error", exc_info=True)
+        return False
 
     def get_plugin_info_safe(self, file_path: str) -> Dict[str, str]:
         """Extracts plugin metadata using AST parsing (safe, no execution)."""
