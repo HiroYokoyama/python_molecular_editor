@@ -38,7 +38,7 @@ class Settings3DSceneTab(SettingsTabBase):
         self.light_checkbox: Any = None
         self.projection_combo: Any = None
         self.realtime_drag_checkbox: Any = None
-        self.right_click_rotate_group_checkbox: Any = None
+        self.rotate_group_follow_mouse_checkbox: Any = None
         self.current_bg_color = default_settings["background_color"]
         self._setup_ui()
 
@@ -93,9 +93,9 @@ class Settings3DSceneTab(SettingsTabBase):
         self.realtime_drag_checkbox = QCheckBox()
         form_layout.addRow("Real-time 3D Drag:", self.realtime_drag_checkbox)
 
-        self.right_click_rotate_group_checkbox = QCheckBox()
+        self.rotate_group_follow_mouse_checkbox = QCheckBox()
         form_layout.addRow(
-            "Right-Click Display Rotates Group:", self.right_click_rotate_group_checkbox
+            "Rotate Groups: Follow Mouse:", self.rotate_group_follow_mouse_checkbox
         )
 
     def _select_color(self) -> None:
@@ -134,8 +134,8 @@ class Settings3DSceneTab(SettingsTabBase):
         sens_val = settings_dict.get("mouse_rotation_sensitivity", 1.0)
         self.rotation_sens_slider.setValue(int(sens_val * 100))
         self.realtime_drag_checkbox.setChecked(settings_dict.get("realtime_3d_drag", True))
-        self.right_click_rotate_group_checkbox.setChecked(
-            settings_dict.get("right_click_rotate_group_anywhere", True)
+        self.rotate_group_follow_mouse_checkbox.setChecked(
+            settings_dict.get("rotate_group_follow_mouse", False)
         )
 
     def get_settings(self) -> dict[str, Any]:
@@ -149,9 +149,7 @@ class Settings3DSceneTab(SettingsTabBase):
             "projection_mode": self.projection_combo.currentText(),
             "mouse_rotation_sensitivity": self.rotation_sens_slider.value() / 100.0,
             "realtime_3d_drag": self.realtime_drag_checkbox.isChecked(),
-            "right_click_rotate_group_anywhere": (
-                self.right_click_rotate_group_checkbox.isChecked()
-            ),
+            "rotate_group_follow_mouse": self.rotate_group_follow_mouse_checkbox.isChecked(),
         }
 
 

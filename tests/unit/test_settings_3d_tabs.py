@@ -52,7 +52,7 @@ def test_scene_tab_get_settings_keys(app):
         "projection_mode",
         "mouse_rotation_sensitivity",
         "realtime_3d_drag",
-        "right_click_rotate_group_anywhere",
+        "rotate_group_follow_mouse",
     }
     assert expected_keys == set(result.keys())
 

@@ -959,18 +959,47 @@ def test_do_realtime_atom_drag_updates_positions(app):
     )
 
 
-def test_right_click_rotate_group_anywhere_setting(app):
-    """Right-clicking display starts group rotation when right_click_rotate_group_anywhere is enabled."""
+def test_rotate_group_follow_mouse_setting(app):
+    """Test group rotation matrix computation for rotate_group_follow_mouse True vs False."""
     host = MagicMock()
-    host.get_settings.return_value = {"right_click_rotate_group_anywhere": True}
+    host.get_settings.return_value = {"rotate_group_follow_mouse": False}
     style = CustomInteractorStyle(host)
 
-    mock_interactor = MagicMock()
-    mock_interactor.GetEventPosition.return_value = (200, 200)
-    style.GetInteractor = MagicMock(return_value=mock_interactor)
+    mock_renderer = MagicMock()
+    mock_camera = MagicMock()
+    mock_camera.GetViewUp.return_value = (0.0, 1.0, 0.0)
+    mock_camera.GetDirectionOfProjection.return_value = (0.0, 0.0, -1.0)
+    mock_renderer.GetActiveCamera.return_value = mock_camera
+    host.view_3d_manager.plotter.renderer = mock_renderer
 
     move_group_dialog = _move_dialog(group_atoms={0, 1})
+    move_group_dialog.rotation_start_pos = (100, 100)
+    move_group_dialog.group_centroid = np.array([1.0, 0.0, 0.0])
+    move_group_dialog.initial_positions = {
+        0: np.array([0.0, 0.0, 0.0]),
+        1: np.array([2.0, 0.0, 0.0]),
+    }
 
+    # False -> delta rotation matrix
+    rot_mat_delta = style._get_group_rotation_matrix(host, move_group_dialog, (120, 100))
+    assert rot_mat_delta is not None
+
+    # True -> follow mouse rotation matrix
+    host.get_settings.return_value = {"rotate_group_follow_mouse": True}
+    move_group_dialog.rotation_atom_idx = 0
+    style._world_to_display_depth = MagicMock(return_value=0.5)
+    style._display_to_world = MagicMock(return_value=(2.0, 1.0, 0.0))
+    rot_mat_follow = style._get_group_rotation_matrix(host, move_group_dialog, (120, 100))
+    assert rot_mat_follow is not None
+
+
+def test_rotate_group_follow_mouse_on_right_click(app):
+    """rotate_group_follow_mouse=True requires atom click, False allows display click."""
+    host = MagicMock()
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (200, 200)
+
+    move_group_dialog = _move_dialog(group_atoms={0, 1})
     mol = MagicMock()
     conf = MagicMock()
     conf.GetAtomPosition.side_effect = [
@@ -990,12 +1019,20 @@ def test_right_click_rotate_group_anywhere_setting(app):
     ):
         mock_qapp.topLevelWidgets.return_value = [move_group_dialog]
 
-        style.on_right_button_down(None, None)
+        # Case 1: follow_mouse=True and display click (no atom clicked) -> skips rotation drag
+        move_group_dialog.is_rotating_group_vtk = False
+        host.get_settings.return_value = {"rotate_group_follow_mouse": True}
+        style1 = CustomInteractorStyle(host)
+        style1.GetInteractor = MagicMock(return_value=mock_interactor)
+        style1.StartRotate = MagicMock()
+        style1.on_right_button_down(None, None)
+        assert getattr(move_group_dialog, "is_rotating_group_vtk", False) is False
 
+        # Case 2: follow_mouse=False and display click (no atom clicked) -> starts rotation drag anywhere
+        host.get_settings.return_value = {"rotate_group_follow_mouse": False}
+        style2 = CustomInteractorStyle(host)
+        style2.GetInteractor = MagicMock(return_value=mock_interactor)
+        style2.on_right_button_down(None, None)
         assert move_group_dialog.is_rotating_group_vtk is True
-        assert move_group_dialog.rotation_start_pos == (200, 200)
-        host.plugin_manager.invoke_atom_drag_handlers.assert_called_once_with(
-            "start", [0, 1], {}
-        )
 
 

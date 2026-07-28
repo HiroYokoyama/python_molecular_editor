@@ -477,17 +477,18 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 mw.view_3d_manager.current_mol,
             )
 
-            allow_anywhere = True
+            follow_mouse = False
             try:
-                allow_anywhere = bool(
-                    mw.get_settings().get("right_click_rotate_group_anywhere", True)
+                follow_mouse = bool(
+                    mw.get_settings().get("rotate_group_follow_mouse", False)
                 )
             except (AttributeError, RuntimeError, TypeError):
-                allow_anywhere = True
+                follow_mouse = False
 
-            # Start rotation drag if atom inside group clicked OR right-click anywhere is enabled
+            # If follow_mouse is True, require clicking directly on an atom in the group.
+            # If follow_mouse is False (default), allow right-clicking anywhere on display.
             if (
-                allow_anywhere
+                not follow_mouse
                 or (
                     clicked_atom_idx is not None
                     and clicked_atom_idx in move_group_dialog.group_atoms
@@ -865,20 +866,83 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             return None
 
 
-    def _do_realtime_group_rotate(
+    def _get_group_rotation_matrix(
         self, mw: Any, move_group_dialog: Any, current_pos: Any
-    ) -> None:
-        """Rotate group atoms around their centroid and redraw during mouse-move."""
+    ) -> Optional[np.ndarray]:
+        """Compute group rotation matrix using delta or follow-mouse method."""
         try:
             renderer = mw.view_3d_manager.plotter.renderer
             centroid = move_group_dialog.group_centroid
             start_pos = getattr(move_group_dialog, "rotation_start_pos", None)
             if start_pos is None:
-                return
+                return None
 
-            rot_matrix = self._compute_delta_rotation_matrix(renderer, start_pos, current_pos)
+            follow_mouse = bool(
+                mw.get_settings().get("rotate_group_follow_mouse", False)
+            )
+
+            if follow_mouse:
+                if not hasattr(move_group_dialog, "rotation_atom_idx"):
+                    move_group_dialog.rotation_atom_idx = next(
+                        iter(move_group_dialog.group_atoms)
+                    )
+                grabbed_atom_idx = move_group_dialog.rotation_atom_idx
+                grabbed_initial_pos = move_group_dialog.initial_positions[grabbed_atom_idx]
+
+                depth_z = self._world_to_display_depth(
+                    renderer,
+                    grabbed_initial_pos[0],
+                    grabbed_initial_pos[1],
+                    grabbed_initial_pos[2],
+                )
+                if depth_z is None:
+                    return None
+                target_world = self._display_to_world(
+                    renderer, current_pos[0], current_pos[1], depth_z
+                )
+                if target_world is None:
+                    return None
+                target_pos = np.array(target_world)
+
+                v1 = grabbed_initial_pos - centroid
+                v2 = target_pos - centroid
+                v1_norm = np.linalg.norm(v1)
+                v2_norm = np.linalg.norm(v2)
+                if v1_norm < 1e-6 or v2_norm < 1e-6:
+                    return None
+
+                v1_n = v1 / v1_norm
+                v2_n = v2 / v2_norm
+                rotation_axis = np.cross(v1_n, v2_n)
+                axis_norm = np.linalg.norm(rotation_axis)
+                if axis_norm < 1e-6:
+                    return None
+                rotation_axis /= axis_norm
+
+                cos_angle = float(np.clip(np.dot(v1_n, v2_n), -1.0, 1.0))
+                angle = np.arccos(cos_angle)
+                k_mat = np.array(
+                    [
+                        [0.0, -rotation_axis[2], rotation_axis[1]],
+                        [rotation_axis[2], 0.0, -rotation_axis[0]],
+                        [-rotation_axis[1], rotation_axis[0], 0.0],
+                    ]
+                )
+                return np.eye(3) + np.sin(angle) * k_mat + (1.0 - np.cos(angle)) * (k_mat @ k_mat)
+            return self._compute_delta_rotation_matrix(renderer, start_pos, current_pos)
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            return None
+
+    def _do_realtime_group_rotate(
+        self, mw: Any, move_group_dialog: Any, current_pos: Any
+    ) -> None:
+        """Rotate group atoms around their centroid and redraw during mouse-move."""
+        try:
+            rot_matrix = self._get_group_rotation_matrix(mw, move_group_dialog, current_pos)
             if rot_matrix is None:
                 return
+
+            centroid = move_group_dialog.group_centroid
 
             conf = mw.view_3d_manager.current_mol.GetConformer()
             new_positions: Dict[int, Tuple[float, float, float]] = {}
@@ -1277,41 +1341,39 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 # Apply rotation on release if moved
                 try:
                     interactor = self.GetInteractor()
-                    renderer = mw.view_3d_manager.plotter.renderer
                     current_pos = interactor.GetEventPosition()
                     conf = mw.view_3d_manager.current_mol.GetConformer()
                     centroid = move_group_dialog.group_centroid
 
                     start_pos = getattr(move_group_dialog, "rotation_start_pos", None)
-                    if start_pos is not None:
-                        rot_matrix = self._compute_delta_rotation_matrix(
-                            renderer, start_pos, current_pos
-                        )
-                        if rot_matrix is not None:
-                            for atom_idx in move_group_dialog.group_atoms:
-                                initial_pos = move_group_dialog.initial_positions[
-                                    atom_idx
-                                ]
-                                relative_pos = initial_pos - centroid
-                                rotated_pos = rot_matrix @ relative_pos
-                                new_pos = rotated_pos + centroid
+                    rot_matrix = self._get_group_rotation_matrix(
+                        mw, move_group_dialog, current_pos
+                    )
+                    if rot_matrix is not None:
+                        for atom_idx in move_group_dialog.group_atoms:
+                            initial_pos = move_group_dialog.initial_positions[
+                                atom_idx
+                            ]
+                            relative_pos = initial_pos - centroid
+                            rotated_pos = rot_matrix @ relative_pos
+                            new_pos = rotated_pos + centroid
 
-                                conf.SetAtomPosition(
-                                    atom_idx,
-                                    Geometry.Point3D(
-                                        float(new_pos[0]),
-                                        float(new_pos[1]),
-                                        float(new_pos[2]),
-                                    ),
-                                )
-                                mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
-
-                            mw.view_3d_manager.draw_molecule_3d(
-                                mw.view_3d_manager.current_mol
+                            conf.SetAtomPosition(
+                                atom_idx,
+                                Geometry.Point3D(
+                                    float(new_pos[0]),
+                                    float(new_pos[1]),
+                                    float(new_pos[2]),
+                                ),
                             )
-                            mw.view_3d_manager.update_chiral_labels()
-                            move_group_dialog.show_atom_labels()
-                            mw.edit_actions_manager.push_undo_state()
+                            mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
+
+                        mw.view_3d_manager.draw_molecule_3d(
+                            mw.view_3d_manager.current_mol
+                        )
+                        mw.view_3d_manager.update_chiral_labels()
+                        move_group_dialog.show_atom_labels()
+                        mw.edit_actions_manager.push_undo_state()
                 except (AttributeError, RuntimeError, TypeError, ValueError):
                     logging.warning("Error finalizing group rotation", exc_info=True)
                 self._invoke_drag_handlers(
