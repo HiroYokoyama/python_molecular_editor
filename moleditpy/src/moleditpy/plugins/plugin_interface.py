@@ -353,7 +353,12 @@ class PluginContext:
         """
         self._manager.register_document_reset_handler(self._plugin_name, callback)
 
-    def register_atom_drag_handler(self, callback: Callable) -> None:
+    def register_atom_drag_handler(
+        self,
+        callback: Callable[
+            [str, List[int], Dict[int, Tuple[float, float, float]]], None
+        ],
+    ) -> None:
         """Register a handler called during 3D atom or group dragging.
 
         The callback receives:

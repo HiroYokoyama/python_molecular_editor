@@ -953,3 +953,44 @@ def test_do_realtime_atom_drag_updates_positions(app):
         "move", [0], {0: (1.0, 2.0, 3.0)}
     )
 
+
+def test_right_click_rotate_group_anywhere_setting(app):
+    """Right-clicking display starts group rotation when right_click_rotate_group_anywhere is enabled."""
+    host = MagicMock()
+    host.get_settings.return_value = {"right_click_rotate_group_anywhere": True}
+    style = CustomInteractorStyle(host)
+
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (200, 200)
+    style.GetInteractor = MagicMock(return_value=mock_interactor)
+
+    move_group_dialog = _move_dialog(group_atoms={0, 1})
+
+    mol = MagicMock()
+    conf = MagicMock()
+    conf.GetAtomPosition.side_effect = [
+        MagicMock(x=0.0, y=0.0, z=0.0),
+        MagicMock(x=2.0, y=0.0, z=0.0),
+    ]
+    mol.GetConformer.return_value = conf
+    host.view_3d_manager.current_mol = mol
+    host.plugin_manager.invoke_atom_drag_handlers = MagicMock()
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=None,
+        ),
+    ):
+        mock_qapp.topLevelWidgets.return_value = [move_group_dialog]
+
+        style.on_right_button_down(None, None)
+
+        assert move_group_dialog.is_rotating_group_vtk is True
+        assert move_group_dialog.rotation_start_pos == (200, 200)
+        host.plugin_manager.invoke_atom_drag_handlers.assert_called_once_with(
+            "start", [0, 1], {}
+        )
+
+

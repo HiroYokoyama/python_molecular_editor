@@ -477,17 +477,31 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 mw.view_3d_manager.current_mol,
             )
 
-            # Start rotation drag if atom inside group clicked
+            allow_anywhere = True
+            try:
+                allow_anywhere = bool(
+                    mw.get_settings().get("right_click_rotate_group_anywhere", True)
+                )
+            except (AttributeError, RuntimeError, TypeError):
+                allow_anywhere = True
+
+            # Start rotation drag if atom inside group clicked OR right-click anywhere is enabled
             if (
-                clicked_atom_idx is not None
-                and clicked_atom_idx in move_group_dialog.group_atoms
+                allow_anywhere
+                or (
+                    clicked_atom_idx is not None
+                    and clicked_atom_idx in move_group_dialog.group_atoms
+                )
             ):
                 move_group_dialog.is_rotating_group_vtk = True
                 move_group_dialog.rotation_start_pos = click_pos
                 move_group_dialog.rotation_mouse_moved = False
-                move_group_dialog.rotation_atom_idx = (
-                    clicked_atom_idx  # Record grabbed atom
-                )
+                if clicked_atom_idx is not None:
+                    move_group_dialog.rotation_atom_idx = (
+                        clicked_atom_idx  # Record grabbed atom
+                    )
+                elif hasattr(move_group_dialog, "rotation_atom_idx"):
+                    delattr(move_group_dialog, "rotation_atom_idx")
 
                 # Save initial positions and centroid
                 move_group_dialog.initial_positions = {}
