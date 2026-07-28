@@ -1036,3 +1036,115 @@ def test_rotate_group_follow_mouse_on_right_click(app):
         assert move_group_dialog.is_rotating_group_vtk is True
 
 
+def test_left_click_in_group_starts_drag(app):
+    host = MagicMock()
+    style = CustomInteractorStyle(host)
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (100, 100)
+    style.GetInteractor = MagicMock(return_value=mock_interactor)
+    
+    move_group_dialog = _move_dialog(group_atoms={0, 1})
+    host.view_3d_manager.current_mol = MagicMock()
+    conf = MagicMock()
+    conf.GetAtomPosition.return_value = MagicMock(x=0.0, y=0.0, z=0.0)
+    host.view_3d_manager.current_mol.GetConformer.return_value = conf
+    
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch("moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen", return_value=0)
+    ):
+        mock_qapp.topLevelWidgets.return_value = [move_group_dialog]
+        style.on_left_button_down(None, None)
+        
+    assert move_group_dialog.is_dragging_group_vtk is True
+    assert move_group_dialog.drag_atom_idx_vtk == 0
+
+
+def test_left_click_outside_group_triggers_bfs(app):
+    host = MagicMock()
+    style = CustomInteractorStyle(host)
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (100, 100)
+    mock_interactor.GetControlKey.return_value = False
+    mock_interactor.GetAltKey.return_value = False
+    style.GetInteractor = MagicMock(return_value=mock_interactor)
+    
+    move_group_dialog = _move_dialog(group_atoms={0, 1}, selected_atoms=set())
+    host.view_3d_manager.current_mol = MagicMock()
+    host.view_3d_manager.current_mol.GetNumBonds.return_value = 1
+    bond = MagicMock()
+    bond.GetBeginAtomIdx.return_value = 2
+    bond.GetEndAtomIdx.return_value = 3
+    host.view_3d_manager.current_mol.GetBondWithIdx.return_value = bond
+    
+    deferred = []
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch("moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen", return_value=2),
+        patch("moleditpy.ui.custom_interactor_style.QTimer.singleShot", side_effect=lambda _ms, fn: deferred.append(fn))
+    ):
+        mock_qapp.topLevelWidgets.return_value = [move_group_dialog]
+        mock_qapp.keyboardModifiers.return_value = Qt.KeyboardModifier.NoModifier
+        style.on_left_button_down(None, None)
+        
+    # BFS should connect 2 and 3
+    assert move_group_dialog.group_atoms == {2, 3}
+    assert 2 in move_group_dialog.selected_atoms
+    assert len(deferred) == 1
+    deferred[0]()
+    move_group_dialog.show_atom_labels.assert_called_once()
+
+
+def test_do_realtime_group_translate(app):
+    host = MagicMock()
+    style = CustomInteractorStyle(host)
+    move_group_dialog = _move_dialog(group_atoms={0, 1}, drag_atom_idx_vtk=0)
+    move_group_dialog.initial_positions = {0: np.array([0.0, 0.0, 0.0]), 1: np.array([2.0, 0.0, 0.0])}
+    
+    renderer = MagicMock()
+    renderer.GetDisplayPoint.return_value = (100.0, 100.0, 0.5)
+    renderer.GetWorldPoint.return_value = (1.0, 1.0, 0.0, 1.0)
+    host.view_3d_manager.plotter.renderer = renderer
+    
+    conf = MagicMock()
+    host.view_3d_manager.current_mol = MagicMock()
+    host.view_3d_manager.current_mol.GetConformer.return_value = conf
+    host.view_3d_manager.atom_positions_3d = np.zeros((2, 3))
+    
+    style._world_to_display_depth = MagicMock(return_value=0.5)
+    style._display_to_world = MagicMock(return_value=(1.0, 1.0, 0.0))
+    
+    deferred = []
+    with patch("moleditpy.ui.custom_interactor_style.QTimer.singleShot", side_effect=lambda _ms, fn: deferred.append(fn)):
+        style._do_realtime_group_translate(host, move_group_dialog, (120, 120))
+        
+    assert conf.SetAtomPosition.call_count == 2
+    assert len(deferred) == 1
+    deferred[0]()
+
+
+def test_do_realtime_group_rotate(app):
+    host = MagicMock()
+    style = CustomInteractorStyle(host)
+    move_group_dialog = _move_dialog(group_atoms={0, 1}, rotation_atom_idx=0)
+    move_group_dialog.initial_positions = {0: np.array([0.0, 0.0, 0.0]), 1: np.array([2.0, 0.0, 0.0])}
+    move_group_dialog.group_centroid = np.array([1.0, 0.0, 0.0])
+    
+    renderer = MagicMock()
+    host.view_3d_manager.plotter.renderer = renderer
+    
+    conf = MagicMock()
+    host.view_3d_manager.current_mol = MagicMock()
+    host.view_3d_manager.current_mol.GetConformer.return_value = conf
+    host.view_3d_manager.atom_positions_3d = np.zeros((2, 3))
+    
+    style._get_group_rotation_matrix = MagicMock(return_value=np.eye(3))
+    
+    deferred = []
+    with patch("moleditpy.ui.custom_interactor_style.QTimer.singleShot", side_effect=lambda _ms, fn: deferred.append(fn)):
+        style._do_realtime_group_rotate(host, move_group_dialog, (120, 120))
+        
+    assert conf.SetAtomPosition.call_count == 2
+    assert len(deferred) == 1
+    deferred[0]()
+
