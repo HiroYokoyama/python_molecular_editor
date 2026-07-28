@@ -23,7 +23,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from .plugin_interface import PluginContext
 
@@ -248,6 +248,7 @@ class PluginManager:
         self.load_handlers = {}
         self.custom_3d_styles = {}
         self.document_reset_handlers = []
+        self.atom_drag_handlers = []
 
         if not os.path.exists(self.plugin_dir):
             return []
@@ -559,13 +560,9 @@ class PluginManager:
             {"plugin": plugin_name, "callback": callback}
         )
 
-    def register_atom_drag_handler(
-        self, plugin_name: str, callback: Callable
-    ) -> None:
+    def register_atom_drag_handler(self, plugin_name: str, callback: Callable) -> None:
         """Register a handler called during 3D atom/group dragging."""
-        self.atom_drag_handlers.append(
-            {"plugin": plugin_name, "callback": callback}
-        )
+        self.atom_drag_handlers.append({"plugin": plugin_name, "callback": callback})
 
     # --- New API Implementation ---
     def show_status_message(self, message: str, timeout: int = 3000) -> None:
@@ -672,7 +669,7 @@ class PluginManager:
         for handler in self.atom_drag_handlers:
             try:
                 handler["callback"](event_type, atom_indices, positions)
-            except Exception as e:  # plugins have full app access; catch everything to keep drag functional
+            except Exception as e:  # plugins have full app access; catch everything to keep the drag alive
                 logging.warning(
                     "Error in atom drag handler for %s: %s",
                     handler["plugin"],
@@ -687,6 +684,24 @@ class PluginManager:
             return False
         if getattr(mw, "dragged_atom_info", None) is not None:
             return True
+        return self._is_dragging_group()
+
+    @staticmethod
+    def _is_dragging_group() -> bool:
+        """Return True while a Move Group / Move Selected Atoms gesture is active."""
+        try:
+            for widget in QApplication.topLevelWidgets():
+                if type(widget).__name__ not in (
+                    "MoveGroupDialog",
+                    "MoveSelectedAtomsDialog",
+                ):
+                    continue
+                if getattr(widget, "is_dragging_group_vtk", False) or getattr(
+                    widget, "is_rotating_group_vtk", False
+                ):
+                    return True
+        except (AttributeError, RuntimeError, TypeError):
+            logging.debug("Suppressed non-critical error", exc_info=True)
         return False
 
     def get_plugin_info_safe(self, file_path: str) -> Dict[str, str]:

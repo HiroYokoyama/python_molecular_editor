@@ -869,3 +869,51 @@ def test_is_dragging_atom_status():
     mw.dragged_atom_info = {"id": 0}
     assert pm.is_dragging_atom() is True
 
+
+def test_discover_plugins_clears_atom_drag_handlers(tmp_path):
+    """Rediscovery drops handlers of the previous load so they cannot fire twice."""
+    pm = PluginManager()
+    pm.plugin_dir = str(tmp_path)
+    pm.register_atom_drag_handler("StalePlugin", MagicMock())
+
+    pm.discover_plugins()
+
+    assert pm.atom_drag_handlers == []
+
+
+def test_is_dragging_atom_reports_group_gestures():
+    """A group translate / rotate counts as dragging, like a single atom does."""
+    mw = MagicMock()
+    mw.dragged_atom_info = None
+    pm = PluginManager(main_window=mw)
+
+    dialog = MagicMock()
+    type(dialog).__name__ = "MoveGroupDialog"
+    dialog.is_dragging_group_vtk = False
+    dialog.is_rotating_group_vtk = False
+
+    with patch("moleditpy.plugins.plugin_manager.QApplication") as mock_qapp:
+        mock_qapp.topLevelWidgets.return_value = [dialog]
+        assert pm.is_dragging_atom() is False
+
+        dialog.is_rotating_group_vtk = True
+        assert pm.is_dragging_atom() is True
+
+        dialog.is_rotating_group_vtk = False
+        dialog.is_dragging_group_vtk = True
+        assert pm.is_dragging_atom() is True
+
+
+def test_is_dragging_atom_ignores_unrelated_windows():
+    """Windows that are not move dialogs never report a drag."""
+    mw = MagicMock()
+    mw.dragged_atom_info = None
+    pm = PluginManager(main_window=mw)
+
+    other = MagicMock()
+    type(other).__name__ = "SomePluginWindow"
+    other.is_dragging_group_vtk = True
+
+    with patch("moleditpy.plugins.plugin_manager.QApplication") as mock_qapp:
+        mock_qapp.topLevelWidgets.return_value = [other]
+        assert pm.is_dragging_atom() is False
