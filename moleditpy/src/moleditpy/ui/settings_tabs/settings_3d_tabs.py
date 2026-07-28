@@ -91,9 +91,18 @@ class Settings3DSceneTab(SettingsTabBase):
         )
 
         self.realtime_drag_checkbox = QCheckBox()
+        self.realtime_drag_checkbox.setToolTip(
+            "Update the structure continuously while dragging an atom or group.\n"
+            "When off, the move is applied only on mouse release."
+        )
         form_layout.addRow("Real-time 3D Drag:", self.realtime_drag_checkbox)
 
         self.rotate_group_follow_mouse_checkbox = QCheckBox()
+        self.rotate_group_follow_mouse_checkbox.setToolTip(
+            "On: right-drag rotation must start on an atom of the group,\n"
+            "and that atom follows the cursor.\n"
+            "Off: right-dragging anywhere on the 3D view rotates the group."
+        )
         form_layout.addRow(
             "Rotate Groups: Follow Mouse:", self.rotate_group_follow_mouse_checkbox
         )
@@ -133,7 +142,9 @@ class Settings3DSceneTab(SettingsTabBase):
 
         sens_val = settings_dict.get("mouse_rotation_sensitivity", 1.0)
         self.rotation_sens_slider.setValue(int(sens_val * 100))
-        self.realtime_drag_checkbox.setChecked(settings_dict.get("realtime_3d_drag", True))
+        self.realtime_drag_checkbox.setChecked(
+            settings_dict.get("realtime_3d_drag", True)
+        )
         self.rotate_group_follow_mouse_checkbox.setChecked(
             settings_dict.get("rotate_group_follow_mouse", False)
         )

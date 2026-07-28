@@ -417,6 +417,8 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
       * 表面の光沢 (Specular) とその強さ (Specular Power)
       * カメラの投影モード (Perspective / Orthographic)
       * マウスの回転感度 (3D ビュー回転速度の倍率)
+      * リアルタイム 3D ドラッグ (原子やグループのドラッグ中に構造を随時更新します。オフにするとマウスを離した時点で移動が適用されます)
+      * グループ回転: マウス追従 (オンの場合、右ドラッグによる回転はグループ内の原子上から開始する必要があり、その原子がカーソルに追従します。オフ (既定) の場合は画面上のどこで右ドラッグしてもグループが回転します)
   * **各表示スタイル (Ball & Stick, CPK, Wireframe, Stick) タブ:**
       * 原子サイズ/半径のスケール
       * 結合半径
@@ -515,7 +517,7 @@ MoleditPyは、Pythonスクリプトによる機能の拡張をサポートし�
 
 ## 11\. バージョン情報・ライセンス
 
-  * **バージョン:** 4.4
+  * **バージョン:** 4.5
   * **作者:** Hiromichi Yokoyama
   * **ライセンス:** GPL-3.0 license
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

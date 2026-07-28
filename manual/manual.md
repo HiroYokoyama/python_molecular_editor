@@ -431,6 +431,8 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
     * Surface shininess (Specular) and its intensity (Specular Power)
     * Camera projection mode (Perspective / Orthographic)
     * Mouse rotation sensitivity (speed multiplier for 3D view rotation)
+    * Real-time 3D Drag (update the structure continuously while dragging an atom or group; turn it off to only apply the move on mouse release)
+    * Rotate Groups: Follow Mouse (when on, right-drag rotation must start on an atom of the group and that atom follows the cursor; when off — the default — right-dragging anywhere rotates the group)
 * **Display Style Tabs (Ball & Stick, CPK, Wireframe, Stick):**
     * Atom size/radius scale
     * Bond radius
@@ -529,7 +531,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 4.4
+  * **Version:** 4.5
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
