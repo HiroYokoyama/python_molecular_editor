@@ -625,8 +625,8 @@ def test_inject_ez_stereo_inserts_cfg_before_m_end():
     block = "header\nbody\nM  END\n"
     out = inject_ez_stereo_to_mol_block(block, mol, {(1, 2): {"stereo": 4}})
     lines = out.split("\n")
-    cfg_idx = next(i for i, l in enumerate(lines) if "M  CFG" in l)
-    end_idx = next(i for i, l in enumerate(lines) if "M  END" in l)
+    cfg_idx = next(i for i, line in enumerate(lines) if "M  CFG" in line)
+    end_idx = next(i for i, line in enumerate(lines) if "M  END" in line)
     assert cfg_idx < end_idx  # CFG inserted just before the terminator
 
 

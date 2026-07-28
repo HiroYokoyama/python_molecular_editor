@@ -180,8 +180,13 @@ def test_register_file_opener():
 def test_register_file_opener_priority():
     """Higher priority opener should replace lower priority one in sorted order."""
     pm = PluginManager()
-    cb_low = lambda: "low"
-    cb_high = lambda: "high"
+
+    def cb_low():
+        return "low"
+
+    def cb_high():
+        return "high"
+
     pm.register_file_opener("Plugin1", ".xyz", cb_low, priority=0)
     pm.register_file_opener("Plugin2", ".xyz", cb_high, priority=10)
     # It's a list, sorted by priority descending

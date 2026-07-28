@@ -119,7 +119,6 @@ def test_delete_items_keys(window, qtbot):
 def test_temp_line_cancellation(window, qtbot):
     """Test Delete key cancels an active temp_line (bond drawing)."""
     scene = window.init_manager.scene
-    data = window.state_manager.data
 
     a1_id = scene.create_atom("C", QPointF(0, 0))
     a1_item = scene.atom_items[a1_id]

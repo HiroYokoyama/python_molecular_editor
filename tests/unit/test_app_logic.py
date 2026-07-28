@@ -69,7 +69,7 @@ def test_coordinate_mapping_primary():
     expected_x = 100.0 * ANGSTROM_PER_PIXEL
 
     lines = mol_block.split("\n")
-    atom_lines = [l for l in lines if " C " in l]
+    atom_lines = [line for line in lines if " C " in line]
     assert len(atom_lines) == 2
 
     parts = atom_lines[1].split()
@@ -98,7 +98,7 @@ def test_coordinate_mapping_fallback():
     expected_x = 100.0 * ANGSTROM_PER_PIXEL
 
     lines = mol_block.split("\n")
-    atom_lines = [l for l in lines if " X " in l]
+    atom_lines = [line for line in lines if " X " in line]
     assert len(atom_lines) == 2
 
     parts = atom_lines[1].split()

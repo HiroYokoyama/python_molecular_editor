@@ -119,7 +119,7 @@ def test_wheel_no_ctrl_passes_to_super(app):
     view, _ = _make_view(app)
     before = view.transform().m11()
     ev = _wheel_event(delta_y=120, ctrl=False)
-    with patch.object(ZoomableView.__bases__[0], "wheelEvent") as mock_super:
+    with patch.object(ZoomableView.__bases__[0], "wheelEvent"):
         view.wheelEvent(ev)
     # Scale should NOT have changed (super handled it)
     assert view.transform().m11() == pytest.approx(before)

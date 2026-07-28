@@ -96,7 +96,7 @@ def test_original_id_mode_hides_rdkit_id_labels(app, mock_parser_host):
 
     mol = Chem.RWMol()
     first_idx = mol.AddAtom(Chem.Atom("C"))
-    second_idx = mol.AddAtom(Chem.Atom("O"))
+    mol.AddAtom(Chem.Atom("O"))
     mol.GetAtomWithIdx(first_idx).SetIntProp("_original_atom_id", 42)
     view3d.current_mol = mol
 
@@ -1107,20 +1107,6 @@ def test_toggle_chiral_labels_display_off_reports_disabled(mock_parser_host):
 # ---------------------------------------------------------------------------
 # toggle_atom_info_display / set_atom_index_base
 # ---------------------------------------------------------------------------
-
-
-def test_toggle_atom_info_same_mode_turns_off(mock_parser_host):
-    view3d = _make_view3d(mock_parser_host)
-    view3d.atom_info_display_mode = "rdkit_index"
-    base_menu = mock_parser_host.init_manager.atom_index_base_menu
-
-    view3d.toggle_atom_info_display("rdkit_index")
-
-    assert view3d.atom_info_display_mode is None
-    base_menu.setEnabled.assert_called_with(False)
-    mock_parser_host.statusBar().showMessage.assert_called_with(
-        "Atom info display disabled."
-    )
 
 
 def test_toggle_atom_info_index_mode_enables_base_menu(mock_parser_host):

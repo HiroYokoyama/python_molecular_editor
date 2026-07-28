@@ -801,8 +801,7 @@ def test_box_selection_toggle_button(qapp):
 def test_box_selection_click_to_reset(qapp):
     """Test that a single click clears the selection when Box Selection is ON."""
     from moleditpy.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
-    from PyQt6.QtCore import QEvent, QPoint, Qt
-    from PyQt6.QtGui import QMouseEvent
+    from PyQt6.QtCore import QEvent, QPoint
 
     mol = _ethane()
     mw = _make_main_window(mol)
