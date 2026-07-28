@@ -25,6 +25,7 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
+from ..utils.constants import MOVE_DIALOG_TYPES
 from .plugin_interface import PluginContext
 
 
@@ -691,10 +692,7 @@ class PluginManager:
         """Return True while a Move Group / Move Selected Atoms gesture is active."""
         try:
             for widget in QApplication.topLevelWidgets():
-                if type(widget).__name__ not in (
-                    "MoveGroupDialog",
-                    "MoveSelectedAtomsDialog",
-                ):
+                if type(widget).__name__ not in MOVE_DIALOG_TYPES:
                     continue
                 if getattr(widget, "is_dragging_group_vtk", False) or getattr(
                     widget, "is_rotating_group_vtk", False

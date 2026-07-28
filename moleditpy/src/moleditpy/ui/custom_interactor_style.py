@@ -23,6 +23,7 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera  # 
 
 
 from .atom_picking import pick_atom_index_from_screen
+from ..utils.constants import MOVE_DIALOG_TYPES
 
 from rdkit import Geometry
 
@@ -124,6 +125,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 # Safe defensive fallback catching AttributeError, RuntimeError
                 logging.debug("Suppressed non-critical error", exc_info=True)
 
+    def _find_move_dialog(self) -> Any:
+        """Return the visible Move Group / Move Selected Atoms dialog, if any."""
+        try:
+            for widget in QApplication.topLevelWidgets():
+                if type(widget).__name__ in MOVE_DIALOG_TYPES and widget.isVisible():
+                    return widget
+        except (AttributeError, RuntimeError, TypeError):
+            logging.debug("Suppressed non-critical error", exc_info=True)
+        return None
+
     def _display_to_world(
         self,
         renderer: Any,
@@ -196,7 +207,12 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         return positions
 
     def _begin_drag_event(self, atom_indices: Any) -> None:
-        """Report the start of a drag gesture and arm the redraw throttle."""
+        """Report the start of a drag gesture and arm the redraw throttle.
+
+        A right-button press never passes through reset_interactor_state, so
+        close any gesture whose end was missed before opening a new one.
+        """
+        self._end_drag_event()
         atoms = [int(idx) for idx in atom_indices]
         self._active_drag_atoms = atoms
         self._last_drag_redraw_time = 0.0
@@ -263,6 +279,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         gesture still needs an undo entry even though it never reached the
         release handler.
         """
+        if self._active_drag_atoms is None:
+            return
         if moved and self._realtime_drag_active():
             self._push_undo_after_aborted_drag()
         self._end_drag_event()
@@ -357,20 +375,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         self._mouse_moved_during_drag = False
         self._mouse_press_pos = None
 
-        # Check Move Group dialog
-        # Check Move Group or Move Selected Atoms dialog
-        move_group_dialog: Any = None
-        for widget in QApplication.topLevelWidgets():
-            try:
-                if (
-                    type(widget).__name__
-                    in ("MoveGroupDialog", "MoveSelectedAtomsDialog")
-                    and widget.isVisible()
-                ):
-                    move_group_dialog = widget
-                    break
-            except (AttributeError, RuntimeError, TypeError):
-                logging.warning("Caught exception in " + __file__, exc_info=True)
+        move_group_dialog = self._find_move_dialog()
 
         if move_group_dialog and move_group_dialog.group_atoms:
             # Group drag if selected
@@ -578,21 +583,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         """
         mw = self.main_window
 
-        # Check if Move Group dialog or Move Selected Atoms dialog is open
-        move_group_dialog: Any = None
-        try:
-            for widget in QApplication.topLevelWidgets():
-                if (
-                    type(widget).__name__
-                    in ("MoveGroupDialog", "MoveSelectedAtomsDialog")
-                    and widget.isVisible()
-                ):
-                    move_group_dialog = widget
-                    break
-        except (AttributeError, RuntimeError, TypeError) as e:
-            logging.debug(
-                f"Suppressed exception: {e}"
-            )  # Suppress non-critical widget search noise
+        move_group_dialog = self._find_move_dialog()
 
         if move_group_dialog and move_group_dialog.group_atoms:
             # Start rotation drag if group selected
@@ -705,19 +696,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         """
         mw = self.main_window
 
-        # Move Group / Selected Atoms drag handling
-        move_group_dialog: Any = None
-        try:
-            for widget in QApplication.topLevelWidgets():
-                if (
-                    type(widget).__name__
-                    in ("MoveGroupDialog", "MoveSelectedAtomsDialog")
-                    and widget.isVisible()
-                ):
-                    move_group_dialog = widget
-                    break
-        except (AttributeError, RuntimeError, TypeError):
-            logging.warning("Caught exception in " + __file__, exc_info=True)
+        move_group_dialog = self._find_move_dialog()
 
         self._heal_stuck_pointer_state(move_group_dialog)
         if move_group_dialog and getattr(
@@ -1089,19 +1068,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         """
         mw = self.main_window
 
-        # Finalize Move Group / Selected Atoms drag
-        move_group_dialog: Any = None
-        try:
-            for widget in QApplication.topLevelWidgets():
-                if (
-                    type(widget).__name__
-                    in ("MoveGroupDialog", "MoveSelectedAtomsDialog")
-                    and widget.isVisible()
-                ):
-                    move_group_dialog = widget
-                    break
-        except (AttributeError, RuntimeError, TypeError):
-            logging.warning("Caught exception in " + __file__, exc_info=True)
+        move_group_dialog = self._find_move_dialog()
         # Prevent multi-click issues
         if move_group_dialog:
             if getattr(
@@ -1417,19 +1384,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         """
         mw = self.main_window
 
-        # Finalize Move Group / Selected Atoms rotation
-        move_group_dialog: Any = None
-        try:
-            for widget in QApplication.topLevelWidgets():
-                if (
-                    type(widget).__name__
-                    in ("MoveGroupDialog", "MoveSelectedAtomsDialog")
-                    and widget.isVisible()
-                ):
-                    move_group_dialog = widget
-                    break
-        except (AttributeError, RuntimeError, TypeError):
-            logging.warning("Caught exception in " + __file__, exc_info=True)
+        move_group_dialog = self._find_move_dialog()
         if move_group_dialog and getattr(
             move_group_dialog, "is_rotating_group_vtk", False
         ):

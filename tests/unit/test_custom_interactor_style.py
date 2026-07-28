@@ -1325,6 +1325,34 @@ def test_reset_interactor_state_ends_active_drag(app):
     assert [e[0] for e in _drag_events(host)] == ["start", "end"]
 
 
+def test_new_gesture_closes_an_orphaned_one(app):
+    """A right press never resets state, so a new start must close the old gesture."""
+    host = _drag_host()
+    style = CustomInteractorStyle(host)
+
+    style._begin_drag_event([0])
+    style._begin_drag_event([1])
+    style._end_drag_event()
+
+    assert [(e[0], e[1]) for e in _drag_events(host)] == [
+        ("start", [0]),
+        ("end", [0]),
+        ("start", [1]),
+        ("end", [1]),
+    ]
+
+
+def test_abort_without_active_gesture_pushes_no_undo(app):
+    """Dialog flags left by something else must not fabricate an undo entry."""
+    host = _drag_host()
+    style = CustomInteractorStyle(host)
+
+    style._abort_active_drag(moved=True)
+
+    host.edit_actions_manager.push_undo_state.assert_not_called()
+    assert _drag_events(host) == []
+
+
 # =============================================================================
 # Real-Time Drag Throttle
 # =============================================================================
