@@ -2286,6 +2286,17 @@ _Forcing a state reset closes any drag still open toward plugins._
 
 - assert [e[0] for e in _drag_events(host)] == ['start', 'end']
 
+### test_new_gesture_closes_an_orphaned_one
+_A right press never resets state, so a new start must close the old gesture._
+
+- assert [(e[0], e[1]) for e in _drag_events(host)] == [('start', [0]), ('end', [0]), ('start', [1]), ('end', [1])]
+
+### test_abort_without_active_gesture_pushes_no_undo
+_Dialog flags left by something else must not fabricate an undo entry._
+
+- host.edit_actions_manager.push_undo_state.assert_not_called()
+- assert _drag_events(host) == []
+
 ### test_should_drag_redraw_respects_setting
 _Real-time frames are suppressed when the setting is off._
 
