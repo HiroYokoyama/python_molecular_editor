@@ -450,7 +450,12 @@ if __name__ == "__main__":
 
     # Persist counts so print_cov.py --skip-run writes them into coverage_report.md.
     # Key names must match print_cov's convention: title-case (Unit/Integration/E2E/GUI).
-    _KEY_MAP = {"UNIT": "Unit", "INTEGRATION": "Integration", "E2E": "E2E", "GUI": "GUI"}
+    _KEY_MAP = {
+        "UNIT": "Unit",
+        "INTEGRATION": "Integration",
+        "E2E": "E2E",
+        "GUI": "GUI",
+    }
     _counts_cache = os.path.join(BASE_DIR, "tests", ".test_counts.json")
     try:
         mapped = {_KEY_MAP.get(k, k): v for k, v in SUITE_COUNTS.items()}

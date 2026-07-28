@@ -2196,13 +2196,13 @@ _rotate_group_follow_mouse=True requires atom click, False allows display click.
 - assert move_group_dialog.is_rotating_group_vtk is True
 
 ### test_left_click_in_group_starts_drag
-_No description provided._
+_Left-clicking an atom in the selected group starts group drag._
 
 - assert move_group_dialog.is_dragging_group_vtk is True
 - assert move_group_dialog.drag_atom_idx_vtk == 0
 
 ### test_left_click_outside_group_triggers_bfs
-_No description provided._
+_Left-clicking outside the selected group triggers BFS selection._
 
 - assert move_group_dialog.group_atoms == {2, 3}
 - assert 2 in move_group_dialog.selected_atoms
@@ -2210,16 +2210,79 @@ _No description provided._
 - move_group_dialog.show_atom_labels.assert_called_once()
 
 ### test_do_realtime_group_translate
-_No description provided._
+_Real-time group translation updates conformer coordinates._
 
 - assert conf.SetAtomPosition.call_count == 2
 - assert len(deferred) == 1
 
 ### test_do_realtime_group_rotate
-_No description provided._
+_Real-time group rotation applies the rotation matrix and updates coordinates._
 
 - assert conf.SetAtomPosition.call_count == 2
 - assert len(deferred) == 1
+
+### test_end_drag_event_reports_final_positions
+_The 'end' event carries the final coordinates of the dragged atoms._
+
+- assert _drag_events(host) == [('start', [0, 1], {}), ('end', [0, 1], {0: (0.0, 0.0, 0.0), 1: (2.0, 0.0, 0.0)})]
+
+### test_end_drag_event_is_emitted_once
+_A second _end_drag_event without a new gesture emits nothing._
+
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_end_drag_event_without_start_is_silent
+_No 'end' is emitted when no gesture was ever started._
+
+- assert _drag_events(host) == []
+
+### test_right_click_without_moving_still_ends_drag
+_A right-click that never moves emits 'end' to match its 'start'._
+
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_aborted_group_drag_ends_and_pushes_undo
+_A lost mouse-release still ends the drag and records the moved geometry._
+
+- assert move_group_dialog.is_dragging_group_vtk is False
+- host.edit_actions_manager.push_undo_state.assert_called_once()
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_aborted_unmoved_drag_does_not_push_undo
+_An aborted gesture that never moved leaves the undo stack alone._
+
+- host.edit_actions_manager.push_undo_state.assert_not_called()
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_reset_interactor_state_ends_active_drag
+_Forcing a state reset closes any drag still open toward plugins._
+
+- assert [e[0] for e in _drag_events(host)] == ['start', 'end']
+
+### test_should_drag_redraw_respects_setting
+_Real-time frames are suppressed when the setting is off._
+
+- assert style._should_drag_redraw() is True
+- assert style._should_drag_redraw() is False
+
+### test_should_drag_redraw_waits_for_pending_frame
+_No new frame is started while a deferred redraw is still queued._
+
+- assert style._should_drag_redraw() is False
+- assert style._drag_redraw_pending is False
+- assert style._should_drag_redraw() is False
+
+### test_realtime_atom_drag_frame_gates_the_next_one
+_A queued drag frame blocks further frames until it has rendered._
+
+- assert style._drag_redraw_pending is False
+- assert host.view_3d_manager.draw_molecule_3d.call_count == 1
+- assert style._should_drag_redraw() is False
+
+### test_group_rotation_scales_with_sensitivity
+_Group rotation honours the mouse rotation sensitivity setting._
+
+- assert _angle(2.0) == pytest.approx(2 * _angle(1.0), rel=1e-06)
 
 ## tests/unit/test_custom_qt_interactor.py
 
@@ -6853,6 +6916,23 @@ _Verify is_dragging_atom status calculation._
 
 - assert pm.is_dragging_atom() is False
 - assert pm.is_dragging_atom() is True
+
+### test_discover_plugins_clears_atom_drag_handlers
+_Rediscovery drops handlers of the previous load so they cannot fire twice._
+
+- assert pm.atom_drag_handlers == []
+
+### test_is_dragging_atom_reports_group_gestures
+_A group translate / rotate counts as dragging, like a single atom does._
+
+- assert pm.is_dragging_atom() is False
+- assert pm.is_dragging_atom() is True
+- assert pm.is_dragging_atom() is True
+
+### test_is_dragging_atom_ignores_unrelated_windows
+_Windows that are not move dialogs never report a drag._
+
+- assert pm.is_dragging_atom() is False
 
 ## tests/unit/test_plugin_manager_window.py
 
