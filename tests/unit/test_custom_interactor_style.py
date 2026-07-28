@@ -362,7 +362,12 @@ def test_custom_interactor_style_right_click_rotation(app, mock_parser_host):
         mock_dialog.group_centroid = np.array([1.0, 0.0, 0.0])
 
         # Mock renderer methods to return coordinate tuples
+        mock_interactor.GetEventPosition.return_value = (150, 120)
         mock_renderer = mock_parser_host.view_3d_manager.plotter.renderer
+        mock_camera = MagicMock()
+        mock_camera.GetViewUp.return_value = (0.0, 1.0, 0.0)
+        mock_camera.GetDirectionOfProjection.return_value = (0.0, 0.0, -1.0)
+        mock_renderer.GetActiveCamera.return_value = mock_camera
         mock_renderer.GetDisplayPoint.return_value = (100.0, 100.0, 0.5)
         mock_renderer.GetWorldPoint.return_value = (1.0, 1.0, 0.0, 1.0)
 

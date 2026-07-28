@@ -818,6 +818,53 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         except (AttributeError, RuntimeError, TypeError, ValueError):
             logging.debug("Suppressed non-critical error", exc_info=True)
 
+    def _compute_delta_rotation_matrix(
+        self, renderer: Any, start_pos: tuple, current_pos: tuple
+    ) -> Optional[np.ndarray]:
+        """Compute 3D rotation matrix from screen mouse displacement (dx, dy)."""
+        try:
+            dx = current_pos[0] - start_pos[0]
+            dy = current_pos[1] - start_pos[1]
+            if abs(dx) < 1e-3 and abs(dy) < 1e-3:
+                return None
+
+            camera = renderer.GetActiveCamera()
+            view_up = np.array(camera.GetViewUp())
+            v_dir = np.array(camera.GetDirectionOfProjection())
+            right = np.cross(v_dir, view_up)
+
+            right_norm = np.linalg.norm(right)
+            if right_norm > 1e-6:
+                right = right / right_norm
+
+            view_up_norm = np.linalg.norm(view_up)
+            if view_up_norm > 1e-6:
+                view_up = view_up / view_up_norm
+
+            angle_y = float(dx) * 0.008
+            angle_x = -float(dy) * 0.008
+
+            def _rodrigues(axis: np.ndarray, angle: float) -> np.ndarray:
+                norm = np.linalg.norm(axis)
+                if norm < 1e-6 or abs(angle) < 1e-6:
+                    return np.eye(3)
+                axis = axis / norm
+                k_mat = np.array(
+                    [
+                        [0.0, -axis[2], axis[1]],
+                        [axis[2], 0.0, -axis[0]],
+                        [-axis[1], axis[0], 0.0],
+                    ]
+                )
+                return np.eye(3) + np.sin(angle) * k_mat + (1.0 - np.cos(angle)) * (k_mat @ k_mat)
+
+            rot_y = _rodrigues(view_up, angle_y)
+            rot_x = _rodrigues(right, angle_x)
+            return rot_x @ rot_y
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            return None
+
+
     def _do_realtime_group_rotate(
         self, mw: Any, move_group_dialog: Any, current_pos: Any
     ) -> None:
@@ -825,56 +872,13 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         try:
             renderer = mw.view_3d_manager.plotter.renderer
             centroid = move_group_dialog.group_centroid
-
-            if not hasattr(move_group_dialog, "rotation_atom_idx"):
-                move_group_dialog.rotation_atom_idx = next(
-                    iter(move_group_dialog.group_atoms)
-                )
-            grabbed_atom_idx = move_group_dialog.rotation_atom_idx
-            grabbed_initial_pos = move_group_dialog.initial_positions[grabbed_atom_idx]
-
-            depth_z = self._world_to_display_depth(
-                renderer,
-                grabbed_initial_pos[0],
-                grabbed_initial_pos[1],
-                grabbed_initial_pos[2],
-            )
-            if depth_z is None:
-                return
-            target_world = self._display_to_world(
-                renderer, current_pos[0], current_pos[1], depth_z
-            )
-            if target_world is None:
-                return
-            target_pos = np.array(target_world)
-
-            v1 = grabbed_initial_pos - centroid
-            v2 = target_pos - centroid
-            v1_norm = np.linalg.norm(v1)
-            v2_norm = np.linalg.norm(v2)
-            if v1_norm < 1e-6 or v2_norm < 1e-6:
+            start_pos = getattr(move_group_dialog, "rotation_start_pos", None)
+            if start_pos is None:
                 return
 
-            v1_n = v1 / v1_norm
-            v2_n = v2 / v2_norm
-            rotation_axis = np.cross(v1_n, v2_n)
-            axis_norm = np.linalg.norm(rotation_axis)
-            if axis_norm < 1e-6:
+            rot_matrix = self._compute_delta_rotation_matrix(renderer, start_pos, current_pos)
+            if rot_matrix is None:
                 return
-            rotation_axis /= axis_norm
-
-            cos_angle = float(np.clip(np.dot(v1_n, v2_n), -1.0, 1.0))
-            angle = np.arccos(cos_angle)
-            K = np.array(
-                [
-                    [0, -rotation_axis[2], rotation_axis[1]],
-                    [rotation_axis[2], 0, -rotation_axis[0]],
-                    [-rotation_axis[1], rotation_axis[0], 0],
-                ]
-            )
-            rot_matrix = (
-                np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * (K @ K)
-            )
 
             conf = mw.view_3d_manager.current_mol.GetConformer()
             new_positions: Dict[int, Tuple[float, float, float]] = {}
@@ -1278,87 +1282,18 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     conf = mw.view_3d_manager.current_mol.GetConformer()
                     centroid = move_group_dialog.group_centroid
 
-                    # Save initial grabbed atom index
-                    if not hasattr(move_group_dialog, "rotation_atom_idx"):
-                        move_group_dialog.rotation_atom_idx = next(
-                            iter(move_group_dialog.group_atoms)
+                    start_pos = getattr(move_group_dialog, "rotation_start_pos", None)
+                    if start_pos is not None:
+                        rot_matrix = self._compute_delta_rotation_matrix(
+                            renderer, start_pos, current_pos
                         )
-
-                    grabbed_atom_idx = move_group_dialog.rotation_atom_idx
-                    grabbed_initial_pos = move_group_dialog.initial_positions[
-                        grabbed_atom_idx
-                    ]
-
-                    # Get start screen coordinates
-                    renderer.SetWorldPoint(
-                        grabbed_initial_pos[0],
-                        grabbed_initial_pos[1],
-                        grabbed_initial_pos[2],
-                        1.0,
-                    )
-                    renderer.WorldToDisplay()
-                    start_display = renderer.GetDisplayPoint()
-
-                    # Convert current mouse pos to world (same depth)
-                    renderer.SetDisplayPoint(
-                        current_pos[0], current_pos[1], start_display[2]
-                    )
-                    renderer.DisplayToWorld()
-                    target_world = renderer.GetWorldPoint()
-                    target_pos = np.array(
-                        [target_world[0], target_world[1], target_world[2]]
-                    )
-
-                    # Vectors relative to centroid
-                    v1 = grabbed_initial_pos - centroid
-                    v2 = target_pos - centroid
-
-                    # Normalize vectors
-                    v1_norm = np.linalg.norm(v1)
-                    v2_norm = np.linalg.norm(v2)
-
-                    if v1_norm > 1e-6 and v2_norm > 1e-6:
-                        v1_normalized = v1 / v1_norm
-                        v2_normalized = v2 / v2_norm
-
-                        # Rotation axis
-                        rotation_axis = np.cross(v1_normalized, v2_normalized)
-                        axis_norm = np.linalg.norm(rotation_axis)
-
-                        if axis_norm > 1e-6:
-                            rotation_axis = rotation_axis / axis_norm
-
-                            # Rotation angle
-                            cos_angle = np.clip(
-                                np.dot(v1_normalized, v2_normalized), -1.0, 1.0
-                            )
-                            angle = np.arccos(cos_angle)
-
-                            # Create rotation matrix
-                            K = np.array(
-                                [
-                                    [0, -rotation_axis[2], rotation_axis[1]],
-                                    [rotation_axis[2], 0, -rotation_axis[0]],
-                                    [-rotation_axis[1], rotation_axis[0], 0],
-                                ]
-                            )
-
-                            rot_matrix = (
-                                np.eye(3)
-                                + np.sin(angle) * K
-                                + (1 - np.cos(angle)) * (K @ K)
-                            )
-
-                            # Rotate group around centroid
+                        if rot_matrix is not None:
                             for atom_idx in move_group_dialog.group_atoms:
                                 initial_pos = move_group_dialog.initial_positions[
                                     atom_idx
                                 ]
-                                # Relative position from centroid
                                 relative_pos = initial_pos - centroid
-                                # Apply rotation
                                 rotated_pos = rot_matrix @ relative_pos
-                                # Restore absolute position
                                 new_pos = rotated_pos + centroid
 
                                 conf.SetAtomPosition(
@@ -1371,7 +1306,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                                 )
                                 mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
-                            # Update 3D display
                             mw.view_3d_manager.draw_molecule_3d(
                                 mw.view_3d_manager.current_mol
                             )
