@@ -476,6 +476,33 @@ _Test boundingRect expansion for E/Z labels_
 - assert rect_stereo.width() >= rect_no_stereo.width()
 - assert rect_stereo.height() >= rect_no_stereo.height()
 
+### TestAtomDragPropagation.test_atom_reports_position_changes
+_Qt only calls itemChange for moves when ItemSendsGeometryChanges is set._
+
+- assert bool(atom.flags() & QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+
+### TestAtomDragPropagation.test_bond_follows_dragged_atom_immediately
+_Moving an atom repositions its bonds without waiting for a redraw._
+
+- assert bond.pos() == atom1.pos()
+
+### TestAtomDragPropagation.test_bond_geometry_follows_far_atom
+_Moving the far end leaves the bond anchored but restretches its line._
+
+- assert bond.pos() == atom1.pos()
+- assert bond.get_line_in_local_coords().p2() != before.p2()
+
+### TestAtomDragPropagation.test_bond_is_never_dragged_itself
+_The bond must not be movable: its position only derives from atom1._
+
+- assert not bool(bond.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+
+### TestAtomDragPropagation.test_multi_atom_move_keeps_bond_attached_to_both_ends
+_Dragging a whole selection keeps the bond spanning both atoms._
+
+- assert bond.pos() == atom1.pos()
+- assert bond.get_line_in_local_coords().length() == pytest.approx(length_before, abs=1e-06)
+
 ## tests/unit/test_atom_picking.py
 
 ### test_pick_atom_index_from_screen_hits_projected_atom_edge

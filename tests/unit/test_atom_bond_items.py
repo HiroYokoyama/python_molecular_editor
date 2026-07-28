@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QPointF, QRectF, QLineF
 from PyQt6.QtGui import QPainterPath
+from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
 
@@ -460,3 +461,67 @@ class TestBondItem:
         # Ensure rect_stereo is not smaller, and hopefully different or contains the other
         assert rect_stereo.width() >= rect_no_stereo.width()
         assert rect_stereo.height() >= rect_no_stereo.height()
+
+
+class TestAtomDragPropagation:
+    """Bonds must track atom positions live, without ever being dragged themselves."""
+
+    def _bonded_pair(self):
+        # Bonds only refresh once they are in a scene.
+        scene = QGraphicsScene()
+        atom1 = AtomItem(1, "C", QPointF(0.0, 0.0))
+        atom2 = AtomItem(2, "C", QPointF(50.0, 0.0))
+        scene.addItem(atom1)
+        scene.addItem(atom2)
+        bond = BondItem(atom1, atom2, 1)
+        scene.addItem(bond)
+        atom1.bonds.append(bond)
+        atom2.bonds.append(bond)
+        bond.update_position()
+        self._scene = scene
+        return atom1, atom2, bond
+
+    def test_atom_reports_position_changes(self, app):
+        """Qt only calls itemChange for moves when ItemSendsGeometryChanges is set."""
+        atom = AtomItem(1, "C", QPointF(0.0, 0.0))
+        assert bool(
+            atom.flags() & QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges
+        )
+
+    def test_bond_follows_dragged_atom_immediately(self, app):
+        """Moving an atom repositions its bonds without waiting for a redraw."""
+        atom1, _atom2, bond = self._bonded_pair()
+
+        atom1.setPos(QPointF(0.0, 40.0))
+
+        assert bond.pos() == atom1.pos()
+
+    def test_bond_geometry_follows_far_atom(self, app):
+        """Moving the far end leaves the bond anchored but restretches its line."""
+        atom1, atom2, bond = self._bonded_pair()
+        before = bond.get_line_in_local_coords()
+
+        atom2.setPos(QPointF(50.0, 40.0))
+
+        assert bond.pos() == atom1.pos()
+        assert bond.get_line_in_local_coords().p2() != before.p2()
+
+    def test_bond_is_never_dragged_itself(self, app):
+        """The bond must not be movable: its position only derives from atom1."""
+        _atom1, _atom2, bond = self._bonded_pair()
+
+        assert not bool(bond.flags() & QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+
+    def test_multi_atom_move_keeps_bond_attached_to_both_ends(self, app):
+        """Dragging a whole selection keeps the bond spanning both atoms."""
+        atom1, atom2, bond = self._bonded_pair()
+        length_before = bond.get_line_in_local_coords().length()
+
+        delta = QPointF(25.0, -15.0)
+        atom1.setPos(atom1.pos() + delta)
+        atom2.setPos(atom2.pos() + delta)
+
+        assert bond.pos() == atom1.pos()
+        assert bond.get_line_in_local_coords().length() == pytest.approx(
+            length_before, abs=1e-6
+        )

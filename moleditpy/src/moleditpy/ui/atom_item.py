@@ -63,6 +63,8 @@ class AtomItem(QGraphicsItem):
         self.setFlags(
             QGraphicsItem.GraphicsItemFlag.ItemIsMovable
             | QGraphicsItem.GraphicsItemFlag.ItemIsSelectable
+            # Without this Qt never calls itemChange for moves, so bonds lag.
+            | QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges
         )
         self.setZValue(1)
         self.update_style()

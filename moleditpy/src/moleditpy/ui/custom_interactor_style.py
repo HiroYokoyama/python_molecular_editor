@@ -39,12 +39,11 @@ _ROTATION_REFERENCE_SIZE = 640.0
 # Minimum seconds between real-time drag redraws (~30 fps).
 _DRAG_REDRAW_INTERVAL = 0.033
 
-# Largest molecule that still gets real-time drag feedback. Each frame is a
-# full scene rebuild, so beyond this the move is applied on release only.
+# Largest molecule that still gets real-time drag feedback (each frame is a
+# full scene rebuild).
 _REALTIME_DRAG_MAX_ATOMS = 300
 
-# Radians of group rotation per pixel of mouse travel, before the user's
-# rotation-sensitivity multiplier.
+# Radians of group rotation per pixel of mouse travel, before sensitivity.
 _GROUP_ROTATION_RADIANS_PER_PIXEL = 0.008
 
 
@@ -79,7 +78,6 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         # Throttle for real-time drag redraws
         self._last_drag_redraw_time: float = 0.0
         self._drag_redraw_pending = False
-        # Atoms of the drag gesture currently reported to plugins, if any
         self._active_drag_atoms: Optional[List[int]] = None
 
         self.AddObserver("LeftButtonPressEvent", self.on_left_button_down)  # type: ignore[arg-type]
