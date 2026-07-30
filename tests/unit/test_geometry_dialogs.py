@@ -640,3 +640,31 @@ class TestDihedralDialogGeometry:
         positions = mol.GetConformer().GetPositions()
         result = calculate_dihedral(positions, 2, 0, 1, 5)
         assert result == pytest.approx(60.0, abs=1.0)
+
+
+class TestDihedralRingFeedback:
+    """A torsion inside a ring cannot rotate; the user must be told."""
+
+    def test_unreachable_torsion_reports_to_status_bar(self, dihedral_dlg):
+        dlg, _, mw = dihedral_dlg
+        dlg._warn_if_torsion_not_applied(60.0, -29.17)
+
+        mw.statusBar().showMessage.assert_called_once()
+        message = mw.statusBar().showMessage.call_args[0][0]
+        assert "unchanged" in message
+        assert "ring" in message
+
+    def test_applied_torsion_stays_silent(self, dihedral_dlg):
+        dlg, _, mw = dihedral_dlg
+        mw.statusBar().showMessage.reset_mock()
+        dlg._warn_if_torsion_not_applied(60.0, 60.0)
+
+        mw.statusBar().showMessage.assert_not_called()
+
+    def test_wraparound_is_not_reported(self, dihedral_dlg):
+        """-180 and +180 name the same torsion."""
+        dlg, _, mw = dihedral_dlg
+        mw.statusBar().showMessage.reset_mock()
+        dlg._warn_if_torsion_not_applied(180.0, -180.0)
+
+        mw.statusBar().showMessage.assert_not_called()
