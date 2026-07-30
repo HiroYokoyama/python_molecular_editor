@@ -668,3 +668,72 @@ class TestDihedralRingFeedback:
         dlg._warn_if_torsion_not_applied(180.0, -180.0)
 
         mw.statusBar().showMessage.assert_not_called()
+
+
+def _cyclohexane():
+    """Cyclohexane with 3D coords, for ring-constrained edits."""
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
+
+    mol = Chem.AddHs(Chem.MolFromSmiles("C1CCCCC1"))
+    AllChem.EmbedMolecule(mol, randomSeed=42)
+    AllChem.MMFFOptimizeMolecule(mol)
+    return mol
+
+
+class TestRingEditFeedback:
+    """Ring bonds cannot be resized or re-angled in isolation; say so."""
+
+    def test_ring_bond_resize_reports_the_neighbour_it_moved(self, qapp):
+        mol = _cyclohexane()
+        mw = _make_mw(mol)
+        dlg = BondLengthDialog(mol, mw)
+        _patch_labels(dlg)
+        try:
+            dlg.atom1_idx, dlg.atom2_idx = 1, 2
+            dlg._update_molecule_geometry = MagicMock()
+            dlg.both_groups_radio.setChecked(False)
+            dlg.atom1_fix_radio.setChecked(False)
+            dlg.apply_geometry_update(1.80)
+
+            mw.statusBar().showMessage.assert_called_once()
+            message = mw.statusBar().showMessage.call_args[0][0]
+            assert "also changed" in message
+            assert "ring" in message
+        finally:
+            dlg.picking_enabled = False
+            dlg.close()
+
+    def test_acyclic_bond_resize_stays_silent(self, qapp):
+        mol = _ethane()
+        mw = _make_mw(mol)
+        dlg = BondLengthDialog(mol, mw)
+        _patch_labels(dlg)
+        try:
+            dlg.atom1_idx, dlg.atom2_idx = 0, 1
+            dlg._update_molecule_geometry = MagicMock()
+            dlg.both_groups_radio.setChecked(False)
+            dlg.atom1_fix_radio.setChecked(False)
+            mw.statusBar().showMessage.reset_mock()
+            dlg.apply_geometry_update(1.70)
+
+            mw.statusBar().showMessage.assert_not_called()
+        finally:
+            dlg.picking_enabled = False
+            dlg.close()
+
+    def test_unreachable_ring_angle_is_reported(self, angle_dlg):
+        dlg, _, mw = angle_dlg
+        dlg._warn_if_angle_not_applied(95.0, 113.60)
+
+        mw.statusBar().showMessage.assert_called_once()
+        message = mw.statusBar().showMessage.call_args[0][0]
+        assert "unchanged" in message
+        assert "ring" in message
+
+    def test_applied_angle_stays_silent(self, angle_dlg):
+        dlg, _, mw = angle_dlg
+        mw.statusBar().showMessage.reset_mock()
+        dlg._warn_if_angle_not_applied(95.0, 95.0)
+
+        mw.statusBar().showMessage.assert_not_called()

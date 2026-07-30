@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-from typing import Any, TYPE_CHECKING, Optional, Sequence
+from typing import Any, Dict, TYPE_CHECKING, Optional, Sequence
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -32,6 +32,7 @@ from rdkit import Chem
 
 from .geometry_base_dialog import GeometryBaseDialog
 from ..core.mol_geometry import calc_distance, get_connected_group
+from ..utils.suppress_log import suppress_log
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -359,6 +360,8 @@ class BondLengthDialog(GeometryBaseDialog):
         if current_distance == 0:
             return
 
+        original = {i: np.array(p, dtype=float) for i, p in positions.items()}
+
         direction = direction / current_distance
 
         if self.both_groups_radio.isChecked():
@@ -400,3 +403,46 @@ class BondLengthDialog(GeometryBaseDialog):
 
         # Write updated positions back using inherited helper
         self._update_molecule_geometry(positions)
+
+        self._warn_if_other_bonds_moved(original, positions, idx1, idx2)
+
+    def _warn_if_other_bonds_moved(
+        self,
+        before: Dict[int, Any],
+        after: Dict[int, Any],
+        idx1: int,
+        idx2: int,
+    ) -> None:
+        """Report a neighbouring bond that this edit resized as a side effect.
+
+        A bond inside a ring cannot be resized alone: the group translated
+        along the bond axis wraps back around the ring, so the ring closes at
+        a different length. Stretching a benzene bond to 1.80 A pulls its
+        neighbour to 1.24 A, shorter than a double bond, with nothing on
+        screen to say so.
+        """
+        edited = {idx1, idx2}
+        worst_delta = 0.0
+        worst_label = ""
+        for bond in self.mol.GetBonds():
+            i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+            if {i, j} == edited or i not in before or j not in before:
+                continue
+            delta = calc_distance(after[i], after[j]) - calc_distance(
+                before[i], before[j]
+            )
+            if abs(delta) > abs(worst_delta):
+                worst_delta = delta
+                worst_label = (
+                    f"{self.mol.GetAtomWithIdx(i).GetSymbol()}{i}-"
+                    f"{self.mol.GetAtomWithIdx(j).GetSymbol()}{j}"
+                )
+
+        if abs(worst_delta) < 1e-4:
+            return
+        with suppress_log(AttributeError, RuntimeError, TypeError):
+            self.main_window.statusBar().showMessage(
+                f"Bond {worst_label} also changed by {worst_delta:+.3f} A: a bond "
+                "inside a ring cannot be resized on its own.",
+                5000,
+            )
