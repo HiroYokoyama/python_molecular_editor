@@ -820,3 +820,25 @@ def test_fallback_keeps_v2000_for_small_molecules():
 
     block, _ = _parse_fallback_block(data)
     assert "V2000" in block.splitlines()[3]
+
+
+def test_fallback_v3000_encodes_wedge_and_dash():
+    """V3000 bond lines must carry stereo as CFG=1 (wedge) / CFG=3 (dash)."""
+    from moleditpy.core.molecular_data import _mdl_radical_code
+
+    assert _mdl_radical_code(0) == 0  # guard branch: no unpaired electrons
+
+    data = MolecularData()
+    ids = [
+        data.add_atom("C", QPointF(i % 40 * 40.0, i // 40 * 40.0)) for i in range(1002)
+    ]
+    data.add_bond(ids[0], ids[1], order=1, stereo=1)  # wedge
+    data.add_bond(ids[2], ids[3], order=1, stereo=2)  # dash
+
+    block, _ = _parse_fallback_block(data)
+    assert "V3000" in block.splitlines()[3]
+    bond_lines = [
+        ln for ln in block.splitlines() if ln.startswith("M  V30 ") and "CFG=" in ln
+    ]
+    assert any(ln.endswith("CFG=1") for ln in bond_lines)
+    assert any(ln.endswith("CFG=3") for ln in bond_lines)

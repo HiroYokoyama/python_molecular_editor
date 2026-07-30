@@ -1743,3 +1743,24 @@ def test_worker_mol_block_unlabelled_bond_keeps_drawn_geometry(mock_parser_host)
     parsed = Chem.MolFromMolBlock(block)
     assert parsed is not None
     assert Chem.MolToSmiles(parsed) == "C/C=C/C"
+
+
+def test_ez_block_falls_back_when_molecule_cannot_be_built(mock_parser_host):
+    """An unbuildable structure must fall through, not crash the conversion."""
+    compute = DummyCompute(mock_parser_host)
+    _but2ene_drawn_trans(compute.data, 3)
+
+    with patch.object(compute.data, "to_rdkit_mol", return_value=None):
+        assert compute._ez_consistent_mol_block() is None
+
+
+def test_ez_block_falls_back_when_layout_fails(mock_parser_host):
+    """A failure while rebuilding the 2D layout is logged, not raised."""
+    compute = DummyCompute(mock_parser_host)
+    _but2ene_drawn_trans(compute.data, 3)
+
+    with patch(
+        "moleditpy.ui.compute_logic.AllChem.Compute2DCoords",
+        side_effect=RuntimeError("depiction failed"),
+    ):
+        assert compute._ez_consistent_mol_block() is None
