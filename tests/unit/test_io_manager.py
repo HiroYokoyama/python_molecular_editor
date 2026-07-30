@@ -651,6 +651,31 @@ class TestXyzLoadRobustness:
         assert mol is not None
         assert mol.GetNumAtoms() == 2
 
+    def test_hash_title_line_keeps_the_first_atom(self, qapp):
+        """A '#' title must not be filtered out.
+
+        Dropping it shifted every atom row up one against the fixed
+        atom_start of 2, so water silently loaded as H2.
+        """
+        io_mgr = self._io()
+        xyz = "3\n# water, generated\nO 0.0 0.0 0.0\nH 0.96 0.0 0.0\nH -0.24 0.93 0.0\n"
+        mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+        assert [a.GetSymbol() for a in mol.GetAtoms()] == ["O", "H", "H"]
+
+    def test_leading_hash_comment_before_count_is_skipped(self, qapp):
+        """Comments ahead of the count line are metadata and still skipped."""
+        io_mgr = self._io()
+        xyz = "# generated\n2\ntitle\nC 0.0 0.0 0.0\nO 0.0 0.0 1.2\n"
+        mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+        assert [a.GetSymbol() for a in mol.GetAtoms()] == ["C", "O"]
+
+    def test_headerless_xyz_still_drops_interleaved_comments(self, qapp):
+        """With no count line there is no title, so comments stay droppable."""
+        io_mgr = self._io()
+        xyz = "# gen\nO 0.0 0.0 0.0\n# mid\nH 0.96 0.0 0.0\nH -0.24 0.93 0.0\n"
+        mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+        assert [a.GetSymbol() for a in mol.GetAtoms()] == ["O", "H", "H"]
+
     def test_skip_checks_with_bond_failure_loads(self, qapp):
         io = self._io(skip_chemistry_checks=True)
         io.estimate_bonds_from_distances = MagicMock(

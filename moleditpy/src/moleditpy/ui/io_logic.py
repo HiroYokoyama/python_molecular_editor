@@ -152,8 +152,11 @@ class IOManager:
 
     def _mol_from_xyz_lines(self, raw_lines: list[str]) -> Any:
         """Create an RDKit molecule from XYZ text lines."""
-        lines = [ln.strip() for ln in raw_lines if not ln.strip().startswith("#")]
-        while lines and not lines[0]:
+        lines = [ln.strip() for ln in raw_lines]
+        # Only leading comments are metadata. In a headed XYZ the second line is
+        # the title and may itself begin with '#', so discarding every '#' line
+        # would shift the atom rows up one and silently drop the first atom.
+        while lines and (not lines[0] or lines[0].startswith("#")):
             lines.pop(0)
 
         if not lines:
@@ -167,9 +170,11 @@ class IOManager:
             if num_atoms == 0:
                 raise ValueError("XYZ file has zero atoms")
         except ValueError as exc:
-            # Not a standard headed XYZ — treat all lines as atom rows
+            # Not a standard headed XYZ — treat all lines as atom rows. There is
+            # no title line here, so interleaved comments are safe to drop.
             if "zero atoms" in str(exc) or "too few" in str(exc):
                 raise
+            lines = [ln for ln in lines if ln and not ln.startswith("#")]
             num_atoms = len(lines)
             atom_start = 0
 
