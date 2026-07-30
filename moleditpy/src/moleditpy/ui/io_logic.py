@@ -447,6 +447,7 @@ class IOManager:
         num_atoms = mol.GetNumAtoms()
         bonds_added = []
 
+        candidates = []
         for i in range(num_atoms):
             for j in range(i + 1, num_atoms):
                 atom_i = mol.GetAtomWithIdx(i)
@@ -461,21 +462,27 @@ class IOManager:
                 expected = radius_i + radius_j
                 tolerance = 1.2 if (symbol_i == "H" or symbol_j == "H") else 1.3
                 if expected * 0.5 <= distance <= expected * tolerance:
-                    if mol.GetBondBetweenAtoms(i, j) is None:
-                        if (
-                            symbol_i == "H" and mol.GetAtomWithIdx(i).GetDegree() >= 1
-                        ) or (
-                            symbol_j == "H" and mol.GetAtomWithIdx(j).GetDegree() >= 1
-                        ):
-                            continue
-                        try:
-                            mol.AddBond(i, j, Chem.BondType.SINGLE)
-                            bonds_added.append((i, j, distance))
-                        except (RuntimeError, ValueError, TypeError):
-                            # Safe defensive fallback catching RuntimeError, ValueError, TypeError
-                            logging.debug(
-                                "Suppressed non-critical error", exc_info=True
-                            )
+                    candidates.append((distance, i, j, symbol_i, symbol_j))
+
+        # Nearest pairs first. The monovalent-H rule below accepts whichever
+        # partner it sees first, so index order would otherwise decide the
+        # connectivity and the same geometry could bond an H differently
+        # depending only on how the file happened to list its atoms.
+        candidates.sort(key=lambda c: c[0])
+
+        for distance, i, j, symbol_i, symbol_j in candidates:
+            if mol.GetBondBetweenAtoms(i, j) is not None:
+                continue
+            if (symbol_i == "H" and mol.GetAtomWithIdx(i).GetDegree() >= 1) or (
+                symbol_j == "H" and mol.GetAtomWithIdx(j).GetDegree() >= 1
+            ):
+                continue
+            try:
+                mol.AddBond(i, j, Chem.BondType.SINGLE)
+                bonds_added.append((i, j, distance))
+            except (RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching RuntimeError, ValueError, TypeError
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         return len(bonds_added)
 

@@ -651,6 +651,74 @@ class TestXyzLoadRobustness:
         assert mol is not None
         assert mol.GetNumAtoms() == 2
 
+    def test_ambiguous_hydrogen_bonds_to_its_nearest_neighbour(self, qapp):
+        """H is monovalent, so only one partner wins; it must be the closest.
+
+        The rule used to accept whichever partner came first by atom index, so
+        the same geometry produced different connectivity depending only on the
+        order the file listed its atoms.
+        """
+        # skip_chemistry_checks routes to the distance-based perceiver rather
+        # than RDKit's DetermineBonds, which is the code under test here.
+        io_mgr = self._io(skip_chemistry_checks=True)
+        # H lies 1.05 A from the carbon and 0.95 A from the oxygen.
+        c_first = "3\nt\nC 0.0 0.0 0.0\nO 2.0 0.0 0.0\nH 1.05 0.0 0.0\n"
+        o_first = "3\nt\nO 0.0 0.0 0.0\nC 2.0 0.0 0.0\nH 0.95 0.0 0.0\n"
+
+        for xyz in (c_first, o_first):
+            mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+            partners = set()
+            for bond in mol.GetBonds():
+                symbols = {
+                    mol.GetAtomWithIdx(bond.GetBeginAtomIdx()).GetSymbol(),
+                    mol.GetAtomWithIdx(bond.GetEndAtomIdx()).GetSymbol(),
+                }
+                if "H" in symbols:
+                    partners |= symbols - {"H"}
+            assert partners == {"O"}, f"H bonded to {partners} for:\n{xyz}"
+
+    def test_bond_perception_is_independent_of_atom_order(self, qapp):
+        """Shuffling the rows of a real molecule must not change its bonds."""
+        io_mgr = self._io(skip_chemistry_checks=True)
+        rows = [
+            ("O", 1.1, 0.2, 0.0),
+            ("C", 0.0, -0.6, 0.0),
+            ("C", -1.2, 0.2, 0.0),
+            ("H", 1.9, -0.3, 0.0),
+            ("H", 0.0, -1.2, 0.9),
+            ("H", 0.0, -1.2, -0.9),
+            ("H", -1.2, 1.3, 0.0),
+            ("H", -2.1, -0.2, 0.0),
+            ("H", -1.2, 0.2, 1.05),
+        ]
+
+        def topology(ordered):
+            xyz = "%d\nt\n%s\n" % (
+                len(ordered),
+                "\n".join("%s %.4f %.4f %.4f" % r for r in ordered),
+            )
+            mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+            conf = mol.GetConformer()
+            bonds = []
+            for bond in mol.GetBonds():
+                i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+                pair = tuple(
+                    sorted(
+                        (
+                            mol.GetAtomWithIdx(i).GetSymbol(),
+                            mol.GetAtomWithIdx(j).GetSymbol(),
+                        )
+                    )
+                )
+                length = conf.GetAtomPosition(i).Distance(conf.GetAtomPosition(j))
+                bonds.append((pair, round(length, 3)))
+            return sorted(bonds)
+
+        reference = topology(rows)
+        assert len(reference) == 8  # ethanol: 2 C-C/C-O plus 6 C-H/O-H
+        assert topology(list(reversed(rows))) == reference
+        assert topology(rows[3:] + rows[:3]) == reference
+
     def test_hash_title_line_keeps_the_first_atom(self, qapp):
         """A '#' title must not be filtered out.
 
