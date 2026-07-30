@@ -1,5 +1,6 @@
 """Unit tests for ComputeManager optimization trigger logic."""
 
+import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.compute_logic import ComputeManager
@@ -1073,8 +1074,8 @@ def test_trigger_conversion_uses_default_when_temp_mode_is_none(mock_parser_host
     assert options["conversion_mode"] == "fallback"
 
 
-def test_trigger_conversion_ez_stereo_injection(mock_parser_host):
-    """Test that M CFG lines are injected for E/Z stereo bonds."""
+def test_trigger_conversion_sends_ez_stereo_to_worker(mock_parser_host):
+    """The block trigger_conversion sends must carry the bond's E/Z stereo."""
     compute = DummyCompute(mock_parser_host)
 
     # Create valid E-isomer (trans-2-butene)
@@ -1128,11 +1129,12 @@ def test_trigger_conversion_ez_stereo_injection(mock_parser_host):
             call_args = mock_start_work.emit.call_args
             sent_block = call_args[0][0]
 
-            print(f"DEBUG: Sent Block:\\n{sent_block}")
-            assert "M  CFG" in sent_block
-            # Check for E isomer (val 2) on bond index 2 (RDKit idx 1 + 1)
-            # 1-2 is usually index 1
-            assert "M  CFG  1   2   2" in sent_block
+            # The block must actually encode the E label. An "M  CFG" line
+            # would not: RDKit ignores it, so stereo has to reach the worker
+            # through the 2D geometry it does read.
+            parsed = Chem.MolFromMolBlock(sent_block)
+            assert parsed is not None
+            assert Chem.MolToSmiles(parsed) == "C/C=C/C"
 
 
 def test_on_calculation_error_uff_fallback_temporary(mock_parser_host):
@@ -1696,3 +1698,69 @@ def test_chemistry_problems_focus_not_called_directly(mock_parser_host):
 
     # If setFocus was called synchronously it would appear here; it must not.
     compute.host.init_manager.view_2d.setFocus.assert_not_called()
+
+
+def _but2ene_drawn_trans(data, stereo_label):
+    """but-2-ene laid out zig-zag (trans) with an explicit E/Z label."""
+    ids = [
+        data.add_atom("C", QPointF(i * 50.0, -50.0 if i % 2 else 0.0)) for i in range(4)
+    ]
+    data.add_bond(ids[0], ids[1], order=1)
+    data.add_bond(ids[1], ids[2], order=2, stereo=stereo_label)
+    data.add_bond(ids[2], ids[3], order=1)
+    return ids
+
+
+@pytest.mark.parametrize(
+    "stereo_label,expected",
+    [(3, r"C/C=C\C"), (4, "C/C=C/C")],
+)
+def test_worker_mol_block_carries_ez_label(mock_parser_host, stereo_label, expected):
+    """The block sent for 3D generation must encode the label, not the drawing.
+
+    MDL stores double-bond cis/trans only as 2D geometry, so a Z label on a
+    bond drawn trans was silently dropped and the worker built the wrong isomer.
+    """
+    compute = DummyCompute(mock_parser_host)
+    _but2ene_drawn_trans(compute.data, stereo_label)
+
+    mol = compute.data.to_rdkit_mol()
+    block = ComputeManager._setup_mol_block_for_worker(compute, mol)
+
+    parsed = Chem.MolFromMolBlock(block)
+    assert parsed is not None
+    assert Chem.MolToSmiles(parsed) == expected
+
+
+def test_worker_mol_block_unlabelled_bond_keeps_drawn_geometry(mock_parser_host):
+    """Without an E/Z label the drawn geometry still decides the stereo."""
+    compute = DummyCompute(mock_parser_host)
+    _but2ene_drawn_trans(compute.data, 0)
+
+    mol = compute.data.to_rdkit_mol()
+    block = ComputeManager._setup_mol_block_for_worker(compute, mol)
+
+    parsed = Chem.MolFromMolBlock(block)
+    assert parsed is not None
+    assert Chem.MolToSmiles(parsed) == "C/C=C/C"
+
+
+def test_ez_block_falls_back_when_molecule_cannot_be_built(mock_parser_host):
+    """An unbuildable structure must fall through, not crash the conversion."""
+    compute = DummyCompute(mock_parser_host)
+    _but2ene_drawn_trans(compute.data, 3)
+
+    with patch.object(compute.data, "to_rdkit_mol", return_value=None):
+        assert compute._ez_consistent_mol_block() is None
+
+
+def test_ez_block_falls_back_when_layout_fails(mock_parser_host):
+    """A failure while rebuilding the 2D layout is logged, not raised."""
+    compute = DummyCompute(mock_parser_host)
+    _but2ene_drawn_trans(compute.data, 3)
+
+    with patch(
+        "moleditpy.ui.compute_logic.AllChem.Compute2DCoords",
+        side_effect=RuntimeError("depiction failed"),
+    ):
+        assert compute._ez_consistent_mol_block() is None

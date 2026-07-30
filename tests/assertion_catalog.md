@@ -1300,11 +1300,11 @@ _Preinitialized temp conversion mode should not suppress the saved setting._
 
 - assert options['conversion_mode'] == 'fallback'
 
-### test_trigger_conversion_ez_stereo_injection
-_Test that M CFG lines are injected for E/Z stereo bonds._
+### test_trigger_conversion_sends_ez_stereo_to_worker
+_The block trigger_conversion sends must carry the bond's E/Z stereo._
 
-- assert 'M  CFG' in sent_block
-- assert 'M  CFG  1   2   2' in sent_block
+- assert parsed is not None
+- assert Chem.MolToSmiles(parsed) == 'C/C=C/C'
 
 ### test_on_calculation_error_uff_fallback_temporary
 _Verify that UFF fallback uses _temp_optimization_method and doesn't change persistent setting._
@@ -1502,6 +1502,18 @@ _A 'Halt' error still schedules a deferred setFocus so the 2D editor_
 __handle_chemistry_problems must NOT call view_2d.setFocus() directly_
 
 - compute.host.init_manager.view_2d.setFocus.assert_not_called()
+
+### test_worker_mol_block_carries_ez_label
+_The block sent for 3D generation must encode the label, not the drawing._
+
+- assert parsed is not None
+- assert Chem.MolToSmiles(parsed) == expected
+
+### test_worker_mol_block_unlabelled_bond_keeps_drawn_geometry
+_Without an E/Z label the drawn geometry still decides the stereo._
+
+- assert parsed is not None
+- assert Chem.MolToSmiles(parsed) == 'C/C=C/C'
 
 ## tests/unit/test_constants.py
 
@@ -4318,6 +4330,47 @@ _In group mode apply_geometry_update rotates the whole side to the target dihedr
 
 - assert result == pytest.approx(60.0, abs=1.0)
 
+### TestDihedralRingFeedback.test_unreachable_torsion_reports_to_status_bar
+_No description provided._
+
+- mw.statusBar().showMessage.assert_called_once()
+- assert 'unchanged' in message
+- assert 'ring' in message
+
+### TestDihedralRingFeedback.test_applied_torsion_stays_silent
+_No description provided._
+
+- mw.statusBar().showMessage.assert_not_called()
+
+### TestDihedralRingFeedback.test_wraparound_is_not_reported
+_-180 and +180 name the same torsion._
+
+- mw.statusBar().showMessage.assert_not_called()
+
+### TestRingEditFeedback.test_ring_bond_resize_reports_the_neighbour_it_moved
+_No description provided._
+
+- mw.statusBar().showMessage.assert_called_once()
+- assert 'also changed' in message
+- assert 'ring' in message
+
+### TestRingEditFeedback.test_acyclic_bond_resize_stays_silent
+_No description provided._
+
+- mw.statusBar().showMessage.assert_not_called()
+
+### TestRingEditFeedback.test_unreachable_ring_angle_is_reported
+_No description provided._
+
+- mw.statusBar().showMessage.assert_called_once()
+- assert 'unchanged' in message
+- assert 'ring' in message
+
+### TestRingEditFeedback.test_applied_angle_stays_silent
+_No description provided._
+
+- mw.statusBar().showMessage.assert_not_called()
+
 ## tests/unit/test_hydrogen.py
 
 ### test_add_hydrogen_atoms_app_logic
@@ -4332,6 +4385,24 @@ _Verify remove_hydrogen_atoms finds and deletes H items using app logic._
 - actions.scene.delete_items.assert_called()
 - assert h_item in deleted_set
 - assert actions.scene.atom_items[c_id] not in deleted_set
+
+### test_h_label_counts_match_molecule
+_The 2D H label must equal the hydrogens the molecule actually carries._
+
+- assert mol is not None
+- assert counts == expected
+
+### test_h_label_ignores_hydrogens_drawn_as_atoms
+_H drawn as its own atom must not also be counted in the label._
+
+- assert mol is not None
+- assert actions._compute_h_counts(mol)[c_id] == 0
+
+### test_add_hydrogen_atoms_covers_aromatic_nh
+_Add Hydrogens must not skip an aromatic N-H (luminol is C8H7N3O2)._
+
+- assert len(after) - before == 7
+- assert set(nitrogens) == set(added_to)
 
 ## tests/unit/test_io.py
 
@@ -4515,6 +4586,33 @@ _No description provided._
 - assert mol is not None
 - assert mol.GetNumAtoms() == 2
 
+### TestXyzLoadRobustness.test_ambiguous_hydrogen_bonds_to_its_nearest_neighbour
+_H is monovalent, so only one partner wins; it must be the closest._
+
+- assert partners == {'O'}
+
+### TestXyzLoadRobustness.test_bond_perception_is_independent_of_atom_order
+_Shuffling the rows of a real molecule must not change its bonds._
+
+- assert len(reference) == 8
+- assert topology(list(reversed(rows))) == reference
+- assert topology(rows[3:] + rows[:3]) == reference
+
+### TestXyzLoadRobustness.test_hash_title_line_keeps_the_first_atom
+_A '#' title must not be filtered out._
+
+- assert [a.GetSymbol() for a in mol.GetAtoms()] == ['O', 'H', 'H']
+
+### TestXyzLoadRobustness.test_leading_hash_comment_before_count_is_skipped
+_Comments ahead of the count line are metadata and still skipped._
+
+- assert [a.GetSymbol() for a in mol.GetAtoms()] == ['C', 'O']
+
+### TestXyzLoadRobustness.test_headerless_xyz_still_drops_interleaved_comments
+_With no count line there is no title, so comments stay droppable._
+
+- assert [a.GetSymbol() for a in mol.GetAtoms()] == ['O', 'H', 'H']
+
 ### TestXyzLoadRobustness.test_skip_checks_with_bond_failure_loads
 _No description provided._
 
@@ -4567,6 +4665,21 @@ _No description provided._
 
 - assert msgs
 - assert all(('non-standard' not in m for m in msgs))
+
+### TestLoadMolFileProperties.test_radical_survives_mol_import
+_An M RAD block must reach the editor; the count used to be dropped._
+
+- assert 'M  RAD' in mol_text
+- assert len(radicals) == 1
+- assert radicals[0]['symbol'] == 'C'
+- assert radicals[0]['radical'] == 1
+
+### TestLoadMolFileProperties.test_charge_survives_mol_import
+_The companion property must keep working._
+
+- assert len(charged) == 1
+- assert charged[0]['symbol'] == 'N'
+- assert charged[0]['charge'] == 1
 
 ## tests/unit/test_items_visual.py
 
@@ -5288,6 +5401,42 @@ _No description provided._
 _No description provided._
 
 - assert mol is not None
+
+### test_fallback_preserves_formal_charge
+_Charges must survive the manual writer, including beyond the +-3 field._
+
+- assert parsed.GetAtomWithIdx(1).GetFormalCharge() == charge
+
+### test_fallback_preserves_radical_electrons
+_Radicals need an M RAD block; the atom line has no field for them._
+
+- assert parsed.GetAtomWithIdx(1).GetNumRadicalElectrons() == radical
+
+### test_fallback_preserves_charge_and_radical_together
+_A charged radical must not lose either property._
+
+- assert atom.GetFormalCharge() == 1
+- assert atom.GetNumRadicalElectrons() == 1
+
+### test_fallback_charge_column_is_not_the_hydrogen_count_field
+_The per-atom fields stay zero: charge belongs in M CHG, not column hhh._
+
+- assert atom_line[34:].split() == ['0'] * 12
+- assert 'M  CHG' in block
+
+### test_fallback_switches_to_v3000_past_the_v2000_counts_limit
+_Past 999 atoms a V2000 counts line would corrupt; V3000 must be used._
+
+- assert 'V3000' in block.splitlines()[3]
+- assert parsed.GetNumAtoms() == 1200
+- assert parsed.GetNumBonds() == 600
+- assert sum((1 for a in parsed.GetAtoms() if a.GetFormalCharge())) == 1
+- assert sum((1 for a in parsed.GetAtoms() if a.GetNumRadicalElectrons())) == 1
+
+### test_fallback_keeps_v2000_for_small_molecules
+_Small structures must not churn to V3000._
+
+- assert 'V2000' in block.splitlines()[3]
 
 ## tests/unit/test_molecule_scene_behavior.py
 
@@ -8762,6 +8911,191 @@ _No description provided._
 _No description provided._
 
 - assert 'Error loading from InChI: view gone' in _last_status(mock_parser_host)
+
+### test_smiles_preserves_radical_electrons
+_Radicals must survive SMILES import; the count was previously dropped._
+
+- assert len(radicals) == 1
+- assert radicals[0]['symbol'] == symbol
+- assert radicals[0]['radical'] == electrons
+
+### test_smiles_without_radical_stays_unpaired_free
+_A closed-shell molecule must not gain phantom radicals._
+
+- assert all((a.get('radical', 0) == 0 for a in data.atoms.values()))
+
+## tests/unit/test_sync_linux_version.py
+
+### test_dotted_module_references_are_renamed
+_No description provided._
+
+- assert sync.transform('from moleditpy.ui import x', False) == 'from moleditpy_linux.ui import x'
+- assert sync.transform('import moleditpy.core.mol', False) == 'import moleditpy_linux.core.mol'
+
+### test_bare_import_forms_are_renamed
+_No description provided._
+
+- assert sync.transform('import moleditpy', False) == 'import moleditpy_linux'
+- assert sync.transform('from moleditpy import x', False) == 'from moleditpy_linux import x'
+
+### test_module_path_inside_a_string_is_renamed
+_main_window_init compares against a module name at runtime; it must track._
+
+- assert sync.transform(src, False) == 'if "moleditpy_linux.utils.constants" in name:'
+
+### test_config_directory_is_not_renamed
+_~/.moleditpy is shared between both builds._
+
+- assert sync.transform(src, False) == src
+
+### test_log_filename_is_preserved
+_No description provided._
+
+- assert sync.transform(src, False) == src
+
+### test_log_path_inside_ui_text_is_preserved
+_No description provided._
+
+- assert sync.transform(src, False) == src
+
+### test_windows_app_id_is_preserved
+_No description provided._
+
+- assert sync.transform(src, False) == src
+
+### test_no_double_linux_suffix_is_produced
+_The old three-rule chain produced moleditpy_linux_linux and patched it after._
+
+- assert 'moleditpy_linux_linux' not in out
+- assert out == 'import moleditpy_linux.ui\nfrom moleditpy_linux import y\n'
+
+### test_already_renamed_text_is_left_alone
+_No description provided._
+
+- assert sync.transform(src, False) == src
+
+### test_version_lookup_package_is_renamed
+_No description provided._
+
+- assert sync.transform('version("MoleditPy")', False) == 'version("MoleditPy-linux")'
+
+### test_obabel_probe_is_disabled
+_No description provided._
+
+- assert 'find_spec' not in out
+- assert out.count('OBABEL_AVAILABLE = False') == 2
+
+### test_obabel_disablement_preserves_indentation
+_No description provided._
+
+- assert '    OBABEL_AVAILABLE = False\n' in out
+
+### test_obabel_rewrite_does_not_swallow_later_lines
+_A greedy DOTALL `.*None` used to delete everything up to the last None._
+
+- assert 'except ImportError:' in out
+- assert 'DEFAULT_THING = None' in out
+- assert 'TRAILER = 1' in out
+- assert len(out.splitlines()) == len(src.splitlines())
+
+### test_obabel_rewrite_only_applies_to_the_root_init
+_No description provided._
+
+- assert sync.transform(src, False) == src
+- assert sync.transform(src, True) == 'OBABEL_AVAILABLE = False\n'
+
+### test_read_dependencies_maps_name_to_requirement
+_No description provided._
+
+- assert deps == {'numpy': 'numpy', 'pyvista': 'pyvista < 0.49'}
+
+### test_read_dependencies_on_missing_file_is_empty
+_No description provided._
+
+- assert sync.read_dependencies('G:\\nope\\pyproject.toml') == {}
+
+### test_shared_pins_matching_reports_nothing
+_No description provided._
+
+- assert sync.check_shared_pins() == []
+
+### test_shared_pin_drift_is_reported
+_No description provided._
+
+- assert 'rdkit' in message and '2027.1' in message and ('2026.4' in message)
+
+### test_real_pyprojects_share_identical_pins
+_The shipped pair must not drift; only openbabel is main-only._
+
+- assert sync.check_shared_pins() == []
+
+### test_sync_version_fails_when_a_pyproject_is_missing
+_No description provided._
+
+- assert sync.sync_version(dry_run=True, prefix='') is False
+
+### test_sync_version_fails_when_version_is_absent
+_No description provided._
+
+- assert sync.sync_version(dry_run=True, prefix='') is False
+
+### test_sync_version_writes_the_main_version
+_No description provided._
+
+- assert sync.sync_version(dry_run=False, prefix='') is True
+- assert 'version = "4.5.0"' in linux.read_text(encoding='utf-8')
+- assert 'name = "MoleditPy-linux"' in linux.read_text(encoding='utf-8')
+
+### test_sync_version_dry_run_does_not_write
+_No description provided._
+
+- assert 'version = "4.4.1"' in linux.read_text(encoding='utf-8')
+
+### test_missing_main_source_returns_none
+_No description provided._
+
+- assert sync.sync_linux() is None
+
+### test_sync_creates_the_transformed_tree
+_No description provided._
+
+- assert sync.sync_linux() == 3
+- assert (src_linux / 'main.py').read_text(encoding='utf-8') == 'import moleditpy_linux.ui\n'
+- assert 'find_spec' not in (src_linux / '__init__.py').read_text(encoding='utf-8')
+- assert (src_linux / 'assets' / 'icon.png').read_bytes() == b'\x89PNG\r\n'
+
+### test_second_sync_reports_no_changes
+_No description provided._
+
+- assert sync.sync_linux() == 0
+
+### test_dry_run_leaves_the_tree_untouched
+_No description provided._
+
+- assert sync.sync_linux(dry_run=True) == 3
+- assert not src_linux.exists()
+
+### test_orphan_files_are_removed_and_counted
+_No description provided._
+
+- assert sync.sync_linux() == 1
+- assert not stale.exists()
+
+### test_pycache_is_not_counted_as_a_change
+_No description provided._
+
+- assert sync.sync_linux() == 0
+- assert not cache.exists()
+
+### test_source_pycache_is_not_copied
+_No description provided._
+
+- assert not (src_linux / '__pycache__').exists()
+
+### test_sync_fails_when_the_version_cannot_be_read
+_No description provided._
+
+- assert sync.sync_linux() is None
 
 ## tests/unit/test_system_utils.py
 

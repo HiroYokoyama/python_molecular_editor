@@ -1,5 +1,6 @@
 """Tests for SMILES/InChI import — verifying atom counts, bonds, and properties against RDKit reference."""
 
+import pytest
 from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
 from moleditpy.ui.string_importers import StringImporterManager
@@ -328,3 +329,36 @@ def test_inchi_placement_error_reported(mock_parser_host):
     with patch.object(QTimer, "singleShot"):
         importer.load_from_inchi("InChI=1S/CH4/h1H4")
     assert "Error loading from InChI: view gone" in _last_status(mock_parser_host)
+
+
+# =============================================================================
+# Radical preservation on import
+# =============================================================================
+
+
+@pytest.mark.parametrize(
+    "smiles,symbol,electrons",
+    [
+        ("[CH3]", "C", 1),
+        ("C[CH2]", "C", 1),
+        ("[CH2]", "C", 2),
+        ("[O]O", "O", 1),
+    ],
+)
+def test_smiles_preserves_radical_electrons(
+    mock_parser_host, smiles, symbol, electrons
+):
+    """Radicals must survive SMILES import; the count was previously dropped."""
+    data = _load_and_get_data(mock_parser_host, "load_from_smiles", smiles)
+
+    radicals = [a for a in data.atoms.values() if a.get("radical", 0)]
+    assert len(radicals) == 1
+    assert radicals[0]["symbol"] == symbol
+    assert radicals[0]["radical"] == electrons
+
+
+def test_smiles_without_radical_stays_unpaired_free(mock_parser_host):
+    """A closed-shell molecule must not gain phantom radicals."""
+    data = _load_and_get_data(mock_parser_host, "load_from_smiles", "CCO")
+
+    assert all(a.get("radical", 0) == 0 for a in data.atoms.values())

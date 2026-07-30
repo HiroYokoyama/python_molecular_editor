@@ -119,6 +119,7 @@ class StringImporterManager:
                 atom.GetSymbol(),
                 QPointF(scene_x, scene_y),
                 charge=atom.GetFormalCharge(),
+                radical=atom.GetNumRadicalElectrons(),
             )
             rdkit_idx_to_my_id[i] = atom_id
         return rdkit_idx_to_my_id

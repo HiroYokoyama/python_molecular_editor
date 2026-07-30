@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **89.46%**
+- **Overall Project Coverage**: **89.50%**
 
 ### Coverage Breakdown
 
@@ -9,7 +9,7 @@
 | moleditpy\src\moleditpy\__init__.py                     |      6 |      2 |   66.7% |
 | moleditpy\src\moleditpy\main.py                         |    170 |     35 |   79.4% |
 | moleditpy\src\moleditpy\core\mol_geometry.py            |    292 |      4 |   98.6% |
-| moleditpy\src\moleditpy\core\molecular_data.py          |    258 |      0 |  100.0% |
+| moleditpy\src\moleditpy\core\molecular_data.py          |    284 |      3 |   98.9% |
 | moleditpy\src\moleditpy\plugins\plugin_interface.py     |    238 |      6 |   97.5% |
 | moleditpy\src\moleditpy\plugins\plugin_manager.py       |    407 |     11 |   97.3% |
 | moleditpy\src\moleditpy\plugins\plugin_manager_window.py |    187 |      2 |   98.9% |
@@ -18,27 +18,27 @@
 | moleditpy\src\moleditpy\ui\align_plane_dialog.py        |    151 |     15 |   90.1% |
 | moleditpy\src\moleditpy\ui\alignment_dialog.py          |    147 |     10 |   93.2% |
 | moleditpy\src\moleditpy\ui\analysis_window.py           |    117 |     25 |   78.6% |
-| moleditpy\src\moleditpy\ui\angle_dialog.py              |    264 |     28 |   89.4% |
+| moleditpy\src\moleditpy\ui\angle_dialog.py              |    272 |     28 |   89.7% |
 | moleditpy\src\moleditpy\ui\app_state.py                 |    345 |     57 |   83.5% |
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    325 |     39 |   88.0% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |    167 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     81 |      4 |   95.1% |
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    366 |     55 |   85.0% |
-| moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    238 |     17 |   92.9% |
+| moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    257 |     17 |   93.4% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    583 |     90 |   84.6% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    166 |     13 |   92.2% |
-| moleditpy\src\moleditpy\ui\compute_logic.py             |    432 |      7 |   98.4% |
+| moleditpy\src\moleditpy\ui\compute_logic.py             |    451 |     11 |   97.6% |
 | moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py |    480 |     24 |   95.0% |
 | moleditpy\src\moleditpy\ui\custom_interactor_style.py   |    772 |    113 |   85.4% |
 | moleditpy\src\moleditpy\ui\custom_qt_interactor.py      |     24 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    137 |     19 |   86.1% |
 | moleditpy\src\moleditpy\ui\dialog_logic.py              |    230 |     25 |   89.1% |
-| moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    268 |     32 |   88.1% |
+| moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    277 |     32 |   88.4% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    221 |     32 |   85.5% |
-| moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    821 |    130 |   84.2% |
+| moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    817 |    127 |   84.5% |
 | moleditpy\src\moleditpy\ui\export_logic.py              |    520 |     85 |   83.7% |
 | moleditpy\src\moleditpy\ui\geometry_base_dialog.py      |     52 |      1 |   98.1% |
-| moleditpy\src\moleditpy\ui\io_logic.py                  |    731 |     77 |   89.5% |
+| moleditpy\src\moleditpy\ui\io_logic.py                  |    737 |     76 |   89.7% |
 | moleditpy\src\moleditpy\ui\main_window.py               |    195 |     13 |   93.3% |
 | moleditpy\src\moleditpy\ui\main_window_init.py          |   1061 |     94 |   91.1% |
 | moleditpy\src\moleditpy\ui\mirror_dialog.py             |     72 |      7 |   90.3% |
@@ -67,11 +67,11 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     39 |      0 |  100.0% |
-| **TOTAL** | **16560** | **1745** | **89.46%** |
+| **TOTAL** | **16643** | **1748** | **89.50%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2047 (1 skipped)
-- **Unit tests**: PASSED (1863 passed)
+- **Total tests passed**: 2125 (1 skipped)
+- **Unit tests**: PASSED (1941 passed)
 - **Integration tests**: PASSED (75 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (75 passed)

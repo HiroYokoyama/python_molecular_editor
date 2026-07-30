@@ -16,6 +16,7 @@ import sys
 import pytest
 from unittest.mock import MagicMock, patch
 
+from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QApplication
 
 # Make the local moleditpy package discoverable
@@ -650,6 +651,99 @@ class TestXyzLoadRobustness:
         assert mol is not None
         assert mol.GetNumAtoms() == 2
 
+    def test_ambiguous_hydrogen_bonds_to_its_nearest_neighbour(self, qapp):
+        """H is monovalent, so only one partner wins; it must be the closest.
+
+        The rule used to accept whichever partner came first by atom index, so
+        the same geometry produced different connectivity depending only on the
+        order the file listed its atoms.
+        """
+        # skip_chemistry_checks routes to the distance-based perceiver rather
+        # than RDKit's DetermineBonds, which is the code under test here.
+        io_mgr = self._io(skip_chemistry_checks=True)
+        # H lies 1.05 A from the carbon and 0.95 A from the oxygen.
+        c_first = "3\nt\nC 0.0 0.0 0.0\nO 2.0 0.0 0.0\nH 1.05 0.0 0.0\n"
+        o_first = "3\nt\nO 0.0 0.0 0.0\nC 2.0 0.0 0.0\nH 0.95 0.0 0.0\n"
+
+        for xyz in (c_first, o_first):
+            mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+            partners = set()
+            for bond in mol.GetBonds():
+                symbols = {
+                    mol.GetAtomWithIdx(bond.GetBeginAtomIdx()).GetSymbol(),
+                    mol.GetAtomWithIdx(bond.GetEndAtomIdx()).GetSymbol(),
+                }
+                if "H" in symbols:
+                    partners |= symbols - {"H"}
+            assert partners == {"O"}, f"H bonded to {partners} for:\n{xyz}"
+
+    def test_bond_perception_is_independent_of_atom_order(self, qapp):
+        """Shuffling the rows of a real molecule must not change its bonds."""
+        io_mgr = self._io(skip_chemistry_checks=True)
+        rows = [
+            ("O", 1.1, 0.2, 0.0),
+            ("C", 0.0, -0.6, 0.0),
+            ("C", -1.2, 0.2, 0.0),
+            ("H", 1.9, -0.3, 0.0),
+            ("H", 0.0, -1.2, 0.9),
+            ("H", 0.0, -1.2, -0.9),
+            ("H", -1.2, 1.3, 0.0),
+            ("H", -2.1, -0.2, 0.0),
+            ("H", -1.2, 0.2, 1.05),
+        ]
+
+        def topology(ordered):
+            xyz = "%d\nt\n%s\n" % (
+                len(ordered),
+                "\n".join("%s %.4f %.4f %.4f" % r for r in ordered),
+            )
+            mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+            conf = mol.GetConformer()
+            bonds = []
+            for bond in mol.GetBonds():
+                i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+                pair = tuple(
+                    sorted(
+                        (
+                            mol.GetAtomWithIdx(i).GetSymbol(),
+                            mol.GetAtomWithIdx(j).GetSymbol(),
+                        )
+                    )
+                )
+                length = conf.GetAtomPosition(i).Distance(conf.GetAtomPosition(j))
+                bonds.append((pair, round(length, 3)))
+            return sorted(bonds)
+
+        reference = topology(rows)
+        assert len(reference) == 8  # ethanol: 2 C-C/C-O plus 6 C-H/O-H
+        assert topology(list(reversed(rows))) == reference
+        assert topology(rows[3:] + rows[:3]) == reference
+
+    def test_hash_title_line_keeps_the_first_atom(self, qapp):
+        """A '#' title must not be filtered out.
+
+        Dropping it shifted every atom row up one against the fixed
+        atom_start of 2, so water silently loaded as H2.
+        """
+        io_mgr = self._io()
+        xyz = "3\n# water, generated\nO 0.0 0.0 0.0\nH 0.96 0.0 0.0\nH -0.24 0.93 0.0\n"
+        mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+        assert [a.GetSymbol() for a in mol.GetAtoms()] == ["O", "H", "H"]
+
+    def test_leading_hash_comment_before_count_is_skipped(self, qapp):
+        """Comments ahead of the count line are metadata and still skipped."""
+        io_mgr = self._io()
+        xyz = "# generated\n2\ntitle\nC 0.0 0.0 0.0\nO 0.0 0.0 1.2\n"
+        mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+        assert [a.GetSymbol() for a in mol.GetAtoms()] == ["C", "O"]
+
+    def test_headerless_xyz_still_drops_interleaved_comments(self, qapp):
+        """With no count line there is no title, so comments stay droppable."""
+        io_mgr = self._io()
+        xyz = "# gen\nO 0.0 0.0 0.0\n# mid\nH 0.96 0.0 0.0\nH -0.24 0.93 0.0\n"
+        mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+        assert [a.GetSymbol() for a in mol.GetAtoms()] == ["O", "H", "H"]
+
     def test_skip_checks_with_bond_failure_loads(self, qapp):
         io = self._io(skip_chemistry_checks=True)
         io.estimate_bonds_from_distances = MagicMock(
@@ -761,3 +855,54 @@ class TestXyzNonStandardWarning:
         msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
         assert msgs
         assert all("non-standard" not in m for m in msgs), msgs
+
+
+class TestLoadMolFileProperties:
+    """load_mol_file must carry per-atom properties into the 2D editor."""
+
+    @staticmethod
+    def _run(mock_parser_host, tmp_path, mol_text):
+        from moleditpy.ui.io_logic import IOManager
+
+        path = tmp_path / "in.mol"
+        path.write_text(mol_text, encoding="utf-8")
+
+        io = IOManager(mock_parser_host)
+        mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file(file_path=str(path))
+        return mock_parser_host.state_manager.data
+
+    def test_radical_survives_mol_import(self, mock_parser_host, tmp_path):
+        """An M RAD block must reach the editor; the count used to be dropped."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        c = source.add_atom("C", (0.0, 0.0), radical=1)
+        o = source.add_atom("O", (50.0, 0.0))
+        source.add_bond(c, o, order=1)
+        mol_text = source.to_mol_block()
+        assert "M  RAD" in mol_text
+
+        data = self._run(mock_parser_host, tmp_path, mol_text)
+
+        radicals = [a for a in data.atoms.values() if a.get("radical", 0)]
+        assert len(radicals) == 1
+        assert radicals[0]["symbol"] == "C"
+        assert radicals[0]["radical"] == 1
+
+    def test_charge_survives_mol_import(self, mock_parser_host, tmp_path):
+        """The companion property must keep working."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        n = source.add_atom("N", (0.0, 0.0), charge=1)
+        c = source.add_atom("C", (50.0, 0.0))
+        source.add_bond(n, c, order=1)
+
+        data = self._run(mock_parser_host, tmp_path, source.to_mol_block())
+
+        charged = [a for a in data.atoms.values() if a.get("charge", 0)]
+        assert len(charged) == 1
+        assert charged[0]["symbol"] == "N"
+        assert charged[0]["charge"] == 1

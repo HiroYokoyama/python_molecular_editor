@@ -152,8 +152,11 @@ class IOManager:
 
     def _mol_from_xyz_lines(self, raw_lines: list[str]) -> Any:
         """Create an RDKit molecule from XYZ text lines."""
-        lines = [ln.strip() for ln in raw_lines if not ln.strip().startswith("#")]
-        while lines and not lines[0]:
+        lines = [ln.strip() for ln in raw_lines]
+        # Only leading comments are metadata. In a headed XYZ the second line is
+        # the title and may itself begin with '#', so discarding every '#' line
+        # would shift the atom rows up one and silently drop the first atom.
+        while lines and (not lines[0] or lines[0].startswith("#")):
             lines.pop(0)
 
         if not lines:
@@ -167,9 +170,11 @@ class IOManager:
             if num_atoms == 0:
                 raise ValueError("XYZ file has zero atoms")
         except ValueError as exc:
-            # Not a standard headed XYZ — treat all lines as atom rows
+            # Not a standard headed XYZ — treat all lines as atom rows. There is
+            # no title line here, so interleaved comments are safe to drop.
             if "zero atoms" in str(exc) or "too few" in str(exc):
                 raise
+            lines = [ln for ln in lines if ln and not ln.startswith("#")]
             num_atoms = len(lines)
             atom_start = 0
 
@@ -442,6 +447,7 @@ class IOManager:
         num_atoms = mol.GetNumAtoms()
         bonds_added = []
 
+        candidates = []
         for i in range(num_atoms):
             for j in range(i + 1, num_atoms):
                 atom_i = mol.GetAtomWithIdx(i)
@@ -456,21 +462,27 @@ class IOManager:
                 expected = radius_i + radius_j
                 tolerance = 1.2 if (symbol_i == "H" or symbol_j == "H") else 1.3
                 if expected * 0.5 <= distance <= expected * tolerance:
-                    if mol.GetBondBetweenAtoms(i, j) is None:
-                        if (
-                            symbol_i == "H" and mol.GetAtomWithIdx(i).GetDegree() >= 1
-                        ) or (
-                            symbol_j == "H" and mol.GetAtomWithIdx(j).GetDegree() >= 1
-                        ):
-                            continue
-                        try:
-                            mol.AddBond(i, j, Chem.BondType.SINGLE)
-                            bonds_added.append((i, j, distance))
-                        except (RuntimeError, ValueError, TypeError):
-                            # Safe defensive fallback catching RuntimeError, ValueError, TypeError
-                            logging.debug(
-                                "Suppressed non-critical error", exc_info=True
-                            )
+                    candidates.append((distance, i, j, symbol_i, symbol_j))
+
+        # Nearest pairs first. The monovalent-H rule below accepts whichever
+        # partner it sees first, so index order would otherwise decide the
+        # connectivity and the same geometry could bond an H differently
+        # depending only on how the file happened to list its atoms.
+        candidates.sort(key=lambda c: c[0])
+
+        for distance, i, j, symbol_i, symbol_j in candidates:
+            if mol.GetBondBetweenAtoms(i, j) is not None:
+                continue
+            if (symbol_i == "H" and mol.GetAtomWithIdx(i).GetDegree() >= 1) or (
+                symbol_j == "H" and mol.GetAtomWithIdx(j).GetDegree() >= 1
+            ):
+                continue
+            try:
+                mol.AddBond(i, j, Chem.BondType.SINGLE)
+                bonds_added.append((i, j, distance))
+            except (RuntimeError, ValueError, TypeError):
+                # Safe defensive fallback catching RuntimeError, ValueError, TypeError
+                logging.debug("Suppressed non-critical error", exc_info=True)
 
         return len(bonds_added)
 
@@ -816,6 +828,7 @@ class IOManager:
                     atom.GetSymbol(),
                     QPointF(scene_x, scene_y),
                     charge=atom.GetFormalCharge(),
+                    radical=atom.GetNumRadicalElectrons(),
                 )
                 rdkit_idx_to_my_id[i] = atom_id
 
