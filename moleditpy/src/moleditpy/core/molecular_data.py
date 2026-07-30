@@ -30,6 +30,93 @@ class PointTuple(tuple):
         return float(self[1])
 
 
+def _mdl_radical_code(radical_electrons: int) -> int:
+    """Map a count of unpaired electrons to an MDL radical code."""
+    # MDL encodes 1 = singlet, 2 = doublet, 3 = triplet.
+    if radical_electrons <= 0:
+        return 0
+    return 2 if radical_electrons == 1 else 3
+
+
+def _mdl_property_lines(atom_records: List[Dict[str, Any]]) -> List[str]:
+    """Build the M CHG / M RAD property lines for a V2000 block."""
+    lines = []
+    for tag, key, encode in (
+        ("CHG", "charge", int),
+        ("RAD", "radical", _mdl_radical_code),
+    ):
+        entries = [
+            (idx, encode(rec[key]))
+            for idx, rec in enumerate(atom_records, start=1)
+            if rec[key]
+        ]
+        # The MDL property block allows at most 8 entries per line.
+        for start in range(0, len(entries), 8):
+            chunk = entries[start : start + 8]
+            lines.append(
+                f"M  {tag}{len(chunk):3d}"
+                + "".join(f"{idx:4d}{val:4d}" for idx, val in chunk)
+            )
+    return lines
+
+
+def _to_v2000_block(
+    atom_records: List[Dict[str, Any]], bond_records: List[Dict[str, Any]]
+) -> str:
+    """Render collected atom/bond records as an MDL V2000 MOL block."""
+    lines = ["", "  MoleditPy", ""]
+    lines.append(
+        f"{len(atom_records):3d}{len(bond_records):3d}  0  0  0  0  0  0  0  0999 V2000"
+    )
+    for rec in atom_records:
+        # Charge and radical travel in the M CHG / M RAD blocks below, so every
+        # per-atom field here stays zero.
+        lines.append(
+            f"{rec['x']:10.4f}{rec['y']:10.4f}{0.0:10.4f} {rec['symbol']:<3}"
+            " 0  0  0  0  0  0  0  0  0  0  0  0"
+        )
+    for rec in bond_records:
+        lines.append(
+            f"{rec['a1']:3d}{rec['a2']:3d}{rec['order']:3d}{rec['stereo']:3d}  0  0  0"
+        )
+    lines.extend(_mdl_property_lines(atom_records))
+    lines.append("M  END")
+    return "\n".join(lines) + "\n"
+
+
+def _to_v3000_block(
+    atom_records: List[Dict[str, Any]], bond_records: List[Dict[str, Any]]
+) -> str:
+    """Render collected atom/bond records as an MDL V3000 MOL block."""
+    lines = ["", "  MoleditPy", "", "  0  0  0  0  0  0  0  0  0  0999 V3000"]
+    lines.append("M  V30 BEGIN CTAB")
+    lines.append(f"M  V30 COUNTS {len(atom_records)} {len(bond_records)} 0 0 0")
+    lines.append("M  V30 BEGIN ATOM")
+    for idx, rec in enumerate(atom_records, start=1):
+        extra = ""
+        if rec["charge"]:
+            extra += f" CHG={int(rec['charge'])}"
+        if rec["radical"]:
+            extra += f" RAD={_mdl_radical_code(rec['radical'])}"
+        lines.append(
+            f"M  V30 {idx} {rec['symbol']} "
+            f"{rec['x']:.4f} {rec['y']:.4f} 0.0000 0{extra}"
+        )
+    lines.append("M  V30 END ATOM")
+    lines.append("M  V30 BEGIN BOND")
+    for idx, rec in enumerate(bond_records, start=1):
+        cfg = ""
+        if rec["stereo"] == 1:
+            cfg = " CFG=1"
+        elif rec["stereo"] == 6:
+            cfg = " CFG=3"
+        lines.append(f"M  V30 {idx} {rec['order']} {rec['a1']} {rec['a2']}{cfg}")
+    lines.append("M  V30 END BOND")
+    lines.append("M  V30 END CTAB")
+    lines.append("M  END")
+    return "\n".join(lines) + "\n"
+
+
 class MolecularData:
     """In-memory graph of atoms and bonds, independent of any UI framework."""
 
@@ -348,7 +435,7 @@ class MolecularData:
 
         # Counts line and bond indices must only reflect atoms actually written
         atom_map: Dict[int, int] = {}
-        atom_lines: List[str] = []
+        atom_records: List[Dict[str, Any]] = []
         for old_id, atom in self.atoms.items():
             # Convert scene pixel coordinates to angstroms when emitting MOL block
             pos = atom.get("pos")
@@ -362,37 +449,23 @@ class MolecularData:
             else:
                 continue
 
-            x, y = x_px * ANGSTROM_PER_PIXEL, y_px * ANGSTROM_PER_PIXEL
-            z, symbol = 0.0, atom["symbol"]
-            charge = atom.get("charge", 0)
-
-            chg_code = 0
-            if charge == 3:
-                chg_code = 1
-            elif charge == 2:
-                chg_code = 2
-            elif charge == 1:
-                chg_code = 3
-            elif charge == -1:
-                chg_code = 5
-            elif charge == -2:
-                chg_code = 6
-            elif charge == -3:
-                chg_code = 7
-
-            atom_map[old_id] = len(atom_lines)
-            atom_lines.append(
-                f"{x:10.4f}{y:10.4f}{z:10.4f} {symbol:<3} 0  0  0{chg_code:3d}  0  0  0  0  0  0  0\n"
+            atom_map[old_id] = len(atom_records)
+            atom_records.append(
+                {
+                    "x": x_px * ANGSTROM_PER_PIXEL,
+                    "y": y_px * ANGSTROM_PER_PIXEL,
+                    "symbol": atom["symbol"],
+                    "charge": int(atom.get("charge", 0) or 0),
+                    "radical": int(atom.get("radical", 0) or 0),
+                }
             )
 
-        bond_lines = []
+        bond_records: List[Dict[str, Any]] = []
         for (id1, id2), bond in self.bonds.items():
             if id1 not in atom_map or id2 not in atom_map:
                 continue
-            idx1, idx2 = atom_map[id1] + 1, atom_map[id2] + 1
-            # Bond order may be a float (1.5 = aromatic); V2000 uses code 4.
+            # Bond order may be a float (1.5 = aromatic); MDL uses code 4.
             order_val = float(bond["order"])
-            order = 4 if order_val == 1.5 else int(order_val)
             stereo_code = 0
             bond_stereo = bond.get("stereo", 0)
             if bond_stereo == 1:
@@ -400,16 +473,20 @@ class MolecularData:
             elif bond_stereo == 2:
                 stereo_code = 6
 
-            bond_lines.append(
-                f"{idx1:3d}{idx2:3d}{order:3d}{stereo_code:3d}  0  0  0\n"
+            bond_records.append(
+                {
+                    "a1": atom_map[id1] + 1,
+                    "a2": atom_map[id2] + 1,
+                    "order": 4 if order_val == 1.5 else int(order_val),
+                    "stereo": stereo_code,
+                }
             )
 
-        mol_block = "\n  MoleditPy\n\n"
-        mol_block += f"{len(atom_lines):3d}{len(bond_lines):3d}  0  0  0  0  0  0  0  0999 V2000\n"
-        mol_block += "".join(atom_lines)
-        mol_block += "".join(bond_lines)
-        mol_block += "M  END\n"
-        return mol_block
+        # V2000 packs the counts into three-character fields, so anything past
+        # 999 would run the atom count into the bond count and corrupt the file.
+        if len(atom_records) > 999 or len(bond_records) > 999:
+            return _to_v3000_block(atom_records, bond_records)
+        return _to_v2000_block(atom_records, bond_records)
 
     def to_template_dict(
         self, name: str, version: str = "1.0", application_version: str = ""

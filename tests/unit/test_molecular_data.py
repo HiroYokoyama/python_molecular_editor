@@ -726,3 +726,97 @@ def test_to_rdkit_mol_ez_invalid_stereo_atoms_suppressed():
     data.bonds[(c2, c3)]["stereo_atoms"] = 5  # not unpackable -> exception branch
     mol = data.to_rdkit_mol(use_2d_stereo=False)
     assert mol is not None
+
+
+# =============================================================================
+# Manual MOL block fallback: charge / radical / large-molecule fidelity
+# =============================================================================
+
+
+def _parse_fallback_block(data):
+    """Render via the manual fallback and read the result back with RDKit."""
+    with patch.object(data, "to_rdkit_mol", return_value=None):
+        block = data.to_mol_block()
+    assert block is not None
+    parsed = Chem.MolFromMolBlock(block, sanitize=False)
+    assert parsed is not None, f"RDKit could not parse the fallback block:\n{block}"
+    return block, parsed
+
+
+@pytest.mark.parametrize("charge", [1, -1, 2, -2, 3, -3, 4, -4])
+def test_fallback_preserves_formal_charge(charge):
+    """Charges must survive the manual writer, including beyond the +-3 field."""
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0))
+    n = data.add_atom("N", QPointF(75, 0), charge=charge)
+    data.add_bond(0, n, order=1)
+
+    _, parsed = _parse_fallback_block(data)
+    assert parsed.GetAtomWithIdx(1).GetFormalCharge() == charge
+
+
+@pytest.mark.parametrize("radical", [1, 2])
+def test_fallback_preserves_radical_electrons(radical):
+    """Radicals need an M RAD block; the atom line has no field for them."""
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0))
+    c = data.add_atom("C", QPointF(75, 0), radical=radical)
+    data.add_bond(0, c, order=1)
+
+    _, parsed = _parse_fallback_block(data)
+    assert parsed.GetAtomWithIdx(1).GetNumRadicalElectrons() == radical
+
+
+def test_fallback_preserves_charge_and_radical_together():
+    """A charged radical must not lose either property."""
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0))
+    n = data.add_atom("N", QPointF(75, 0), charge=1, radical=1)
+    data.add_bond(0, n, order=1)
+
+    _, parsed = _parse_fallback_block(data)
+    atom = parsed.GetAtomWithIdx(1)
+    assert atom.GetFormalCharge() == 1
+    assert atom.GetNumRadicalElectrons() == 1
+
+
+def test_fallback_charge_column_is_not_the_hydrogen_count_field():
+    """The per-atom fields stay zero: charge belongs in M CHG, not column hhh."""
+    data = MolecularData()
+    data.add_atom("N", QPointF(0, 0), charge=1)
+
+    block, _ = _parse_fallback_block(data)
+    atom_line = block.splitlines()[4]
+    # 3 coordinates of width 10, a space, then the 3-char symbol.
+    assert atom_line[34:].split() == ["0"] * 12
+    assert "M  CHG" in block
+
+
+def test_fallback_switches_to_v3000_past_the_v2000_counts_limit():
+    """Past 999 atoms a V2000 counts line would corrupt; V3000 must be used."""
+    data = MolecularData()
+    ids = [
+        data.add_atom("C", QPointF(i % 40 * 40.0, i // 40 * 40.0)) for i in range(1200)
+    ]
+    for i in range(0, len(ids) - 1, 2):
+        data.add_bond(ids[i], ids[i + 1], order=1)
+    data.atoms[ids[5]]["charge"] = -1
+    data.atoms[ids[7]]["radical"] = 1
+
+    block, parsed = _parse_fallback_block(data)
+    assert "V3000" in block.splitlines()[3]
+    assert parsed.GetNumAtoms() == 1200
+    assert parsed.GetNumBonds() == 600
+    assert sum(1 for a in parsed.GetAtoms() if a.GetFormalCharge()) == 1
+    assert sum(1 for a in parsed.GetAtoms() if a.GetNumRadicalElectrons()) == 1
+
+
+def test_fallback_keeps_v2000_for_small_molecules():
+    """Small structures must not churn to V3000."""
+    data = MolecularData()
+    data.add_atom("C", QPointF(0, 0))
+    data.add_atom("C", QPointF(75, 0))
+    data.add_bond(0, 1, order=1)
+
+    block, _ = _parse_fallback_block(data)
+    assert "V2000" in block.splitlines()[3]
