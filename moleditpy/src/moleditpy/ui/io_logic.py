@@ -816,6 +816,7 @@ class IOManager:
                     atom.GetSymbol(),
                     QPointF(scene_x, scene_y),
                     charge=atom.GetFormalCharge(),
+                    radical=atom.GetNumRadicalElectrons(),
                 )
                 rdkit_idx_to_my_id[i] = atom_id
 

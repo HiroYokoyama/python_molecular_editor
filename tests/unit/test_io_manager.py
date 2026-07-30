@@ -16,6 +16,7 @@ import sys
 import pytest
 from unittest.mock import MagicMock, patch
 
+from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QApplication
 
 # Make the local moleditpy package discoverable
@@ -761,3 +762,54 @@ class TestXyzNonStandardWarning:
         msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
         assert msgs
         assert all("non-standard" not in m for m in msgs), msgs
+
+
+class TestLoadMolFileProperties:
+    """load_mol_file must carry per-atom properties into the 2D editor."""
+
+    @staticmethod
+    def _run(mock_parser_host, tmp_path, mol_text):
+        from moleditpy.ui.io_logic import IOManager
+
+        path = tmp_path / "in.mol"
+        path.write_text(mol_text, encoding="utf-8")
+
+        io = IOManager(mock_parser_host)
+        mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file(file_path=str(path))
+        return mock_parser_host.state_manager.data
+
+    def test_radical_survives_mol_import(self, mock_parser_host, tmp_path):
+        """An M RAD block must reach the editor; the count used to be dropped."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        c = source.add_atom("C", (0.0, 0.0), radical=1)
+        o = source.add_atom("O", (50.0, 0.0))
+        source.add_bond(c, o, order=1)
+        mol_text = source.to_mol_block()
+        assert "M  RAD" in mol_text
+
+        data = self._run(mock_parser_host, tmp_path, mol_text)
+
+        radicals = [a for a in data.atoms.values() if a.get("radical", 0)]
+        assert len(radicals) == 1
+        assert radicals[0]["symbol"] == "C"
+        assert radicals[0]["radical"] == 1
+
+    def test_charge_survives_mol_import(self, mock_parser_host, tmp_path):
+        """The companion property must keep working."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        n = source.add_atom("N", (0.0, 0.0), charge=1)
+        c = source.add_atom("C", (50.0, 0.0))
+        source.add_bond(n, c, order=1)
+
+        data = self._run(mock_parser_host, tmp_path, source.to_mol_block())
+
+        charged = [a for a in data.atoms.values() if a.get("charge", 0)]
+        assert len(charged) == 1
+        assert charged[0]["symbol"] == "N"
+        assert charged[0]["charge"] == 1
