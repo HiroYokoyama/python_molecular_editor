@@ -19,6 +19,7 @@ from PyQt6.QtCore import QThread, QTimer, QPoint
 from PyQt6.QtGui import QAction, QColor
 from PyQt6.QtWidgets import QMenu, QMessageBox, QWidget
 from rdkit import Chem
+from rdkit.Chem import AllChem
 
 from . import OBABEL_AVAILABLE
 
@@ -458,7 +459,31 @@ class ComputeManager:
         # Defer so Qt finishes routing the modal result before restoring focus.
         QTimer.singleShot(0, self.host.init_manager.view_2d.setFocus)
 
+    def _ez_consistent_mol_block(self) -> Optional[str]:
+        """MOL block whose 2D geometry encodes the editor's E/Z labels."""
+        data = self.host.state_manager.data
+        if not any(b.get("stereo", 0) in (3, 4) for b in data.bonds.values()):
+            return None
+        stereo_mol = data.to_rdkit_mol(use_2d_stereo=False)
+        if stereo_mol is None:
+            return None
+        try:
+            # MDL carries double-bond cis/trans only in the 2D coordinates, so a
+            # label that contradicts how the user drew the bond is lost unless
+            # the layout is rebuilt from the stereo. These coordinates only seed
+            # 3D generation; the 2D canvas keeps the user's own layout.
+            planar = Chem.Mol(stereo_mol)
+            planar.RemoveAllConformers()
+            AllChem.Compute2DCoords(planar)
+            return str(Chem.MolToMolBlock(planar, includeStereo=True))
+        except (RuntimeError, ValueError) as e:
+            logging.warning("E/Z-consistent 2D layout failed: %s", e)
+            return None
+
     def _setup_mol_block_for_worker(self, mol: Chem.Mol) -> str:
+        ez_block = self._ez_consistent_mol_block()
+        if ez_block:
+            return ez_block
         mol_block = self.host.state_manager.data.to_mol_block()
         if not mol_block:
             mol_block = Chem.MolToMolBlock(mol, includeStereo=True)
