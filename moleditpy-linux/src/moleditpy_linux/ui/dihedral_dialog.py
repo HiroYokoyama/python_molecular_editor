@@ -35,6 +35,7 @@ from ..core.mol_geometry import (
     calculate_dihedral,
     get_connected_group,
 )
+from ..utils.suppress_log import suppress_log
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -469,5 +470,27 @@ class DihedralDialog(GeometryBaseDialog):
                 positions, idx1, idx2, idx3, idx4, new_dihedral_deg, atoms_to_move
             )
 
+        achieved = calculate_dihedral(positions, idx1, idx2, idx3, idx4)
+
         # Write updated positions back using inherited helper
         self._update_molecule_geometry(positions)
+
+        self._warn_if_torsion_not_applied(new_dihedral_deg, achieved)
+
+    def _warn_if_torsion_not_applied(self, requested: float, achieved: float) -> None:
+        """Tell the user when the requested torsion could not be reached.
+
+        A torsion inside a ring cannot rotate: the connected group reached from
+        one side comes back around and contains all four atoms, so they turn
+        together and the angle is unchanged. Silently leaving the old value
+        looks like the edit was applied.
+        """
+        difference = abs(achieved - requested) % 360.0
+        if min(difference, 360.0 - difference) < 0.5:
+            return
+        with suppress_log(AttributeError, RuntimeError, TypeError):
+            self.main_window.statusBar().showMessage(
+                f"Dihedral unchanged ({achieved:.2f}°): the four atoms rotate "
+                "together, which happens for a bond inside a ring.",
+                5000,
+            )

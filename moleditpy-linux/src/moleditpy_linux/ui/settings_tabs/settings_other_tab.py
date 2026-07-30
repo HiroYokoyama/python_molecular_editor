@@ -117,10 +117,10 @@ class SettingsOtherTab(SettingsTabBase):
 
         self.log_to_file_checkbox = QCheckBox()
         self.log_to_file_checkbox.setToolTip(
-            "Save application log to ~/.moleditpy/moleditpy_linux.log (rotated, max 1 MB × 3)."
+            "Save application log to ~/.moleditpy/moleditpy.log (rotated, max 1 MB × 3)."
         )
         form_layout.addRow(
-            "Save log to file (~/.moleditpy/moleditpy_linux.log):", self.log_to_file_checkbox
+            "Save log to file (~/.moleditpy/moleditpy.log):", self.log_to_file_checkbox
         )
 
         self.log_level_debug_checkbox = QCheckBox()

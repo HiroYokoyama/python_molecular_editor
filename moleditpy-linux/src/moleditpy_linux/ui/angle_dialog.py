@@ -35,6 +35,7 @@ from ..core.mol_geometry import (
     calc_angle_deg,
     get_connected_group,
 )
+from ..utils.suppress_log import suppress_log
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -468,5 +469,26 @@ class AngleDialog(GeometryBaseDialog):
                 atoms_to_move,
             )
 
+        achieved = calc_angle_deg(positions[idx_a], positions[idx_b], positions[idx_c])
+
         # Write updated positions back using inherited helper
         self._update_molecule_geometry(positions)
+
+        self._warn_if_angle_not_applied(new_angle_deg, achieved)
+
+    def _warn_if_angle_not_applied(self, requested: float, achieved: float) -> None:
+        """Tell the user when the requested angle could not be reached.
+
+        For an angle inside a ring the connected group reached from one arm
+        comes back around and contains all three atoms, so they rotate
+        together and the angle is unchanged. Leaving the old value silently
+        looks like the edit was applied.
+        """
+        if abs(achieved - requested) < 0.5:
+            return
+        with suppress_log(AttributeError, RuntimeError, TypeError):
+            self.main_window.statusBar().showMessage(
+                f"Angle unchanged ({achieved:.2f} deg): the three atoms rotate "
+                "together, which happens for an angle inside a ring.",
+                5000,
+            )

@@ -583,26 +583,17 @@ class EditActionsManager:
                 if orig_id not in self.host.state_manager.data.atoms:
                     continue
 
-                # Get implicit hydrogens; fallback to total - explicit
-                implicit_h = (
-                    int(rd_atom.GetNumImplicitHs())
-                    if hasattr(rd_atom, "GetNumImplicitHs")
-                    else 0
-                )
-                if implicit_h is None or implicit_h < 0:
+                # Hydrogens still needing an atom of their own. GetTotalNumHs()
+                # excludes H already drawn as atoms but includes the
+                # property-explicit H that sanitization assigns to an aromatic
+                # N-H; subtracting GetNumExplicitHs() here would cancel exactly
+                # that term and leave luminol's two N-H without hydrogens.
+                try:
+                    implicit_h = int(rd_atom.GetTotalNumHs())
+                except (AttributeError, RuntimeError, ValueError, TypeError):
                     implicit_h = 0
-                if implicit_h == 0:
-                    # Fallback
-                    try:
-                        total_h = int(rd_atom.GetTotalNumHs())
-                        explicit_h = (
-                            int(rd_atom.GetNumExplicitHs())
-                            if hasattr(rd_atom, "GetNumExplicitHs")
-                            else 0
-                        )
-                        implicit_h = max(0, total_h - explicit_h)
-                    except (AttributeError, RuntimeError, ValueError, TypeError):
-                        implicit_h = 0
+                if implicit_h < 0:
+                    implicit_h = 0
 
                 if implicit_h <= 0:
                     continue
@@ -954,12 +945,16 @@ class EditActionsManager:
                     continue
                 original_id = atom.GetIntProp("_original_atom_id")
 
-                # Robust retrieval of H counts: prefer implicit, fallback to total or 0
+                # GetTotalNumHs() counts implicit plus property-explicit H but
+                # not H drawn as its own atom, which is exactly what the label
+                # should show. Sanitization files an aromatic N-H (luminol,
+                # pyrrole) under the property, where GetNumImplicitHs() alone
+                # reports 0 and the H silently vanishes from the label.
                 try:
-                    h_count = int(atom.GetNumImplicitHs())
+                    h_count = int(atom.GetTotalNumHs())
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     try:
-                        h_count = int(atom.GetTotalNumHs())
+                        h_count = int(atom.GetNumImplicitHs())
                     except (AttributeError, RuntimeError, ValueError, TypeError):
                         h_count = 0
 
