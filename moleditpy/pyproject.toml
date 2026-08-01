@@ -37,7 +37,7 @@ dependencies = [
   "pyqt6 < 6.10; python_version == '3.9'",
   "pyqt6 < 6.12; python_version != '3.9'",
   "pyvista < 0.49",
-  "pyvistaqt < 0.12",
+  "pyvistaqt < 0.13",
   "rdkit < 2026.4",
   "openbabel-wheel < 3.2"
 ]
