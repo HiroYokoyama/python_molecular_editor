@@ -1,0 +1,177 @@
+name: Full GUI Tests
+
+# The `tests` workflow runs the unit/integration/E2E/GUI tiers with VTK and
+# PyVista mocked. This workflow runs the one tier that mocks nothing: a real
+# MainWindow, a real embedded VTK render window, and the real conversion
+# worker thread, drawing benzene and converting it to 3D.
+#
+# CI runners have no monitor, so a display has to be provided:
+#   * Linux   -- xvfb gives a real X server, mesa (llvmpipe) gives software GL.
+#                This job is REQUIRED: MOLEDITPY_FULL_GUI_REQUIRED=1 makes a
+#                missing render context a failure instead of a silent skip.
+#   * Windows -- the runner has a desktop but only OpenGL 1.1 software GL,
+#                which VTK 9 may reject. Informational: it reports, it does
+#                not gate.
+#   * macOS   -- the runner has a window server; usually works. Informational.
+
+on:
+  push:
+    branches: [ main, master, dev, 'test/**' ]
+  pull_request:
+    branches: [ main, master, dev ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------
+  # Gating job: a real X display via xvfb + software OpenGL via llvmpipe.
+  # ---------------------------------------------------------------------
+  full-gui-linux:
+    name: full-gui / ubuntu / py${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libgl1 libegl1 libglx-mesa0 libgl1-mesa-dri libosmesa6 \
+          libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+          libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 \
+          libxcb-cursor0 x11-utils xvfb
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-qt pytest-mock pytest-timeout
+        pip install -e moleditpy/
+
+    - name: Report GL / Qt environment
+      run: |
+        xvfb-run -a --server-args="-screen 0 1600x1200x24" \
+          python -c "import vtk, pyvista, PyQt6.QtCore as c; \
+            print('vtk', vtk.VTK_VERSION); print('pyvista', pyvista.__version__); \
+            print('qt', c.QT_VERSION_STR)"
+        xvfb-run -a --server-args="-screen 0 1600x1200x24" glxinfo -B || true
+
+    - name: Run Full GUI Tests
+      env:
+        # A missing render context here means the runner image regressed --
+        # fail loudly rather than skipping the whole tier.
+        MOLEDITPY_FULL_GUI_REQUIRED: "1"
+        LIBGL_ALWAYS_SOFTWARE: "1"
+        GALLIUM_DRIVER: llvmpipe
+        MOLEDITPY_LAUNCH_TIMEOUT: "300"
+      run: |
+        xvfb-run -a --server-args="-screen 0 1600x1200x24" \
+          python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
+
+  # ---------------------------------------------------------------------
+  # Informational: same tier on the desktop platforms. Skips are expected
+  # where the runner has no usable OpenGL; failures here do not gate.
+  # ---------------------------------------------------------------------
+  full-gui-desktop:
+    name: full-gui / ${{ matrix.os }} / py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            python-version: "3.13"
+          - os: macos-latest
+            python-version: "3.13"
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-qt pytest-mock pytest-timeout
+        pip install -e moleditpy/
+
+    - name: Run Full GUI Tests
+      env:
+        MOLEDITPY_LAUNCH_TIMEOUT: "300"
+      run: python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
+
+  # ---------------------------------------------------------------------
+  # The reported macOS + Python 3.9 problem: the PyQt6 range pinned for 3.9
+  # (`pyqt6 < 6.10`) is said never to bring up a window there. This job only
+  # has to answer "does the GUI launch, yes or no" -- the launch test kills
+  # the process on timeout and fails, so a hang is reported as a failure
+  # instead of burning the job's whole time budget.
+  # ---------------------------------------------------------------------
+  launch-probe-py39:
+    name: launch-probe / ${{ matrix.os }} / py3.9
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-latest, ubuntu-latest]
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.9"
+
+    - name: Install System Dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgl1 libegl1 libglx-mesa0 libgl1-mesa-dri \
+          libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+          libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 \
+          libxcb-cursor0 xvfb
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-qt pytest-mock pytest-timeout
+        pip install -e moleditpy/
+
+    - name: Show resolved PyQt6 version
+      run: pip show pyqt6 | head -3
+
+    - name: Launch probe (Linux)
+      if: runner.os == 'Linux'
+      env:
+        MOLEDITPY_LAUNCH_TIMEOUT: "240"
+      run: |
+        xvfb-run -a --server-args="-screen 0 1600x1200x24" \
+          python -m pytest tests/full_gui/test_full_launch.py \
+          -c tests/full_gui/pytest.ini -v -rA
+
+    - name: Launch probe (macOS)
+      if: runner.os == 'macOS'
+      env:
+        MOLEDITPY_LAUNCH_TIMEOUT: "240"
+      run: |
+        python -m pytest tests/full_gui/test_full_launch.py \
+          -c tests/full_gui/pytest.ini -v -rA
