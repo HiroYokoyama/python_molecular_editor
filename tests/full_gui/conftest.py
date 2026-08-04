@@ -184,8 +184,48 @@ def full_window(app, qtbot, monkeypatch, tmp_path):
     try:
         yield win
     finally:
-        win.state_manager.has_unsaved_changes = False
-        win.closeEvent = lambda e: e.accept()
-        win.close()
-        for _ in range(5):
-            app.processEvents()
+        _teardown_window(win, app)
+
+
+def _teardown_window(win, app) -> None:
+    """Dismantle the window in an order VTK survives.
+
+    Closing the QWidget alone is not enough. Two things outlive it and then
+    touch a render window whose GL context is gone -- a segfault, not an
+    exception, and it lands in whichever test runs next:
+
+    * ``UIManager._style_watchdog``, a 2 s QTimer that reads
+      ``plotter.interactor`` (harmless in the real app, where the window
+      outlives the process, fatal across a test boundary);
+    * pyvistaqt's own render path -- ``QtInteractor.render`` emits a signal
+      handled later, and on macOS that handler runs on another thread.
+
+    So: stop the timer, finalise the plotter, then drain the event queue.
+    """
+    plotter = getattr(win.view_3d_manager, "plotter", None)
+
+    watchdog = getattr(win.ui_manager, "_style_watchdog", None)
+    if watchdog is not None:
+        try:
+            watchdog.stop()
+        except RuntimeError:
+            pass
+
+    win.state_manager.has_unsaved_changes = False
+    win.closeEvent = lambda e: e.accept()
+    win.close()
+
+    # Drain first: the app still has queued callbacks (view_isometric,
+    # deferred redraws) that need a live plotter. Finalising before they run
+    # gives them a camera of None.
+    for _ in range(10):
+        app.processEvents()
+
+    if plotter is not None:
+        try:
+            plotter.close()
+        except (RuntimeError, AttributeError, TypeError):
+            pass
+
+    for _ in range(10):
+        app.processEvents()
