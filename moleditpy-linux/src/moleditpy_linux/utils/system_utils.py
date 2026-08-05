@@ -21,6 +21,9 @@ try:
 except ImportError:
     winreg = None  # type: ignore[assignment]
 
+# A wedged `defaults`/`gsettings` must not take the app's startup with it.
+_THEME_QUERY_TIMEOUT_S = 5.0
+
 
 def detect_system_dark_mode() -> Optional[bool]:
     """Return True if the OS prefers dark app theme, False if light, or None if unknown."""
@@ -33,8 +36,18 @@ def detect_system_dark_mode() -> Optional[bool]:
 
 
 def detect_system_theme() -> Optional[str]:
-    """Return the OS's preferred theme setting as 'dark', 'light', or None."""
-    with suppress_log(AttributeError, RuntimeError, OSError, FileNotFoundError):
+    """Return the OS's preferred theme setting as 'dark', 'light', or None.
+
+    Forks a helper process on macOS and Linux, so callers that ask repeatedly
+    should hold on to the answer rather than re-querying.
+    """
+    with suppress_log(
+        AttributeError,
+        RuntimeError,
+        OSError,
+        FileNotFoundError,
+        subprocess.SubprocessError,
+    ):
         # Windows
         if platform.system() == "Windows" and winreg is not None:
             with winreg.OpenKey(
@@ -50,6 +63,7 @@ def detect_system_theme() -> Optional[str]:
                 ["defaults", "read", "-g", "AppleInterfaceStyle"],
                 capture_output=True,
                 text=True,
+                timeout=_THEME_QUERY_TIMEOUT_S,
             )
             if p.returncode == 0 and "dark" in p.stdout.strip().lower():
                 return "dark"
@@ -61,6 +75,7 @@ def detect_system_theme() -> Optional[str]:
                 ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
                 capture_output=True,
                 text=True,
+                timeout=_THEME_QUERY_TIMEOUT_S,
             )
             if p.returncode == 0:
                 out = p.stdout.strip().strip("'\n ")
@@ -73,6 +88,7 @@ def detect_system_theme() -> Optional[str]:
                 ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
                 capture_output=True,
                 text=True,
+                timeout=_THEME_QUERY_TIMEOUT_S,
             )
             if p.returncode == 0 and "-dark" in p.stdout.lower():
                 return "dark"

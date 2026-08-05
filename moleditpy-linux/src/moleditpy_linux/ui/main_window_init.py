@@ -20,9 +20,6 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
-# RDKit imports (explicit to satisfy flake8 and used features)
-from rdkit import Chem
-
 # PyQt6 Modules
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt, QTimer, QUrl
 from PyQt6.QtGui import (
@@ -65,13 +62,18 @@ except ImportError:
     winreg = None  # type: ignore[assignment]
 
 
-from ..utils.constants import DEFAULT_CPK_COLORS, NUM_DASHES, VERSION
+from ..utils.constants import DEFAULT_CPK_COLORS, FONT_FAMILY, NUM_DASHES, VERSION
+from .atom_item import warm_font_cache
 from .custom_qt_interactor import CustomQtInteractor
 from ..core.molecular_data import MolecularData
 from .molecule_scene import MoleculeScene
 from .plugin_menu_manager import PluginMenuManager
 from .settings_dialog import SettingsDialog
 from .zoomable_view import ZoomableView
+
+
+# Distinct from None, which is a real answer meaning "OS preference unknown".
+_UNQUERIED = object()
 
 
 class MainInitManager:
@@ -82,6 +84,7 @@ class MainInitManager:
     ) -> None:
         self.host = host
         # Explicit declarations for Mypy
+        self._os_dark_pref: Any = _UNQUERIED
         self.scene: Any = None  # MoleculeScene, created during init
         self.data: Optional[MolecularData] = None
         self.formula_label: Optional[QLabel] = None
@@ -179,18 +182,6 @@ class MainInitManager:
         # Install event filter to capture window close events (handled in UIManager)
         self.host.installEventFilter(self.host.ui_manager)
 
-        # RDKit Warm-up (initial execution cost)
-        try:
-            # Create a molecule with a variety of common atoms to ensure
-            # the valence/H-count machinery is fully initialized.
-            warmup_smiles = "OC(N)C(S)P"
-            warmup_mol = Chem.MolFromSmiles(warmup_smiles)
-            if warmup_mol:
-                for atom in warmup_mol.GetAtoms():
-                    atom.GetNumImplicitHs()
-        except (AttributeError, RuntimeError, ValueError) as e:
-            logging.warning(f"RDKit warm-up failed: {e}")
-
         self.host.state_manager.reset_undo_stack()
         self.scene.selectionChanged.connect(  # type: ignore[attr-defined]
             self.host.edit_actions_manager.update_edit_menu_actions
@@ -206,6 +197,8 @@ class MainInitManager:
             QTimer.singleShot(0, lambda: self.load_command_line_file(initial_file))
 
         QTimer.singleShot(0, self.apply_initial_settings)
+        # After apply_initial_settings, so the user's own font family is warmed.
+        QTimer.singleShot(0, self._warm_font_cache)
         # Camera initialization flag (permits reset only during the first draw)
         self._camera_initialized = False
 
@@ -225,6 +218,19 @@ class MainInitManager:
             logging.debug(
                 f"Suppressed exception: {e}"
             )  # Suppress non-critical UI/menu initialization errors
+
+    def _warm_font_cache(self) -> None:
+        """Resolve the atom-label font now, in the user's configured family."""
+        scene = getattr(self, "scene", None)
+        font = None
+        if scene is not None and hasattr(scene, "get_setting"):
+            family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
+            size = scene.get_setting("atom_font_size_2d", 20)
+            bold = scene.get_setting("atom_font_bold_2d", True)
+            font = QFont(
+                family, size, QFont.Weight.Bold if bold else QFont.Weight.Normal
+            )
+        warm_font_cache(font)
 
     def init_ui(self) -> None:
         """Set the window icon and initialize main layout, toolbars, and menu bar."""
@@ -1076,7 +1082,11 @@ class MainInitManager:
                 return QColor(fg)
 
         with suppress_log(Exception):
-            os_pref = detect_system_dark_mode()
+            # Cached: this forks `defaults`/`gsettings` on macOS and Linux, and
+            # icon painting asks once per icon (15+ during startup).
+            if self._os_dark_pref is _UNQUERIED:
+                self._os_dark_pref = detect_system_dark_mode()
+            os_pref = self._os_dark_pref
             if os_pref is not None:
                 return QColor("#FFFFFF") if os_pref else QColor("#000000")
 
