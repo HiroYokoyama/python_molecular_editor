@@ -71,6 +71,7 @@ def test_safe_mode_loads_no_plugins(full_window):
     )
 
 
+@pytest.mark.timeout(LAUNCH_TIMEOUT_S + 60)
 def test_entry_point_boots_in_a_subprocess(tmp_path):
     """`MainWindow` + `show()` via the installed package, in a clean process.
 

@@ -95,7 +95,10 @@ def _probe_render_context() -> "str | None":
             [sys.executable, "-c", _PROBE_CODE],
             capture_output=True,
             text=True,
-            timeout=300,
+            # Short on purpose: a context that works answers in seconds, and a
+            # context that does not should say so quickly rather than stall the
+            # whole job.
+            timeout=120,
             env={**os.environ},
         )
     except (OSError, subprocess.SubprocessError) as exc:

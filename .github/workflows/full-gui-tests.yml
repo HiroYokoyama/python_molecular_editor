@@ -134,9 +134,12 @@ jobs:
         pip install pytest pytest-qt pytest-mock pytest-timeout
         pip install -e moleditpy/
 
+    # Windows py3.13 is known to have a working render context -- it passes the
+    # full 36-test suite -- so "cannot start" here is a regression, not a
+    # missing GPU, and must be red rather than a green skip.
     - name: Run Full GUI Tests
       env:
-        MOLEDITPY_LAUNCH_TIMEOUT: "300"
+        MOLEDITPY_FULL_GUI_REQUIRED: "1"
       run: python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
 
   # ---------------------------------------------------------------------
@@ -210,6 +213,12 @@ jobs:
   # macos-13 is deliberately absent: GitHub retired those Intel runners, and
   # requesting the label leaves the job queued until the run is cancelled
   # (observed here: 2 h 36 m, never picked up).
+  #
+  # windows-latest is absent too, and for a different reason: that image has no
+  # usable OpenGL on Python 3.9. VTK fails at `wglChoosePixelFormatARB` before
+  # Qt is even reached, so the probe can never run there and would only ever
+  # report on the runner's missing GPU. Windows is covered at py3.13 by the
+  # full-gui job above, which does have a context and runs the whole suite.
   # ---------------------------------------------------------------------
   launch-probe-py39:
     name: launch-probe / ${{ matrix.os }} / py3.9
@@ -218,7 +227,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
 
     steps:
     - uses: actions/checkout@v6
@@ -255,14 +264,12 @@ jobs:
       shell: bash
       run: python -c "from PyQt6.QtCore import QT_VERSION_STR, PYQT_VERSION_STR; print('PyQt6', PYQT_VERSION_STR, '/ Qt', QT_VERSION_STR)"
 
+    # Both remaining runners are known to have a working render context, so
+    # MOLEDITPY_FULL_GUI_REQUIRED=1 on both: "Qt cannot start" is the answer
+    # this job exists to give, and it has to be red rather than a green skip.
     - name: Launch probe (Linux)
       if: runner.os == 'Linux'
       env:
-        MOLEDITPY_LAUNCH_TIMEOUT: "240"
-        # Without this the probe *skips* when Qt cannot start, and the job goes
-        # green while reporting nothing -- which is exactly what happened on
-        # the py3.9 legs. A GUI that will not come up is the answer this job
-        # exists to give, so it has to be a failure.
         MOLEDITPY_FULL_GUI_REQUIRED: "1"
         QT_DEBUG_PLUGINS: "1"
       run: |
@@ -270,14 +277,9 @@ jobs:
           python -m pytest tests/full_gui/test_full_launch.py \
           -c tests/full_gui/pytest.ini -v -rA
 
-    # No MOLEDITPY_FULL_GUI_REQUIRED here, unlike the Linux leg. These runners
-    # genuinely may not have a usable OpenGL context -- the Windows py3.9 image
-    # fails at `wglChoosePixelFormatARB` before Qt is even involved -- and a
-    # missing GPU is an environment fact, not something the application can be
-    # blamed for. Linux gets xvfb plus llvmpipe, so there a skip really is a
-    # regression.
-    - name: Launch probe (Windows / macOS)
-      if: runner.os != 'Linux'
+    - name: Launch probe (macOS)
+      if: runner.os == 'macOS'
       env:
-        MOLEDITPY_LAUNCH_TIMEOUT: "240"
+        MOLEDITPY_FULL_GUI_REQUIRED: "1"
+        QT_DEBUG_PLUGINS: "1"
       run: python -m pytest tests/full_gui/test_full_launch.py -c tests/full_gui/pytest.ini -v -rA
