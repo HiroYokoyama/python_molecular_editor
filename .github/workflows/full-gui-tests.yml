@@ -96,8 +96,28 @@ jobs:
         include:
           - os: windows-latest
             python-version: "3.13"
-          - os: macos-latest
-            python-version: "3.13"
+          # macOS is disabled, not forgotten. The full suite segfaults there,
+          # and the cause is a pyvistaqt/pytest-qt interaction rather than
+          # anything in the application:
+          #
+          #   pyvistaqt decorates QtInteractor.render with @threaded on Darwin,
+          #   so a render is emitted as a queued signal and delivered later.
+          #   pytest-qt's pytest_runtest_teardown pumps the event queue, and it
+          #   runs ahead of every fixture finaliser, so that delivery lands in
+          #   a plotter the fixture has not been allowed to close yet.
+          #
+          # Tried and insufficient: closing the plotter in teardown; draining
+          # before and after; stubbing render; binding pyvistaqt's synchronous
+          # _render; neutralising the deferred fit_to_view; stubbing _render
+          # from our own tryfirst teardown hook. The last one fails because Qt
+          # bound the slot at connect time, so reassigning the attribute does
+          # not change what the queued metacall invokes.
+          #
+          # macOS is still covered by launch-probe below, which passes: the
+          # application does launch and render there. Re-enable when pyvistaqt
+          # offers a way to cancel its pending renders.
+          # - os: macos-latest
+          #   python-version: "3.13"
 
     steps:
     - uses: actions/checkout@v6
