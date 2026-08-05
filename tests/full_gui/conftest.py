@@ -253,6 +253,19 @@ def _teardown_window(win, app) -> None:
         except (RuntimeError, AttributeError):
             pass
 
+    # UIManager schedules `QTimer.singleShot(100, view_3d_manager.fit_to_view)`
+    # after a conversion. If the test ends inside that 100 ms the timer fires
+    # later, against a manager whose plotter has since been finalised, and
+    # `fit_to_view` renders into a dead window. It surfaces in the *next*
+    # test's teardown, inside pytest-qt's own event pump, so make the callbacks
+    # themselves inert rather than trying to outrun the timer.
+    for name in ("fit_to_view", "draw_molecule_3d", "update_3d_view"):
+        if hasattr(win.view_3d_manager, name):
+            try:
+                setattr(win.view_3d_manager, name, lambda *a, **k: None)
+            except (AttributeError, RuntimeError):
+                pass
+
     win.state_manager.has_unsaved_changes = False
     win.closeEvent = lambda e: e.accept()
     win.close()
