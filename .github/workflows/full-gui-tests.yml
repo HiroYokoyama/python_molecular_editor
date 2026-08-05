@@ -140,6 +140,61 @@ jobs:
       run: python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
 
   # ---------------------------------------------------------------------
+  # TEMPORARY -- delete once it has reported.
+  #
+  # `pyqt6 < 6.10; python_version == '3.9'` was pinned because PyQt6 6.10 did
+  # not work on macOS with Python 3.9. That specific combination has never
+  # actually been run to completion here: the earlier attempt died in a
+  # workflow bug before reaching the tests, and the retries were cancelled.
+  # This job runs both sides on macOS in one go, so the comparison is
+  # unambiguous:
+  #
+  #   pinned -> PyQt6 6.9.x, the version the constraint allows
+  #   newest -> PyQt6 6.10.x, the version it excludes (6.11 needs >=3.10)
+  #
+  # MOLEDITPY_FULL_GUI_REQUIRED=1 on both, so "Qt cannot start" fails loudly
+  # instead of skipping into a green tick. macos-latest is known to have a
+  # working render context here -- the regular py3.9 probe passes 6 tests on
+  # it -- so a skip would be the anomaly, not the environment.
+  # ---------------------------------------------------------------------
+  pin-check-macos-py39:
+    name: PIN CHECK / macos / py3.9 / pyqt-${{ matrix.pyqt }}
+    runs-on: macos-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        pyqt: [pinned, newest]
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.9"
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-qt pytest-mock pytest-timeout
+        pip install -e moleditpy/
+
+    - name: Force the newest PyQt6 installable on 3.9
+      if: matrix.pyqt == 'newest'
+      run: python -m pip install --upgrade "pyqt6" "pyqt6-qt6"
+
+    - name: Show resolved PyQt6 version
+      run: python -c "from PyQt6.QtCore import QT_VERSION_STR, PYQT_VERSION_STR; print('PyQt6', PYQT_VERSION_STR, '/ Qt', QT_VERSION_STR)"
+
+    - name: Launch probe
+      env:
+        MOLEDITPY_LAUNCH_TIMEOUT: "240"
+        MOLEDITPY_FULL_GUI_REQUIRED: "1"
+        QT_DEBUG_PLUGINS: "1"
+      run: python -m pytest tests/full_gui/test_full_launch.py -c tests/full_gui/pytest.ini -v -rA
+
+  # ---------------------------------------------------------------------
   # Does the GUI come up on Python 3.9, the oldest interpreter pyproject
   # supports? A launch that never finishes is the failure mode being hunted,
   # and test_entry_point_boots_in_a_subprocess kills the process and fails on
