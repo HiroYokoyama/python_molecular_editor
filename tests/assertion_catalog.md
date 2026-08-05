@@ -1515,6 +1515,16 @@ _Without an E/Z label the drawn geometry still decides the stereo._
 - assert parsed is not None
 - assert Chem.MolToSmiles(parsed) == 'C/C=C/C'
 
+### test_ez_block_falls_back_when_molecule_cannot_be_built
+_An unbuildable structure must fall through, not crash the conversion._
+
+- assert compute._ez_consistent_mol_block() is None
+
+### test_ez_block_falls_back_when_layout_fails
+_A failure while rebuilding the 2D layout is logged, not raised._
+
+- assert compute._ez_consistent_mol_block() is None
+
 ## tests/unit/test_constants.py
 
 ### test_constants_version_from_metadata
@@ -3774,6 +3784,54 @@ _No description provided._
 
 - assert any(('error occurred during SVG export' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
 
+## tests/unit/test_font_cache_warmup.py
+
+### TestSubscriptMap.test_maps_every_digit
+_No description provided._
+
+- assert '0123456789'.translate(SUBSCRIPT_MAP) == '₀₁₂₃₄₅₆₇₈₉'
+
+### TestSubscriptMap.test_labels_render_as_subscripts
+_No description provided._
+
+- assert 'H' + '2'.translate(SUBSCRIPT_MAP) == 'H₂'
+
+### TestWarmUpText.test_covers_every_subscript_digit
+_One warm-up must serve any implicit-H count, not just H₂._
+
+- assert digit in _WARM_UP_TEXT
+
+### TestWarmUpText.test_covers_latin_shaping_too
+_No description provided._
+
+- assert 'C' in _WARM_UP_TEXT and 'H' in _WARM_UP_TEXT
+
+### TestWarmFontCache.test_measures_the_warm_up_text
+_No description provided._
+
+- fm.return_value.boundingRect.assert_called_once_with(_WARM_UP_TEXT)
+
+### TestWarmFontCache.test_uses_the_font_it_is_given
+_No description provided._
+
+- assert fm.call_args[0][0] is font
+
+### TestWarmFontCache.test_never_raises
+_A cosmetic optimisation must not be able to break startup._
+
+
+### TestInitManagerHook.test_warms_with_the_configured_font
+_No description provided._
+
+- assert font.family() == 'Times New Roman'
+- assert font.pointSize() == 14
+- assert font.weight() == QFont.Weight.Normal
+
+### TestInitManagerHook.test_falls_back_when_the_scene_has_no_settings
+_No description provided._
+
+- warm.assert_called_once_with(None)
+
 ## tests/unit/test_geometry.py
 
 ### test_3d_bond_lengths
@@ -4403,6 +4461,39 @@ _Add Hydrogens must not skip an aromatic N-H (luminol is C8H7N3O2)._
 
 - assert len(after) - before == 7
 - assert set(nitrogens) == set(added_to)
+
+## tests/unit/test_icon_theme_cache.py
+
+### TestOsThemeIsQueriedOnce.test_repeated_icons_fork_only_one_helper
+_detect_system_dark_mode forks `defaults`/`gsettings`; 15+ per launch hung CI._
+
+- detect.assert_called_once()
+
+### TestOsThemeIsQueriedOnce.test_unknown_preference_is_not_re_queried
+_None is a real answer ("OS could not say"), so it must also be cached._
+
+- detect.assert_called_once()
+
+### TestColourIsStillCorrect.test_dark_os_gives_white_icons
+_No description provided._
+
+- assert MainInitManager._get_icon_foreground_color(manager) == QColor('#FFFFFF')
+
+### TestColourIsStillCorrect.test_light_os_gives_black_icons
+_No description provided._
+
+- assert MainInitManager._get_icon_foreground_color(manager) == QColor('#000000')
+
+### TestColourIsStillCorrect.test_explicit_setting_wins_without_asking_the_os
+_No description provided._
+
+- detect.assert_not_called()
+- assert MainInitManager._get_icon_foreground_color(manager) == QColor('#FF0000')
+
+### TestColourIsStillCorrect.test_falls_back_to_background_luminance
+_With no OS answer, a dark canvas still has to yield light icons._
+
+- assert MainInitManager._get_icon_foreground_color(manager) == QColor('#FFFFFF')
 
 ## tests/unit/test_io.py
 
@@ -5437,6 +5528,14 @@ _Past 999 atoms a V2000 counts line would corrupt; V3000 must be used._
 _Small structures must not churn to V3000._
 
 - assert 'V2000' in block.splitlines()[3]
+
+### test_fallback_v3000_encodes_wedge_and_dash
+_V3000 bond lines must carry stereo as CFG=1 (wedge) / CFG=3 (dash)._
+
+- assert _mdl_radical_code(0) == 0
+- assert 'V3000' in block.splitlines()[3]
+- assert any((ln.endswith('CFG=1') for ln in bond_lines))
+- assert any((ln.endswith('CFG=3') for ln in bond_lines))
 
 ## tests/unit/test_molecule_scene_behavior.py
 
