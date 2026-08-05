@@ -176,6 +176,7 @@ def full_window(app, qtbot, monkeypatch, tmp_path):
 
     # safe_mode=True: the user's real plugin folder must not influence CI.
     win = MainWindow(initial_file=None, safe_mode=True)
+    _make_rendering_synchronous(win)
     qtbot.addWidget(win)
     win.resize(1280, 800)
     win.show()
@@ -185,6 +186,27 @@ def full_window(app, qtbot, monkeypatch, tmp_path):
         yield win
     finally:
         _teardown_window(win, app)
+
+
+def _make_rendering_synchronous(win) -> None:
+    """Bypass pyvistaqt's deferred render signal for the lifetime of the test.
+
+    ``QtInteractor.render`` normally emits ``render_signal`` and lets the
+    handler run later -- and on macOS that handler is decorated ``@threaded``,
+    so the render happens on another thread at an unpredictable time. A render
+    left in flight when the window goes away is a segfault, and it does not
+    even land in our own teardown: pytest-qt pumps the event queue in its
+    ``pytest_runtest_teardown`` hook, ahead of any fixture finaliser, so the
+    crash appears inside pytest-qt with no way to guard it from here.
+
+    ``_render`` is pyvistaqt's own synchronous path (it is what the signal
+    handler calls). Binding it directly keeps rendering real -- the tests still
+    drive genuine VTK draws -- while removing the deferral that makes teardown
+    unsafe.
+    """
+    plotter = getattr(win.view_3d_manager, "plotter", None)
+    if plotter is not None and hasattr(plotter, "_render"):
+        plotter.render = plotter._render
 
 
 def _teardown_window(win, app) -> None:
