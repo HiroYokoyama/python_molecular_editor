@@ -104,12 +104,13 @@ jobs:
       run: python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
 
   # Does the GUI come up on every supported interpreter?
-  # Runs on Linux (ubuntu-latest) and macOS (macos-latest) across all
-  # supported Python versions (3.9 – 3.14).
-  # Windows is absent: no usable OpenGL there (VTK fails at
-  # wglChoosePixelFormatARB), so any result only reports on the runner.
-  # macos-13 is absent: those Intel runners are retired and the job would
-  # queue indefinitely.
+  # Linux (ubuntu-latest) and macOS (macos-latest): all versions, 3.9 – 3.14.
+  # Windows (windows-latest): 3.10 – 3.14 only; 3.9 has no usable OpenGL
+  # (VTK fails at wglChoosePixelFormatARB). No MOLEDITPY_FULL_GUI_REQUIRED
+  # on Windows: OpenGL there is intermittent, so a skip is an environment
+  # fact, not a regression.
+  # macos-13 is absent: those Intel runners are retired and jobs queue
+  # indefinitely.
   #
   # `pyqt6 < 6.10` for 3.9 is macOS-only: 6.10.2 launched fine on Linux but
   # hung at window creation on macOS (killed at 120 s). 6.9.1 passed all 6
@@ -121,8 +122,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        exclude:
+          # No usable OpenGL on the Windows runner for Python 3.9.
+          - os: windows-latest
+            python-version: "3.9"
 
     steps:
     - uses: actions/checkout@v6
@@ -168,4 +173,10 @@ jobs:
       env:
         MOLEDITPY_FULL_GUI_REQUIRED: "1"
         QT_DEBUG_PLUGINS: "1"
+      run: python -m pytest tests/full_gui/test_full_launch.py -c tests/full_gui/pytest.ini -v -rA
+
+    - name: Launch probe (Windows)
+      if: runner.os == 'Windows'
+      # No MOLEDITPY_FULL_GUI_REQUIRED: OpenGL on the Windows image is
+      # intermittent, so a skip is an environment fact, not a regression.
       run: python -m pytest tests/full_gui/test_full_launch.py -c tests/full_gui/pytest.ini -v -rA
