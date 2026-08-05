@@ -173,7 +173,11 @@ jobs:
       env:
         MOLEDITPY_FULL_GUI_REQUIRED: "1"
         QT_DEBUG_PLUGINS: "1"
-      run: python -m pytest tests/full_gui/test_full_launch.py -c tests/full_gui/pytest.ini -v -rA
+      # Only the subprocess-isolated test: the fixture-based tests crash in
+      # pyvistaqt's @threaded teardown (SIGSEGV in pytest-qt's processEvents,
+      # before pytest_sessionfinish can call os._exit). The subprocess test
+      # proves the GUI boots in a cold interpreter, which is all a probe needs.
+      run: python -m pytest tests/full_gui/test_full_launch.py::test_entry_point_boots_in_a_subprocess -c tests/full_gui/pytest.ini -v -rA
 
     - name: Launch probe (Windows)
       if: runner.os == 'Windows'
