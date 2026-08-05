@@ -72,6 +72,10 @@ from .settings_dialog import SettingsDialog
 from .zoomable_view import ZoomableView
 
 
+# Distinct from None, which is a real answer meaning "OS preference unknown".
+_UNQUERIED = object()
+
+
 class MainInitManager:
     """Feature class separated from main_window.py"""
 
@@ -80,6 +84,7 @@ class MainInitManager:
     ) -> None:
         self.host = host
         # Explicit declarations for Mypy
+        self._os_dark_pref: Any = _UNQUERIED
         self.scene: Any = None  # MoleculeScene, created during init
         self.data: Optional[MolecularData] = None
         self.formula_label: Optional[QLabel] = None
@@ -1077,7 +1082,11 @@ class MainInitManager:
                 return QColor(fg)
 
         with suppress_log(Exception):
-            os_pref = detect_system_dark_mode()
+            # Cached: this forks `defaults`/`gsettings` on macOS and Linux, and
+            # icon painting asks once per icon (15+ during startup).
+            if self._os_dark_pref is _UNQUERIED:
+                self._os_dark_pref = detect_system_dark_mode()
+            os_pref = self._os_dark_pref
             if os_pref is not None:
                 return QColor("#FFFFFF") if os_pref else QColor("#000000")
 
