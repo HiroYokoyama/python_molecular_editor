@@ -178,18 +178,16 @@ def pytest_runtest_teardown(item, nextitem):
     pyvistaqt decorates render with @threaded on macOS, so renders become
     queued signals.  pytest-qt's teardown hook pumps the event queue ahead of
     any fixture finaliser, delivering a render into a plotter that is still
-    open.  Steps to guard against this:
+    open.  Python attribute reassignment (_render = lambda) does NOT redirect
+    queued metacalls because Qt binds the C++ slot pointer at connect time.
 
-    1. Stub _render / render so any delivery is a no-op.
-    2. Disconnect render_signal so no further deliveries are scheduled.
-    3. On macOS, finalize the VTK render window so any queued metacall that
-       still gets delivered by Qt (C++ slot pointers are bound at connect
-       time, Python attribute reassignment does not change them) hits a
-       finalized context that is safe to call into.
-    4. Drain the queue NOW, while the guards are live, before pytest-qt can.
+    The only safe defence: finalize the VTK render window *before* pytest-qt
+    pumps.  Finalize() detaches the OpenGL context at the C++ level, making
+    any subsequent render delivery a harmless no-op inside VTK itself.
+
+    We intentionally do NOT call processEvents() here — doing so would
+    deliver the queued metacalls ourselves, which crashes just the same.
     """
-    from PyQt6.QtWidgets import QApplication
-
     for plotter in list(_live_plotters):
         try:
             plotter._render = lambda *a, **k: None
@@ -200,23 +198,12 @@ def pytest_runtest_teardown(item, nextitem):
             plotter.render_signal.disconnect()
         except (RuntimeError, TypeError, AttributeError):
             pass
-        # On macOS, finalize the VTK render window so that any C++ metacall
-        # still sitting in the queue renders into a safely finalized context
-        # instead of a live OpenGL window that is being torn down.
-        if sys.platform == "darwin":
-            try:
-                rw = plotter.render_window
-                if rw is not None:
-                    rw.Finalize()
-            except (RuntimeError, AttributeError):
-                pass
-
-    q_app = QApplication.instance()
-    if q_app is not None:
-        # Flush any metacalls already sitting in the queue so pytest-qt's
-        # subsequent pump finds nothing dangerous to deliver.
-        for _ in range(5):
-            q_app.processEvents()
+        try:
+            rw = plotter.render_window
+            if rw is not None:
+                rw.Finalize()
+        except (RuntimeError, AttributeError):
+            pass
 
 
 def _make_rendering_synchronous(win) -> None:
