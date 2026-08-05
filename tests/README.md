@@ -91,7 +91,7 @@ least:
 *   **Not** part of a no-flag `run_all_tests.py` run — it needs a display and an OpenGL context. Opt in with `--full-gui`, and on Linux run it under `xvfb-run`.
 *   **CI coverage:**
     *   Full 36-test suite gates on Linux (Python 3.11, 3.13) via `xvfb-run` + llvmpipe.
-    *   Launch probe (6 tests, `test_full_launch.py`) runs on **Linux and macOS** across **all supported Python versions (3.9 – 3.14)**. Windows is excluded — no usable OpenGL on the runner.
+    *   Launch probe (`test_full_launch.py`) runs on **Linux, macOS and Windows** across **Python 3.9 – 3.14** (no Windows 3.9). Only Linux gates: macOS runs the subprocess-isolated test alone, and the Windows runner has no usable OpenGL, so it reports skips.
 *   [**Read More**](full_gui/README.md)
 
 ## Test Reports & Catalogs

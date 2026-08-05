@@ -272,18 +272,18 @@ def _teardown_window(win, app) -> None:
         app.processEvents()
 
 
-@pytest.hookimpl(trylast=True)
+@pytest.hookimpl(hookwrapper=True)
 def pytest_sessionfinish(session, exitstatus):
     """Bypass Qt/VTK shutdown on macOS to avoid libqmacstyle Abort trap 6.
 
-    On macOS, Qt unloads style plugins during QApplication destruction and
-    then tries to access them, raising SIGABRT (exit code 134).  The tests
-    have already run and the exit status is final, so skipping normal cleanup
-    via os._exit() is safe.  The guard is macOS-only; other platforms use
-    normal teardown.
+    Qt unloads style plugins during QApplication destruction and then touches
+    them, raising SIGABRT (exit 134). The exit status is already final, so
+    os._exit() is safe. A hookwrapper — not trylast — because the terminal
+    reporter writes its summary from this same hook, and exiting before it
+    ran left macOS jobs with no pass/fail line at all.
     """
+    yield
     if sys.platform == "darwin":
-        import sys as _sys
-        _sys.stdout.flush()
-        _sys.stderr.flush()
+        sys.stdout.flush()
+        sys.stderr.flush()
         os._exit(int(exitstatus))

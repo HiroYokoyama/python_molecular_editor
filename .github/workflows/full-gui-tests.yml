@@ -66,11 +66,11 @@ jobs:
         xvfb-run -a --server-args="-screen 0 1600x1200x24" \
           python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
 
-  # Informational: skips are expected where the runner has no usable OpenGL.
+  # A failure here is red. Skips are not failures: without
+  # MOLEDITPY_FULL_GUI_REQUIRED a runner with no OpenGL skips the tier.
   full-gui-desktop:
     name: full-gui / ${{ matrix.os }} / py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -103,7 +103,8 @@ jobs:
     - name: Run Full GUI Tests
       run: python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
 
-  # Does the GUI come up on every supported interpreter?
+  # Does the GUI come up on every supported interpreter? A hang or crash here
+  # is red — that is the whole point of the probe.
   # Linux (ubuntu-latest) and macOS (macos-latest): all versions, 3.9 – 3.14.
   # Windows (windows-latest): 3.10 – 3.14 only; 3.9 has no usable OpenGL
   # (VTK fails at wglChoosePixelFormatARB). No MOLEDITPY_FULL_GUI_REQUIRED
@@ -118,7 +119,6 @@ jobs:
   launch-probe:
     name: launch-probe / ${{ matrix.os }} / py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
