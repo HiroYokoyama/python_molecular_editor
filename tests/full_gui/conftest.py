@@ -200,7 +200,17 @@ def _teardown_window(win, app) -> None:
     * pyvistaqt's own render path -- ``QtInteractor.render`` emits a signal
       handled later, and on macOS that handler runs on another thread.
 
-    So: stop the timer, finalise the plotter, then drain the event queue.
+    Order matters, and it is not the obvious one:
+
+    1. Stop the watchdog and silence the render path *before* anything else.
+       Rendering is what segfaults, and a render can already be sitting in the
+       queue -- draining first ran it and crashed inside ``processEvents``.
+       Stubbing ``render`` does not break the app's other teardown callbacks;
+       ``view_isometric`` and friends still work, they just stop drawing.
+    2. Close the window and drain, so those queued callbacks run against a
+       plotter that is still alive (finalising first gives them a camera of
+       ``None`` and an AttributeError).
+    3. Finalise the plotter, then drain again.
     """
     plotter = getattr(win.view_3d_manager, "plotter", None)
 
@@ -211,21 +221,7 @@ def _teardown_window(win, app) -> None:
         except RuntimeError:
             pass
 
-    win.state_manager.has_unsaved_changes = False
-    win.closeEvent = lambda e: e.accept()
-    win.close()
-
-    # Drain first: the app still has queued callbacks (view_isometric,
-    # deferred redraws) that need a live plotter. Finalising before they run
-    # gives them a camera of None.
-    for _ in range(10):
-        app.processEvents()
-
     if plotter is not None:
-        # Silence the render path before finalising. pyvistaqt's `render` emits
-        # a signal whose handler is decorated `@threaded` on macOS, so closing
-        # can schedule a render on another thread against a window that is
-        # already going away -- segfault, inside plotter.close() itself.
         try:
             plotter.render_signal.disconnect()
         except (RuntimeError, TypeError, AttributeError):
@@ -234,6 +230,15 @@ def _teardown_window(win, app) -> None:
             plotter.render = lambda *a, **k: None
         except (RuntimeError, AttributeError):
             pass
+
+    win.state_manager.has_unsaved_changes = False
+    win.closeEvent = lambda e: e.accept()
+    win.close()
+
+    for _ in range(10):
+        app.processEvents()
+
+    if plotter is not None:
         try:
             plotter.close()
         except (RuntimeError, AttributeError, TypeError):
