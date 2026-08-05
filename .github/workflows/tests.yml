@@ -2,9 +2,10 @@ name: MoleditPy Tests
 
 on:
   push:
-    branches: [ main, master, dev ]
+    # 'dev-*' covers the dev-N.N.N release branches, which otherwise got no CI.
+    branches: [ main, master, dev, 'dev-*' ]
   pull_request:
-    branches: [ main, master, dev ]
+    branches: [ main, master, dev, 'dev-*' ]
   workflow_dispatch:
 
 permissions:

@@ -43,6 +43,34 @@ from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 if TYPE_CHECKING:
     from .bond_item import BondItem
 
+SUBSCRIPT_MAP = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+
+# Every subscript digit, so one warm-up covers any implicit-H count.
+_WARM_UP_TEXT = "CH" + "0123456789".translate(SUBSCRIPT_MAP)
+
+
+def warm_font_cache(font: Optional[QFont] = None) -> None:
+    """Pay Qt's one-off font costs up front instead of on the first heteroatom.
+
+    Two process-wide costs hide in QFontMetricsF: the first text shaping in a
+    family (~10-120 ms, worse on a cold Windows font cache) and the first
+    lookup of a subscript digit, which Arial lacks — Qt answers that by walking
+    the whole system font database (~200-330 ms, measured).
+
+    Drawing a carbon skeleton pays neither: a bonded neutral carbon is
+    invisible, so it renders no glyph at all. The first O or N a user places
+    gets "OH₂" and pays both at once, mid-click, as a visible freeze.
+
+    Call once on the GUI thread after the window is up. QFontMetricsF is not
+    usable off the GUI thread, so this cannot move to a worker.
+    """
+    try:
+        QFontMetricsF(font or QFont(FONT_FAMILY, 20, FONT_WEIGHT_BOLD)).boundingRect(
+            _WARM_UP_TEXT
+        )
+    except (RuntimeError, TypeError, ValueError):
+        logging.debug("Font cache warm-up skipped", exc_info=True)
+
 
 class AtomItem(QGraphicsItem):
     """2D scene item representing a single atom in the molecule editor."""
@@ -138,8 +166,7 @@ class AtomItem(QGraphicsItem):
             if not is_skeletal_carbon:
                 hydrogen_part = "H"
                 if self.implicit_h_count > 1:
-                    subscript_map = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
-                    hydrogen_part += str(self.implicit_h_count).translate(subscript_map)
+                    hydrogen_part += str(self.implicit_h_count).translate(SUBSCRIPT_MAP)
 
         flip_text = False
         if hydrogen_part and self.bonds:
@@ -261,8 +288,7 @@ class AtomItem(QGraphicsItem):
             if not is_skeletal_carbon:
                 hydrogen_part = "H"
                 if self.implicit_h_count > 1:
-                    subscript_map = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
-                    hydrogen_part += str(self.implicit_h_count).translate(subscript_map)
+                    hydrogen_part += str(self.implicit_h_count).translate(SUBSCRIPT_MAP)
 
         flip_text = False
         if hydrogen_part and self.bonds:
@@ -361,9 +387,8 @@ class AtomItem(QGraphicsItem):
                 if not is_skeletal_carbon:
                     hydrogen_part = "H"
                     if self.implicit_h_count > 1:
-                        subscript_map = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
                         hydrogen_part += str(self.implicit_h_count).translate(
-                            subscript_map
+                            SUBSCRIPT_MAP
                         )
 
             # --- Determine if the text should be flipped ---
