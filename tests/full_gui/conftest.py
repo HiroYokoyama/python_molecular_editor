@@ -103,7 +103,7 @@ def _probe_render_context() -> "str | None":
         return _render_probe_error
 
     if res.returncode != 0 or "PROBE_OK" not in res.stdout:
-        tail = (res.stderr or res.stdout or "").strip().splitlines()[-3:]
+        tail = (res.stderr or res.stdout or "").strip().splitlines()[-12:]
         _render_probe_error = "no usable VTK-in-Qt render context: " + " | ".join(tail)
     return _render_probe_error
 

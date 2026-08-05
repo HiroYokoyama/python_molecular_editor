@@ -182,6 +182,12 @@ jobs:
       if: runner.os == 'Linux'
       env:
         MOLEDITPY_LAUNCH_TIMEOUT: "240"
+        # Without this the probe *skips* when Qt cannot start, and the job goes
+        # green while reporting nothing -- which is exactly what happened on
+        # the py3.9 legs. A GUI that will not come up is the answer this job
+        # exists to give, so it has to be a failure.
+        MOLEDITPY_FULL_GUI_REQUIRED: "1"
+        QT_DEBUG_PLUGINS: "1"
       run: |
         xvfb-run -a --server-args="-screen 0 1600x1200x24" \
           python -m pytest tests/full_gui/test_full_launch.py \
@@ -191,4 +197,10 @@ jobs:
       if: runner.os != 'Linux'
       env:
         MOLEDITPY_LAUNCH_TIMEOUT: "240"
+        # Without this the probe *skips* when Qt cannot start, and the job goes
+        # green while reporting nothing -- which is exactly what happened on
+        # the py3.9 legs. A GUI that will not come up is the answer this job
+        # exists to give, so it has to be a failure.
+        MOLEDITPY_FULL_GUI_REQUIRED: "1"
+        QT_DEBUG_PLUGINS: "1"
       run: python -m pytest tests/full_gui/test_full_launch.py -c tests/full_gui/pytest.ini -v -rA
