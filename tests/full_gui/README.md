@@ -1,6 +1,6 @@
 # Full-GUI tests
 
-The fourth tier (`tests/gui`) runs the real `MainWindow` with VTK and PyVista
+`tests/gui` and `tests/e2e` run the real `MainWindow` with VTK and PyVista
 **mocked**. This tier mocks none of it:
 
 | | `tests/gui`, `tests/e2e` | `tests/full_gui` |
