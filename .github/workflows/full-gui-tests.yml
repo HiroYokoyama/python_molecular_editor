@@ -120,32 +120,30 @@ jobs:
       run: python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
 
   # ---------------------------------------------------------------------
-  # Python 3.9, on every OS, twice: once with the PyQt6 range pyproject pins
-  # for 3.9 (`pyqt6 < 6.10`), and once with the newest PyQt6 that still
-  # installs on 3.9. That second leg is what tests whether the pin is still
-  # needed -- if the GUI does not come up there, the constraint is earning its
-  # keep and CI can now prove it.
-  #
-  # PyQt6 6.11.0 declares requires-python >=3.10, so "latest that installs on
-  # 3.9" is the 6.10.x line; pip resolves it automatically when unpinned.
-  #
-  # A launch that never finishes is the failure mode being hunted, and
-  # test_entry_point_boots_in_a_subprocess kills the process and fails on
+  # Does the GUI come up on Python 3.9, the oldest interpreter pyproject
+  # supports? A launch that never finishes is the failure mode being hunted,
+  # and test_entry_point_boots_in_a_subprocess kills the process and fails on
   # timeout, so a hang is reported rather than left to burn the job.
+  #
+  # This job also carried a second `newest` leg for a while, force-upgrading to
+  # the newest PyQt6 that installs on 3.9 (the 6.10.x line -- 6.11.0 declares
+  # requires-python >=3.10) to test whether `pyqt6 < 6.10` is still earning its
+  # keep. Answer, on Linux: PyQt6 6.10.2 launched the GUI fine, 6 passed. The
+  # leg has been removed rather than left running, having answered its
+  # question; re-add it if the pin is ever revisited.
   #
   # macos-13 is deliberately absent: GitHub retired those Intel runners, and
   # requesting the label leaves the job queued until the run is cancelled
   # (observed here: 2 h 36 m, never picked up).
   # ---------------------------------------------------------------------
   launch-probe-py39:
-    name: launch-probe / ${{ matrix.os }} / py3.9 / pyqt-${{ matrix.pyqt }}
+    name: launch-probe / ${{ matrix.os }} / py3.9
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        pyqt: [pinned, newest]
 
     steps:
     - uses: actions/checkout@v6

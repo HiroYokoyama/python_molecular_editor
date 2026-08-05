@@ -188,6 +188,31 @@ def full_window(app, qtbot, monkeypatch, tmp_path):
         _teardown_window(win, app)
 
 
+_live_plotters: list = []
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_teardown(item, nextitem):
+    """Disarm every plotter *before* pytest-qt pumps the event queue.
+
+    pytest-qt's own ``pytest_runtest_teardown`` calls ``_process_events()``,
+    and it runs ahead of any fixture finaliser. A ``render_signal`` emission
+    queued during the test is therefore delivered there, into a plotter this
+    fixture has not been given the chance to close yet -- and on macOS that
+    delivery segfaults. Disconnecting the signal in the fixture cannot help:
+    an already-queued metacall is not undone by disconnecting.
+
+    ``_render`` is the slot on the receiving end, so stubbing it here makes the
+    queued delivery a no-op no matter when it arrives.
+    """
+    for plotter in _live_plotters:
+        try:
+            plotter._render = lambda *a, **k: None
+            plotter.render = lambda *a, **k: None
+        except (RuntimeError, AttributeError):
+            continue
+
+
 def _make_rendering_synchronous(win) -> None:
     """Bypass pyvistaqt's deferred render signal for the lifetime of the test.
 
@@ -207,6 +232,7 @@ def _make_rendering_synchronous(win) -> None:
     plotter = getattr(win.view_3d_manager, "plotter", None)
     if plotter is not None and hasattr(plotter, "_render"):
         plotter.render = plotter._render
+        _live_plotters.append(plotter)
 
 
 def _teardown_window(win, app) -> None:
@@ -278,6 +304,8 @@ def _teardown_window(win, app) -> None:
             plotter.close()
         except (RuntimeError, AttributeError, TypeError):
             pass
+        if plotter in _live_plotters:
+            _live_plotters.remove(plotter)
 
     for _ in range(10):
         app.processEvents()
