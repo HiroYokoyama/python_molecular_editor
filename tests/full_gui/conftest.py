@@ -272,18 +272,26 @@ def _teardown_window(win, app) -> None:
         app.processEvents()
 
 
-@pytest.hookimpl(hookwrapper=True)
 def pytest_sessionfinish(session, exitstatus):
+    session.config._moleditpy_exitstatus = int(exitstatus)
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_unconfigure(config):
     """Bypass Qt/VTK shutdown on macOS to avoid libqmacstyle Abort trap 6.
 
     Qt unloads style plugins during QApplication destruction and then touches
     them, raising SIGABRT (exit 134). The exit status is already final, so
-    os._exit() is safe. A hookwrapper — not trylast — because the terminal
-    reporter writes its summary from this same hook, and exiting before it
-    ran left macOS jobs with no pass/fail line at all.
+    os._exit() is safe.
+
+    This must not run from pytest_sessionfinish: the terminal reporter writes
+    its summary from that same hook, and exiting there cost macOS jobs their
+    pass/fail line entirely (both trylast and hookwrapper landed too early).
+    pytest_unconfigure is strictly after all reporting.
     """
-    yield
-    if sys.platform == "darwin":
-        sys.stdout.flush()
-        sys.stderr.flush()
-        os._exit(int(exitstatus))
+    if sys.platform != "darwin":
+        return
+    status = getattr(config, "_moleditpy_exitstatus", 0)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(int(status))

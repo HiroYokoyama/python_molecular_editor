@@ -20,6 +20,9 @@ def test_window_is_shown_and_exposed(full_window):
     """The window really becomes visible (not just constructed)."""
     assert full_window.isVisible()
     assert full_window.windowTitle()
+    handle = full_window.windowHandle()
+    assert handle is not None, "shown window has no native handle"
+    assert handle.isExposed(), "window was shown but never mapped by the compositor"
 
 
 def test_core_managers_exist(full_window):
@@ -63,19 +66,16 @@ def test_safe_mode_loads_no_plugins(full_window):
     )
 
 
-@pytest.mark.timeout(LAUNCH_TIMEOUT_S + 60)
-def test_entry_point_boots_in_a_subprocess(tmp_path):
-    """Launch in a cold interpreter, where import-order regressions show up."""
-    src_root = os.path.abspath(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "moleditpy-linux" if PKG == "moleditpy_linux" else "moleditpy",
-            "src",
-        )
-    )
-    code = f"""
+def _child_source(src_root: str) -> str:
+    """Source for the cold-interpreter launch, driven through the real `main()`.
+
+    Nothing here reimplements the boot: `moleditpy.main.main()` runs verbatim,
+    so setup_logging, the excepthook, argparse, qInstallMessageHandler and the
+    win32 AppUserModelID call are all on the path a user's `moleditpy` takes.
+    MainWindow is subclassed only to emit stage markers and to arm the probe,
+    which happens from `show()` — after main() has built the QApplication.
+    """
+    return f"""
 import os, sys
 os.environ.pop("QT_QPA_PLATFORM", None)
 if os.path.isdir({src_root!r}):
@@ -91,32 +91,89 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
 
 mark("STAGE_QT_IMPORTED")
-MainWindow = importlib.import_module("{PKG}.ui.main_window").MainWindow
+main_mod = importlib.import_module("{PKG}.main")
 mark("STAGE_APP_IMPORTED")
 
-app = QApplication([sys.argv[0]])
-win = MainWindow(initial_file=None, safe_mode=True)
-mark("STAGE_WINDOW_CONSTRUCTED")
-win.show()
-mark("STAGE_SHOW_CALLED")
-
-def _check():
-    # Printed from inside the live loop: after app.exec() the verdict would sit
-    # behind Qt/VTK shutdown, which can crash and hide a successful launch.
-    print(
-        "LAUNCH_OK",
-        win.isVisible(),
-        win.view_3d_manager.plotter is not None,
-        flush=True,
-    )
-    app.quit()
+EXPOSE_DEADLINE_MS = 30000
+POLL_MS = 100
+_elapsed = [0]
+_entered = [False]
 
 
-QTimer.singleShot(3000, _check)
-app.exec()
+def _verdict(win):
+    handle = win.windowHandle()
+    exposed = handle is not None and handle.isExposed()
+    plotter = getattr(win.view_3d_manager, "plotter", None)
+    rendered = False
+    if exposed and plotter is not None:
+        # A real round trip through the GL pipeline, not just "the object exists".
+        plotter.render()
+        rendered = True
+    return win.isVisible(), exposed, rendered
+
+
+def _poll(win):
+    if not _entered[0]:
+        _entered[0] = True
+        mark("STAGE_EVENT_LOOP_ENTERED")
+    visible, exposed, rendered = _verdict(win)
+    if visible and exposed and rendered:
+        # Printed from inside the live loop: after app.exec() the verdict would
+        # sit behind Qt/VTK shutdown, which can crash and hide a good launch.
+        print("LAUNCH_OK visible=True exposed=True render=True", flush=True)
+        QApplication.instance().quit()
+        return
+    _elapsed[0] += POLL_MS
+    if _elapsed[0] >= EXPOSE_DEADLINE_MS:
+        print(
+            "LAUNCH_INCOMPLETE visible=%s exposed=%s render=%s"
+            % (visible, exposed, rendered),
+            flush=True,
+        )
+        QApplication.instance().quit()
+        return
+    QTimer.singleShot(POLL_MS, lambda: _poll(win))
+
+
+class _ProbeWindow(main_mod.MainWindow):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        mark("STAGE_WINDOW_CONSTRUCTED")
+
+    def show(self):
+        super().show()
+        mark("STAGE_SHOW_CALLED")
+        QTimer.singleShot(POLL_MS, lambda: _poll(self))
+
+
+main_mod.MainWindow = _ProbeWindow
+
+sys.argv = ["moleditpy", "--safe"]
+try:
+    main_mod.main()
+except SystemExit:
+    pass
 print("EXIT_REACHED", flush=True)
 os._exit(0)
 """
+
+
+@pytest.mark.timeout(LAUNCH_TIMEOUT_S + 60)
+def test_entry_point_boots_in_a_subprocess(tmp_path):
+    """Run the shipped entry point in a cold interpreter and watch it come up.
+
+    A launch that never finishes is the failure this exists for, so the child
+    is killed and reported rather than left to hang the job.
+    """
+    src_root = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "moleditpy-linux" if PKG == "moleditpy_linux" else "moleditpy",
+            "src",
+        )
+    )
     env = dict(os.environ)
     env["HOME"] = str(tmp_path)
     env["USERPROFILE"] = str(tmp_path)
@@ -125,7 +182,7 @@ os._exit(0)
 
     started = time.monotonic()
     proc = subprocess.Popen(
-        [sys.executable, "-c", code],
+        [sys.executable, "-c", _child_source(src_root)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -135,7 +192,12 @@ os._exit(0)
         stdout, stderr = proc.communicate(timeout=LAUNCH_TIMEOUT_S)
     except subprocess.TimeoutExpired:
         proc.kill()
-        stdout, stderr = proc.communicate()
+        try:
+            # kill() reaps only the direct child; a surviving grandchild holding
+            # the pipe would otherwise block here with no bound.
+            stdout, stderr = proc.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            stdout, stderr = "", "<pipes never closed after kill>"
         stages = [ln for ln in stdout.splitlines() if ln.startswith("STAGE_")]
         pytest.fail(
             f"the GUI never finished launching within {LAUNCH_TIMEOUT_S}s "
@@ -146,7 +208,7 @@ os._exit(0)
         )
 
     elapsed = time.monotonic() - started
-    assert "LAUNCH_OK True True" in stdout, (
+    assert "LAUNCH_OK visible=True exposed=True render=True" in stdout, (
         f"launch failed after {elapsed:.1f}s (rc={proc.returncode})\n"
         f"--- stdout ---\n{stdout}\n--- stderr ---\n{stderr[-4000:]}"
     )

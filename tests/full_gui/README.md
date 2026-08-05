@@ -55,7 +55,18 @@ disabling every test in this directory.
 
 `MOLEDITPY_LAUNCH_TIMEOUT` exists because the failure mode worth catching is a
 launch that *never finishes* — reported on macOS with the PyQt6 range pinned
-for Python 3.9. `test_entry_point_boots_in_a_subprocess` prints staged
+for Python 3.9. In-process that is undetectable: an event loop that never
+returns cannot be interrupted, and pytest-timeout's `signal` handler fires
+inside a Qt event handler where pyvistaqt catches it. A child process can be
+killed, so the hang becomes a red test instead of a stalled job.
+
+`test_entry_point_boots_in_a_subprocess` runs `moleditpy.main.main()` itself
+with `sys.argv = ["moleditpy", "--safe"]`, so `setup_logging`, the excepthook,
+argparse, `qInstallMessageHandler` and the win32 AppUserModelID call are all
+on the tested path — `MainWindow` is subclassed only to emit stage markers.
+It polls until the window is genuinely exposed and a `plotter.render()` round
+trip succeeds, then prints its verdict from inside the live loop. The stage
 markers (`STAGE_QT_IMPORTED`, `STAGE_APP_IMPORTED`,
-`STAGE_WINDOW_CONSTRUCTED`, `STAGE_SHOW_CALLED`), so a timeout reports the
-last stage reached rather than just "it hung".
+`STAGE_WINDOW_CONSTRUCTED`, `STAGE_SHOW_CALLED`,
+`STAGE_EVENT_LOOP_ENTERED`) mean a timeout reports the last stage reached
+rather than just "it hung".
