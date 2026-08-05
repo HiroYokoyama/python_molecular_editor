@@ -259,7 +259,7 @@ def _teardown_window(win, app) -> None:
     for _ in range(10):
         app.processEvents()
 
-    if plotter is not None:
+    if plotter is not None and sys.platform != "darwin":
         try:
             plotter.close()
         except (RuntimeError, AttributeError, TypeError):
