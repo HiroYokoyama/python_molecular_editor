@@ -59,12 +59,16 @@ def test_2d_view_and_scene_are_live(full_window):
     assert scene.views(), "scene has no attached view"
 
 
-def test_safe_mode_loaded_no_plugins(full_window):
-    """Safe mode must leave the plugin registry empty so CI is deterministic."""
-    pm = getattr(full_window, "plugin_manager", None)
-    if pm is None:
-        pytest.skip("no plugin_manager attribute on this build")
-    assert not getattr(pm, "plugins", []), "safe mode still loaded plugins"
+def test_safe_mode_loads_no_plugins(full_window):
+    """Safe mode leaves no plugin manager at all, so CI is deterministic.
+
+    `MainInitManager.__init__` sets `plugin_manager = None` under safe mode; if
+    that ever becomes a real manager, the developer's own ~/.moleditpy/plugins
+    would start influencing this tier.
+    """
+    assert full_window.plugin_manager is None, (
+        f"safe mode built a plugin manager: {full_window.plugin_manager!r}"
+    )
 
 
 def test_entry_point_boots_in_a_subprocess(tmp_path):
@@ -108,20 +112,23 @@ mark("STAGE_WINDOW_CONSTRUCTED")
 win.show()
 mark("STAGE_SHOW_CALLED")
 
-seen = {{}}
-
-
 def _check():
-    # Sampled while the event loop is live -- after app.exec() returns the
-    # window may already be tearing down, which says nothing about the launch.
-    seen["visible"] = win.isVisible()
-    seen["plotter"] = win.view_3d_manager.plotter is not None
+    # Reported from inside the live event loop. Printing after app.exec()
+    # returns would put the verdict behind Qt/VTK shutdown, which can crash on
+    # some platforms and would then hide a launch that actually succeeded.
+    print(
+        "LAUNCH_OK",
+        win.isVisible(),
+        win.view_3d_manager.plotter is not None,
+        flush=True,
+    )
     app.quit()
 
 
 QTimer.singleShot(3000, _check)
 app.exec()
-print("LAUNCH_OK", seen.get("visible"), seen.get("plotter"), flush=True)
+print("EXIT_REACHED", flush=True)
+os._exit(0)
 """
     env = dict(os.environ)
     env["HOME"] = str(tmp_path)

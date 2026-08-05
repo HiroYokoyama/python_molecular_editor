@@ -222,6 +222,18 @@ def _teardown_window(win, app) -> None:
         app.processEvents()
 
     if plotter is not None:
+        # Silence the render path before finalising. pyvistaqt's `render` emits
+        # a signal whose handler is decorated `@threaded` on macOS, so closing
+        # can schedule a render on another thread against a window that is
+        # already going away -- segfault, inside plotter.close() itself.
+        try:
+            plotter.render_signal.disconnect()
+        except (RuntimeError, TypeError, AttributeError):
+            pass
+        try:
+            plotter.render = lambda *a, **k: None
+        except (RuntimeError, AttributeError):
+            pass
         try:
             plotter.close()
         except (RuntimeError, AttributeError, TypeError):
