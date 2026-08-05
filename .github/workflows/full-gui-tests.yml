@@ -104,6 +104,8 @@ jobs:
       run: python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
 
   # Does the GUI come up on every supported interpreter?
+  # Runs on Linux (ubuntu-latest) and macOS (macos-latest) across all
+  # supported Python versions (3.9 – 3.14).
   # Windows is absent: no usable OpenGL there (VTK fails at
   # wglChoosePixelFormatARB), so any result only reports on the runner.
   # macos-13 is absent: those Intel runners are retired and the job would
