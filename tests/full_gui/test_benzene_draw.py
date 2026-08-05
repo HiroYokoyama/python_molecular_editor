@@ -41,8 +41,7 @@ def test_benzene_template_creates_scene_items(full_window, qtbot):
 def test_bond_drawn_by_real_mouse_drag(full_window, qtbot):
     """Press-drag-release on the canvas creates two atoms and a bond.
 
-    The one drawing path driven entirely by real Qt mouse events, so the
-    press/move/release handling in `MoleculeScene` is covered end to end.
+    The one drawing path driven entirely by real Qt mouse events.
     """
     view = full_window.init_manager.view_2d
     viewport = view.viewport()
@@ -133,9 +132,8 @@ def test_second_ring_fuses_into_naphthalene(full_window, qtbot):
     bond_item = next(iter(scene.bond_items.values()))
     mid = (bond_item.atom1.pos() + bond_item.atom2.pos()) / 2.0
 
-    # Nudge the probe point outward from the ring centre. Exactly on the
-    # midpoint the new ring's side is undefined, and it gets built back on top
-    # of the existing one -- every vertex fuses and the atom count never grows.
+    # Exactly on the midpoint the new ring's side is undefined and it lands on
+    # top of the old one, fusing every vertex; nudge outward from the centre.
     centre = _centroid([a.pos() for a in scene.atom_items.values()])
     outward = mid - centre
     scale = 3.0 / math.hypot(outward.x(), outward.y())
@@ -144,9 +142,8 @@ def test_second_ring_fuses_into_naphthalene(full_window, qtbot):
 
     full_window.init_manager.mode_actions["template_benzene"].trigger()
 
-    # Arm the preview the way the hover handler does. A synthesized mouseMove
-    # onto a one-pixel-wide bond is not reliable enough to gate CI on, and the
-    # behaviour under test is the fusion, not Qt's hit-testing.
+    # Arm the preview the way the hover handler does; the fusion is what is
+    # under test here, not Qt's hit-testing of a one-pixel-wide bond.
     scene.update_template_preview(probe)
     ctx = scene.template_context
     # "items" holds the two atoms of the bond the new ring will share.

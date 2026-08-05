@@ -21,11 +21,8 @@ def ring_positions(center: QPointF = CENTER, radius: float = RING_RADIUS):
 
 
 def draw_benzene_by_hand(window):
-    """Build benzene atom-by-atom through the scene's own creation API.
-
-    Deterministic (no hit-testing), so tests that are really about conversion
-    or rendering do not fail for drawing reasons.
-    """
+    """Build benzene through the scene's creation API: no hit-testing, so tests
+    about conversion or rendering cannot fail for drawing reasons."""
     scene = window.init_manager.scene
     window.ui_manager.set_mode("atom_C")
 
@@ -41,12 +38,9 @@ def draw_benzene_by_hand(window):
 def place_benzene_template(window, qtbot, viewport_pos: QPoint = None):
     """Place the benzene ring the way a user does: pick the tool, hover, click.
 
-    Arming the preview is a real step, not cosmetic: the release handler only
-    commits a template when `template_context` already holds points, and it is
-    `MoleculeScene.mouseMoveEvent` that fills it. Synthesized hover moves do
-    not reach that handler dependably without a physical cursor, so the hover's
-    own callee -- `update_template_preview` -- is invoked directly and the
-    commit is then driven by a genuine mouse click.
+    The release only commits when `template_context` holds points, and it is
+    the hover handler that fills it. Synthesized hovers do not reach that
+    handler reliably, so its callee is invoked directly; the click is real.
     """
     view = window.init_manager.view_2d
     viewport = view.viewport()

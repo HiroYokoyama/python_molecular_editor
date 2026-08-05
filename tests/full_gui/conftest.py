@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Conftest for the full-GUI tier.
+"""Conftest for the full-GUI tier: real window, real VTK, real worker thread.
 
-Unlike ``tests/gui`` and ``tests/e2e``, nothing is mocked here: the real
-PyVista/VTK ``CustomQtInteractor`` is embedded, the real ``CalculationWorker``
-QThread performs 2D->3D conversion, and the window is actually ``show()``-n.
-The only concessions to CI are a sandboxed home directory, safe mode (no
-plugins), and neutralised modal dialogs.
-
-If VTK cannot create a rendering context (no GPU *and* no software GL), every
-test in this tier skips rather than fails -- see :func:`_probe_render_context`.
+See README.md for what this tier covers and how to run it.
 """
 
 import os
@@ -18,10 +11,7 @@ import importlib.util
 
 import pytest
 
-# ---------------------------------------------------------------------------
-# Package selection: moleditpy_linux on Linux, moleditpy everywhere else.
-# Mirrors tests/e2e/conftest.py so the same suite covers both variants.
-# ---------------------------------------------------------------------------
+# Package selection mirrors tests/e2e/conftest.py.
 _IS_LINUX = sys.platform.startswith("linux")
 
 _LINUX_SRC = os.path.abspath(
@@ -48,12 +38,8 @@ else:
 
 PKG = _PKG
 
-# A *real* window is the point of this tier. QT_QPA_PLATFORM=offscreen gives the
-# embedded QVTKRenderWindowInteractor no native window handle, and
-# `interactor.Initialize()` then dereferences it -- an access violation, not an
-# exception. So the platform plugin is forced back to the native default
-# (windows/cocoa/xcb) even when the surrounding CI job exported "offscreen";
-# the Linux job supplies the display via xvfb-run.
+# offscreen leaves the interactor without a window handle, and
+# interactor.Initialize() then crashes the process. CI supplies xvfb instead.
 os.environ.pop("QT_QPA_PLATFORM", None)
 os.environ.pop("PYVISTA_OFF_SCREEN", None)
 
@@ -79,9 +65,7 @@ print("PROBE_OK")
 def _probe_render_context() -> "str | None":
     """Return None if a real VTK-in-Qt window works here, else why it does not.
 
-    A runner with no display (or no software GL) aborts the process inside
-    VTK rather than raising, so the probe runs once, up front, in a subprocess
-    where a crash is just a non-zero exit code.
+    Runs in a subprocess: no display aborts VTK outright rather than raising.
     """
     global _render_probe_done, _render_probe_error
     if _render_probe_done:
@@ -95,9 +79,6 @@ def _probe_render_context() -> "str | None":
             [sys.executable, "-c", _PROBE_CODE],
             capture_output=True,
             text=True,
-            # Short on purpose: a context that works answers in seconds, and a
-            # context that does not should say so quickly rather than stall the
-            # whole job.
             timeout=120,
             env={**os.environ},
         )
@@ -113,12 +94,10 @@ def _probe_render_context() -> "str | None":
 
 @pytest.fixture(scope="session", autouse=True)
 def require_render_context():
-    """Skip the whole tier when there is no usable OpenGL context.
+    """Skip the tier without a usable OpenGL context.
 
-    Set ``MOLEDITPY_FULL_GUI_REQUIRED=1`` to turn that skip into a failure.
-    The Linux CI job sets it: there, xvfb plus software GL is guaranteed, so a
-    skip would mean the environment broke and the tier silently stopped
-    testing anything -- exactly the outcome this tier exists to prevent.
+    MOLEDITPY_FULL_GUI_REQUIRED=1 makes that a failure instead; the Linux job
+    sets it, where xvfb guarantees a context and a skip means CI broke.
     """
     reason = _probe_render_context()
     if not reason:
@@ -135,9 +114,7 @@ def require_render_context():
 def app(require_render_context):
     from PyQt6.QtWidgets import QApplication
 
-    # Tearing a QVTKRenderWindowInteractor down emits a wall of wglMakeCurrent /
-    # glX errors that drown the pytest summary. They are teardown-only and do
-    # not affect results.
+    # Teardown emits a wall of wglMakeCurrent/glX errors that drown the summary.
     try:
         import vtk
 
@@ -159,7 +136,7 @@ def full_window(app, qtbot, monkeypatch, tmp_path):
     monkeypatch.setenv("HOME", str(fake_home))
     monkeypatch.setenv("USERPROFILE", str(fake_home))
 
-    # Any modal that slips through would block the run forever under offscreen.
+    # Any modal that slips through would block the run forever.
     monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: None))
     monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *a, **k: None))
     monkeypatch.setattr(QMessageBox, "critical", staticmethod(lambda *a, **k: None))
@@ -177,7 +154,7 @@ def full_window(app, qtbot, monkeypatch, tmp_path):
 
     MainWindow = importlib.import_module(f"{PKG}.ui.main_window").MainWindow
 
-    # safe_mode=True: the user's real plugin folder must not influence CI.
+    # safe_mode keeps the developer's own plugin folder out of the run.
     win = MainWindow(initial_file=None, safe_mode=True)
     _make_rendering_synchronous(win)
     qtbot.addWidget(win)
@@ -196,17 +173,11 @@ _live_plotters: list = []
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_teardown(item, nextitem):
-    """Disarm every plotter *before* pytest-qt pumps the event queue.
+    """Disarm every plotter before pytest-qt pumps the queue in its own hook.
 
-    pytest-qt's own ``pytest_runtest_teardown`` calls ``_process_events()``,
-    and it runs ahead of any fixture finaliser. A ``render_signal`` emission
-    queued during the test is therefore delivered there, into a plotter this
-    fixture has not been given the chance to close yet -- and on macOS that
-    delivery segfaults. Disconnecting the signal in the fixture cannot help:
-    an already-queued metacall is not undone by disconnecting.
-
-    ``_render`` is the slot on the receiving end, so stubbing it here makes the
-    queued delivery a no-op no matter when it arrives.
+    That pump runs ahead of fixture finalisers, and a render queued during the
+    test is delivered there, into a plotter still open. Stubbing `_render`, the
+    slot itself, is the only guard: disconnecting does not drop a queued call.
     """
     for plotter in _live_plotters:
         try:
@@ -217,20 +188,10 @@ def pytest_runtest_teardown(item, nextitem):
 
 
 def _make_rendering_synchronous(win) -> None:
-    """Bypass pyvistaqt's deferred render signal for the lifetime of the test.
+    """Bind pyvistaqt's synchronous `_render` over its deferred `render`.
 
-    ``QtInteractor.render`` normally emits ``render_signal`` and lets the
-    handler run later -- and on macOS that handler is decorated ``@threaded``,
-    so the render happens on another thread at an unpredictable time. A render
-    left in flight when the window goes away is a segfault, and it does not
-    even land in our own teardown: pytest-qt pumps the event queue in its
-    ``pytest_runtest_teardown`` hook, ahead of any fixture finaliser, so the
-    crash appears inside pytest-qt with no way to guard it from here.
-
-    ``_render`` is pyvistaqt's own synchronous path (it is what the signal
-    handler calls). Binding it directly keeps rendering real -- the tests still
-    drive genuine VTK draws -- while removing the deferral that makes teardown
-    unsafe.
+    `render` is @threaded on macOS, so a draw can land after the window is
+    gone. Rendering stays real, it just stops being deferred.
     """
     plotter = getattr(win.view_3d_manager, "plotter", None)
     if plotter is not None and hasattr(plotter, "_render"):
@@ -241,27 +202,9 @@ def _make_rendering_synchronous(win) -> None:
 def _teardown_window(win, app) -> None:
     """Dismantle the window in an order VTK survives.
 
-    Closing the QWidget alone is not enough. Two things outlive it and then
-    touch a render window whose GL context is gone -- a segfault, not an
-    exception, and it lands in whichever test runs next:
-
-    * ``UIManager._style_watchdog``, a 2 s QTimer that reads
-      ``plotter.interactor`` (harmless in the real app, where the window
-      outlives the process, fatal across a test boundary);
-    * pyvistaqt's own render path -- ``QtInteractor.render`` emits a signal
-      handled later, and on macOS that handler runs on another thread.
-
-    Order matters, and it is not the obvious one:
-
-    1. Stop the watchdog and silence the render path *before* anything else.
-       Rendering is what segfaults, and a render can already be sitting in the
-       queue -- draining first ran it and crashed inside ``processEvents``.
-       Stubbing ``render`` does not break the app's other teardown callbacks;
-       ``view_isometric`` and friends still work, they just stop drawing.
-    2. Close the window and drain, so those queued callbacks run against a
-       plotter that is still alive (finalising first gives them a camera of
-       ``None`` and an AttributeError).
-    3. Finalise the plotter, then drain again.
+    Silence rendering first (a queued render crashes inside processEvents),
+    then close and drain while the plotter is still alive for the app's own
+    callbacks, and only then finalise it.
     """
     plotter = getattr(win.view_3d_manager, "plotter", None)
 
@@ -282,12 +225,8 @@ def _teardown_window(win, app) -> None:
         except (RuntimeError, AttributeError):
             pass
 
-    # UIManager schedules `QTimer.singleShot(100, view_3d_manager.fit_to_view)`
-    # after a conversion. If the test ends inside that 100 ms the timer fires
-    # later, against a manager whose plotter has since been finalised, and
-    # `fit_to_view` renders into a dead window. It surfaces in the *next*
-    # test's teardown, inside pytest-qt's own event pump, so make the callbacks
-    # themselves inert rather than trying to outrun the timer.
+    # UIManager arms singleShot(100, fit_to_view) after a conversion; a test
+    # ending inside that window leaves it to fire against a dead plotter.
     for name in ("fit_to_view", "draw_molecule_3d", "update_3d_view"):
         if hasattr(win.view_3d_manager, name):
             try:

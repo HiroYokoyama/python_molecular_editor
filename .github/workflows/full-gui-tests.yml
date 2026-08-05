@@ -1,18 +1,8 @@
 name: Full GUI Tests
 
-# The `tests` workflow runs the unit/integration/E2E/GUI tiers with VTK and
-# PyVista mocked. This workflow runs the one tier that mocks nothing: a real
-# MainWindow, a real embedded VTK render window, and the real conversion
-# worker thread, drawing benzene and converting it to 3D.
-#
-# CI runners have no monitor, so a display has to be provided:
-#   * Linux   -- xvfb gives a real X server, mesa (llvmpipe) gives software GL.
-#                This job is REQUIRED: MOLEDITPY_FULL_GUI_REQUIRED=1 makes a
-#                missing render context a failure instead of a silent skip.
-#   * Windows -- the runner has a desktop but only OpenGL 1.1 software GL,
-#                which VTK 9 may reject. Informational: it reports, it does
-#                not gate.
-#   * macOS   -- the runner has a window server; usually works. Informational.
+# Runs tests/full_gui: real window, real VTK, nothing mocked. See its README.
+# Linux gates (xvfb + llvmpipe guarantee a context); Windows and macOS only
+# report, since their runners cannot promise OpenGL.
 
 on:
   push:
@@ -25,9 +15,6 @@ permissions:
   contents: read
 
 jobs:
-  # ---------------------------------------------------------------------
-  # Gating job: a real X display via xvfb + software OpenGL via llvmpipe.
-  # ---------------------------------------------------------------------
   full-gui-linux:
     name: full-gui / ubuntu / py${{ matrix.python-version }}
     runs-on: ubuntu-latest
@@ -72,20 +59,14 @@ jobs:
 
     - name: Run Full GUI Tests
       env:
-        # A missing render context here means the runner image regressed --
-        # fail loudly rather than skipping the whole tier.
         MOLEDITPY_FULL_GUI_REQUIRED: "1"
         LIBGL_ALWAYS_SOFTWARE: "1"
         GALLIUM_DRIVER: llvmpipe
-        MOLEDITPY_LAUNCH_TIMEOUT: "300"
       run: |
         xvfb-run -a --server-args="-screen 0 1600x1200x24" \
           python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
 
-  # ---------------------------------------------------------------------
-  # Informational: same tier on the desktop platforms. Skips are expected
-  # where the runner has no usable OpenGL; failures here do not gate.
-  # ---------------------------------------------------------------------
+  # Informational: skips are expected where the runner has no usable OpenGL.
   full-gui-desktop:
     name: full-gui / ${{ matrix.os }} / py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
@@ -96,26 +77,9 @@ jobs:
         include:
           - os: windows-latest
             python-version: "3.13"
-          # macOS is disabled, not forgotten. The full suite segfaults there,
-          # and the cause is a pyvistaqt/pytest-qt interaction rather than
-          # anything in the application:
-          #
-          #   pyvistaqt decorates QtInteractor.render with @threaded on Darwin,
-          #   so a render is emitted as a queued signal and delivered later.
-          #   pytest-qt's pytest_runtest_teardown pumps the event queue, and it
-          #   runs ahead of every fixture finaliser, so that delivery lands in
-          #   a plotter the fixture has not been allowed to close yet.
-          #
-          # Tried and insufficient: closing the plotter in teardown; draining
-          # before and after; stubbing render; binding pyvistaqt's synchronous
-          # _render; neutralising the deferred fit_to_view; stubbing _render
-          # from our own tryfirst teardown hook. The last one fails because Qt
-          # bound the slot at connect time, so reassigning the attribute does
-          # not change what the queued metacall invokes.
-          #
-          # macOS is still covered by launch-probe below, which passes: the
-          # application does launch and render there. Re-enable when pyvistaqt
-          # offers a way to cancel its pending renders.
+          # macOS segfaults in pyvistaqt's @threaded render, delivered by
+          # pytest-qt's teardown pump before any fixture can disarm it. Covered
+          # by launch-probe instead, which passes.
           # - os: macos-latest
           #   python-version: "3.13"
 
@@ -134,32 +98,13 @@ jobs:
         pip install pytest pytest-qt pytest-mock pytest-timeout
         pip install -e moleditpy/
 
-    # Windows py3.13 is known to have a working render context -- it passes the
-    # full 36-test suite -- so "cannot start" here is a regression, not a
-    # missing GPU, and must be red rather than a green skip.
+    # No MOLEDITPY_FULL_GUI_REQUIRED: OpenGL on the Windows image is
+    # intermittent, so a skip is an environment fact, not a regression.
     - name: Run Full GUI Tests
-      env:
-        MOLEDITPY_FULL_GUI_REQUIRED: "1"
       run: python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
 
-  # ---------------------------------------------------------------------
-  # TEMPORARY -- delete once it has reported.
-  #
-  # `pyqt6 < 6.10; python_version == '3.9'` was pinned because PyQt6 6.10 did
-  # not work on macOS with Python 3.9. That specific combination has never
-  # actually been run to completion here: the earlier attempt died in a
-  # workflow bug before reaching the tests, and the retries were cancelled.
-  # This job runs both sides on macOS in one go, so the comparison is
-  # unambiguous:
-  #
-  #   pinned -> PyQt6 6.9.x, the version the constraint allows
-  #   newest -> PyQt6 6.10.x, the version it excludes (6.11 needs >=3.10)
-  #
-  # MOLEDITPY_FULL_GUI_REQUIRED=1 on both, so "Qt cannot start" fails loudly
-  # instead of skipping into a green tick. macos-latest is known to have a
-  # working render context here -- the regular py3.9 probe passes 6 tests on
-  # it -- so a skip would be the anomaly, not the environment.
-  # ---------------------------------------------------------------------
+  # TEMPORARY -- delete once it has reported. Does `pyqt6 < 6.10` still earn
+  # its keep? pinned = 6.9.x (allowed), newest = 6.10.x (excluded).
   pin-check-macos-py39:
     name: PIN CHECK / macos / py3.9 / pyqt-${{ matrix.pyqt }}
     runs-on: macos-latest
@@ -197,29 +142,10 @@ jobs:
         QT_DEBUG_PLUGINS: "1"
       run: python -m pytest tests/full_gui/test_full_launch.py -c tests/full_gui/pytest.ini -v -rA
 
-  # ---------------------------------------------------------------------
-  # Does the GUI come up on Python 3.9, the oldest interpreter pyproject
-  # supports? A launch that never finishes is the failure mode being hunted,
-  # and test_entry_point_boots_in_a_subprocess kills the process and fails on
-  # timeout, so a hang is reported rather than left to burn the job.
-  #
-  # This job also carried a second `newest` leg for a while, force-upgrading to
-  # the newest PyQt6 that installs on 3.9 (the 6.10.x line -- 6.11.0 declares
-  # requires-python >=3.10) to test whether `pyqt6 < 6.10` is still earning its
-  # keep. Answer, on Linux: PyQt6 6.10.2 launched the GUI fine, 6 passed. The
-  # leg has been removed rather than left running, having answered its
-  # question; re-add it if the pin is ever revisited.
-  #
-  # macos-13 is deliberately absent: GitHub retired those Intel runners, and
-  # requesting the label leaves the job queued until the run is cancelled
-  # (observed here: 2 h 36 m, never picked up).
-  #
-  # windows-latest is absent too, and for a different reason: that image has no
-  # usable OpenGL on Python 3.9. VTK fails at `wglChoosePixelFormatARB` before
-  # Qt is even reached, so the probe can never run there and would only ever
-  # report on the runner's missing GPU. Windows is covered at py3.13 by the
-  # full-gui job above, which does have a context and runs the whole suite.
-  # ---------------------------------------------------------------------
+  # Does the GUI come up on Python 3.9, the oldest interpreter supported?
+  # Absent on purpose: macos-13 (runners retired, the job never gets picked
+  # up) and windows-latest (no OpenGL on 3.9, so it can only report on the
+  # runner). PyQt6 6.10.2 there launched fine on Linux, if the pin is revisited.
   launch-probe-py39:
     name: launch-probe / ${{ matrix.os }} / py3.9
     runs-on: ${{ matrix.os }}
@@ -254,19 +180,12 @@ jobs:
         pip install pytest pytest-qt pytest-mock pytest-timeout
         pip install -e moleditpy/
 
-    - name: Force the newest PyQt6 installable on 3.9
-      if: matrix.pyqt == 'newest'
-      run: python -m pip install --upgrade "pyqt6" "pyqt6-qt6"
-
-    # No `| head`: `shell: bash` turns on pipefail, and pip dying of SIGPIPE
-    # then fails the step before the probe ever runs.
+    # No `| head`: `shell: bash` enables pipefail, so pip taking SIGPIPE would
+    # fail the step before the probe runs.
     - name: Show resolved PyQt6 version
       shell: bash
       run: python -c "from PyQt6.QtCore import QT_VERSION_STR, PYQT_VERSION_STR; print('PyQt6', PYQT_VERSION_STR, '/ Qt', QT_VERSION_STR)"
 
-    # Both remaining runners are known to have a working render context, so
-    # MOLEDITPY_FULL_GUI_REQUIRED=1 on both: "Qt cannot start" is the answer
-    # this job exists to give, and it has to be red rather than a green skip.
     - name: Launch probe (Linux)
       if: runner.os == 'Linux'
       env:

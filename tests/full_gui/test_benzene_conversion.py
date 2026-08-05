@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-"""2D->3D conversion of benzene, driven through the running application.
+"""2D->3D conversion of benzene through the running application.
 
-The real ``CalculationWorker`` QThread does the work here (nothing is
-monkeypatched to run synchronously), and the result is rendered into the real
-PyVista widget, so these tests cover the whole button-to-geometry path.
+The real CalculationWorker QThread does the work and the result is rendered
+into the real PyVista widget: the whole button-to-geometry path.
 """
 
 import importlib

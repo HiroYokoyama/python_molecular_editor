@@ -12,10 +12,7 @@ from conftest import PKG
 
 pytestmark = pytest.mark.full_gui
 
-# A launch that never completes is the failure mode we care about most: on
-# macOS the PyQt6 version pinned for Python 3.9 has been reported to hang
-# instead of showing a window. The budget is generous enough for a cold CI
-# runner (RDKit/VTK imports + font cache) and is overridable per platform.
+# A launch that never completes is the failure mode this file exists for.
 LAUNCH_TIMEOUT_S = float(os.environ.get("MOLEDITPY_LAUNCH_TIMEOUT", "180"))
 
 
@@ -60,12 +57,7 @@ def test_2d_view_and_scene_are_live(full_window):
 
 
 def test_safe_mode_loads_no_plugins(full_window):
-    """Safe mode leaves no plugin manager at all, so CI is deterministic.
-
-    `MainInitManager.__init__` sets `plugin_manager = None` under safe mode; if
-    that ever becomes a real manager, the developer's own ~/.moleditpy/plugins
-    would start influencing this tier.
-    """
+    """Safe mode leaves no plugin manager, so ~/.moleditpy/plugins cannot leak in."""
     assert full_window.plugin_manager is None, (
         f"safe mode built a plugin manager: {full_window.plugin_manager!r}"
     )
@@ -73,12 +65,7 @@ def test_safe_mode_loads_no_plugins(full_window):
 
 @pytest.mark.timeout(LAUNCH_TIMEOUT_S + 60)
 def test_entry_point_boots_in_a_subprocess(tmp_path):
-    """`MainWindow` + `show()` via the installed package, in a clean process.
-
-    This is the only test that exercises a cold interpreter, so it catches
-    import-order and top-level-side-effect regressions the in-process fixture
-    cannot see.
-    """
+    """Launch in a cold interpreter, where import-order regressions show up."""
     src_root = os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),
@@ -114,9 +101,8 @@ win.show()
 mark("STAGE_SHOW_CALLED")
 
 def _check():
-    # Reported from inside the live event loop. Printing after app.exec()
-    # returns would put the verdict behind Qt/VTK shutdown, which can crash on
-    # some platforms and would then hide a launch that actually succeeded.
+    # Printed from inside the live loop: after app.exec() the verdict would sit
+    # behind Qt/VTK shutdown, which can crash and hide a successful launch.
     print(
         "LAUNCH_OK",
         win.isVisible(),

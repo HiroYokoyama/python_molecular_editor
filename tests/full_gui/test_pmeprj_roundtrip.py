@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 """Save the benzene session to a .pmeprj project and load it back.
 
-Both halves go through the application's own menu handlers -- `save_project_as`
-and `open_project_file` -- with only the file dialogs stubbed, so the test
-covers the real serialisation, the real "clear then rebuild" load path, and the
-real scene reconstruction.
+Both halves go through the app's own save_project_as / open_project_file with
+only the file dialogs stubbed.
 """
 
 import json
