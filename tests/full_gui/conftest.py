@@ -175,16 +175,34 @@ _live_plotters: list = []
 def pytest_runtest_teardown(item, nextitem):
     """Disarm every plotter before pytest-qt pumps the queue in its own hook.
 
-    That pump runs ahead of fixture finalisers, and a render queued during the
-    test is delivered there, into a plotter still open. Stubbing `_render`, the
-    slot itself, is the only guard: disconnecting does not drop a queued call.
+    pyvistaqt decorates render with @threaded on macOS, so renders become
+    queued signals.  pytest-qt's teardown hook pumps the event queue ahead of
+    any fixture finaliser, delivering a render into a plotter that is still
+    open.  Three steps guard against this:
+
+    1. Stub _render / render so any delivery is a no-op.
+    2. Disconnect render_signal so no further deliveries are scheduled.
+    3. Drain the queue NOW, while the stubs are live, before pytest-qt can.
     """
-    for plotter in _live_plotters:
+    from PyQt6.QtWidgets import QApplication
+
+    for plotter in list(_live_plotters):
         try:
             plotter._render = lambda *a, **k: None
             plotter.render = lambda *a, **k: None
         except (RuntimeError, AttributeError):
-            continue
+            pass
+        try:
+            plotter.render_signal.disconnect()
+        except (RuntimeError, TypeError, AttributeError):
+            pass
+
+    q_app = QApplication.instance()
+    if q_app is not None:
+        # Flush any metacalls already sitting in the queue so pytest-qt's
+        # subsequent pump finds nothing dangerous to deliver.
+        for _ in range(5):
+            q_app.processEvents()
 
 
 def _make_rendering_synchronous(win) -> None:
@@ -251,3 +269,20 @@ def _teardown_window(win, app) -> None:
 
     for _ in range(10):
         app.processEvents()
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session, exitstatus):
+    """Bypass Qt/VTK shutdown on macOS to avoid libqmacstyle Abort trap 6.
+
+    On macOS, Qt unloads style plugins during QApplication destruction and
+    then tries to access them, raising SIGABRT (exit code 134).  The tests
+    have already run and the exit status is final, so skipping normal cleanup
+    via os._exit() is safe.  The guard is macOS-only; other platforms use
+    normal teardown.
+    """
+    if sys.platform == "darwin":
+        import sys as _sys
+        _sys.stdout.flush()
+        _sys.stderr.flush()
+        os._exit(int(exitstatus))
