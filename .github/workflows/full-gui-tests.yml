@@ -103,30 +103,32 @@ jobs:
     - name: Run Full GUI Tests
       run: python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
 
-  # Does the GUI come up on Python 3.9, the oldest interpreter supported?
-  # Absent on purpose: macos-13 (runners retired, the job never gets picked
-  # up) and windows-latest (no OpenGL on 3.9, so it can only report on the
-  # runner).
+  # Does the GUI come up on every supported interpreter?
+  # Windows is absent: no usable OpenGL there (VTK fails at
+  # wglChoosePixelFormatARB), so any result only reports on the runner.
+  # macos-13 is absent: those Intel runners are retired and the job would
+  # queue indefinitely.
   #
-  # `pyqt6 < 6.10` for 3.9 is justified: a temporary A/B here had 6.9.1 pass 6
-  # tests on macOS while 6.10.2 hung at window creation, killed at 120 s. On
-  # Linux 6.10.2 was fine, so the constraint is carried for macOS.
-  launch-probe-py39:
-    name: launch-probe / ${{ matrix.os }} / py3.9
+  # `pyqt6 < 6.10` for 3.9 is macOS-only: 6.10.2 launched fine on Linux but
+  # hung at window creation on macOS (killed at 120 s). 6.9.1 passed all 6
+  # macOS launch tests. Python 3.9 is EOL; the pin stays as-is.
+  launch-probe:
+    name: launch-probe / ${{ matrix.os }} / py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v6
 
-    - name: Set up Python 3.9
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
       with:
-        python-version: "3.9"
+        python-version: ${{ matrix.python-version }}
 
     - name: Install System Dependencies
       if: runner.os == 'Linux'
@@ -145,8 +147,6 @@ jobs:
         pip install pytest pytest-qt pytest-mock pytest-timeout
         pip install -e moleditpy/
 
-    # No `| head`: `shell: bash` enables pipefail, so pip taking SIGPIPE would
-    # fail the step before the probe runs.
     - name: Show resolved PyQt6 version
       shell: bash
       run: python -c "from PyQt6.QtCore import QT_VERSION_STR, PYQT_VERSION_STR; print('PyQt6', PYQT_VERSION_STR, '/ Qt', QT_VERSION_STR)"
