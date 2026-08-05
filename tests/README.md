@@ -26,6 +26,10 @@ python tests/run_all_tests.py --unit
 python tests/run_all_tests.py --integration
 python tests/run_all_tests.py --gui --headless
 
+# Full-GUI tier: real window and real VTK, so it needs a display.
+# Never included in a no-flag run; on Linux wrap it in xvfb-run.
+python tests/run_all_tests.py --full-gui --no-cov --no-report
+
 # Pass custom arguments to pytest (e.g., run tests matching a pattern)
 python tests/run_all_tests.py --unit -- -k test_edit
 
@@ -58,7 +62,8 @@ Specific directories (like `tests/gui/`) provide further mocks for UI elements, 
 
 ## Test Architecture
 
-The MoleditPy test suite is organized into three layers:
+The MoleditPy test suite is organized into five layers, from most isolated to
+least:
 
 ### 1. Unit Tests (`tests/unit/`)
 **Scope:** Core scientific logic, data structures, and parsers.
@@ -70,10 +75,24 @@ The MoleditPy test suite is organized into three layers:
 *   Validates `CalculationWorker` pipelines and physics-based geometry (bond lengths/angles) using RDKit.
 *   [**Read More**](integration/README.md)
 
-### 3. GUI Tests (`tests/gui/`)
+### 3. E2E Tests (`tests/e2e/`)
+**Scope:** Whole-document workflows against a real `MainWindow`.
+*   Draws, converts, saves and reloads with VTK/PyVista mocked and the conversion run synchronously.
+*   [**Read More**](e2e/README.md)
+
+### 4. GUI Tests (`tests/gui/`)
 **Scope:** Full application workflows and user interactions.
 *   Simulates clicks, key presses, and complex workflows (e.g., drawing, undo/redo, saving) in the actual `MainWindow`.
 *   [**Read More**](gui/README.md)
+
+### 5. Full-GUI Tests (`tests/full_gui/`)
+**Scope:** The one tier that mocks nothing.
+*   Real `MainWindow`, shown; real PyVista/VTK widget embedded; real `CalculationWorker` thread. Draws benzene, converts it to 3D, checks the geometry, and round-trips the session through `.pmeprj`.
+*   **Not** part of a no-flag `run_all_tests.py` run — it needs a display and an OpenGL context. Opt in with `--full-gui`, and on Linux run it under `xvfb-run`.
+*   **CI coverage:**
+    *   Full 36-test suite gates on Linux (Python 3.11, 3.13) via `xvfb-run` + llvmpipe.
+    *   Launch probe (`test_full_launch.py`) runs on **Linux, macOS and Windows** across **Python 3.9 – 3.14** (no Windows 3.9). Only Linux gates: macOS runs the subprocess-isolated test alone, and the Windows runner has no usable OpenGL, so it reports skips.
+*   [**Read More**](full_gui/README.md)
 
 ## Test Reports & Catalogs
 

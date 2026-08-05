@@ -1,0 +1,186 @@
+name: Full GUI Tests
+
+# Runs tests/full_gui: real window, real VTK, nothing mocked. See its README.
+# Linux gates (xvfb + llvmpipe guarantee a context); Windows and macOS only
+# report, since their runners cannot promise OpenGL.
+
+on:
+  push:
+    branches: [ main, master, dev, 'test/**' ]
+  pull_request:
+    branches: [ main, master, dev ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-gui-linux:
+    name: full-gui / ubuntu / py${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libgl1 libegl1 libglx-mesa0 libgl1-mesa-dri libosmesa6 \
+          libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+          libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 \
+          libxcb-cursor0 libxcb-shape0 libxcb-sync1 libxcb-shm0 libxcb-glx0 \
+          libxcb-dri2-0 libxcb-dri3-0 libxcb-present0 \
+          x11-utils xvfb
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-qt pytest-mock pytest-timeout
+        pip install -e moleditpy/
+
+    - name: Report GL / Qt environment
+      run: |
+        xvfb-run -a --server-args="-screen 0 1600x1200x24" \
+          python -c "import vtk, pyvista, PyQt6.QtCore as c; \
+            print('vtk', vtk.VTK_VERSION); print('pyvista', pyvista.__version__); \
+            print('qt', c.QT_VERSION_STR)"
+        xvfb-run -a --server-args="-screen 0 1600x1200x24" glxinfo -B || true
+
+    - name: Run Full GUI Tests
+      env:
+        MOLEDITPY_FULL_GUI_REQUIRED: "1"
+        LIBGL_ALWAYS_SOFTWARE: "1"
+        GALLIUM_DRIVER: llvmpipe
+      run: |
+        xvfb-run -a --server-args="-screen 0 1600x1200x24" \
+          python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
+
+  # A failure here is red. Skips are not failures: without
+  # MOLEDITPY_FULL_GUI_REQUIRED a runner with no OpenGL skips the tier.
+  full-gui-desktop:
+    name: full-gui / ${{ matrix.os }} / py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            python-version: "3.13"
+          # macOS segfaults in pyvistaqt's @threaded render, delivered by
+          # pytest-qt's teardown pump before any fixture can disarm it. Covered
+          # by launch-probe instead, which passes.
+          # - os: macos-latest
+          #   python-version: "3.13"
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-qt pytest-mock pytest-timeout
+        pip install -e moleditpy/
+
+    # No MOLEDITPY_FULL_GUI_REQUIRED: OpenGL on the Windows image is
+    # intermittent, so a skip is an environment fact, not a regression.
+    - name: Run Full GUI Tests
+      run: python -m pytest tests/full_gui -c tests/full_gui/pytest.ini -v -rA
+
+  # Does the GUI come up on every supported interpreter? A hang or crash here
+  # is red — that is the whole point of the probe.
+  # Linux (ubuntu-latest) and macOS (macos-latest): all versions, 3.9 – 3.14.
+  # Windows (windows-latest): 3.10 – 3.14 only; 3.9 has no usable OpenGL
+  # (VTK fails at wglChoosePixelFormatARB). No MOLEDITPY_FULL_GUI_REQUIRED
+  # on Windows: OpenGL there is intermittent, so a skip is an environment
+  # fact, not a regression.
+  # macos-13 is absent: those Intel runners are retired and jobs queue
+  # indefinitely.
+  #
+  # `pyqt6 < 6.10` for 3.9 is macOS-only: 6.10.2 launched fine on Linux but
+  # hung at window creation on macOS (killed at 120 s). 6.9.1 passed all 6
+  # macOS launch tests. Python 3.9 is EOL; the pin stays as-is.
+  launch-probe:
+    name: launch-probe / ${{ matrix.os }} / py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        exclude:
+          # No usable OpenGL on the Windows runner for Python 3.9.
+          - os: windows-latest
+            python-version: "3.9"
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install System Dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgl1 libegl1 libglx-mesa0 libgl1-mesa-dri \
+          libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+          libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 \
+          libxcb-cursor0 libxcb-shape0 libxcb-sync1 libxcb-shm0 libxcb-glx0 \
+          libxcb-dri2-0 libxcb-dri3-0 libxcb-present0 \
+          xvfb
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-qt pytest-mock pytest-timeout
+        pip install -e moleditpy/
+
+    - name: Show resolved PyQt6 version
+      shell: bash
+      run: python -c "from PyQt6.QtCore import QT_VERSION_STR, PYQT_VERSION_STR; print('PyQt6', PYQT_VERSION_STR, '/ Qt', QT_VERSION_STR)"
+
+    - name: Launch probe (Linux)
+      if: runner.os == 'Linux'
+      env:
+        MOLEDITPY_FULL_GUI_REQUIRED: "1"
+        QT_DEBUG_PLUGINS: "1"
+      run: |
+        xvfb-run -a --server-args="-screen 0 1600x1200x24" \
+          python -m pytest tests/full_gui/test_full_launch.py \
+          -c tests/full_gui/pytest.ini -v -rA
+
+    - name: Launch probe (macOS)
+      if: runner.os == 'macOS'
+      env:
+        MOLEDITPY_FULL_GUI_REQUIRED: "1"
+        QT_DEBUG_PLUGINS: "1"
+      # Only the subprocess-isolated test: the fixture-based tests crash in
+      # pyvistaqt's @threaded teardown (SIGSEGV in pytest-qt's processEvents,
+      # before pytest_sessionfinish can call os._exit). The subprocess test
+      # proves the GUI boots in a cold interpreter, which is all a probe needs.
+      run: python -m pytest tests/full_gui/test_full_launch.py::test_entry_point_boots_in_a_subprocess -c tests/full_gui/pytest.ini -v -rA
+
+    - name: Launch probe (Windows)
+      if: runner.os == 'Windows'
+      # No MOLEDITPY_FULL_GUI_REQUIRED: OpenGL on the Windows image is
+      # intermittent, so a skip is an environment fact, not a regression.
+      run: python -m pytest tests/full_gui/test_full_launch.py -c tests/full_gui/pytest.ini -v -rA

@@ -13,6 +13,7 @@ UNIT_DIR = os.path.join(BASE_DIR, "tests", "unit")
 INTEGRATION_DIR = os.path.join(BASE_DIR, "tests", "integration")
 E2E_DIR = os.path.join(BASE_DIR, "tests", "e2e")
 GUI_DIR = os.path.join(BASE_DIR, "tests", "gui")
+FULL_GUI_DIR = os.path.join(BASE_DIR, "tests", "full_gui")
 
 # Avoid colorama/COM issues on Windows by disabling color globally for pytest
 os.environ["PYTEST_ADDOPTS"] = os.environ.get("PYTEST_ADDOPTS", "") + " --color=no"
@@ -270,6 +271,11 @@ if __name__ == "__main__":
     parser.add_argument("--e2e", action="store_true", help="Run ONLY E2E tests")
     parser.add_argument("--gui", action="store_true", help="Run ONLY GUI tests")
     parser.add_argument(
+        "--full-gui",
+        action="store_true",
+        help="Run ONLY full-GUI tests (real window + real VTK; needs a display)",
+    )
+    parser.add_argument(
         "--no-report", action="store_true", help="Skip reporting phase entirely"
     )
     parser.add_argument(
@@ -375,8 +381,16 @@ if __name__ == "__main__":
 
     # Define suites to run
     suites = []
-    run_all = not (args.unit or args.integration or args.e2e or args.gui)
+    # FULL_GUI is deliberately excluded from run_all: it needs a real display
+    # (xvfb on Linux) and an OpenGL context, so it only runs when asked for.
+    run_all = not (
+        args.unit or args.integration or args.e2e or args.gui or args.full_gui
+    )
 
+    if args.full_gui:
+        if platform.system() == "Linux":
+            sync_linux_for_e2e(BASE_DIR)
+        suites.append(("FULL_GUI", FULL_GUI_DIR))
     if args.unit or run_all:
         suites.append(("UNIT", UNIT_DIR))
     if args.integration or run_all:
