@@ -1,8 +1,49 @@
 # -*- coding: utf-8 -*-
 """GUI tests for MoleculeScene mouse and keyboard events."""
 
+import math
+
+import pytest
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QKeyEvent
+
+from moleditpy.ui.chain_mixin import CHAIN_HALF_ANGLE_DEG
+from moleditpy.utils.constants import DEFAULT_BOND_LENGTH
+
+CHAIN_AXIS_STEP = DEFAULT_BOND_LENGTH * math.cos(math.radians(CHAIN_HALF_ANGLE_DEG))
+
+
+class FakeSceneMouseEvent:
+    """QGraphicsSceneMouseEvent stand-in; PyQt6 forbids instantiating the real one."""
+
+    def __init__(self, pos, button=Qt.MouseButton.LeftButton):
+        self._pos = pos
+        self._button = button
+        self.accepted = False
+
+    def scenePos(self):
+        return self._pos
+
+    def pos(self):
+        return self._pos
+
+    def button(self):
+        return self._button
+
+    def buttons(self):
+        return self._button
+
+    def accept(self):
+        self.accepted = True
+
+    def ignore(self):
+        self.accepted = False
+
+
+def _drag_chain(scene, start, end):
+    scene.mousePressEvent(FakeSceneMouseEvent(start))
+    scene.mouseMoveEvent(FakeSceneMouseEvent(end))
+    scene.mouseReleaseEvent(FakeSceneMouseEvent(end))
 
 
 def test_bond_stereo_toggle_keys(window, qtbot):
@@ -138,6 +179,67 @@ def test_temp_line_cancellation(window, qtbot):
     scene.keyPressEvent(event_del)
 
     assert scene.temp_line is None
+
+
+def test_chain_drag_creates_zigzag_chain(window, qtbot):
+    """Dragging in chain mode creates one atom per bond at fixed bond length."""
+    scene = window.init_manager.scene
+    data = window.state_manager.data
+    window.ui_manager.set_mode("chain")
+
+    _drag_chain(scene, QPointF(0, 0), QPointF(4 * CHAIN_AXIS_STEP, 0))
+
+    assert len(data.atoms) == 5
+    assert len(data.bonds) == 4
+    for (id1, id2), bond in data.bonds.items():
+        assert bond["order"] == 1
+        p1 = scene.atom_items[id1].pos()
+        p2 = scene.atom_items[id2].pos()
+        assert math.hypot(p2.x() - p1.x(), p2.y() - p1.y()) == pytest.approx(
+            DEFAULT_BOND_LENGTH, abs=1e-6
+        )
+
+
+def test_chain_drag_grows_from_an_existing_atom(window, qtbot):
+    """A chain started on an existing atom extends it instead of duplicating it."""
+    scene = window.init_manager.scene
+    data = window.state_manager.data
+    anchor_id = scene.create_atom("C", QPointF(0, 0))
+    window.ui_manager.set_mode("chain")
+
+    _drag_chain(scene, QPointF(0, 0), QPointF(3 * CHAIN_AXIS_STEP, 0))
+
+    assert anchor_id in data.atoms
+    assert len(data.atoms) == 4
+    assert len(data.bonds) == 3
+    assert any(anchor_id in key for key in data.bonds)
+
+
+def test_chain_tool_button_sits_between_the_9_ring_and_user_templates(window, qtbot):
+    """The chain tool shares the exclusive tool group and closes the template row."""
+    init = window.init_manager
+    chain_action = init.mode_actions["chain"]
+    toolbar_actions = init.toolbar_bottom.actions()
+
+    ring9_index = toolbar_actions.index(init.mode_actions["template_9"])
+    assert toolbar_actions[ring9_index + 1] is chain_action
+    assert toolbar_actions[ring9_index + 2] is init.mode_actions["template_user"]
+    assert chain_action.isCheckable()
+    assert chain_action in init.tool_group.actions()
+    assert not chain_action.icon().isNull()
+
+
+def test_chain_click_without_drag_adds_nothing(window, qtbot):
+    """A bare click in chain mode is not long enough to place a bond."""
+    scene = window.init_manager.scene
+    data = window.state_manager.data
+    window.ui_manager.set_mode("chain")
+
+    _drag_chain(scene, QPointF(0, 0), QPointF(2, 0))
+
+    assert len(data.atoms) == 0
+    assert len(data.bonds) == 0
+    assert scene.chain_active is False
 
 
 def test_bonding_to_existing_atom(window, qtbot):

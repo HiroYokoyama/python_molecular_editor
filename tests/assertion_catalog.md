@@ -929,6 +929,105 @@ _No description provided._
 - assert result is False
 - assert any(('OpenBabel' in m for m in messages))
 
+## tests/unit/test_chain_mode.py
+
+### test_every_bond_keeps_the_standard_length
+_No description provided._
+
+- assert len(points) == 6
+- assert length == pytest.approx(DEFAULT_BOND_LENGTH)
+
+### test_bond_count_follows_drag_distance
+_No description provided._
+
+- assert len(points) - 1 == expected
+
+### test_chain_zigzags_around_the_axis
+_No description provided._
+
+- assert offsets[0] == pytest.approx(0.0)
+- assert offsets[2] == pytest.approx(0.0)
+- assert abs(offsets[1]) == pytest.approx(DEFAULT_BOND_LENGTH * math.sin(math.radians(CHAIN_HALF_ANGLE_DEG)))
+- assert p.x() == pytest.approx(i * AXIS_STEP)
+
+### test_zigzag_side_follows_the_cursor
+_No description provided._
+
+- assert below[1].y() > 0
+- assert above[1].y() < 0
+
+### test_axis_is_snapped_to_fixed_angle_steps
+_No description provided._
+
+- assert axis_angle == pytest.approx(CHAIN_ANGLE_SNAP_DEG)
+
+### test_short_or_backward_drag_yields_no_chain
+_No description provided._
+
+- assert scene.calculate_chain_points(QPointF(0, 0), QPointF(0, 0)) == []
+- assert scene.calculate_chain_points(QPointF(0, 0), QPointF(4, 0)) == []
+
+### test_chain_length_is_capped
+_No description provided._
+
+- assert len(points) - 1 == MAX_CHAIN_LENGTH
+
+### test_preview_shows_repeat_count_near_the_cursor
+_No description provided._
+
+- assert label == 'n = 3'
+- assert len(points) == 4
+- assert label_pos.x() > cursor.x()
+- scene.template_preview.show.assert_called_once()
+
+### test_preview_hides_when_the_drag_is_too_short
+_No description provided._
+
+- scene.template_preview.set_chain_geometry.assert_not_called()
+- scene.template_preview.hide.assert_called_once()
+
+### test_preview_ignores_moves_outside_a_drag
+_No description provided._
+
+- scene.template_preview.set_chain_geometry.assert_not_called()
+
+### test_begin_chain_anchors_on_the_start_atom
+_No description provided._
+
+- assert scene.chain_active is True
+- assert scene.chain_anchor == QPointF(10, 20)
+- assert scene.chain_start_atom is atom
+
+### test_commit_builds_a_single_bonded_path
+_No description provided._
+
+- assert scene.commit_chain(QPointF(3 * AXIS_STEP, 0)) is True
+- assert len(points) == 4
+- assert bonds_info == [(0, 1, 1), (1, 2, 1), (2, 3, 1)]
+- assert kwargs['existing_items'] == []
+- assert kwargs['symbol'] == 'C'
+
+### test_commit_passes_the_start_atom_for_fusing
+_No description provided._
+
+- assert scene.add_molecule_fragment.call_args[1]['existing_items'] == [atom]
+
+### test_commit_is_a_no_op_without_a_usable_drag
+_No description provided._
+
+- assert scene.commit_chain(QPointF(50, 0)) is False
+- assert scene.commit_chain(QPointF(2, 0)) is False
+- scene.add_molecule_fragment.assert_not_called()
+
+### test_clear_chain_preview_resets_the_drag_state
+_No description provided._
+
+- assert scene.chain_active is False
+- assert scene.chain_anchor is None
+- assert scene.chain_start_atom is None
+- assert scene.chain_points == []
+- scene.template_preview.hide.assert_called()
+
 ## tests/unit/test_color_settings_dialog.py
 
 ### test_color_settings_dialog_initialization
@@ -9362,6 +9461,36 @@ _paint_regular_template draws an aromatic polygon without raising._
 _paint_regular_template with an empty polygon does not raise._
 
 
+### test_set_chain_geometry_stores_points_and_label
+_set_chain_geometry switches the item into chain mode and clears other modes._
+
+- assert item.is_chain is True
+- assert item.is_user_template is False
+- assert item.chain_points == pts
+- assert item.chain_label == 'n = 1'
+- assert item.chain_label_pos == QPointF(60, 10)
+
+### test_set_geometry_leaves_chain_mode
+_A ring template preview after a chain preview no longer paints as a chain._
+
+- assert item.is_chain is False
+
+### test_bounding_rect_covers_chain_and_label
+_boundingRect spans both the zigzag and the label drawn beside the cursor._
+
+- assert rect.contains(QPointF(0, 0))
+- assert rect.contains(QPointF(76, 18))
+
+### test_paint_chain_draws_the_zigzag_and_label
+_paint_chain marks the canvas for both the chain and its label._
+
+- assert _painted_pixel_count(img) > 0
+
+### test_paint_chain_needs_at_least_one_bond
+_A chain preview with a single vertex paints nothing._
+
+- assert _painted_pixel_count(img) == 0
+
 ### test_paint_user_template_no_points_returns_early
 _paint_user_template with no points returns without raising._
 
@@ -9860,6 +9989,15 @@ _No description provided._
 - assert ui.host.init_manager.scene.bond_order == 1
 - assert ui.host.init_manager.scene.bond_stereo == 2
 - ui.host.update_status_message.assert_any_call('Mode: Draw Bond (Order: 1 (Dash))')
+
+### test_set_mode_chain_uses_carbon_and_cross_cursor
+_No description provided._
+
+- assert ui.host.init_manager.scene.mode == 'chain'
+- assert ui.host.init_manager.scene.current_atom_symbol == 'C'
+- assert ui.host.init_manager.scene.bond_order == 1
+- ui.host.init_manager.view_2d.setCursor.assert_called_with(Qt.CursorShape.CrossCursor)
+- ui.host.update_status_message.assert_any_call('Mode: Alkyl Chain (Drag to set the chain length)')
 
 ### test_set_mode_builtin_template_status
 _No description provided._
@@ -11876,6 +12014,38 @@ _Test Delete and Backspace keys remove selected items._
 _Test Delete key cancels an active temp_line (bond drawing)._
 
 - assert scene.temp_line is None
+
+### test_chain_drag_creates_zigzag_chain
+_Dragging in chain mode creates one atom per bond at fixed bond length._
+
+- assert len(data.atoms) == 5
+- assert len(data.bonds) == 4
+- assert bond['order'] == 1
+- assert math.hypot(p2.x() - p1.x(), p2.y() - p1.y()) == pytest.approx(DEFAULT_BOND_LENGTH, abs=1e-06)
+
+### test_chain_drag_grows_from_an_existing_atom
+_A chain started on an existing atom extends it instead of duplicating it._
+
+- assert anchor_id in data.atoms
+- assert len(data.atoms) == 4
+- assert len(data.bonds) == 3
+- assert any((anchor_id in key for key in data.bonds))
+
+### test_chain_tool_button_sits_between_the_9_ring_and_user_templates
+_The chain tool shares the exclusive tool group and closes the template row._
+
+- assert toolbar_actions[ring9_index + 1] is chain_action
+- assert toolbar_actions[ring9_index + 2] is init.mode_actions['template_user']
+- assert chain_action.isCheckable()
+- assert chain_action in init.tool_group.actions()
+- assert not chain_action.icon().isNull()
+
+### test_chain_click_without_drag_adds_nothing
+_A bare click in chain mode is not long enough to place a bond._
+
+- assert len(data.atoms) == 0
+- assert len(data.bonds) == 0
+- assert scene.chain_active is False
 
 ### test_bonding_to_existing_atom
 _Test that pressing 1, 2, 3 bonds to an existing atom if it's nearby._
