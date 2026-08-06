@@ -75,7 +75,7 @@ class UIManager(QObject):
         # Set cursor shape
         if mode_str == "select":
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
-        elif mode_str.startswith(("atom", "bond", "template")):
+        elif mode_str.startswith(("atom", "bond", "template", "chain")):
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.CrossCursor)
         elif mode_str.startswith(("charge", "radical")):
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.CrossCursor)
@@ -98,6 +98,14 @@ class UIManager(QObject):
             stereo_text = {0: "", 1: " (Wedge)", 2: " (Dash)"}.get(stereo, "")
             self.host.update_status_message(
                 f"Mode: Draw Bond (Order: {order}{stereo_text})"
+            )
+            self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self.host.init_manager.view_2d.setMouseTracking(True)
+        elif mode_str == "chain":
+            self.host.set_scene_atom_symbol("C")
+            self.host.set_scene_bond_properties(1, 0)
+            self.host.update_status_message(
+                "Mode: Alkyl Chain (Drag to set the chain length)"
             )
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.host.init_manager.view_2d.setMouseTracking(True)
