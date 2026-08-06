@@ -106,7 +106,7 @@ The MoleditPy main window is primarily composed of the following elements:
 
 1.  **Menu Bar:** Contains functions for file operations, editing, viewing, analysis, settings, and help.
 2.  **Main Toolbar:** Provides basic tools for selecting atom/bond drawing modes, setting charges/radicals, and changing 3D display styles.
-3.  **Template Toolbar:** Contains buttons for selecting templates such as ring structures.
+3.  **Template Toolbar:** Contains buttons for selecting templates such as ring structures, and the alkyl chain tool.
 4.  **2D Edit View:** The main canvas for drawing and editing molecular structures. You can add and edit atoms and bonds using mouse operations.
 5.  **3D View:** Displays the 3D structure of the generated or loaded molecule. You can rotate, zoom, and pan with the mouse. 3D measurement and editing are also performed in this view.
 6.  **Splitter:** The boundary line between the 2D view and the 3D view. You can drag it to resize the display area of each view. You can also quickly switch split ratios via `View` \> `Panel Layout` (or Ctrl+1, 2, 3).
@@ -128,6 +128,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
   * **Charge buttons (+/-):** Mode for increasing or decreasing the charge on an atom by clicking it. Right-click to reset the charge to 0.
   * **Radical button (Radical):** Mode for toggling the number of radical electrons on an atom (0 -\> 1 -\> 2 -\> 0) by clicking it. Right-click to reset to 0.
   * **Template buttons (Benzene ring, etc.):** Mode for adding a template structure by clicking on the canvas. It can also snap to and merge with existing atoms or bonds.
+  * **Alkyl chain button (`-(-)n-` icon, at the end of the template toolbar):** Mode for drawing a zigzag carbon chain of any length by dragging on the canvas.
 
 ### 4.2. Atom and Bond Operations
 
@@ -168,6 +169,8 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
 ### 4.3. Using Templates
 
   * **Standard Templates:** Click a button on the template toolbar (benzene ring, cyclohexane ring, etc.) to select the mode, then click on the canvas to place it. Clicking on an existing atom or bond allows you to merge the structures. Template snapping distance and fusing settings can be adjusted in the `Settings` menu. **Hold down the `Alt` key to temporarily bypass atom fusing; the template preview will deform to show fusing points visually unless the `Alt` key is pressed.**
+
+  * **Alkyl Chains:** Click the `-(-)n-` button on the template toolbar, then drag on the canvas. Every bond keeps the standard 2D bond length and the chain axis snaps to 15° steps, so the drag distance decides the chain length and the drag direction decides its orientation; the zigzag bends toward whichever side of the axis the cursor is on. The repeat count (`n = ...`) is shown next to the cursor while dragging, and the chain is only created when the mouse is released. Starting the drag on an existing atom extends that atom instead of duplicating it, and an end that lands on an existing atom fuses with it.
 
   * **User Templates:**
 

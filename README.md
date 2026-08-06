@@ -39,6 +39,7 @@ This application combines a modern GUI built with **PyQt6**, powerful cheminform
 
   * **Intuitive Operations:** Easily add, edit, and delete atoms and bonds with simple mouse controls. Left-click and drag to create, and right-click to delete.
   * **Advanced Templates:** Place templates for benzene or 3- to 9-membered rings with a live preview. Features intelligent logic to automatically adjust the double-bond configuration when fusing a benzene ring to an existing structure.
+  * **Alkyl Chain Tool:** Drag to draw a zigzag chain of any length — the bond length stays fixed, the chain axis snaps to 15° steps, and the repeat count (`n`) is previewed next to the cursor.
   * **Charges & Radicals:** Quickly set formal charges (`+`/`-`) and radicals (`.`) on any atom using keyboard shortcuts or the toolbar.
   * **Full Element Support:** Select any element from a built-in periodic table dialog.
   * **Clipboard Operations:** Full support for `Cut` (Ctrl+X), `Copy` (Ctrl+C), and `Paste` (Ctrl+V) for molecular fragments.
