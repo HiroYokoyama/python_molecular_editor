@@ -1025,6 +1025,36 @@ _No description provided._
 - assert scene.commit_chain(QPointF(2, 0)) is False
 - scene.add_molecule_fragment.assert_not_called()
 
+### test_end_snaps_to_the_hovered_atom_and_stretches_only_the_tail
+_No description provided._
+
+- assert end_atom is atom
+- assert points[-1] == cursor
+- assert lengths[:-1] == pytest.approx([DEFAULT_BOND_LENGTH] * 2)
+- assert lengths[-1] != pytest.approx(DEFAULT_BOND_LENGTH)
+- assert lengths[-1] == pytest.approx(73.95, abs=0.01)
+
+### test_hovered_end_atom_is_not_counted_as_drawn
+_No description provided._
+
+- assert label == 'n = 3'
+
+### test_end_snap_is_refused_when_it_would_collapse_the_tail_bond
+_No description provided._
+
+- assert end_atom is None
+
+### test_end_snap_never_targets_the_start_atom
+_No description provided._
+
+- assert end_atom is None
+
+### test_commit_names_both_reused_atoms
+_No description provided._
+
+- assert scene.commit_chain(cursor) is True
+- assert scene.add_molecule_fragment.call_args[1]['existing_items'] == [start, end]
+
 ### test_clear_chain_preview_resets_the_drag_state
 _No description provided._
 
@@ -12054,6 +12084,21 @@ _The reused start atom is not newly drawn, so it must not inflate the badge._
 
 - assert added == 4
 - assert label == 'n = 4'
+
+### test_chain_end_joins_the_atom_under_the_cursor
+_Releasing on an atom joins it, stretching only the tail bond._
+
+- assert target_id in data.atoms
+- assert len(data.atoms) == 5
+- assert _bonded_to_symbol(data, 'O')
+- assert lengths[:-1] == pytest.approx([DEFAULT_BOND_LENGTH] * 3, abs=1e-06)
+- assert lengths[-1] > DEFAULT_BOND_LENGTH
+
+### test_chain_end_ignores_an_atom_the_cursor_is_not_on
+_An atom well away from the cursor must not capture the chain end._
+
+- assert len(data.atoms) == 6
+- assert not _bonded_to_symbol(data, 'O')
 
 ### test_chain_preview_follows_a_real_mouse_drag
 _Real Qt events through the view must reach the live preview, not just fakes._
