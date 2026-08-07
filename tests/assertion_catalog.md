@@ -972,13 +972,19 @@ _No description provided._
 
 - assert len(points) - 1 == MAX_CHAIN_LENGTH
 
-### test_preview_shows_repeat_count_near_the_cursor
-_No description provided._
+### test_preview_counts_the_atoms_the_drag_will_draw
+_On empty canvas the anchor becomes a new atom too, so n is the vertex count._
 
-- assert label == 'n = 3'
 - assert len(points) == 4
+- assert label == 'n = 4'
 - assert label_pos.x() > cursor.x()
 - scene.template_preview.show.assert_called_once()
+
+### test_preview_excludes_an_existing_start_atom_from_the_count
+_Growing from an existing atom reuses it, so it must not be counted as drawn._
+
+- assert len(points) == 4
+- assert label == 'n = 3'
 
 ### test_preview_hides_when_the_drag_is_too_short
 _No description provided._
@@ -12036,6 +12042,18 @@ _A chain started on an existing atom extends it instead of duplicating it._
 - assert len(data.atoms) == 4
 - assert len(data.bonds) == 3
 - assert any((anchor_id in key for key in data.bonds))
+
+### test_previewed_count_matches_the_atoms_drawn_on_empty_canvas
+_The n badge promises a number of atoms; releasing must deliver exactly that._
+
+- assert added == 5
+- assert label == 'n = 5'
+
+### test_previewed_count_matches_the_atoms_drawn_from_an_existing_atom
+_The reused start atom is not newly drawn, so it must not inflate the badge._
+
+- assert added == 4
+- assert label == 'n = 4'
 
 ### test_chain_preview_follows_a_real_mouse_drag
 _Real Qt events through the view must reach the live preview, not just fakes._

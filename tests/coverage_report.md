@@ -26,7 +26,7 @@
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    366 |     55 |   85.0% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    257 |     17 |   93.4% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    583 |     90 |   84.6% |
-| moleditpy\src\moleditpy\ui\chain_mixin.py               |     69 |      0 |  100.0% |
+| moleditpy\src\moleditpy\ui\chain_mixin.py               |     73 |      1 |   98.6% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    166 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    451 |      7 |   98.4% |
 | moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py |    480 |     24 |   95.0% |
@@ -68,13 +68,13 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **16837** | **1734** | **89.70%** |
+| **TOTAL** | **16841** | **1735** | **89.70%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2170 (1 skipped)
-- **Unit tests**: PASSED (1981 passed)
+- **Total tests passed**: 2173 (1 skipped)
+- **Unit tests**: PASSED (1982 passed)
 - **Integration tests**: PASSED (75 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
-- **GUI tests**: PASSED (80 passed)
+- **GUI tests**: PASSED (82 passed)
 
 [View Detailed HTML Report](coverage_html/index.html)
