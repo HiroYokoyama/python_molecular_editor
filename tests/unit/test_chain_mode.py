@@ -21,7 +21,6 @@ AXIS_STEP = DEFAULT_BOND_LENGTH * math.cos(math.radians(CHAIN_HALF_ANGLE_DEG))
 class MockChainScene(ChainMixin):
     def __init__(self):
         self.template_preview = MagicMock()
-        self.views = MagicMock(return_value=[MagicMock()])
         self.add_molecule_fragment = MagicMock()
         self.current_atom_symbol = "C"
         super().__init__()

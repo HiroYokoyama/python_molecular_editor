@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **89.69%**
+- **Overall Project Coverage**: **89.70%**
 
 ### Coverage Breakdown
 
@@ -26,7 +26,7 @@
 | moleditpy\src\moleditpy\ui\bond_item.py                 |    366 |     55 |   85.0% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    257 |     17 |   93.4% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    583 |     90 |   84.6% |
-| moleditpy\src\moleditpy\ui\chain_mixin.py               |     80 |      2 |   97.5% |
+| moleditpy\src\moleditpy\ui\chain_mixin.py               |     69 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    166 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    451 |      7 |   98.4% |
 | moleditpy\src\moleditpy\ui\constrained_optimization_dialog.py |    480 |     24 |   95.0% |
@@ -55,7 +55,7 @@
 | moleditpy\src\moleditpy\ui\template_preview_item.py     |    149 |      4 |   97.3% |
 | moleditpy\src\moleditpy\ui\template_preview_view.py     |     46 |      4 |   91.3% |
 | moleditpy\src\moleditpy\ui\translation_dialog.py        |    276 |     21 |   92.4% |
-| moleditpy\src\moleditpy\ui\ui_manager.py                |    401 |     36 |   91.0% |
+| moleditpy\src\moleditpy\ui\ui_manager.py                |    403 |     36 |   91.1% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    360 |     45 |   87.5% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1007 |    179 |   82.2% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |     82 |      2 |   97.6% |
@@ -68,13 +68,13 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **16846** | **1736** | **89.69%** |
+| **TOTAL** | **16837** | **1734** | **89.70%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2168 (1 skipped)
-- **Unit tests**: PASSED (1980 passed)
+- **Total tests passed**: 2170 (1 skipped)
+- **Unit tests**: PASSED (1981 passed)
 - **Integration tests**: PASSED (75 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
-- **GUI tests**: PASSED (79 passed)
+- **GUI tests**: PASSED (80 passed)
 
 [View Detailed HTML Report](coverage_html/index.html)

@@ -9999,6 +9999,12 @@ _No description provided._
 - ui.host.init_manager.view_2d.setCursor.assert_called_with(Qt.CursorShape.CrossCursor)
 - ui.host.update_status_message.assert_any_call('Mode: Alkyl Chain (Drag to set the chain length)')
 
+### test_leaving_chain_mode_drops_an_abandoned_drag
+_A shortcut key pressed mid-drag must not leave a live chain anchor behind._
+
+- ui.host.init_manager.scene.clear_chain_preview.assert_not_called()
+- ui.host.init_manager.scene.clear_chain_preview.assert_called_once()
+
 ### test_set_mode_builtin_template_status
 _No description provided._
 
@@ -12030,6 +12036,15 @@ _A chain started on an existing atom extends it instead of duplicating it._
 - assert len(data.atoms) == 4
 - assert len(data.bonds) == 3
 - assert any((anchor_id in key for key in data.bonds))
+
+### test_chain_preview_follows_a_real_mouse_drag
+_Real Qt events through the view must reach the live preview, not just fakes._
+
+- assert scene.chain_active is True
+- assert previewed_bonds > 0
+- assert scene.template_preview.isVisible()
+- assert scene.template_preview.isVisible() is False
+- assert len(window.state_manager.data.bonds) == previewed_bonds
 
 ### test_chain_tool_button_sits_between_the_9_ring_and_user_templates
 _The chain tool shares the exclusive tool group and closes the template row._

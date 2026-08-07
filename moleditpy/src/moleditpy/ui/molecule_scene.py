@@ -439,9 +439,8 @@ class MoleculeScene(
         if self.mode == "chain":
             self.clearSelection()
             snap_dist = self.get_setting("bond_snapping_distance_2d", 14.0)
-            near = self.find_atom_near(self.press_pos, tol=snap_dist)
             self.begin_chain(
-                self.press_pos, near if isinstance(near, AtomItem) else None
+                self.press_pos, self.find_atom_near(self.press_pos, tol=snap_dist)
             )
             event.accept()
             return
@@ -502,7 +501,6 @@ class MoleculeScene(
 
         if self.mode == "chain" and self.chain_active:
             self.update_chain_preview(event.scenePos())
-            self.mouse_moved_since_press = True
             return
 
         if not self.mouse_moved_since_press and self.press_pos:
@@ -563,7 +561,9 @@ class MoleculeScene(
             self.temp_line = None
 
         if self.mode == "chain":
-            committed = self.chain_active and self.commit_chain(end_pos)
+            committed = False
+            if self.chain_active:
+                committed = self.commit_chain(end_pos)
             self.clear_chain_preview()
             self.start_atom = None
             self.start_pos = None

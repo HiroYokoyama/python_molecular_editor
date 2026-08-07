@@ -12,12 +12,12 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 
-import logging
 import math
 from typing import Any, List, Optional
 
 from PyQt6.QtCore import QPointF
 
+from .atom_item import AtomItem
 from ..utils.constants import DEFAULT_BOND_LENGTH
 
 # Half of the 120 deg zigzag angle, measured from the chain axis.
@@ -29,20 +29,18 @@ MAX_CHAIN_LENGTH = 100
 class ChainMixin:
     """Drag-to-draw tool that grows a fixed-bond-length zigzag alkyl chain."""
 
-    atom_items: Any
     add_molecule_fragment: Any
     current_atom_symbol: Any
     template_preview: Any
-    views: Any
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.chain_anchor: Optional[QPointF] = None
-        self.chain_start_atom: Optional[Any] = None
+        self.chain_start_atom: Optional[AtomItem] = None
         self.chain_points: List[QPointF] = []
         self.chain_active: bool = False
         super().__init__(*args, **kwargs)
 
-    def begin_chain(self, pos: QPointF, start_atom: Optional[Any] = None) -> None:
+    def begin_chain(self, pos: QPointF, start_atom: Optional[AtomItem] = None) -> None:
         """Anchor a new chain drag at ``pos`` (or at ``start_atom`` if given)."""
         self.chain_start_atom = start_atom
         self.chain_anchor = start_atom.pos() if start_atom is not None else QPointF(pos)
@@ -58,8 +56,6 @@ class ChainMixin:
         """
         vx = cursor.x() - anchor.x()
         vy = cursor.y() - anchor.y()
-        if math.hypot(vx, vy) < 1e-6:
-            return []
 
         snap = math.radians(CHAIN_ANGLE_SNAP_DEG)
         axis_angle = round(math.atan2(vy, vx) / snap) * snap
@@ -97,16 +93,14 @@ class ChainMixin:
         self.chain_points = self.calculate_chain_points(self.chain_anchor, pos)
         if len(self.chain_points) < 2:
             self.template_preview.hide()
-        else:
-            self.template_preview.set_chain_geometry(
-                self.chain_points,
-                f"n = {len(self.chain_points) - 1}",
-                QPointF(pos.x() + 16, pos.y() - 12),
-            )
-            self.template_preview.show()
+            return
 
-        if self.views():
-            self.views()[0].viewport().update()
+        self.template_preview.set_chain_geometry(
+            self.chain_points,
+            f"n = {len(self.chain_points) - 1}",
+            QPointF(pos.x() + 16, pos.y() - 12),
+        )
+        self.template_preview.show()
 
     def clear_chain_preview(self) -> None:
         """Hide the ghost chain and drop the drag state."""
@@ -114,12 +108,7 @@ class ChainMixin:
         self.chain_start_atom = None
         self.chain_points = []
         self.chain_active = False
-        try:
-            self.template_preview.hide()
-        except (AttributeError, RuntimeError) as e:
-            logging.debug(f"Could not hide chain preview: {e}")
-        if self.views():
-            self.views()[0].viewport().update()
+        self.template_preview.hide()
 
     def commit_chain(self, pos: QPointF) -> bool:
         """Materialize the previewed chain as atoms and bonds. True if anything was added."""
@@ -132,8 +121,7 @@ class ChainMixin:
 
         bonds_info = [(i, i + 1, 1) for i in range(len(points) - 1)]
         existing = [self.chain_start_atom] if self.chain_start_atom is not None else []
-        symbol = getattr(self, "current_atom_symbol", "C") or "C"
         self.add_molecule_fragment(
-            points, bonds_info, existing_items=existing, symbol=symbol
+            points, bonds_info, existing_items=existing, symbol=self.current_atom_symbol
         )
         return True

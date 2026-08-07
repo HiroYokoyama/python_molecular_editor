@@ -62,6 +62,10 @@ class UIManager(QObject):
 
         # Trigger immediate scene refresh to show/update template previews
         self.host.init_manager.scene.refresh_mode_state()
+        # A shortcut key can switch modes mid-drag; drop the abandoned chain anchor.
+        if prev_mode == "chain" and mode_str != "chain":
+            self.host.init_manager.scene.clear_chain_preview()
+
         # Clear ghost when leaving template mode
         if (
             prev_mode

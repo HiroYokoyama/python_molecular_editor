@@ -210,6 +210,16 @@ def test_set_mode_chain_uses_carbon_and_cross_cursor():
     )
 
 
+def test_leaving_chain_mode_drops_an_abandoned_drag():
+    """A shortcut key pressed mid-drag must not leave a live chain anchor behind."""
+    ui = _make_ui_manager()
+    ui.set_mode("chain")
+    ui.host.init_manager.scene.clear_chain_preview.assert_not_called()
+
+    ui.set_mode("bond_2_0")
+    ui.host.init_manager.scene.clear_chain_preview.assert_called_once()
+
+
 def test_set_mode_builtin_template_status():
     ui = _make_ui_manager()
     ui.set_mode("template_benzene")

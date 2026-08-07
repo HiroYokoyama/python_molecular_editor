@@ -4,8 +4,9 @@
 import math
 
 import pytest
-from PyQt6.QtCore import Qt, QPointF
+from PyQt6.QtCore import Qt, QPoint, QPointF
 from PyQt6.QtGui import QKeyEvent
+from PyQt6.QtTest import QTest
 
 from moleditpy.ui.chain_mixin import CHAIN_HALF_ANGLE_DEG
 from moleditpy.utils.constants import DEFAULT_BOND_LENGTH
@@ -213,6 +214,31 @@ def test_chain_drag_grows_from_an_existing_atom(window, qtbot):
     assert len(data.atoms) == 4
     assert len(data.bonds) == 3
     assert any(anchor_id in key for key in data.bonds)
+
+
+def test_chain_preview_follows_a_real_mouse_drag(window, qtbot):
+    """Real Qt events through the view must reach the live preview, not just fakes."""
+    view = window.init_manager.view_2d
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("chain")
+    view.show()
+    qtbot.waitExposed(view)
+
+    start = view.viewport().rect().center()
+    far = QPoint(start.x() + 250, start.y())
+
+    QTest.mousePress(view.viewport(), Qt.MouseButton.LeftButton, pos=start)
+    assert scene.chain_active is True
+
+    QTest.mouseMove(view.viewport(), far)
+    qtbot.wait(20)
+    previewed_bonds = len(scene.chain_points) - 1
+    assert previewed_bonds > 0
+    assert scene.template_preview.isVisible()
+
+    QTest.mouseRelease(view.viewport(), Qt.MouseButton.LeftButton, pos=far)
+    assert scene.template_preview.isVisible() is False
+    assert len(window.state_manager.data.bonds) == previewed_bonds
 
 
 def test_chain_tool_button_sits_between_the_9_ring_and_user_templates(window, qtbot):
