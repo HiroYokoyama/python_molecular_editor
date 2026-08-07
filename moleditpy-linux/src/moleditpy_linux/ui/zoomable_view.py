@@ -113,7 +113,7 @@ class ZoomableView(QGraphicsView):
             current_mode = self.scene().mode if self.scene() else "select"  # type: ignore[union-attr]
             if current_mode == "select":
                 self.setCursor(Qt.CursorShape.ArrowCursor)
-            elif current_mode.startswith(("atom", "bond", "template")):
+            elif current_mode.startswith(("atom", "bond", "template", "chain")):
                 self.setCursor(Qt.CursorShape.CrossCursor)
             elif current_mode.startswith(("charge", "radical")):
                 self.setCursor(Qt.CursorShape.CrossCursor)

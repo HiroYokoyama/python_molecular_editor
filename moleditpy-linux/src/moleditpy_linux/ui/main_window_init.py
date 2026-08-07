@@ -873,6 +873,17 @@ class MainInitManager:
             self.tool_group.addAction(action)  # type: ignore[union-attr]
         toolbar.addSeparator()
 
+    def _add_chain_action(self, toolbar: QToolBar) -> None:
+        """Add the drag-to-draw alkyl chain action."""
+        action = QAction(self.host)
+        action.setIcon(self._create_chain_icon())
+        action.setToolTip("Alkyl Chain — drag to draw a zigzag chain")
+        action.setCheckable(True)
+        action.triggered.connect(lambda checked: self.host.ui_manager.set_mode("chain"))
+        self.mode_actions["chain"] = action
+        toolbar.addAction(action)
+        self.tool_group.addAction(action)  # type: ignore[union-attr]
+
     def _add_charge_radical_actions(self, toolbar: QToolBar) -> None:
         """Add charge and radical modification actions."""
         ops = [
@@ -909,6 +920,8 @@ class MainInitManager:
             self.mode_actions[mode] = action
             toolbar_bottom.addAction(action)
             self.tool_group.addAction(action)  # type: ignore[union-attr]
+
+        self._add_chain_action(toolbar_bottom)
 
         user_action = QAction("USER", self.host)
         user_action.setCheckable(True)
@@ -1035,6 +1048,57 @@ class MainInitManager:
             painter.drawText(
                 QRectF(0, 0, size, size * 0.6), Qt.AlignmentFlag.AlignCenter, "Z⇌E"
             )
+
+        painter.end()
+        return QIcon(pixmap)
+
+    def _create_chain_icon(self, size: int = 32) -> QIcon:
+        """Generate the -(-)n- repeat-unit icon for the alkyl chain tool."""
+        fg = self._get_icon_foreground_color()
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(fg, max(1.8, size / 16.0)))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+
+        cy = size * 0.375
+        amp = size * 0.17
+        # Backbone zigzag spans the full width so the repeat brackets cross it.
+        zig = [
+            QPointF(1 + i * (size - 2) / 2.0, cy + (amp if i % 2 == 0 else -amp))
+            for i in range(3)
+        ]
+        for start, end in zip(zig, zig[1:]):
+            painter.drawLine(start, end)
+
+        painter.setPen(QPen(fg, max(1.5, size / 20.0)))
+        bracket_h = size * 0.55
+        bracket_w = size * 0.19
+        inset = size * 0.13
+        painter.drawArc(
+            QRectF(inset, cy - bracket_h / 2, bracket_w, bracket_h), 118 * 16, 124 * 16
+        )
+        painter.drawArc(
+            QRectF(size - inset - bracket_w, cy - bracket_h / 2, bracket_w, bracket_h),
+            -62 * 16,
+            124 * 16,
+        )
+
+        font = painter.font()
+        font.setPixelSize(max(8, int(size * 0.30)))
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(
+            QRectF(
+                size - size * 0.26,
+                cy + bracket_h / 2 - size * 0.06,
+                size * 0.24,
+                size * 0.36,
+            ),
+            Qt.AlignmentFlag.AlignCenter,
+            "n",
+        )
 
         painter.end()
         return QIcon(pixmap)
