@@ -254,6 +254,55 @@ def test_previewed_count_matches_the_atoms_drawn_from_an_existing_atom(window, q
     assert label == "n = 4"
 
 
+def _bonded_to_symbol(data, symbol):
+    return any(
+        symbol in (data.atoms[i]["symbol"], data.atoms[j]["symbol"])
+        for i, j in data.bonds
+    )
+
+
+def test_chain_end_joins_the_atom_under_the_cursor(window, qtbot):
+    """Releasing on an atom joins it, stretching only the tail bond."""
+    scene = window.init_manager.scene
+    data = window.state_manager.data
+    window.ui_manager.set_mode("chain")
+
+    # Sits past where the geometry alone would end, so only a cursor snap reaches it.
+    target = QPointF(4 * CHAIN_AXIS_STEP + 8, 0)
+    target_id = scene.create_atom("O", target)
+
+    _drag_chain(scene, QPointF(0, 0), target)
+
+    assert target_id in data.atoms
+    assert len(data.atoms) == 5, "the hovered atom must be reused, not duplicated"
+    assert _bonded_to_symbol(data, "O")
+    # Only the tail bond absorbs the stretch; the rest keep the exact length.
+    lengths = sorted(
+        math.hypot(
+            scene.atom_items[j].pos().x() - scene.atom_items[i].pos().x(),
+            scene.atom_items[j].pos().y() - scene.atom_items[i].pos().y(),
+        )
+        for i, j in data.bonds
+    )
+    assert lengths[:-1] == pytest.approx([DEFAULT_BOND_LENGTH] * 3, abs=1e-6)
+    assert lengths[-1] > DEFAULT_BOND_LENGTH
+
+
+def test_chain_end_ignores_an_atom_the_cursor_is_not_on(window, qtbot):
+    """An atom well away from the cursor must not capture the chain end."""
+    scene = window.init_manager.scene
+    data = window.state_manager.data
+    window.ui_manager.set_mode("chain")
+
+    end = QPointF(4 * CHAIN_AXIS_STEP, 0)
+    scene.create_atom("O", QPointF(end.x() + 60, end.y()))
+
+    _drag_chain(scene, QPointF(0, 0), end)
+
+    assert len(data.atoms) == 6
+    assert not _bonded_to_symbol(data, "O")
+
+
 def test_chain_preview_follows_a_real_mouse_drag(window, qtbot):
     """Real Qt events through the view must reach the live preview, not just fakes."""
     view = window.init_manager.view_2d

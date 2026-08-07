@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import math
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 from PyQt6.QtCore import QPointF
 
@@ -24,6 +24,8 @@ from ..utils.constants import DEFAULT_BOND_LENGTH
 CHAIN_HALF_ANGLE_DEG = 30.0
 CHAIN_ANGLE_SNAP_DEG = 15.0
 MAX_CHAIN_LENGTH = 100
+# Reject an end snap that would collapse the tail bond onto its neighbour.
+MIN_TAIL_BOND_RATIO = 0.4
 
 
 class ChainMixin:
@@ -31,11 +33,13 @@ class ChainMixin:
 
     add_molecule_fragment: Any
     current_atom_symbol: Any
+    items: Any
     template_preview: Any
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.chain_anchor: Optional[QPointF] = None
         self.chain_start_atom: Optional[AtomItem] = None
+        self.chain_end_atom: Optional[AtomItem] = None
         self.chain_points: List[QPointF] = []
         self.chain_active: bool = False
         super().__init__(*args, **kwargs)
@@ -43,9 +47,48 @@ class ChainMixin:
     def begin_chain(self, pos: QPointF, start_atom: Optional[AtomItem] = None) -> None:
         """Anchor a new chain drag at ``pos`` (or at ``start_atom`` if given)."""
         self.chain_start_atom = start_atom
+        self.chain_end_atom = None
         self.chain_anchor = start_atom.pos() if start_atom is not None else QPointF(pos)
         self.chain_points = []
         self.chain_active = True
+
+    def atom_under(self, pos: QPointF) -> Optional[AtomItem]:
+        """Atom whose shape contains pos — the same hit test that hover highlights."""
+        for item in self.items(pos):
+            if isinstance(item, AtomItem):
+                return item
+        return None
+
+    def chain_geometry(
+        self, cursor: QPointF
+    ) -> Tuple[List[QPointF], Optional[AtomItem]]:
+        """Zigzag for this cursor, with the last vertex pulled onto a hovered atom.
+
+        Every other bond keeps the fixed length, so the tail bond absorbs the
+        whole difference and may end up longer or shorter. The reach is the
+        atom's own hover-highlight shape, so any atom lit up under the cursor is
+        one the chain will join.
+        """
+        if self.chain_anchor is None:
+            return [], None
+
+        points = self.calculate_chain_points(self.chain_anchor, cursor)
+        if len(points) < 2:
+            return points, None
+
+        target = self.atom_under(cursor)
+        if target is None or target is self.chain_start_atom:
+            return points, None
+
+        end = target.pos()
+        prev = points[-2]
+        if math.hypot(end.x() - prev.x(), end.y() - prev.y()) < MIN_TAIL_BOND_RATIO * (
+            DEFAULT_BOND_LENGTH
+        ):
+            return points, None
+
+        points[-1] = end
+        return points, target
 
     def calculate_chain_points(self, anchor: QPointF, cursor: QPointF) -> List[QPointF]:
         """Return the zigzag vertices from ``anchor`` toward ``cursor``.
@@ -90,7 +133,7 @@ class ChainMixin:
         if not self.chain_active or self.chain_anchor is None:
             return
 
-        self.chain_points = self.calculate_chain_points(self.chain_anchor, pos)
+        self.chain_points, self.chain_end_atom = self.chain_geometry(pos)
         if len(self.chain_points) < 2:
             self.template_preview.hide()
             return
@@ -103,15 +146,21 @@ class ChainMixin:
         self.template_preview.show()
 
     def new_atom_count(self) -> int:
-        """Atoms the previewed chain would add; the anchor only counts if it is new."""
+        """Atoms the previewed chain would add; reused end atoms do not count."""
         if not self.chain_points:
             return 0
-        return len(self.chain_points) - (1 if self.chain_start_atom is not None else 0)
+        reused = sum(
+            1
+            for atom in (self.chain_start_atom, self.chain_end_atom)
+            if atom is not None
+        )
+        return len(self.chain_points) - reused
 
     def clear_chain_preview(self) -> None:
         """Hide the ghost chain and drop the drag state."""
         self.chain_anchor = None
         self.chain_start_atom = None
+        self.chain_end_atom = None
         self.chain_points = []
         self.chain_active = False
         self.template_preview.hide()
@@ -121,12 +170,15 @@ class ChainMixin:
         if self.chain_anchor is None:
             return False
 
-        points = self.calculate_chain_points(self.chain_anchor, pos)
+        points, end_atom = self.chain_geometry(pos)
         if len(points) < 2:
             return False
 
         bonds_info = [(i, i + 1, 1) for i in range(len(points) - 1)]
-        existing = [self.chain_start_atom] if self.chain_start_atom is not None else []
+        # Naming both reused atoms fuses them even with template fusing turned off.
+        existing = [
+            atom for atom in (self.chain_start_atom, end_atom) if atom is not None
+        ]
         self.add_molecule_fragment(
             points, bonds_info, existing_items=existing, symbol=self.current_atom_symbol
         )

@@ -170,7 +170,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
 
   * **Standard Templates:** Click a button on the template toolbar (benzene ring, cyclohexane ring, etc.) to select the mode, then click on the canvas to place it. Clicking on an existing atom or bond allows you to merge the structures. Template snapping distance and fusing settings can be adjusted in the `Settings` menu. **Hold down the `Alt` key to temporarily bypass atom fusing; the template preview will deform to show fusing points visually unless the `Alt` key is pressed.**
 
-  * **Alkyl Chains:** Click the `-(-)n-` button on the template toolbar, then drag on the canvas. Every bond keeps the standard 2D bond length and the chain axis snaps to 15° steps, so the drag distance decides the chain length and the drag direction decides its orientation; the zigzag bends toward whichever side of the axis the cursor is on. The number of carbon atoms that will be added (`n = ...`) is shown next to the cursor while dragging, and the chain is only created when the mouse is released. Starting the drag on an existing atom extends that atom instead of duplicating it — the reused atom is not counted in `n` — and an end that lands on an existing atom fuses with it.
+  * **Alkyl Chains:** Click the `-(-)n-` button on the template toolbar, then drag on the canvas. Every bond keeps the standard 2D bond length and the chain axis snaps to 15° steps, so the drag distance decides the chain length and the drag direction decides its orientation; the zigzag bends toward whichever side of the axis the cursor is on. The number of carbon atoms that will be added (`n = ...`) is shown next to the cursor while dragging, and the chain is only created when the mouse is released. Starting the drag on an existing atom extends that atom instead of duplicating it — the reused atom is not counted in `n`. Releasing on an existing atom joins the chain to it: any atom highlighted under the cursor is a valid target, and the final bond simply comes out a little longer or shorter so that every other bond can keep its exact length.
 
   * **User Templates:**
 
@@ -534,7 +534,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 4.5
+  * **Version:** 4.6
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
