@@ -34,6 +34,10 @@ class TemplatePreviewItem(QGraphicsItem):
         self.user_template_bonds: List[Any] = []
         self.user_template_atoms: List[Any] = []
         self.is_user_template = False
+        self.chain_points: List[QPointF] = []
+        self.chain_label = ""
+        self.chain_label_pos = QPointF()
+        self.is_chain = False
 
     def set_geometry(self, points: list[QPointF], is_aromatic: bool = False) -> None:
         """Set polygon points for a standard ring template preview."""
@@ -41,6 +45,21 @@ class TemplatePreviewItem(QGraphicsItem):
         self.polygon = QPolygonF(points)
         self.is_aromatic = is_aromatic
         self.is_user_template = False
+        self.is_chain = False
+        self.update()
+
+    def set_chain_geometry(
+        self, points: list[QPointF], label: str, label_pos: QPointF
+    ) -> None:
+        """Set the zigzag vertices and the repeat-count label for a chain preview."""
+        self.prepareGeometryChange()
+        self.chain_points = list(points)
+        self.chain_label = label
+        self.chain_label_pos = QPointF(label_pos)
+        self.is_chain = True
+        self.is_user_template = False
+        self.is_aromatic = False
+        self.polygon = QPolygonF()
         self.update()
 
     def set_user_template_geometry(
@@ -55,12 +74,22 @@ class TemplatePreviewItem(QGraphicsItem):
         self.user_template_bonds = bonds_info
         self.user_template_atoms = atoms_data
         self.is_user_template = True
+        self.is_chain = False
         self.is_aromatic = False
         self.polygon = QPolygonF()
         self.update()
 
     def boundingRect(self) -> QRectF:
         """Return the bounding rect encompassing the preview geometry."""
+        if self.is_chain and self.chain_points:
+            xs = [p.x() for p in self.chain_points] + [self.chain_label_pos.x()]
+            ys = [p.y() for p in self.chain_points] + [self.chain_label_pos.y()]
+            return QRectF(
+                min(xs) - 10,
+                min(ys) - 20,
+                max(xs) - min(xs) + 90,
+                max(ys) - min(ys) + 40,
+            )
         if self.is_user_template and self.user_template_points:
             # Calculate bounding rect for user template
             min_x = min(p.x() for p in self.user_template_points)
@@ -81,10 +110,42 @@ class TemplatePreviewItem(QGraphicsItem):
         """Dispatch to the regular or user-template painter."""
         if painter is None:
             return
-        if self.is_user_template:
+        if self.is_chain:
+            self.paint_chain(painter)
+        elif self.is_user_template:
             self.paint_user_template(painter)
         else:
             self.paint_regular_template(painter)
+
+    def paint_chain(self, painter: QPainter) -> None:
+        """Paint the ghost zigzag chain plus the repeat count next to the cursor."""
+        if len(self.chain_points) < 2:
+            return
+
+        painter.setPen(QPen(QColor(80, 80, 80, 180), 2.5))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        for i in range(len(self.chain_points) - 1):
+            painter.drawLine(QLineF(self.chain_points[i], self.chain_points[i + 1]))
+
+        dot = QColor(80, 80, 80, 140)
+        painter.setBrush(QBrush(dot))
+        painter.setPen(QPen(dot, 1))
+        for p in self.chain_points[1:]:
+            painter.drawEllipse(p, 2.5, 2.5)
+
+        if not self.chain_label:
+            return
+        font = QFont("Arial", 11, QFont.Weight.Bold)
+        painter.setFont(font)
+        metrics = painter.fontMetrics()
+        rect = QRectF(metrics.boundingRect(self.chain_label))
+        rect.moveTopLeft(self.chain_label_pos)
+        rect = rect.adjusted(-5, -3, 5, 3)
+        painter.setPen(QPen(QColor(80, 80, 80, 180), 1))
+        painter.setBrush(QBrush(QColor(255, 255, 255, 225)))
+        painter.drawRoundedRect(rect, 4, 4)
+        painter.setPen(QPen(QColor(40, 40, 40)))
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, self.chain_label)
 
     def paint_regular_template(self, painter: QPainter) -> None:
         """Paint a standard ring or aromatic template as a polygon outline."""

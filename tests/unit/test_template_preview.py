@@ -9,6 +9,7 @@ Covers:
     - paint: None painter early-return
     - paint_regular_template: non-aromatic, aromatic, empty polygon
     - paint_user_template: no points, single/double/triple bonds, non-C atoms
+    - set_chain_geometry / paint_chain: alkyl chain ghost + repeat-count label
 
   TemplatePreviewView (ui/template_preview_view.py):
     - __init__ defaults
@@ -196,6 +197,82 @@ def test_paint_regular_template_empty_polygon(app):
     _, p = _painter()
     item.paint_regular_template(p)
     p.end()
+
+
+# ---------------------------------------------------------------------------
+# TemplatePreviewItem — alkyl chain preview
+# ---------------------------------------------------------------------------
+
+
+def _blank_painter() -> tuple:
+    """Return (white QImage, QPainter); caller must call painter.end()."""
+    img = QImage(200, 200, QImage.Format.Format_ARGB32)
+    img.fill(0xFFFFFFFF)
+    return img, QPainter(img)
+
+
+def _painted_pixel_count(img: QImage) -> int:
+    return sum(
+        1
+        for y in range(img.height())
+        for x in range(img.width())
+        if img.pixel(x, y) != 0xFFFFFFFF
+    )
+
+
+def test_set_chain_geometry_stores_points_and_label(app):
+    """set_chain_geometry switches the item into chain mode and clears other modes."""
+    item = TemplatePreviewItem()
+    item.set_user_template_geometry([QPointF(0, 0)], [], [{"symbol": "C"}])
+    pts = [QPointF(0, 0), QPointF(50, 20)]
+    item.set_chain_geometry(pts, "n = 1", QPointF(60, 10))
+
+    assert item.is_chain is True
+    assert item.is_user_template is False
+    assert item.chain_points == pts
+    assert item.chain_label == "n = 1"
+    assert item.chain_label_pos == QPointF(60, 10)
+
+
+def test_set_geometry_leaves_chain_mode(app):
+    """A ring template preview after a chain preview no longer paints as a chain."""
+    item = TemplatePreviewItem()
+    item.set_chain_geometry([QPointF(0, 0), QPointF(50, 0)], "n = 1", QPointF(60, 0))
+    item.set_geometry(_points(6))
+    assert item.is_chain is False
+
+
+def test_bounding_rect_covers_chain_and_label(app):
+    """boundingRect spans both the zigzag and the label drawn beside the cursor."""
+    item = TemplatePreviewItem()
+    item.set_chain_geometry([QPointF(0, 0), QPointF(60, 30)], "n = 1", QPointF(76, 18))
+    rect = item.boundingRect()
+    assert rect.contains(QPointF(0, 0))
+    assert rect.contains(QPointF(76, 18))
+
+
+def test_paint_chain_draws_the_zigzag_and_label(app):
+    """paint_chain marks the canvas for both the chain and its label."""
+    item = TemplatePreviewItem()
+    item.set_chain_geometry(
+        [QPointF(10, 100), QPointF(70, 60), QPointF(130, 100)],
+        "n = 2",
+        QPointF(140, 40),
+    )
+    img, p = _blank_painter()
+    item.paint(p, None, None)
+    p.end()
+    assert _painted_pixel_count(img) > 0
+
+
+def test_paint_chain_needs_at_least_one_bond(app):
+    """A chain preview with a single vertex paints nothing."""
+    item = TemplatePreviewItem()
+    item.set_chain_geometry([QPointF(10, 10)], "n = 0", QPointF(20, 20))
+    img, p = _blank_painter()
+    item.paint(p, None, None)
+    p.end()
+    assert _painted_pixel_count(img) == 0
 
 
 # ---------------------------------------------------------------------------

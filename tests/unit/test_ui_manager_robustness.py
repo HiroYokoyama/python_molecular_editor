@@ -196,6 +196,30 @@ def test_set_mode_bond_parses_order_and_stereo():
     ui.host.update_status_message.assert_any_call("Mode: Draw Bond (Order: 1 (Dash))")
 
 
+def test_set_mode_chain_uses_carbon_and_cross_cursor():
+    ui = _make_ui_manager()
+    ui.set_mode("chain")
+    assert ui.host.init_manager.scene.mode == "chain"
+    assert ui.host.init_manager.scene.current_atom_symbol == "C"
+    assert ui.host.init_manager.scene.bond_order == 1
+    ui.host.init_manager.view_2d.setCursor.assert_called_with(
+        Qt.CursorShape.CrossCursor
+    )
+    ui.host.update_status_message.assert_any_call(
+        "Mode: Alkyl Chain (Drag to set the chain length)"
+    )
+
+
+def test_leaving_chain_mode_drops_an_abandoned_drag():
+    """A shortcut key pressed mid-drag must not leave a live chain anchor behind."""
+    ui = _make_ui_manager()
+    ui.set_mode("chain")
+    ui.host.init_manager.scene.clear_chain_preview.assert_not_called()
+
+    ui.set_mode("bond_2_0")
+    ui.host.init_manager.scene.clear_chain_preview.assert_called_once()
+
+
 def test_set_mode_builtin_template_status():
     ui = _make_ui_manager()
     ui.set_mode("template_benzene")

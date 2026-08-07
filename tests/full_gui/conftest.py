@@ -171,7 +171,7 @@ def full_window(app, qtbot, monkeypatch, tmp_path):
 _live_plotters: list = []
 
 
-@pytest.hookimpl(tryfirst=True)
+@pytest.hookimpl(wrapper=True, tryfirst=True)
 def pytest_runtest_teardown(item, nextitem):
     """Disarm every plotter before pytest-qt pumps the queue in its own hook.
 
@@ -184,6 +184,13 @@ def pytest_runtest_teardown(item, nextitem):
     The only safe defence: finalize the VTK render window *before* pytest-qt
     pumps.  Finalize() detaches the OpenGL context at the C++ level, making
     any subsequent render delivery a harmless no-op inside VTK itself.
+
+    This must be a hook *wrapper*: pytest-qt's own teardown is a wrapper that
+    calls processEvents() before its yield, and a plain tryfirst hook runs
+    inside that — too late.  Only an outer wrapper's pre-yield body beats it.
+    Running as a plain tryfirst hook segfaulted CI in
+    pyvistaqt.render <- pytestqt _process_events (flaky: it needs a render to
+    be queued at that instant).
 
     We intentionally do NOT call processEvents() here — doing so would
     deliver the queued metacalls ourselves, which crashes just the same.
@@ -204,6 +211,8 @@ def pytest_runtest_teardown(item, nextitem):
                 rw.Finalize()
         except (RuntimeError, AttributeError):
             pass
+
+    return (yield)
 
 
 def _make_rendering_synchronous(win) -> None:

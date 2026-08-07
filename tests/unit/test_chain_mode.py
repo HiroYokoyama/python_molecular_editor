@@ -1,0 +1,284 @@
+"""Unit tests for the drag-to-draw alkyl chain tool (ChainMixin)."""
+
+import math
+
+import pytest
+from unittest.mock import MagicMock
+from PyQt6.QtCore import QPointF
+from PyQt6.QtWidgets import QApplication
+
+from moleditpy.ui.chain_mixin import (
+    CHAIN_ANGLE_SNAP_DEG,
+    CHAIN_HALF_ANGLE_DEG,
+    MAX_CHAIN_LENGTH,
+    ChainMixin,
+)
+from moleditpy.ui.atom_item import AtomItem
+from moleditpy.utils.constants import DEFAULT_BOND_LENGTH
+
+AXIS_STEP = DEFAULT_BOND_LENGTH * math.cos(math.radians(CHAIN_HALF_ANGLE_DEG))
+
+
+class MockChainScene(ChainMixin):
+    def __init__(self):
+        self.template_preview = MagicMock()
+        self.add_molecule_fragment = MagicMock()
+        self.settings: dict = {}
+        self.nearby_atom = None
+        self.find_atom_near_calls: list = []
+        self.current_atom_symbol = "C"
+        super().__init__()
+
+    def get_setting(self, key, default=None):
+        return self.settings.get(key, default)
+
+    def find_atom_near(self, pos, tol=14.0):
+        self.find_atom_near_calls.append((pos, tol))
+        return self.nearby_atom
+
+
+@pytest.fixture(scope="session")
+def qapp():
+    return QApplication.instance() or QApplication([])
+
+
+@pytest.fixture
+def scene(qapp):
+    return MockChainScene()
+
+
+def bond_lengths(points):
+    return [
+        math.hypot(b.x() - a.x(), b.y() - a.y()) for a, b in zip(points, points[1:])
+    ]
+
+
+def test_every_bond_keeps_the_standard_length(scene):
+    points = scene.calculate_chain_points(QPointF(0, 0), QPointF(5 * AXIS_STEP, 0))
+    assert len(points) == 6
+    for length in bond_lengths(points):
+        assert length == pytest.approx(DEFAULT_BOND_LENGTH)
+
+
+def test_bond_count_follows_drag_distance(scene):
+    for expected in (1, 2, 7):
+        points = scene.calculate_chain_points(
+            QPointF(0, 0), QPointF(expected * AXIS_STEP, 0)
+        )
+        assert len(points) - 1 == expected
+
+
+def test_chain_zigzags_around_the_axis(scene):
+    points = scene.calculate_chain_points(QPointF(0, 0), QPointF(4 * AXIS_STEP, 0))
+    offsets = [p.y() for p in points]
+    assert offsets[0] == pytest.approx(0.0)
+    assert offsets[2] == pytest.approx(0.0)
+    assert abs(offsets[1]) == pytest.approx(
+        DEFAULT_BOND_LENGTH * math.sin(math.radians(CHAIN_HALF_ANGLE_DEG))
+    )
+    # Vertices advance along the axis by a constant step.
+    for i, p in enumerate(points):
+        assert p.x() == pytest.approx(i * AXIS_STEP)
+
+
+def test_zigzag_side_follows_the_cursor(scene):
+    below = scene.calculate_chain_points(QPointF(0, 0), QPointF(2 * AXIS_STEP, 3))
+    above = scene.calculate_chain_points(QPointF(0, 0), QPointF(2 * AXIS_STEP, -3))
+    assert below[1].y() > 0
+    assert above[1].y() < 0
+
+
+def test_axis_is_snapped_to_fixed_angle_steps(scene):
+    # 20 deg drag snaps down to the nearest 15 deg step.
+    angle = math.radians(20)
+    far = QPointF(
+        3 * AXIS_STEP * math.cos(angle),
+        3 * AXIS_STEP * math.sin(angle),
+    )
+    points = scene.calculate_chain_points(QPointF(0, 0), far)
+    # Even-indexed vertices sit exactly on the snapped axis.
+    axis_angle = math.degrees(math.atan2(points[2].y(), points[2].x()))
+    assert axis_angle == pytest.approx(CHAIN_ANGLE_SNAP_DEG)
+
+
+def test_short_or_backward_drag_yields_no_chain(scene):
+    assert scene.calculate_chain_points(QPointF(0, 0), QPointF(0, 0)) == []
+    assert scene.calculate_chain_points(QPointF(0, 0), QPointF(4, 0)) == []
+
+
+def test_chain_length_is_capped(scene):
+    points = scene.calculate_chain_points(QPointF(0, 0), QPointF(5000 * AXIS_STEP, 0))
+    assert len(points) - 1 == MAX_CHAIN_LENGTH
+
+
+def test_preview_counts_the_atoms_the_drag_will_draw(scene):
+    """On empty canvas the anchor becomes a new atom too, so n is the vertex count."""
+    scene.begin_chain(QPointF(0, 0))
+    cursor = QPointF(3 * AXIS_STEP, 0)
+    scene.update_chain_preview(cursor)
+
+    points, label, label_pos = scene.template_preview.set_chain_geometry.call_args[0]
+    assert len(points) == 4
+    assert label == "n = 4"
+    assert label_pos.x() > cursor.x()
+    scene.template_preview.show.assert_called_once()
+
+
+def test_preview_excludes_an_existing_start_atom_from_the_count(scene):
+    """Growing from an existing atom reuses it, so it must not be counted as drawn."""
+    atom = MagicMock()
+    atom.pos.return_value = QPointF(0, 0)
+    scene.begin_chain(QPointF(0, 0), atom)
+    scene.update_chain_preview(QPointF(3 * AXIS_STEP, 0))
+
+    points, label, _ = scene.template_preview.set_chain_geometry.call_args[0]
+    assert len(points) == 4
+    assert label == "n = 3"
+
+
+def test_preview_hides_when_the_drag_is_too_short(scene):
+    scene.begin_chain(QPointF(0, 0))
+    scene.update_chain_preview(QPointF(2, 0))
+
+    scene.template_preview.set_chain_geometry.assert_not_called()
+    scene.template_preview.hide.assert_called_once()
+
+
+def test_preview_ignores_moves_outside_a_drag(scene):
+    scene.update_chain_preview(QPointF(3 * AXIS_STEP, 0))
+    scene.template_preview.set_chain_geometry.assert_not_called()
+
+
+def test_begin_chain_anchors_on_the_start_atom(scene):
+    atom = MagicMock()
+    atom.pos.return_value = QPointF(10, 20)
+    scene.begin_chain(QPointF(13, 24), atom)
+
+    assert scene.chain_active is True
+    assert scene.chain_anchor == QPointF(10, 20)
+    assert scene.chain_start_atom is atom
+
+
+def test_commit_builds_a_single_bonded_path(scene):
+    scene.begin_chain(QPointF(0, 0))
+    assert scene.commit_chain(QPointF(3 * AXIS_STEP, 0)) is True
+
+    args, kwargs = scene.add_molecule_fragment.call_args
+    points, bonds_info = args
+    assert len(points) == 4
+    assert bonds_info == [(0, 1, 1), (1, 2, 1), (2, 3, 1)]
+    assert kwargs["existing_items"] == []
+    assert kwargs["symbol"] == "C"
+
+
+def test_commit_passes_the_start_atom_for_fusing(scene):
+    atom = MagicMock()
+    atom.pos.return_value = QPointF(0, 0)
+    scene.begin_chain(QPointF(0, 0), atom)
+    scene.commit_chain(QPointF(2 * AXIS_STEP, 0))
+
+    assert scene.add_molecule_fragment.call_args[1]["existing_items"] == [atom]
+
+
+def test_commit_is_a_no_op_without_a_usable_drag(scene):
+    assert scene.commit_chain(QPointF(50, 0)) is False
+
+    scene.begin_chain(QPointF(0, 0))
+    assert scene.commit_chain(QPointF(2, 0)) is False
+    scene.add_molecule_fragment.assert_not_called()
+
+
+def _nearby_atom(scene, pos):
+    """Put an atom within snapping range of the cursor."""
+    atom = MagicMock(spec=AtomItem)
+    atom.pos.return_value = pos
+    scene.nearby_atom = atom
+    return atom
+
+
+def test_end_snap_uses_the_shared_bond_snapping_distance(scene):
+    """The end must obey the same setting bond drawing does, not a private radius."""
+    scene.settings["bond_snapping_distance_2d"] = 9.0
+    scene.begin_chain(QPointF(0, 0))
+    cursor = QPointF(3 * AXIS_STEP, 0)
+
+    scene.chain_geometry(cursor)
+
+    assert scene.find_atom_near_calls[-1] == (cursor, 9.0)
+
+
+def test_end_snaps_to_the_nearby_atom_and_stretches_only_the_tail(scene):
+    scene.begin_chain(QPointF(0, 0))
+    cursor = QPointF(3 * AXIS_STEP + 9, 0)
+    atom = _nearby_atom(scene, cursor)
+
+    points, end_atom = scene.chain_geometry(cursor)
+
+    assert end_atom is atom
+    assert points[-1] == cursor
+    lengths = [
+        math.hypot(b.x() - a.x(), b.y() - a.y()) for a, b in zip(points, points[1:])
+    ]
+    assert lengths[:-1] == pytest.approx([DEFAULT_BOND_LENGTH] * 2)
+    # The tail takes the whole difference - shorter here, since this vertex sits
+    # off-axis and the cursor is on it.
+    assert lengths[-1] != pytest.approx(DEFAULT_BOND_LENGTH)
+    assert lengths[-1] == pytest.approx(73.95, abs=0.01)
+
+
+def test_hovered_end_atom_is_not_counted_as_drawn(scene):
+    scene.begin_chain(QPointF(0, 0))
+    cursor = QPointF(3 * AXIS_STEP + 9, 0)
+    _nearby_atom(scene, cursor)
+
+    scene.update_chain_preview(cursor)
+
+    _, label, _ = scene.template_preview.set_chain_geometry.call_args[0]
+    assert label == "n = 3"
+
+
+def test_end_snap_is_refused_when_it_would_collapse_the_tail_bond(scene):
+    scene.begin_chain(QPointF(0, 0))
+    cursor = QPointF(3 * AXIS_STEP, 0)
+    # An atom sitting almost on the previous vertex must not be snapped to.
+    prev_vertex = scene.calculate_chain_points(QPointF(0, 0), cursor)[-2]
+    _nearby_atom(scene, QPointF(prev_vertex.x() + 2, prev_vertex.y()))
+
+    _, end_atom = scene.chain_geometry(cursor)
+
+    assert end_atom is None
+
+
+def test_end_snap_never_targets_the_start_atom(scene):
+    start = MagicMock(spec=AtomItem)
+    start.pos.return_value = QPointF(0, 0)
+    scene.begin_chain(QPointF(0, 0), start)
+    scene.nearby_atom = start
+
+    _, end_atom = scene.chain_geometry(QPointF(3 * AXIS_STEP, 0))
+
+    assert end_atom is None
+
+
+def test_commit_names_both_reused_atoms(scene):
+    start = MagicMock(spec=AtomItem)
+    start.pos.return_value = QPointF(0, 0)
+    scene.begin_chain(QPointF(0, 0), start)
+    cursor = QPointF(3 * AXIS_STEP + 9, 0)
+    end = _nearby_atom(scene, cursor)
+
+    assert scene.commit_chain(cursor) is True
+
+    assert scene.add_molecule_fragment.call_args[1]["existing_items"] == [start, end]
+
+
+def test_clear_chain_preview_resets_the_drag_state(scene):
+    scene.begin_chain(QPointF(0, 0))
+    scene.update_chain_preview(QPointF(2 * AXIS_STEP, 0))
+    scene.clear_chain_preview()
+
+    assert scene.chain_active is False
+    assert scene.chain_anchor is None
+    assert scene.chain_start_atom is None
+    assert scene.chain_points == []
+    scene.template_preview.hide.assert_called()

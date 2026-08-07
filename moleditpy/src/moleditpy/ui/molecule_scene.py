@@ -36,9 +36,12 @@ from .template_preview_item import TemplatePreviewItem
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 from .molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMixin
+from .chain_mixin import ChainMixin
 
 
-class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene):
+class MoleculeScene(
+    ChainMixin, TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScene
+):
     """Central QGraphicsScene that owns all 2D atom and bond items."""
 
     def __init__(self, data: MolecularData, window: MainWindow) -> None:
@@ -433,6 +436,15 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
             event.accept()
             return  # Complete right-click processing and prevent proceeding to left-click logic
 
+        if self.mode == "chain":
+            self.clearSelection()
+            snap_dist = self.get_setting("bond_snapping_distance_2d", 14.0)
+            self.begin_chain(
+                self.press_pos, self.find_atom_near(self.press_pos, tol=snap_dist)
+            )
+            event.accept()
+            return
+
         if self.mode.startswith("template"):
             self.clearSelection()  # In template mode, no selection is made; only the click position is recorded.
             return
@@ -486,6 +498,10 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
 
         if self.mode.startswith("template"):
             self.update_template_preview(event.scenePos())
+
+        if self.mode == "chain" and self.chain_active:
+            self.update_chain_preview(event.scenePos())
+            return
 
         if not self.mouse_moved_since_press and self.press_pos:
             if (
@@ -543,6 +559,20 @@ class MoleculeScene(TemplateMixin, KeyboardMixin, SceneQueryMixin, QGraphicsScen
                     logging.debug(f"Error removing temp_line in mouseReleaseEvent: {e}")
 
             self.temp_line = None
+
+        if self.mode == "chain":
+            committed = False
+            if self.chain_active:
+                committed = self.commit_chain(end_pos)
+            self.clear_chain_preview()
+            self.start_atom = None
+            self.start_pos = None
+            self.press_pos = None
+            if committed:
+                self.data_changed_in_event = True
+                self.update_all_items()
+                self.window.edit_actions_manager.push_undo_state()
+            return
 
         if self.mode.startswith("template") and is_click:
             if self.template_context and self.template_context.get("points"):
