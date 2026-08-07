@@ -33,7 +33,8 @@ class ChainMixin:
 
     add_molecule_fragment: Any
     current_atom_symbol: Any
-    items: Any
+    find_atom_near: Any
+    get_setting: Any
     template_preview: Any
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -52,22 +53,14 @@ class ChainMixin:
         self.chain_points = []
         self.chain_active = True
 
-    def atom_under(self, pos: QPointF) -> Optional[AtomItem]:
-        """Atom whose shape contains pos — the same hit test that hover highlights."""
-        for item in self.items(pos):
-            if isinstance(item, AtomItem):
-                return item
-        return None
-
     def chain_geometry(
         self, cursor: QPointF
     ) -> Tuple[List[QPointF], Optional[AtomItem]]:
-        """Zigzag for this cursor, with the last vertex pulled onto a hovered atom.
+        """Zigzag for this cursor, with the last vertex pulled onto a nearby atom.
 
         Every other bond keeps the fixed length, so the tail bond absorbs the
-        whole difference and may end up longer or shorter. The reach is the
-        atom's own hover-highlight shape, so any atom lit up under the cursor is
-        one the chain will join.
+        whole difference and may end up longer or shorter. Both ends of the drag
+        use the shared 2D bond snapping distance, as bond drawing does.
         """
         if self.chain_anchor is None:
             return [], None
@@ -76,15 +69,15 @@ class ChainMixin:
         if len(points) < 2:
             return points, None
 
-        target = self.atom_under(cursor)
+        snap_dist = self.get_setting("bond_snapping_distance_2d", 14.0)
+        target = self.find_atom_near(cursor, tol=snap_dist)
         if target is None or target is self.chain_start_atom:
             return points, None
 
         end = target.pos()
         prev = points[-2]
-        if math.hypot(end.x() - prev.x(), end.y() - prev.y()) < MIN_TAIL_BOND_RATIO * (
-            DEFAULT_BOND_LENGTH
-        ):
+        tail = math.hypot(end.x() - prev.x(), end.y() - prev.y())
+        if tail < MIN_TAIL_BOND_RATIO * DEFAULT_BOND_LENGTH:
             return points, None
 
         points[-1] = end

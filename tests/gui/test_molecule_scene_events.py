@@ -276,16 +276,20 @@ def test_chain_end_joins_the_atom_under_the_cursor(window, qtbot):
     assert target_id in data.atoms
     assert len(data.atoms) == 5, "the hovered atom must be reused, not duplicated"
     assert _bonded_to_symbol(data, "O")
-    # Only the tail bond absorbs the stretch; the rest keep the exact length.
-    lengths = sorted(
-        math.hypot(
+
+    # Identify the tail by the joined atom, not by sorting: the snap can shorten
+    # it as easily as lengthen it, so sorted() would silently pick a different bond.
+    def length(i, j):
+        return math.hypot(
             scene.atom_items[j].pos().x() - scene.atom_items[i].pos().x(),
             scene.atom_items[j].pos().y() - scene.atom_items[i].pos().y(),
         )
-        for i, j in data.bonds
-    )
-    assert lengths[:-1] == pytest.approx([DEFAULT_BOND_LENGTH] * 3, abs=1e-6)
-    assert lengths[-1] > DEFAULT_BOND_LENGTH
+
+    tail = [length(i, j) for i, j in data.bonds if target_id in (i, j)]
+    rest = [length(i, j) for i, j in data.bonds if target_id not in (i, j)]
+    assert len(tail) == 1
+    assert rest == pytest.approx([DEFAULT_BOND_LENGTH] * 3, abs=1e-6)
+    assert tail[0] != pytest.approx(DEFAULT_BOND_LENGTH, abs=1e-6)
 
 
 def test_chain_end_ignores_an_atom_the_cursor_is_not_on(window, qtbot):
@@ -301,6 +305,41 @@ def test_chain_end_ignores_an_atom_the_cursor_is_not_on(window, qtbot):
 
     assert len(data.atoms) == 6
     assert not _bonded_to_symbol(data, "O")
+
+
+def test_both_ends_of_a_chain_use_the_bond_snapping_setting(window, qtbot):
+    """Start and end share the setting bond drawing uses, not a private radius."""
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("chain")
+    tol = scene.get_setting("bond_snapping_distance_2d", 14.0)
+
+    start_id = scene.create_atom("N", QPointF(0, 0))
+    end_id = scene.create_atom("O", QPointF(4 * CHAIN_AXIS_STEP, 0))
+
+    # Both ends are offset by less than the shared snapping distance.
+    _drag_chain(
+        scene,
+        QPointF(tol - 2, 0),
+        QPointF(4 * CHAIN_AXIS_STEP + tol - 2, 0),
+    )
+
+    data = window.state_manager.data
+    assert len(data.atoms) == 5, "both existing atoms must be reused, not duplicated"
+    assert any(start_id in key for key in data.bonds)
+    assert any(end_id in key for key in data.bonds)
+
+
+def test_previewed_count_matches_the_atoms_drawn_when_the_end_fuses(window, qtbot):
+    """A joined end atom already exists, so the badge must not promise it."""
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("chain")
+    target = QPointF(4 * CHAIN_AXIS_STEP + 8, 0)
+    scene.create_atom("O", target)
+
+    label, added = _drag_and_capture_label(scene, QPointF(0, 0), target)
+
+    assert added == 4
+    assert label == "n = 4"
 
 
 def test_chain_preview_follows_a_real_mouse_drag(window, qtbot):

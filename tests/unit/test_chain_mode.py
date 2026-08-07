@@ -23,10 +23,18 @@ class MockChainScene(ChainMixin):
     def __init__(self):
         self.template_preview = MagicMock()
         self.add_molecule_fragment = MagicMock()
-        self.items_under_cursor: list = []
-        self.items = lambda pos: self.items_under_cursor
+        self.settings: dict = {}
+        self.nearby_atom = None
+        self.find_atom_near_calls: list = []
         self.current_atom_symbol = "C"
         super().__init__()
+
+    def get_setting(self, key, default=None):
+        return self.settings.get(key, default)
+
+    def find_atom_near(self, pos, tol=14.0):
+        self.find_atom_near_calls.append((pos, tol))
+        return self.nearby_atom
 
 
 @pytest.fixture(scope="session")
@@ -180,18 +188,29 @@ def test_commit_is_a_no_op_without_a_usable_drag(scene):
     scene.add_molecule_fragment.assert_not_called()
 
 
-def _hovered_atom(scene, pos):
-    """Put an AtomItem-shaped stand-in under the cursor for the hover hit test."""
+def _nearby_atom(scene, pos):
+    """Put an atom within snapping range of the cursor."""
     atom = MagicMock(spec=AtomItem)
     atom.pos.return_value = pos
-    scene.items_under_cursor = [atom]
+    scene.nearby_atom = atom
     return atom
 
 
-def test_end_snaps_to_the_hovered_atom_and_stretches_only_the_tail(scene):
+def test_end_snap_uses_the_shared_bond_snapping_distance(scene):
+    """The end must obey the same setting bond drawing does, not a private radius."""
+    scene.settings["bond_snapping_distance_2d"] = 9.0
+    scene.begin_chain(QPointF(0, 0))
+    cursor = QPointF(3 * AXIS_STEP, 0)
+
+    scene.chain_geometry(cursor)
+
+    assert scene.find_atom_near_calls[-1] == (cursor, 9.0)
+
+
+def test_end_snaps_to_the_nearby_atom_and_stretches_only_the_tail(scene):
     scene.begin_chain(QPointF(0, 0))
     cursor = QPointF(3 * AXIS_STEP + 9, 0)
-    atom = _hovered_atom(scene, cursor)
+    atom = _nearby_atom(scene, cursor)
 
     points, end_atom = scene.chain_geometry(cursor)
 
@@ -201,7 +220,7 @@ def test_end_snaps_to_the_hovered_atom_and_stretches_only_the_tail(scene):
         math.hypot(b.x() - a.x(), b.y() - a.y()) for a, b in zip(points, points[1:])
     ]
     assert lengths[:-1] == pytest.approx([DEFAULT_BOND_LENGTH] * 2)
-    # The tail takes the whole difference — shorter here, since this vertex sits
+    # The tail takes the whole difference - shorter here, since this vertex sits
     # off-axis and the cursor is on it.
     assert lengths[-1] != pytest.approx(DEFAULT_BOND_LENGTH)
     assert lengths[-1] == pytest.approx(73.95, abs=0.01)
@@ -210,7 +229,7 @@ def test_end_snaps_to_the_hovered_atom_and_stretches_only_the_tail(scene):
 def test_hovered_end_atom_is_not_counted_as_drawn(scene):
     scene.begin_chain(QPointF(0, 0))
     cursor = QPointF(3 * AXIS_STEP + 9, 0)
-    _hovered_atom(scene, cursor)
+    _nearby_atom(scene, cursor)
 
     scene.update_chain_preview(cursor)
 
@@ -223,7 +242,7 @@ def test_end_snap_is_refused_when_it_would_collapse_the_tail_bond(scene):
     cursor = QPointF(3 * AXIS_STEP, 0)
     # An atom sitting almost on the previous vertex must not be snapped to.
     prev_vertex = scene.calculate_chain_points(QPointF(0, 0), cursor)[-2]
-    _hovered_atom(scene, QPointF(prev_vertex.x() + 2, prev_vertex.y()))
+    _nearby_atom(scene, QPointF(prev_vertex.x() + 2, prev_vertex.y()))
 
     _, end_atom = scene.chain_geometry(cursor)
 
@@ -234,7 +253,7 @@ def test_end_snap_never_targets_the_start_atom(scene):
     start = MagicMock(spec=AtomItem)
     start.pos.return_value = QPointF(0, 0)
     scene.begin_chain(QPointF(0, 0), start)
-    scene.items_under_cursor = [start]
+    scene.nearby_atom = start
 
     _, end_atom = scene.chain_geometry(QPointF(3 * AXIS_STEP, 0))
 
@@ -246,7 +265,7 @@ def test_commit_names_both_reused_atoms(scene):
     start.pos.return_value = QPointF(0, 0)
     scene.begin_chain(QPointF(0, 0), start)
     cursor = QPointF(3 * AXIS_STEP + 9, 0)
-    end = _hovered_atom(scene, cursor)
+    end = _nearby_atom(scene, cursor)
 
     assert scene.commit_chain(cursor) is True
 
