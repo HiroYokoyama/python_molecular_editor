@@ -97,10 +97,16 @@ class ChainMixin:
 
         self.template_preview.set_chain_geometry(
             self.chain_points,
-            f"n = {len(self.chain_points) - 1}",
+            f"n = {self.new_atom_count()}",
             QPointF(pos.x() + 16, pos.y() - 12),
         )
         self.template_preview.show()
+
+    def new_atom_count(self) -> int:
+        """Atoms the previewed chain would add; the anchor only counts if it is new."""
+        if not self.chain_points:
+            return 0
+        return len(self.chain_points) - (1 if self.chain_start_atom is not None else 0)
 
     def clear_chain_preview(self) -> None:
         """Hide the ghost chain and drop the drag state."""

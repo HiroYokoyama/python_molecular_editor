@@ -100,16 +100,29 @@ def test_chain_length_is_capped(scene):
     assert len(points) - 1 == MAX_CHAIN_LENGTH
 
 
-def test_preview_shows_repeat_count_near_the_cursor(scene):
+def test_preview_counts_the_atoms_the_drag_will_draw(scene):
+    """On empty canvas the anchor becomes a new atom too, so n is the vertex count."""
     scene.begin_chain(QPointF(0, 0))
     cursor = QPointF(3 * AXIS_STEP, 0)
     scene.update_chain_preview(cursor)
 
     points, label, label_pos = scene.template_preview.set_chain_geometry.call_args[0]
-    assert label == "n = 3"
     assert len(points) == 4
+    assert label == "n = 4"
     assert label_pos.x() > cursor.x()
     scene.template_preview.show.assert_called_once()
+
+
+def test_preview_excludes_an_existing_start_atom_from_the_count(scene):
+    """Growing from an existing atom reuses it, so it must not be counted as drawn."""
+    atom = MagicMock()
+    atom.pos.return_value = QPointF(0, 0)
+    scene.begin_chain(QPointF(0, 0), atom)
+    scene.update_chain_preview(QPointF(3 * AXIS_STEP, 0))
+
+    points, label, _ = scene.template_preview.set_chain_geometry.call_args[0]
+    assert len(points) == 4
+    assert label == "n = 3"
 
 
 def test_preview_hides_when_the_drag_is_too_short(scene):

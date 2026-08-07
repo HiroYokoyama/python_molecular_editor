@@ -216,6 +216,44 @@ def test_chain_drag_grows_from_an_existing_atom(window, qtbot):
     assert any(anchor_id in key for key in data.bonds)
 
 
+def _drag_and_capture_label(scene, start, end):
+    """Drag a chain, returning the label shown mid-drag and the atoms added."""
+    data = scene.data
+    before = len(data.atoms)
+    scene.mousePressEvent(FakeSceneMouseEvent(start))
+    scene.mouseMoveEvent(FakeSceneMouseEvent(end))
+    label = scene.template_preview.chain_label
+    scene.mouseReleaseEvent(FakeSceneMouseEvent(end))
+    return label, len(data.atoms) - before
+
+
+def test_previewed_count_matches_the_atoms_drawn_on_empty_canvas(window, qtbot):
+    """The n badge promises a number of atoms; releasing must deliver exactly that."""
+    scene = window.init_manager.scene
+    window.ui_manager.set_mode("chain")
+
+    label, added = _drag_and_capture_label(
+        scene, QPointF(0, 0), QPointF(4 * CHAIN_AXIS_STEP, 0)
+    )
+
+    assert added == 5
+    assert label == "n = 5"
+
+
+def test_previewed_count_matches_the_atoms_drawn_from_an_existing_atom(window, qtbot):
+    """The reused start atom is not newly drawn, so it must not inflate the badge."""
+    scene = window.init_manager.scene
+    scene.create_atom("C", QPointF(0, 0))
+    window.ui_manager.set_mode("chain")
+
+    label, added = _drag_and_capture_label(
+        scene, QPointF(0, 0), QPointF(4 * CHAIN_AXIS_STEP, 0)
+    )
+
+    assert added == 4
+    assert label == "n = 4"
+
+
 def test_chain_preview_follows_a_real_mouse_drag(window, qtbot):
     """Real Qt events through the view must reach the live preview, not just fakes."""
     view = window.init_manager.view_2d
