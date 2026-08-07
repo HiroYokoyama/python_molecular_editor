@@ -1025,7 +1025,12 @@ _No description provided._
 - assert scene.commit_chain(QPointF(2, 0)) is False
 - scene.add_molecule_fragment.assert_not_called()
 
-### test_end_snaps_to_the_hovered_atom_and_stretches_only_the_tail
+### test_end_snap_uses_the_shared_bond_snapping_distance
+_The end must obey the same setting bond drawing does, not a private radius._
+
+- assert scene.find_atom_near_calls[-1] == (cursor, 9.0)
+
+### test_end_snaps_to_the_nearby_atom_and_stretches_only_the_tail
 _No description provided._
 
 - assert end_atom is atom
@@ -12091,14 +12096,28 @@ _Releasing on an atom joins it, stretching only the tail bond._
 - assert target_id in data.atoms
 - assert len(data.atoms) == 5
 - assert _bonded_to_symbol(data, 'O')
-- assert lengths[:-1] == pytest.approx([DEFAULT_BOND_LENGTH] * 3, abs=1e-06)
-- assert lengths[-1] > DEFAULT_BOND_LENGTH
+- assert len(tail) == 1
+- assert rest == pytest.approx([DEFAULT_BOND_LENGTH] * 3, abs=1e-06)
+- assert tail[0] != pytest.approx(DEFAULT_BOND_LENGTH, abs=1e-06)
 
 ### test_chain_end_ignores_an_atom_the_cursor_is_not_on
 _An atom well away from the cursor must not capture the chain end._
 
 - assert len(data.atoms) == 6
 - assert not _bonded_to_symbol(data, 'O')
+
+### test_both_ends_of_a_chain_use_the_bond_snapping_setting
+_Start and end share the setting bond drawing uses, not a private radius._
+
+- assert len(data.atoms) == 5
+- assert any((start_id in key for key in data.bonds))
+- assert any((end_id in key for key in data.bonds))
+
+### test_previewed_count_matches_the_atoms_drawn_when_the_end_fuses
+_A joined end atom already exists, so the badge must not promise it._
+
+- assert added == 4
+- assert label == 'n = 4'
 
 ### test_chain_preview_follows_a_real_mouse_drag
 _Real Qt events through the view must reach the live preview, not just fakes._
