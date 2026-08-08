@@ -23,7 +23,7 @@
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    332 |     36 |   89.2% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |    167 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     81 |      4 |   95.1% |
-| moleditpy\src\moleditpy\ui\bond_item.py                 |    366 |     55 |   85.0% |
+| moleditpy\src\moleditpy\ui\bond_item.py                 |    375 |     56 |   85.1% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    257 |     17 |   93.4% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    583 |     90 |   84.6% |
 | moleditpy\src\moleditpy\ui\chain_mixin.py               |     97 |      2 |   97.9% |
@@ -68,11 +68,11 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **16874** | **1733** | **89.73%** |
+| **TOTAL** | **16883** | **1734** | **89.73%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2189 (1 skipped)
-- **Unit tests**: PASSED (1994 passed)
+- **Total tests passed**: 2195 (1 skipped)
+- **Unit tests**: PASSED (2000 passed)
 - **Integration tests**: PASSED (75 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (86 passed)

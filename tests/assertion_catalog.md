@@ -4592,6 +4592,21 @@ _Both radii must stay identical in screen-pixel terms at any zoom._
 - assert scene.find_atom_near(QPointF(boundary_scene + 0.5, 0), tol=DEFAULT_SNAP_PX) is None
 - assert hover_screen_px == pytest.approx(DEFAULT_SNAP_PX, abs=0.5)
 
+### test_bond_hover_uses_default_radius
+_At default settings, bond shape must use bond_snapping_distance_2d._
+
+- assert hover_radius == pytest.approx(DEFAULT_SNAP_PX, abs=0.5)
+
+### test_bond_hover_follows_custom_setting
+_When the setting is changed, bond hover must change._
+
+- assert hover_radius == pytest.approx(custom_dist, abs=0.5)
+
+### test_bond_hover_stays_consistent_at_different_zoom_levels
+_Bond radius must stay identical in screen-pixel terms at any zoom._
+
+- assert hover_screen_px == pytest.approx(DEFAULT_SNAP_PX, abs=0.5)
+
 ## tests/unit/test_hydrogen.py
 
 ### test_add_hydrogen_atoms_app_logic
