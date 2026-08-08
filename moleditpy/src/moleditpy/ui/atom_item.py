@@ -34,7 +34,6 @@ from PyQt6.QtWidgets import (
 from ..utils.constants import (
     ATOM_RADIUS,
     CPK_COLORS,
-    DESIRED_ATOM_PIXEL_RADIUS,
     FONT_FAMILY,
     FONT_WEIGHT_BOLD,
 )
@@ -332,7 +331,13 @@ class AtomItem(QGraphicsItem):
         return path
 
     def shape(self) -> QPainterPath:
-        """Define the shape of the atom item for collision detection."""
+        """Define the shape of the atom item for collision detection.
+
+        The hit radius is derived from the ``bond_snapping_distance_2d``
+        setting so that hover highlight matches the snapping / keyboard
+        instant-switch zone exactly.  The radius is expressed in screen
+        pixels and divided by the current view scale.
+        """
         scene = self.scene()
         if not scene or not scene.views():
             path = QPainterPath()
@@ -343,7 +348,13 @@ class AtomItem(QGraphicsItem):
         view = scene.views()[0]
         scale = view.transform().m11()
 
-        scene_radius = DESIRED_ATOM_PIXEL_RADIUS / scale
+        # Use the same setting that find_atom_near() uses for snapping,
+        # so hover highlight and snap zones are identical.
+        if hasattr(scene, "get_setting"):
+            hit_px = scene.get_setting("bond_snapping_distance_2d", 14.0)
+        else:
+            hit_px = 14.0
+        scene_radius = hit_px / scale
 
         path = QPainterPath()
         path.addEllipse(QPointF(0, 0), scene_radius, scene_radius)
