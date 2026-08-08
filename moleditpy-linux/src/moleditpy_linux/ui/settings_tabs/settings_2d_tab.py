@@ -198,7 +198,10 @@ class Settings2DTab(SettingsTabBase):
             self._create_slider(5, 50, 1.0, is_int=True)
         )
         self.bond_snapping_distance_2d_slider.setToolTip(
-            "The distance in pixels within which drawing a bond will snap to an existing atom."
+            "The distance in screen pixels (zoom-independent) within which:\n"
+            "• Drawing a bond snaps to an existing atom\n"
+            "• Keyboard shortcuts instantly edit the atom under cursor\n"
+            "• Atoms show hover highlight"
         )
         form_layout.addRow(
             "Bond Snapping Distance (px):",

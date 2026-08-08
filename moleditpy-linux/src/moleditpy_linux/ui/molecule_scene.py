@@ -1002,8 +1002,8 @@ class MoleculeScene(
         # Find the active view for this scene
         for view in self.views():
             if view.isVisible():
-                # Map global cursor position to scene coordinates
-                local_pos = view.mapFromGlobal(global_pos)
+                # Map global cursor position to scene coordinates (via viewport)
+                local_pos = view.viewport().mapFromGlobal(global_pos)
                 scene_pos = view.mapToScene(local_pos)
 
                 # If the mouse is within the viewport, trigger the preview update
