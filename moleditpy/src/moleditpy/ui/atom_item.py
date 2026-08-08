@@ -347,6 +347,8 @@ class AtomItem(QGraphicsItem):
 
         view = scene.views()[0]
         scale = view.transform().m11()
+        if scale <= 0.0:
+            scale = 1.0
 
         # Use the same setting that find_atom_near() uses for snapping,
         # so hover highlight and snap zones are identical.

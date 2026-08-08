@@ -297,6 +297,8 @@ class BondItem(QGraphicsItem):
             if scene and scene.views():
                 view = scene.views()[0]
                 scale = view.transform().m11()
+                if scale <= 0.0:
+                    scale = 1.0
                 if hasattr(scene, "get_setting"):
                     hit_px = scene.get_setting("bond_snapping_distance_2d", 14.0)
                 else:
