@@ -36,7 +36,6 @@ from PyQt6.QtWidgets import (
 )
 
 from ..utils.constants import (
-    DESIRED_BOND_PIXEL_WIDTH,
     EZ_LABEL_BOX_SIZE,
     EZ_LABEL_MARGIN,
     EZ_LABEL_TEXT_OUTLINE,
@@ -305,7 +304,7 @@ class BondItem(QGraphicsItem):
                 # width is diameter, so 2 * radius
                 scene_width = (hit_px * 2) / scale
             else:
-                scene_width = DESIRED_BOND_PIXEL_WIDTH
+                scene_width = 28.0
 
             # Stroke it to give it some width
             stroker = QPainterPathStroker()
