@@ -36,7 +36,6 @@ from PyQt6.QtWidgets import (
 )
 
 from ..utils.constants import (
-    DESIRED_BOND_PIXEL_WIDTH,
     EZ_LABEL_BOX_SIZE,
     EZ_LABEL_MARGIN,
     EZ_LABEL_TEXT_OUTLINE,
@@ -293,10 +292,25 @@ class BondItem(QGraphicsItem):
             path.moveTo(line.p1())
             path.lineTo(line.p2())
 
-            # Stroke it to give it some width (e.g., 10px or dynamic based on settings) generally easier to click
-            # even if the visual width is smaller.
+            # Use the exact same setting as atom hover highlight and snapping, zoom-aware.
+            scene = self.scene()
+            if scene and scene.views():
+                view = scene.views()[0]
+                scale = view.transform().m11()
+                if scale <= 0.0:
+                    scale = 1.0
+                if hasattr(scene, "get_setting"):
+                    hit_px = scene.get_setting("bond_snapping_distance_2d", 14.0)
+                else:
+                    hit_px = 14.0
+                # width is diameter, so 2 * radius
+                scene_width = (hit_px * 2) / scale
+            else:
+                scene_width = 28.0
+
+            # Stroke it to give it some width
             stroker = QPainterPathStroker()
-            stroker.setWidth(DESIRED_BOND_PIXEL_WIDTH)  # Use constant (20.0)
+            stroker.setWidth(scene_width)
             path = stroker.createStroke(path)
 
             # If there's an E/Z label, add its rect to the selection shape

@@ -856,7 +856,10 @@ class KeyboardMixin:
             return
 
         view = self.views()[0]
-        cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
+        # mapToScene expects viewport coordinates. Mapping to the view widget directly
+        # includes the widget's frame margins, introducing a cursor offset that gets
+        # magnified when zooming.
+        cursor_pos = view.mapToScene(view.viewport().mapFromGlobal(QCursor.pos()))
         transform = view.transform()
         key = event.key()
         modifiers = event.modifiers()
@@ -1587,9 +1590,22 @@ class SceneQueryMixin:
             return False
 
     def find_atom_near(self, pos: Any, tol: float = 14.0) -> Any:
-        """Return the AtomItem within tolerance distance of pos, or None."""
+        """Return the AtomItem within tolerance distance of pos, or None.
+
+        ``tol`` is specified in **screen pixels**.  It is divided by the
+        current view scale so that the effective snap radius stays constant
+        on screen regardless of zoom level — matching the behaviour of
+        ``AtomItem.shape()`` (hover highlight).
+        """
         if pos is None:
             return None
+        # Convert screen-pixel tolerance to scene units (zoom-aware).
+        if self.views():
+            xform = self.views()[0].transform()
+            if xform is not None:
+                scale = xform.m11()
+                if scale > 0:
+                    tol = tol / scale
         # Create a small search rectangle around the position
         search_rect = QRectF(pos.x() - tol, pos.y() - tol, 2 * tol, 2 * tol)
         nearby_items = self.items(search_rect)

@@ -4569,6 +4569,44 @@ _No description provided._
 
 - mw.statusBar().showMessage.assert_not_called()
 
+## tests/unit/test_hover_snap_consistency.py
+
+### test_hover_and_snap_use_same_default_radius
+_At default settings both radii must equal bond_snapping_distance_2d._
+
+- assert scene.find_atom_near(QPointF(DEFAULT_SNAP_PX - 0.1, 0), tol=DEFAULT_SNAP_PX) is atom
+- assert scene.find_atom_near(QPointF(DEFAULT_SNAP_PX + 0.1, 0), tol=DEFAULT_SNAP_PX) is None
+- assert hover_radius == pytest.approx(DEFAULT_SNAP_PX, abs=0.5)
+
+### test_hover_and_snap_follow_custom_setting
+_When the setting is changed, both hover and snap must change together._
+
+- assert scene.find_atom_near(QPointF(custom_dist - 0.1, 0), tol=custom_dist) is atom
+- assert scene.find_atom_near(QPointF(custom_dist + 0.1, 0), tol=custom_dist) is None
+- assert hover_radius == pytest.approx(custom_dist, abs=0.5)
+
+### test_hover_and_snap_stay_consistent_at_different_zoom_levels
+_Both radii must stay identical in screen-pixel terms at any zoom._
+
+- assert scene.find_atom_near(QPointF(boundary_scene - 0.01, 0), tol=DEFAULT_SNAP_PX) is atom
+- assert scene.find_atom_near(QPointF(boundary_scene + 0.5, 0), tol=DEFAULT_SNAP_PX) is None
+- assert hover_screen_px == pytest.approx(DEFAULT_SNAP_PX, abs=0.5)
+
+### test_bond_hover_uses_default_radius
+_At default settings, bond shape must use bond_snapping_distance_2d._
+
+- assert hover_radius == pytest.approx(DEFAULT_SNAP_PX, abs=0.5)
+
+### test_bond_hover_follows_custom_setting
+_When the setting is changed, bond hover must change._
+
+- assert hover_radius == pytest.approx(custom_dist, abs=0.5)
+
+### test_bond_hover_stays_consistent_at_different_zoom_levels
+_Bond radius must stay identical in screen-pixel terms at any zoom._
+
+- assert hover_screen_px == pytest.approx(DEFAULT_SNAP_PX, abs=0.5)
+
 ## tests/unit/test_hydrogen.py
 
 ### test_add_hydrogen_atoms_app_logic
