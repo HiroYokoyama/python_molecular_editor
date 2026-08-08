@@ -856,7 +856,10 @@ class KeyboardMixin:
             return
 
         view = self.views()[0]
-        cursor_pos = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
+        # mapToScene expects viewport coordinates. Mapping to the view widget directly
+        # includes the widget's frame margins, introducing a cursor offset that gets
+        # magnified when zooming.
+        cursor_pos = view.mapToScene(view.viewport().mapFromGlobal(QCursor.pos()))
         transform = view.transform()
         key = event.key()
         modifiers = event.modifiers()
