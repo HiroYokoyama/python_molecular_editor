@@ -136,17 +136,25 @@ def test_save_project_never_overwrites_raw(mock_parser_host, tmp_path):
 def test_confirm_pickle_load_open(mock_parser_host):
     """Choosing 'Open' in the raw-file warning proceeds with the load."""
     io = DummyProjectIo(mock_parser_host)
-    with (
-        patch.dict(os.environ, {}, clear=False),
-        patch("moleditpy.ui.io_logic.QMessageBox") as mock_box_cls,
-    ):
-        os.environ.pop("MOLEDITPY_HEADLESS", None)
+    with patch("moleditpy.ui.io_logic.QMessageBox") as mock_box_cls:
         box = mock_box_cls.return_value
         open_button = MagicMock()
         box.addButton.side_effect = [open_button, MagicMock()]
         box.clickedButton.return_value = open_button
 
         assert io._confirm_pickle_load("danger.pmeraw") is True
+
+
+def test_confirm_pickle_load_cancel(mock_parser_host):
+    """Choosing Cancel in the raw-file warning refuses the load."""
+    io = DummyProjectIo(mock_parser_host)
+    with patch("moleditpy.ui.io_logic.QMessageBox") as mock_box_cls:
+        box = mock_box_cls.return_value
+        open_button, cancel_button = MagicMock(), MagicMock()
+        box.addButton.side_effect = [open_button, cancel_button]
+        box.clickedButton.return_value = cancel_button
+
+        assert io._confirm_pickle_load("danger.pmeraw") is False
 
 
 def test_confirm_pickle_load_cancel_aborts(mock_parser_host, tmp_path):

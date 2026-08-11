@@ -1115,9 +1115,6 @@ class IOManager:
         embedded in the file, so a file from an untrusted source can take over
         the machine. Returns True only if the user explicitly chooses Open.
         """
-        if os.environ.get("MOLEDITPY_HEADLESS"):
-            return True
-
         box = QMessageBox(self.host)
         box.setIcon(QMessageBox.Icon.Warning)
         box.setWindowTitle("Open Raw Project File?")

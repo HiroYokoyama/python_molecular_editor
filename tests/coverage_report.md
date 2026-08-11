@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **89.72%**
+- **Overall Project Coverage**: **89.73%**
 
 ### Coverage Breakdown
 
@@ -39,7 +39,7 @@
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    817 |    127 |   84.5% |
 | moleditpy\src\moleditpy\ui\export_logic.py              |    520 |     85 |   83.7% |
 | moleditpy\src\moleditpy\ui\geometry_base_dialog.py      |     52 |      1 |   98.1% |
-| moleditpy\src\moleditpy\ui\io_logic.py                  |    753 |     77 |   89.8% |
+| moleditpy\src\moleditpy\ui\io_logic.py                  |    751 |     76 |   89.9% |
 | moleditpy\src\moleditpy\ui\main_window.py               |    195 |     13 |   93.3% |
 | moleditpy\src\moleditpy\ui\main_window_init.py          |   1103 |     86 |   92.2% |
 | moleditpy\src\moleditpy\ui\mirror_dialog.py             |     72 |      7 |   90.3% |
@@ -69,11 +69,11 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **16927** | **1740** | **89.72%** |
+| **TOTAL** | **16925** | **1739** | **89.73%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2217 (1 skipped)
-- **Unit tests**: PASSED (2022 passed)
+- **Total tests passed**: 2218 (1 skipped)
+- **Unit tests**: PASSED (2023 passed)
 - **Integration tests**: PASSED (75 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (86 passed)

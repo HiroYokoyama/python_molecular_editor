@@ -7807,6 +7807,11 @@ _Choosing 'Open' in the raw-file warning proceeds with the load._
 
 - assert io._confirm_pickle_load('danger.pmeraw') is True
 
+### test_confirm_pickle_load_cancel
+_Choosing Cancel in the raw-file warning refuses the load._
+
+- assert io._confirm_pickle_load('danger.pmeraw') is False
+
 ### test_confirm_pickle_load_cancel_aborts
 _Cancelling the raw-file warning must leave the document untouched._
 
