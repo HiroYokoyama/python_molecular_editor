@@ -11141,6 +11141,12 @@ _Ctrl+wheel goes through scale(), so items must be re-indexed._
 
 - assert probe.notified >= 1
 
+### test_zoom_burst_re_indexes_once_not_per_step
+_Re-indexing per wheel tick dirties every item and made a zoom step ~40x_
+
+- assert probe.notified == 0
+- assert probe.notified == 1
+
 ## tests/integration/test_calculation_worker.py
 
 ### test_calculation_worker_bond_length_validation

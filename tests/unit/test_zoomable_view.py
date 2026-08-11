@@ -16,6 +16,7 @@ Covers:
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import Qt, QPoint, QEvent, QRectF
+from PyQt6.QtTest import QTest
 from PyQt6.QtGui import QMouseEvent, QWheelEvent
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
 from moleditpy.ui.zoomable_view import ZoomableView
@@ -377,6 +378,11 @@ class _GeometryProbe(QGraphicsItem):
         super().prepareGeometryChange()
 
 
+def _settle(view):
+    """Let the coalescing timer fire."""
+    QTest.qWait(view._geometry_timer.interval() + 80)
+
+
 def test_scale_notifies_items_of_geometry_change(app):
     """AtomItem/BondItem hit areas are pixel-sized, so zooming changes their
     geometry; without this notification Qt keeps the stale BSP index and
@@ -387,6 +393,7 @@ def test_scale_notifies_items_of_geometry_change(app):
     probe.notified = 0
 
     view.scale(2.0, 2.0)
+    _settle(view)
     assert probe.notified >= 1
 
 
@@ -398,6 +405,7 @@ def test_reset_transform_notifies_items_of_geometry_change(app):
     probe.notified = 0
 
     view.resetTransform()
+    _settle(view)
     assert probe.notified >= 1
 
 
@@ -409,4 +417,21 @@ def test_wheel_zoom_notifies_items_of_geometry_change(app):
     probe.notified = 0
 
     view.wheelEvent(_wheel_event(120, ctrl=True))
+    _settle(view)
     assert probe.notified >= 1
+
+
+def test_zoom_burst_re_indexes_once_not_per_step(app):
+    """Re-indexing per wheel tick dirties every item and made a zoom step ~40x
+    slower (125 ms per tick at 3000 atoms). One pass per gesture is enough."""
+    view, scene = _make_view(app)
+    probe = _GeometryProbe()
+    scene.addItem(probe)
+    probe.notified = 0
+
+    for _ in range(20):
+        view.scale(1.1, 1.1)
+    assert probe.notified == 0, "must not re-index mid-gesture"
+
+    _settle(view)
+    assert probe.notified == 1, f"one pass per gesture, got {probe.notified}"
