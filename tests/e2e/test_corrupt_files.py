@@ -81,6 +81,11 @@ def test_corrupted_files_never_crash_loaders(window, qtbot, tmp_path, monkeypatc
     monkeypatch.setattr(
         window.state_manager, "check_unsaved_changes", lambda: True, raising=False
     )
+    # .pmeraw opens behind a modal warning; answer it so the loader is what is
+    # under test here, and so this never depends on MOLEDITPY_HEADLESS.
+    monkeypatch.setattr(
+        window.io_manager, "_confirm_pickle_load", lambda _p: True, raising=False
+    )
     window.init_manager.settings["skip_chemistry_checks"] = True
 
     crashes = []

@@ -197,7 +197,10 @@ def test_load_raw_data_success(mock_parser_host, tmp_path):
     with open(raw_file, "wb") as f:
         pickle.dump(sample_data, f)
 
-    with patch.object(io.host.state_manager, "set_state_from_data") as mock_set_state:
+    with (
+        patch.object(io, "_confirm_pickle_load", return_value=True),
+        patch.object(io.host.state_manager, "set_state_from_data") as mock_set_state,
+    ):
         io.load_raw_data(raw_file)
         assert mock_set_state.called
         assert io.host.init_manager.current_file_path == raw_file
@@ -253,15 +256,20 @@ def test_save_as_json_trigger(mock_parser_host, tmp_path):
 def test_load_raw_data_error_paths(mock_parser_host):
     """Verify error handling during raw data loading (file not found, corrupt)."""
     io = DummyProjectIo(mock_parser_host)
-    io.load_raw_data("non_existent.pmeraw")
-    io.statusBar().showMessage.assert_called_with("File not found: non_existent.pmeraw")
+    # The pickle warning is answered explicitly: these assert the load paths, and
+    # must not depend on MOLEDITPY_HEADLESS being set to skip the dialog.
+    with patch.object(io, "_confirm_pickle_load", return_value=True):
+        io.load_raw_data("non_existent.pmeraw")
+        io.statusBar().showMessage.assert_called_with(
+            "File not found: non_existent.pmeraw"
+        )
 
-    with patch("builtins.open", MagicMock()):
-        with patch("pickle.load", side_effect=pickle.UnpicklingError("Corrupt")):
-            io.load_raw_data("dummy_data")
-            io.statusBar().showMessage.assert_called_with(
-                "Invalid project file format: Corrupt"
-            )
+        with patch("builtins.open", MagicMock()):
+            with patch("pickle.load", side_effect=pickle.UnpicklingError("Corrupt")):
+                io.load_raw_data("dummy_data")
+                io.statusBar().showMessage.assert_called_with(
+                    "Invalid project file format: Corrupt"
+                )
 
 
 def test_open_project_file_unsaved_check(mock_parser_host):
@@ -545,9 +553,12 @@ def test_load_raw_data_dialog_success(io, tmp_path):
     with open(load_path, "wb") as f:
         pickle.dump(sample_data, f)
 
-    with patch(
-        "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
-        return_value=(load_path, "Project Files (*.pmeraw)"),
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
+            return_value=(load_path, "Project Files (*.pmeraw)"),
+        ),
+        patch.object(io, "_confirm_pickle_load", return_value=True),
     ):
         io.load_raw_data()
 
@@ -572,7 +583,8 @@ def test_load_raw_data_io_error(io, tmp_path):
     with open(bad_path, "w") as f:
         f.write("not a pickle")
 
-    io.load_raw_data(bad_path)
+    with patch.object(io, "_confirm_pickle_load", return_value=True):
+        io.load_raw_data(bad_path)
     io.statusBar().showMessage.assert_called()
     msg = io.statusBar().showMessage.call_args[0][0]
     assert "Invalid project file format" in msg
