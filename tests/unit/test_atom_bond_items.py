@@ -481,12 +481,20 @@ class TestBondItem:
         assert rect_stereo.height() >= rect_no_stereo.height()
 
 
+class _SettingsScene(QGraphicsScene):
+    """Stands in for MoleculeScene, which is the only scene that holds atom and
+    bond items in the app: they read their geometry settings via get_setting()."""
+
+    def get_setting(self, key, default=None):
+        return default
+
+
 class TestAtomDragPropagation:
     """Bonds must track atom positions live, without ever being dragged themselves."""
 
     def _bonded_pair(self):
         # Bonds only refresh once they are in a scene.
-        scene = QGraphicsScene()
+        scene = _SettingsScene()
         atom1 = AtomItem(1, "C", QPointF(0.0, 0.0))
         atom2 = AtomItem(2, "C", QPointF(50.0, 0.0))
         scene.addItem(atom1)

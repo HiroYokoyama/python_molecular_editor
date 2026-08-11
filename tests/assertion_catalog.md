@@ -3967,8 +3967,8 @@ _No description provided._
 - assert font.pointSize() == 14
 - assert font.weight() == QFont.Weight.Normal
 
-### TestInitManagerHook.test_falls_back_when_the_scene_has_no_settings
-_No description provided._
+### TestInitManagerHook.test_falls_back_before_the_scene_exists
+_Warm-up can run before the scene is built, so a missing scene must_
 
 - warm.assert_called_once_with(None)
 

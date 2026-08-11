@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import math
 import logging
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
 
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import (
@@ -249,10 +249,10 @@ class BondItem(QGraphicsItem):
             line = QLineF(0, 0, 0, 0)
 
         # Get dynamic bond offset (spacing)
-        scene = self.scene()
+        scene: Any = self.scene()
         bond_offset = 3.5
         wedge_width = 6.0
-        if scene is not None and hasattr(scene, "get_setting"):
+        if scene is not None:
             key = (
                 "bond_spacing_triple_2d"
                 if getattr(self, "order", 1) == 3
@@ -275,7 +275,7 @@ class BondItem(QGraphicsItem):
         if self.order == 2 and self.stereo in [3, 4]:
             font_size = 20
             font_family = FONT_FAMILY
-            if scene is not None and hasattr(scene, "get_setting"):
+            if scene is not None:
                 font_size = scene.get_setting("atom_font_size_2d", 20)
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
 
@@ -359,8 +359,8 @@ class BondItem(QGraphicsItem):
         bond_color = QColor("#222222")
 
         try:
-            scene = self.scene()
-            if scene is not None and hasattr(scene, "get_setting"):
+            scene: Any = self.scene()
+            if scene is not None:
                 # Color
                 if self.isSelected():
                     bond_color = QColor("blue")
@@ -535,8 +535,8 @@ class BondItem(QGraphicsItem):
                         # --- Label Settings ---
                         font_size = 20
                         font_family = FONT_FAMILY
-                        _sc = self.scene()
-                        if _sc is not None and hasattr(_sc, "get_setting"):
+                        _sc: Any = self.scene()
+                        if _sc is not None:
                             font_size = _sc.get_setting("atom_font_size_2d", 20)
                             font_family = _sc.get_setting(
                                 "atom_font_family_2d", FONT_FAMILY

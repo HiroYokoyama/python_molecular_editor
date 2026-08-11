@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **89.73%**
+- **Overall Project Coverage**: **89.72%**
 
 ### Coverage Breakdown
 
@@ -65,11 +65,11 @@
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_tab_base.py |     57 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\constants.py              |     60 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
-| moleditpy\src\moleditpy\utils\hit_radius.py             |     12 |      1 |   91.7% |
+| moleditpy\src\moleditpy\utils\hit_radius.py             |     10 |      1 |   90.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **16925** | **1739** | **89.73%** |
+| **TOTAL** | **16923** | **1739** | **89.72%** |
 
 ## Test Suite Status
 - **Total tests passed**: 2218 (1 skipped)

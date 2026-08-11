@@ -223,7 +223,7 @@ class MainInitManager:
         """Resolve the atom-label font now, in the user's configured family."""
         scene = getattr(self, "scene", None)
         font = None
-        if scene is not None and hasattr(scene, "get_setting"):
+        if scene is not None:
             family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             size = scene.get_setting("atom_font_size_2d", 20)
             bold = scene.get_setting("atom_font_bold_2d", True)

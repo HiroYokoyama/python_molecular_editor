@@ -112,8 +112,8 @@ class AtomItem(QGraphicsItem):
         font_italic = False
         font_underline = False
 
-        scene = self.scene()
-        if scene is not None and hasattr(scene, "get_setting"):
+        scene: Any = self.scene()
+        if scene is not None:
             font_size = scene.get_setting("atom_font_size_2d", 20)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
@@ -147,8 +147,8 @@ class AtomItem(QGraphicsItem):
         font_bold = True
         font_italic = False
         font_underline = False
-        scene = self.scene()
-        if scene is not None and hasattr(scene, "get_setting"):
+        scene: Any = self.scene()
+        if scene is not None:
             font_size = scene.get_setting("atom_font_size_2d", 20)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
@@ -280,8 +280,8 @@ class AtomItem(QGraphicsItem):
         font_bold = True
         font_italic = False
         font_underline = False
-        scene = self.scene()
-        if scene is not None and hasattr(scene, "get_setting"):
+        scene: Any = self.scene()
+        if scene is not None:
             font_size = scene.get_setting("atom_font_size_2d", 20)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
@@ -384,11 +384,11 @@ class AtomItem(QGraphicsItem):
         # Color logic: check if we should use bond color (uniform) or CPK (element-specific)
         color = CPK_COLORS.get(self.symbol, CPK_COLORS["DEFAULT"])
         # Use bond color if specified in settings
-        scene = self.scene()
-        if hasattr(scene, "get_setting") and (
-            self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)  # type: ignore[union-attr]
+        scene: Any = self.scene()
+        if scene is not None and (
+            self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)
         ):
-            custom_color = scene.get_setting("bond_color_2d", "#222222")  # type: ignore[union-attr]
+            custom_color = scene.get_setting("bond_color_2d", "#222222")
             if isinstance(custom_color, str):
                 color = QColor(custom_color)
 

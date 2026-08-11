@@ -30,7 +30,5 @@ def scene_hit_radius(scene: Any, fallback: float = DEFAULT_HIT_PX) -> float:
     if scale <= 0.0:
         scale = 1.0
 
-    hit_px = DEFAULT_HIT_PX
-    if hasattr(scene, "get_setting"):
-        hit_px = scene.get_setting("bond_snapping_distance_2d", DEFAULT_HIT_PX)
+    hit_px = scene.get_setting("bond_snapping_distance_2d", DEFAULT_HIT_PX)
     return float(hit_px / scale)
