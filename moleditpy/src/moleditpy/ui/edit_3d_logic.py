@@ -242,7 +242,7 @@ class Edit3DManager:
 
         # Position near top-right of atom
         atom_pos = atom_item.pos()
-        atom_rect = atom_item.boundingRect()
+        atom_rect = atom_item.visual_rect()
         label_pos = QPointF(
             atom_pos.x() + atom_rect.width() / 4 + 2,
             atom_pos.y() - atom_rect.height() / 4 - 8,

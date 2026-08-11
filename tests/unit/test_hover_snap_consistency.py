@@ -60,29 +60,26 @@ def scene_with_atom(app):
 # ---------------------------------------------------------------------------
 
 
-def _glyph_extent(atom):
-    """Half-width / half-height of the atom's drawn label, in scene units."""
-    rect = atom.get_bg_ellipse_path().boundingRect()
-    return rect.width() / 2, rect.height() / 2
-
-
 def test_hover_and_snap_use_same_default_radius(scene_with_atom):
-    """At default settings the hit radius must be the setting (glyph aside)."""
+    """At default settings both radii must equal bond_snapping_distance_2d."""
     scene, atom, _, _ = scene_with_atom
 
+    # Hover: shape() radius (in scene units; at scale=1 ≡ screen px)
+    hover_radius = atom.shape().boundingRect().width() / 2
     assert atom.hit_radius() == pytest.approx(DEFAULT_SNAP_PX)
 
-    # Snap: find_atom_near at the boundary distance, probed along the axis
-    # where the glyph does not extend past the snap circle.
-    _, glyph_h = _glyph_extent(atom)
-    assert glyph_h > DEFAULT_SNAP_PX  # the label is taller than the snap circle
+    # Snap: find_atom_near at the boundary distance
     assert (
         scene.find_atom_near(QPointF(DEFAULT_SNAP_PX - 0.1, 0), tol=DEFAULT_SNAP_PX)
         is atom
     ), "atom should be found inside snapping distance"
-    far = QPointF(0, glyph_h + DEFAULT_SNAP_PX + 10.0)
-    assert scene.find_atom_near(far, tol=DEFAULT_SNAP_PX) is None, (
-        "atom should NOT be found far outside snapping distance and glyph"
+    assert (
+        scene.find_atom_near(QPointF(DEFAULT_SNAP_PX + 0.1, 0), tol=DEFAULT_SNAP_PX)
+        is None
+    ), "atom should NOT be found outside snapping distance"
+
+    assert hover_radius == pytest.approx(DEFAULT_SNAP_PX, abs=0.5), (
+        f"hover radius ({hover_radius}) must match snap distance ({DEFAULT_SNAP_PX})"
     )
 
 
@@ -92,12 +89,11 @@ def test_hover_and_snap_follow_custom_setting(scene_with_atom):
     custom_dist = 25.0
     settings["bond_snapping_distance_2d"] = custom_dist
 
-    assert atom.hit_radius() == pytest.approx(custom_dist)
+    hover_radius = atom.shape().boundingRect().width() / 2
 
-    _, glyph_h = _glyph_extent(atom)
     assert scene.find_atom_near(QPointF(custom_dist - 0.1, 0), tol=custom_dist) is atom
-    far = QPointF(0, max(custom_dist, glyph_h) + 10.0)
-    assert scene.find_atom_near(far, tol=custom_dist) is None
+    assert scene.find_atom_near(QPointF(custom_dist + 0.1, 0), tol=custom_dist) is None
+    assert hover_radius == pytest.approx(custom_dist, abs=0.5)
 
 
 @pytest.mark.parametrize("scale", [0.5, 1.0, 2.0, 4.0])
@@ -112,11 +108,11 @@ def test_hover_and_snap_stay_consistent_at_different_zoom_levels(
     scene, atom, mock_view, _ = scene_with_atom
     mock_view.transform.return_value = QTransform.fromScale(scale, scale)
 
-    # The pixel-sized radius stays constant on screen.
+    # The pixel-sized radius stays constant on screen, so zooming in narrows
+    # the molecular distance it covers — that is how precise editing works.
     assert atom.hit_radius() * scale == pytest.approx(DEFAULT_SNAP_PX)
 
-    glyph_w, glyph_h = _glyph_extent(atom)
-    reach = max(glyph_w, glyph_h, DEFAULT_SNAP_PX / scale) + 12.0
+    reach = DEFAULT_SNAP_PX / scale + 12.0
     probes = []
     for i in range(1, 13):
         d = reach * i / 12.0
@@ -128,6 +124,24 @@ def test_hover_and_snap_stay_consistent_at_different_zoom_levels(
         assert hovered == snapped, (
             f"scale={scale}: hover ({hovered}) and snap ({snapped}) disagree at {p}"
         )
+
+
+@pytest.mark.parametrize("scale", [0.05, 0.25, 1.0, 4.0])
+def test_visual_rect_ignores_the_hit_radius(scene_with_atom, scale):
+    """Selection/hover highlights are drawn from visual_rect(), so it must track
+    the label only. boundingRect() additionally covers the hit shape — drawing
+    from that would balloon the highlight box as the user zooms out."""
+    scene, atom, mock_view, settings = scene_with_atom
+    settings["bond_snapping_distance_2d"] = 50.0  # slider maximum
+    mock_view.transform.return_value = QTransform.fromScale(scale, scale)
+
+    label = atom.get_bg_ellipse_path().boundingRect()
+    visual = atom.visual_rect()
+
+    assert visual.width() < label.width() + 20.0, (
+        f"scale={scale}: visual_rect {visual} is not tracking the drawn label"
+    )
+    assert visual.height() < label.height() + 20.0
 
 
 @pytest.mark.parametrize("scale", [0.5, 1.0, 2.0, 4.0, 8.0])
@@ -144,19 +158,25 @@ def test_hit_shape_stays_inside_bounding_rect(scene_with_atom, scale):
 
 
 @pytest.mark.parametrize("scale", [4.0, 8.0, 16.0])
-def test_drawn_label_is_always_clickable_when_zoomed_in(scene_with_atom, scale):
-    """Zoomed in, the pixel radius shrinks below the glyph — it must still hit."""
+def test_hit_zone_does_not_grow_to_the_drawn_label_when_zoomed_in(
+    scene_with_atom, scale
+):
+    """Zooming in must sharpen targeting, not widen it.
+
+    The hit zone stays a fixed number of screen pixels, so it covers an ever
+    smaller molecular distance as the user zooms — the reason zooming is how
+    you pick one atom out of a crowded structure. Growing it to the drawn
+    glyph would make targeting worse the further in you zoom.
+    """
     scene, atom, mock_view, _ = scene_with_atom
     mock_view.transform.return_value = QTransform.fromScale(scale, scale)
 
-    glyph_w, _ = _glyph_extent(atom)
-    assert glyph_w > atom.hit_radius()  # the regression precondition
+    glyph_w = atom.get_bg_ellipse_path().boundingRect().width() / 2
+    assert glyph_w > atom.hit_radius()  # zoomed in, the label dwarfs the hit zone
 
-    on_glyph = QPointF(glyph_w * 0.7, 0)
-    assert atom.contains(atom.mapFromScene(on_glyph)), "glyph must be hoverable"
-    assert scene.find_atom_near(on_glyph, tol=DEFAULT_SNAP_PX) is atom, (
-        "glyph must be snappable"
-    )
+    on_glyph_edge = QPointF(glyph_w * 0.9, 0)
+    assert not atom.contains(atom.mapFromScene(on_glyph_edge))
+    assert scene.find_atom_near(on_glyph_edge, tol=DEFAULT_SNAP_PX) is None
 
 
 @pytest.fixture

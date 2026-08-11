@@ -134,8 +134,14 @@ class AtomItem(QGraphicsItem):
         )
         self.update()
 
-    def boundingRect(self) -> QRectF:
-        """Calculate the bounding rectangle for the atom item."""
+    def visual_rect(self) -> QRectF:
+        """Return the rectangle the atom actually draws into.
+
+        Kept separate from boundingRect(), which Qt also requires to cover the
+        (zoom-dependent) hit shape: selection and hover highlights are drawn
+        from this one, so they stay wrapped around the label instead of
+        ballooning with the hit radius when zoomed out.
+        """
         font_size = 20
         font_family = FONT_FAMILY
         font_bold = True
@@ -250,12 +256,18 @@ class AtomItem(QGraphicsItem):
             full_visual_rect = full_visual_rect.united(radical_area)
 
         # 3. Add final margins for selection highlights, etc.
-        full_visual_rect = full_visual_rect.adjusted(-3, -3, 3, 3)
+        return full_visual_rect.adjusted(-3, -3, 3, 3)
 
-        # 4. The hit circle from shape() must stay inside boundingRect(), or
-        # Qt's item index prunes hover/click hits that shape() would accept.
+    def boundingRect(self) -> QRectF:
+        """Return the item geometry: everything drawn, plus the hit shape.
+
+        The hit circle from shape() must stay inside boundingRect(), or Qt's
+        item index prunes hover/click hits that shape() would accept.
+        """
         hit_r = self.hit_radius()
-        return full_visual_rect.united(QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0))
+        return self.visual_rect().united(
+            QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0)
+        )
 
     def get_bg_ellipse_path(self) -> QPainterPath:
         """Return the elliptical background path used for bond endpoint clipping."""
@@ -347,15 +359,17 @@ class AtomItem(QGraphicsItem):
         return scene_hit_radius(self.scene(), fallback=max(4.0, ATOM_RADIUS - 6.0) * 2)
 
     def shape(self) -> QPainterPath:
-        """Define the shape of the atom item for collision detection."""
+        """Define the shape of the atom item for collision detection.
+
+        Deliberately independent of the drawn label: the hit zone is a fixed
+        number of screen pixels, so zooming in narrows the molecular distance
+        it covers.  That is what makes zooming the way to target atoms
+        precisely in a crowded structure.
+        """
         scene_radius = self.hit_radius()
 
         path = QPainterPath()
         path.addEllipse(QPointF(0, 0), scene_radius, scene_radius)
-        # When zoomed in the pixel-sized hit circle can be smaller than the
-        # drawn label; the glyph itself must always stay clickable.
-        if self.is_visible:
-            path = path.united(self.get_bg_ellipse_path())
         return path
 
     def paint(
@@ -529,17 +543,17 @@ class AtomItem(QGraphicsItem):
         if self.has_problem:
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(QColor(255, 0, 0, 200), 4))
-            painter.drawRect(self.boundingRect())
+            painter.drawRect(self.visual_rect())
         elif self.isSelected():
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(QColor(0, 100, 255), 3))
-            painter.drawRect(self.boundingRect())
+            painter.drawRect(self.visual_rect())
         if (not self.isSelected()) and getattr(self, "hovered", False):
             pen = QPen(QColor(144, 238, 144, 200), 3)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(pen)
-            painter.drawRect(self.boundingRect())
+            painter.drawRect(self.visual_rect())
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         """Propagate position and scene changes to connected bond items."""

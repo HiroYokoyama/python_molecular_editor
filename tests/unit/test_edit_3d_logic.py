@@ -140,7 +140,9 @@ def test_add_2d_measurement_label_adds_item(mock_parser_host):
 
     atom_item = MagicMock()
     atom_item.pos.return_value = QPointF(10.0, 20.0)
-    atom_item.boundingRect.return_value = QRectF(0, 0, 16.0, 16.0)
+    # visual_rect(), not boundingRect(): the latter also covers the zoom-dependent
+    # hit shape, which would drift the label away from the atom as you zoom out.
+    atom_item.visual_rect.return_value = QRectF(0, 0, 16.0, 16.0)
 
     edit3d.add_2d_measurement_label(atom_item, "1.234 Å")
 
