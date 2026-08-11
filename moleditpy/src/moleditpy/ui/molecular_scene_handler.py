@@ -1396,6 +1396,7 @@ class SceneQueryMixin:
     items: Any
     update_all_items: Any
     window: Any
+    views: Any
     addItem: Any
     removeItem: Any
 
@@ -1601,20 +1602,28 @@ class SceneQueryMixin:
             return None
         # Convert screen-pixel tolerance to scene units (zoom-aware).
         if self.views():
-            xform = self.views()[0].transform()
-            if xform is not None:
-                scale = xform.m11()
-                if scale > 0:
-                    tol = tol / scale
+            scale = self.views()[0].transform().m11()
+            if scale > 0:
+                tol = tol / scale
         # Create a small search rectangle around the position
         search_rect = QRectF(pos.x() - tol, pos.y() - tol, 2 * tol, 2 * tol)
         nearby_items = self.items(search_rect)
 
-        for it in nearby_items:
-            if isinstance(it, AtomItem):
-                # Check the precise distance only for candidate items
-                if QLineF(it.pos(), pos).length() <= tol:
+        atoms = [it for it in nearby_items if isinstance(it, AtomItem)]
+        for it in atoms:
+            # Check the precise distance only for candidate items
+            if QLineF(it.pos(), pos).length() <= tol:
+                return it
+
+        # When zoomed in, the pixel-sized tolerance shrinks below the drawn
+        # label, so also accept a position that lands on the glyph itself.
+        # This keeps snapping in step with AtomItem.shape() (hover highlight).
+        for it in atoms:
+            try:
+                if it.contains(it.mapFromScene(pos)):
                     return it
+            except (AttributeError, RuntimeError, TypeError):
+                continue
         return None
 
     def find_bond_between(self, atom1: Any, atom2: Any) -> Any:

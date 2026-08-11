@@ -15,9 +15,9 @@ Covers:
 
 import pytest
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import Qt, QPoint, QEvent
+from PyQt6.QtCore import Qt, QPoint, QEvent, QRectF
 from PyQt6.QtGui import QMouseEvent, QWheelEvent
-from PyQt6.QtWidgets import QGraphicsScene
+from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
 from moleditpy.ui.zoomable_view import ZoomableView
 
 
@@ -352,3 +352,61 @@ def test_viewport_event_zoom_native_gesture_scales(app):
     result = view.viewportEvent(ev)
     assert result is True
     assert view.transform().m11() > before
+
+
+# ---------------------------------------------------------------------------
+# Zoom re-indexing
+# ---------------------------------------------------------------------------
+
+
+class _GeometryProbe(QGraphicsItem):
+    """Item that records prepareGeometryChange() notifications."""
+
+    def __init__(self):
+        super().__init__()
+        self.notified = 0
+
+    def boundingRect(self):
+        return QRectF(-5, -5, 10, 10)
+
+    def paint(self, painter, option, widget=None):
+        pass
+
+    def prepareGeometryChange(self):
+        self.notified += 1
+        super().prepareGeometryChange()
+
+
+def test_scale_notifies_items_of_geometry_change(app):
+    """AtomItem/BondItem hit areas are pixel-sized, so zooming changes their
+    geometry; without this notification Qt keeps the stale BSP index and
+    hover/click stops matching the drawn hit zone."""
+    view, scene = _make_view(app)
+    probe = _GeometryProbe()
+    scene.addItem(probe)
+    probe.notified = 0
+
+    view.scale(2.0, 2.0)
+    assert probe.notified >= 1
+
+
+def test_reset_transform_notifies_items_of_geometry_change(app):
+    """Reset-zoom must re-index items for the same reason as scale()."""
+    view, scene = _make_view(app)
+    probe = _GeometryProbe()
+    scene.addItem(probe)
+    probe.notified = 0
+
+    view.resetTransform()
+    assert probe.notified >= 1
+
+
+def test_wheel_zoom_notifies_items_of_geometry_change(app):
+    """Ctrl+wheel goes through scale(), so items must be re-indexed."""
+    view, scene = _make_view(app)
+    probe = _GeometryProbe()
+    scene.addItem(probe)
+    probe.notified = 0
+
+    view.wheelEvent(_wheel_event(120, ctrl=True))
+    assert probe.notified >= 1

@@ -37,6 +37,7 @@ from ..utils.constants import (
     FONT_FAMILY,
     FONT_WEIGHT_BOLD,
 )
+from ..utils.hit_radius import scene_hit_radius
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 if TYPE_CHECKING:
@@ -249,7 +250,12 @@ class AtomItem(QGraphicsItem):
             full_visual_rect = full_visual_rect.united(radical_area)
 
         # 3. Add final margins for selection highlights, etc.
-        return full_visual_rect.adjusted(-3, -3, 3, 3)
+        full_visual_rect = full_visual_rect.adjusted(-3, -3, 3, 3)
+
+        # 4. The hit circle from shape() must stay inside boundingRect(), or
+        # Qt's item index prunes hover/click hits that shape() would accept.
+        hit_r = self.hit_radius()
+        return full_visual_rect.united(QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0))
 
     def get_bg_ellipse_path(self) -> QPainterPath:
         """Return the elliptical background path used for bond endpoint clipping."""
@@ -330,36 +336,26 @@ class AtomItem(QGraphicsItem):
         path.addEllipse(bg_rect)
         return path
 
-    def shape(self) -> QPainterPath:
-        """Define the shape of the atom item for collision detection.
+    def hit_radius(self) -> float:
+        """Return the hit/snap radius in scene units for the current zoom.
 
-        The hit radius is derived from the ``bond_snapping_distance_2d``
-        setting so that hover highlight matches the snapping / keyboard
-        instant-switch zone exactly.  The radius is expressed in screen
-        pixels and divided by the current view scale.
+        The radius is derived from the ``bond_snapping_distance_2d`` setting so
+        that hover highlight matches the snapping / keyboard instant-switch
+        zone exactly.  The setting is in screen pixels, so it is divided by the
+        current view scale.
         """
-        scene = self.scene()
-        if not scene or not scene.views():
-            path = QPainterPath()
-            hit_r = max(4.0, ATOM_RADIUS - 6.0) * 2
-            path.addEllipse(QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0))
-            return path
+        return scene_hit_radius(self.scene(), fallback=max(4.0, ATOM_RADIUS - 6.0) * 2)
 
-        view = scene.views()[0]
-        scale = view.transform().m11()
-        if scale <= 0.0:
-            scale = 1.0
-
-        # Use the same setting that find_atom_near() uses for snapping,
-        # so hover highlight and snap zones are identical.
-        if hasattr(scene, "get_setting"):
-            hit_px = scene.get_setting("bond_snapping_distance_2d", 14.0)
-        else:
-            hit_px = 14.0
-        scene_radius = hit_px / scale
+    def shape(self) -> QPainterPath:
+        """Define the shape of the atom item for collision detection."""
+        scene_radius = self.hit_radius()
 
         path = QPainterPath()
         path.addEllipse(QPointF(0, 0), scene_radius, scene_radius)
+        # When zoomed in the pixel-sized hit circle can be smaller than the
+        # drawn label; the glyph itself must always stay clickable.
+        if self.is_visible:
+            path = path.united(self.get_bg_ellipse_path())
         return path
 
     def paint(

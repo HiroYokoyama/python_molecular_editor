@@ -123,6 +123,33 @@ class ZoomableView(QGraphicsView):
         else:
             super().mouseReleaseEvent(event)
 
+    def _invalidate_item_geometry(self) -> None:
+        """Re-index every item after a zoom change.
+
+        AtomItem/BondItem express their hit area in screen pixels, so both
+        boundingRect() and shape() change with the view scale.  Without this
+        notification Qt keeps the BSP index built at the old scale and hover /
+        click detection stops matching the drawn hit zone after zooming.
+        """
+        scene = self.scene()
+        if scene is None:
+            return
+        for item in scene.items():
+            try:
+                item.prepareGeometryChange()
+            except (AttributeError, RuntimeError):
+                continue
+
+    def scale(self, sx: float, sy: float) -> None:
+        """Scale the view and re-index items for the new scale."""
+        super().scale(sx, sy)
+        self._invalidate_item_geometry()
+
+    def resetTransform(self) -> None:
+        """Reset the view transform and re-index items for the new scale."""
+        super().resetTransform()
+        self._invalidate_item_geometry()
+
     def viewportEvent(self, event: Optional[QEvent]) -> bool:
         """Handle native gestures (like pinch zoom on trackpads)"""
         if event is None:

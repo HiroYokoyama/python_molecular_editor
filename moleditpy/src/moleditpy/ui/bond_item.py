@@ -43,6 +43,7 @@ from ..utils.constants import (
     FONT_WEIGHT_BOLD,
     HOVER_PEN_WIDTH,
 )
+from ..utils.hit_radius import scene_hit_radius
 
 if TYPE_CHECKING:
     from .atom_item import AtomItem
@@ -231,6 +232,15 @@ class BondItem(QGraphicsItem):
             # return zero line to prevent downstream crashes.
             return QLineF(0, 0, 0, 0)
 
+    def hit_radius(self) -> float:
+        """Return the click/hover half-width in scene units for the current zoom.
+
+        Uses the same ``bond_snapping_distance_2d`` setting (screen pixels) as
+        atom hover/snapping, divided by the view scale so the clickable band
+        stays a constant width on screen.
+        """
+        return scene_hit_radius(self.scene())
+
     def boundingRect(self) -> QRectF:
         """Return the bounding rect encompassing all visual bond representations."""
         try:
@@ -251,7 +261,10 @@ class BondItem(QGraphicsItem):
             bond_offset = scene.get_setting(key, 3.5)
             wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
 
+        # The stroked hit band from shape() must stay inside boundingRect(),
+        # otherwise Qt's item index prunes clicks that shape() would accept.
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
+        extra = max(extra, self.hit_radius() + 2.0)
         rect = (
             QRectF(line.p1(), line.p2())
             .normalized()
@@ -292,25 +305,9 @@ class BondItem(QGraphicsItem):
             path.moveTo(line.p1())
             path.lineTo(line.p2())
 
-            # Use the exact same setting as atom hover highlight and snapping, zoom-aware.
-            scene = self.scene()
-            if scene and scene.views():
-                view = scene.views()[0]
-                scale = view.transform().m11()
-                if scale <= 0.0:
-                    scale = 1.0
-                if hasattr(scene, "get_setting"):
-                    hit_px = scene.get_setting("bond_snapping_distance_2d", 14.0)
-                else:
-                    hit_px = 14.0
-                # width is diameter, so 2 * radius
-                scene_width = (hit_px * 2) / scale
-            else:
-                scene_width = 28.0
-
-            # Stroke it to give it some width
+            # Stroke it to give it some width (width is a diameter, so 2 * radius)
             stroker = QPainterPathStroker()
-            stroker.setWidth(scene_width)
+            stroker.setWidth(self.hit_radius() * 2.0)
             path = stroker.createStroke(path)
 
             # If there's an E/Z label, add its rect to the selection shape
