@@ -495,22 +495,21 @@ class IOManager:
             self.host.statusBar().showMessage("Error: Nothing to save.")
             return
 
-        native_exts = [".pmeprj", ".pmeraw"]
-        if self.host.init_manager.current_file_path and any(
-            self.host.init_manager.current_file_path.lower().endswith(ext)
-            for ext in native_exts
-        ):
+        current_path = self.host.init_manager.current_file_path
+        if current_path and current_path.lower().endswith(".pmeraw"):
+            # Never write back the legacy pickle format: fall through to
+            # Save As, which always produces a .pmeprj.
+            self.host.update_status_message(
+                "Raw (.pmeraw) files are read-only — saving as .pmeprj instead."
+            )
+            self.save_project_as()
+            return
+
+        if current_path and current_path.lower().endswith(".pmeprj"):
             try:
-                if self.host.init_manager.current_file_path.lower().endswith(".pmeraw"):
-                    save_data = self.host.state_manager.get_current_state()
-                    with open(self.host.init_manager.current_file_path, "wb") as f:
-                        pickle.dump(save_data, f)
-                else:
-                    json_data = self.host.state_manager.create_json_data()
-                    with open(
-                        self.host.init_manager.current_file_path, "w", encoding="utf-8"
-                    ) as f:
-                        json.dump(json_data, f, indent=2, ensure_ascii=False)
+                json_data = self.host.state_manager.create_json_data()
+                with open(current_path, "w", encoding="utf-8") as f:
+                    json.dump(json_data, f, indent=2, ensure_ascii=False)
 
                 self.host.set_has_unsaved_changes(False)
                 self.host.state_manager.update_window_title()
@@ -1109,6 +1108,33 @@ class IOManager:
             except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
                 self.host.statusBar().showMessage(f"Error saving XYZ: {e}")
 
+    def _confirm_pickle_load(self, file_path: str) -> bool:
+        """Ask the user before unpickling a .pmeraw file.
+
+        A .pmeraw file is a Python pickle: loading one runs arbitrary code
+        embedded in the file, so a file from an untrusted source can take over
+        the machine. Returns True only if the user explicitly chooses Open.
+        """
+        if os.environ.get("MOLEDITPY_HEADLESS"):
+            return True
+
+        box = QMessageBox(self.host)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle("Open Raw Project File?")
+        box.setText("This file is in the legacy raw (pickle) format.")
+        box.setInformativeText(
+            f"{os.path.basename(file_path)}\n\n"
+            "Raw project files can execute arbitrary code when opened. "
+            "Only open .pmeraw files that you created yourself or received "
+            "from a source you trust.\n\n"
+            "The .pmeprj format is safe and is recommended instead."
+        )
+        open_button = box.addButton("Open", QMessageBox.ButtonRole.AcceptRole)
+        cancel_button = box.addButton(QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(cancel_button)
+        box.exec()
+        return box.clickedButton() is open_button
+
     def load_raw_data(self, file_path: Optional[str] = None) -> None:
         """Open a .pmeraw pickle project file."""
         if not self.host.state_manager.check_unsaved_changes():
@@ -1128,6 +1154,10 @@ class IOManager:
             )
             if not file_path:
                 return
+
+        if not self._confirm_pickle_load(file_path):
+            self.host.update_status_message("Opening raw project file cancelled.")
+            return
 
         if not self.host.edit_actions_manager.clear_all(skip_check=True):
             return
