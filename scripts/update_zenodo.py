@@ -323,11 +323,22 @@ def main():
                     new_creators.append(new_creator)
         metadata["creators"] = new_creators
 
-    # Map legacy license to InvenioRDM rights list
+    # Map legacy license to InvenioRDM rights list.
+    #
+    # Older records still carry pre-SPDX ids that the current InvenioRDM
+    # vocabulary rejects outright ("Invalid value gpl-3.0."), which fails the
+    # whole archive step. Normalise those before echoing them back.
+    LEGACY_LICENSE_IDS = {
+        "gpl-3.0": "gpl-3.0-or-later",
+        "gpl-2.0": "gpl-2.0-or-later",
+        "lgpl-3.0": "lgpl-3.0-or-later",
+        "agpl-3.0": "agpl-3.0-or-later",
+    }
     lic = parent_metadata.get("license")
     if lic and isinstance(lic, dict):
         lic_id = lic.get("id")
         if lic_id:
+            lic_id = LEGACY_LICENSE_IDS.get(lic_id, lic_id)
             metadata["rights"] = [{"id": lic_id}]
 
     # Ensure resource_type is in the format expected by the InvenioRDM schema
