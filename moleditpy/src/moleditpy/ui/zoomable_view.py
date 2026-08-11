@@ -124,20 +124,15 @@ class ZoomableView(QGraphicsView):
             super().mouseReleaseEvent(event)
 
     def _invalidate_item_geometry(self) -> None:
-        """Re-index every item after a zoom change.
-
-        AtomItem/BondItem express their hit area in screen pixels, so both
-        boundingRect() and shape() change with the view scale.  Without this
-        notification Qt keeps the BSP index built at the old scale and hover /
-        click detection stops matching the drawn hit zone after zooming.
-        """
+        """Re-index items: their pixel-sized hit geometry changes with zoom."""
         scene = self.scene()
         if scene is None:
             return
         for item in scene.items():
+            # A wrapper deleted mid-iteration (scene teardown) raises.
             try:
                 item.prepareGeometryChange()
-            except (AttributeError, RuntimeError):
+            except RuntimeError:
                 continue
 
     def scale(self, sx: float, sy: float) -> None:

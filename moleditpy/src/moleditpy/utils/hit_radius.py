@@ -18,10 +18,8 @@ DEFAULT_HIT_PX = 14.0
 def scene_hit_radius(scene: Any, fallback: float = DEFAULT_HIT_PX) -> float:
     """Return the 2D hit/snap radius in scene units for the current zoom.
 
-    The ``bond_snapping_distance_2d`` setting is in screen pixels, so it is
-    divided by the view scale.  AtomItem.shape(), BondItem.shape() and
-    ``find_atom_near()`` all resolve their hit zone through this, which is what
-    keeps hover highlight, clicking and snapping on the same radius.
+    bond_snapping_distance_2d is in screen pixels, so it is divided by the view
+    scale; shape() and find_atom_near() share this to stay in step.
     """
     if not scene or not scene.views():
         return fallback

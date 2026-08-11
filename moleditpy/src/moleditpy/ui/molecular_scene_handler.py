@@ -1593,10 +1593,7 @@ class SceneQueryMixin:
     def find_atom_near(self, pos: Any, tol: float = 14.0) -> Any:
         """Return the AtomItem within tolerance distance of pos, or None.
 
-        ``tol`` is specified in **screen pixels**.  It is divided by the
-        current view scale so that the effective snap radius stays constant
-        on screen regardless of zoom level — matching the behaviour of
-        ``AtomItem.shape()`` (hover highlight).
+        ``tol`` is in screen pixels, divided by the view scale to match shape().
         """
         if pos is None:
             return None

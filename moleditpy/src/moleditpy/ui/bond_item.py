@@ -233,12 +233,7 @@ class BondItem(QGraphicsItem):
             return QLineF(0, 0, 0, 0)
 
     def hit_radius(self) -> float:
-        """Return the click/hover half-width in scene units for the current zoom.
-
-        Uses the same ``bond_snapping_distance_2d`` setting (screen pixels) as
-        atom hover/snapping, divided by the view scale so the clickable band
-        stays a constant width on screen.
-        """
+        """Return the click/hover half-width in scene units for the current zoom."""
         return scene_hit_radius(self.scene())
 
     def boundingRect(self) -> QRectF:
@@ -261,8 +256,7 @@ class BondItem(QGraphicsItem):
             bond_offset = scene.get_setting(key, 3.5)
             wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
 
-        # The stroked hit band from shape() must stay inside boundingRect(),
-        # otherwise Qt's item index prunes clicks that shape() would accept.
+        # Qt prunes clicks whose shape() escapes boundingRect().
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
         extra = max(extra, self.hit_radius() + 2.0)
         rect = (

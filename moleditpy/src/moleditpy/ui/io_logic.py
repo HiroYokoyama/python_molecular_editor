@@ -497,8 +497,7 @@ class IOManager:
 
         current_path = self.host.init_manager.current_file_path
         if current_path and current_path.lower().endswith(".pmeraw"):
-            # Never write back the legacy pickle format: fall through to
-            # Save As, which always produces a .pmeprj.
+            # Never write the legacy pickle back; Save As only emits .pmeprj.
             self.host.update_status_message(
                 "Raw (.pmeraw) files are read-only — saving as .pmeprj instead."
             )
@@ -1109,12 +1108,7 @@ class IOManager:
                 self.host.statusBar().showMessage(f"Error saving XYZ: {e}")
 
     def _confirm_pickle_load(self, file_path: str) -> bool:
-        """Ask the user before unpickling a .pmeraw file.
-
-        A .pmeraw file is a Python pickle: loading one runs arbitrary code
-        embedded in the file, so a file from an untrusted source can take over
-        the machine. Returns True only if the user explicitly chooses Open.
-        """
+        """Ask before unpickling a .pmeraw file, which can run arbitrary code."""
         box = QMessageBox(self.host)
         box.setIcon(QMessageBox.Icon.Warning)
         box.setWindowTitle("Open Raw Project File?")

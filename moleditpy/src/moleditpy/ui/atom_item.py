@@ -135,13 +135,7 @@ class AtomItem(QGraphicsItem):
         self.update()
 
     def visual_rect(self) -> QRectF:
-        """Return the rectangle the atom actually draws into.
-
-        Kept separate from boundingRect(), which Qt also requires to cover the
-        (zoom-dependent) hit shape: selection and hover highlights are drawn
-        from this one, so they stay wrapped around the label instead of
-        ballooning with the hit radius when zoomed out.
-        """
+        """Return the rectangle the atom draws into; highlights use this."""
         font_size = 20
         font_family = FONT_FAMILY
         font_bold = True
@@ -259,11 +253,7 @@ class AtomItem(QGraphicsItem):
         return full_visual_rect.adjusted(-3, -3, 3, 3)
 
     def boundingRect(self) -> QRectF:
-        """Return the item geometry: everything drawn, plus the hit shape.
-
-        The hit circle from shape() must stay inside boundingRect(), or Qt's
-        item index prunes hover/click hits that shape() would accept.
-        """
+        """Return the drawn rect plus the hit shape, which Qt requires it to cover."""
         hit_r = self.hit_radius()
         return self.visual_rect().united(
             QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0)
@@ -349,23 +339,11 @@ class AtomItem(QGraphicsItem):
         return path
 
     def hit_radius(self) -> float:
-        """Return the hit/snap radius in scene units for the current zoom.
-
-        The radius is derived from the ``bond_snapping_distance_2d`` setting so
-        that hover highlight matches the snapping / keyboard instant-switch
-        zone exactly.  The setting is in screen pixels, so it is divided by the
-        current view scale.
-        """
+        """Return the hit/snap radius in scene units for the current zoom."""
         return scene_hit_radius(self.scene(), fallback=max(4.0, ATOM_RADIUS - 6.0) * 2)
 
     def shape(self) -> QPainterPath:
-        """Define the shape of the atom item for collision detection.
-
-        Deliberately independent of the drawn label: the hit zone is a fixed
-        number of screen pixels, so zooming in narrows the molecular distance
-        it covers.  That is what makes zooming the way to target atoms
-        precisely in a crowded structure.
-        """
+        """Define the collision area: a fixed pixel radius, never the drawn label."""
         scene_radius = self.hit_radius()
 
         path = QPainterPath()
