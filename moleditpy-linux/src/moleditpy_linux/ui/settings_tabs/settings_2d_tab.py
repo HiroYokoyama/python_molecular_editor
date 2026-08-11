@@ -190,10 +190,11 @@ class Settings2DTab(SettingsTabBase):
 
         form_layout.addRow(self._create_separator())
 
-        # --- Bond Snapping Settings ---
-        form_layout.addRow(QLabel("<b>Bond Snapping Settings</b>"))
+        # --- Atom Hit / Snap Settings ---
+        form_layout.addRow(QLabel("<b>Atom Hit / Snap Settings</b>"))
 
-        # Bond Snapping Distance
+        # Atom hit radius (also used for bond snapping) — internal key is
+        # kept as bond_snapping_distance_2d so existing settings files load.
         self.bond_snapping_distance_2d_slider, self.bond_snapping_distance_2d_label = (
             self._create_slider(5, 50, 1.0, is_int=True)
         )
@@ -201,10 +202,10 @@ class Settings2DTab(SettingsTabBase):
             "The distance in screen pixels (zoom-independent) within which:\n"
             "• Drawing a bond snaps to an existing atom\n"
             "• Keyboard shortcuts instantly edit the atom under cursor\n"
-            "• Atoms show hover highlight"
+            "• Atoms and bonds show hover highlight and respond to clicks"
         )
         form_layout.addRow(
-            "Bond Snapping Distance (px):",
+            "Atom Hit / Snap Distance (px):",
             self._wrap_layout(
                 self.bond_snapping_distance_2d_slider,
                 self.bond_snapping_distance_2d_label,

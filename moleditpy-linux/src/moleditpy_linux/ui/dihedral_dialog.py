@@ -489,7 +489,10 @@ class DihedralDialog(GeometryBaseDialog):
         if min(difference, 360.0 - difference) < 0.5:
             return
         with suppress_log(AttributeError, RuntimeError, TypeError):
-            self.main_window.statusBar().showMessage(
+            status_bar = self.main_window.statusBar()
+            if status_bar is None:
+                return
+            status_bar.showMessage(
                 f"Dihedral unchanged ({achieved:.2f}°): the four atoms rotate "
                 "together, which happens for a bond inside a ring.",
                 5000,

@@ -441,7 +441,10 @@ class BondLengthDialog(GeometryBaseDialog):
         if abs(worst_delta) < 1e-4:
             return
         with suppress_log(AttributeError, RuntimeError, TypeError):
-            self.main_window.statusBar().showMessage(
+            status_bar = self.main_window.statusBar()
+            if status_bar is None:
+                return
+            status_bar.showMessage(
                 f"Bond {worst_label} also changed by {worst_delta:+.3f} A: a bond "
                 "inside a ring cannot be resized on its own.",
                 5000,
