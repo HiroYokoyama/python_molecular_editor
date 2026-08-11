@@ -51,8 +51,9 @@ _GROUP_ROTATION_RADIANS_PER_PIXEL = 0.008
 def _rodrigues_matrix(axis: np.ndarray, angle: float) -> np.ndarray:
     """Return the rotation matrix for `angle` radians about `axis` (Rodrigues)."""
     norm = float(np.linalg.norm(axis))
+    identity: np.ndarray = np.eye(3)
     if norm < 1e-6 or abs(angle) < 1e-6:
-        return np.eye(3)
+        return identity
     unit = axis / norm
     k_mat = np.array(
         [
@@ -61,7 +62,10 @@ def _rodrigues_matrix(axis: np.ndarray, angle: float) -> np.ndarray:
             [-unit[1], unit[0], 0.0],
         ]
     )
-    return np.eye(3) + np.sin(angle) * k_mat + (1.0 - np.cos(angle)) * (k_mat @ k_mat)
+    rotation: np.ndarray = (
+        identity + np.sin(angle) * k_mat + (1.0 - np.cos(angle)) * (k_mat @ k_mat)
+    )
+    return rotation
 
 
 class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
@@ -944,7 +948,8 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             speed = _GROUP_ROTATION_RADIANS_PER_PIXEL * self._rotation_sensitivity()
             rot_y = _rodrigues_matrix(view_up, float(dx) * speed)
             rot_x = _rodrigues_matrix(right, -float(dy) * speed)
-            return rot_x @ rot_y
+            combined: np.ndarray = rot_x @ rot_y
+            return combined
         except (AttributeError, RuntimeError, TypeError, ValueError):
             logging.debug("Suppressed non-critical error", exc_info=True)
             return None

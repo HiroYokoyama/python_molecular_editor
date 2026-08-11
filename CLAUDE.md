@@ -56,13 +56,17 @@ Run full suite + pylint in one pass (updates `tests/pylint-score.txt` automatica
 MOLEDITPY_HEADLESS=1 QT_QPA_PLATFORM=offscreen python tests/run_all_tests.py --pylint
 ```
 
-## Linting
+## Linting and Type Checking
 
 ```bash
 pylint moleditpy/src/moleditpy/
+ruff format moleditpy/src tests && ruff check moleditpy/src
+mypy moleditpy/src/moleditpy/          # config in mypy.ini; must stay at zero errors
 ```
 
-Target score: > 9.0/10. PEP 8 compliance required. Type hints required for all functions and methods.
+Target pylint score: > 9.0/10. PEP 8 compliance required. Type hints required for all functions and methods.
+
+Run all three before committing. `mypy` is clean as of 4.7.0 — do not add errors, and do not silence one with `# type: ignore` where a real guard or an explicitly typed local expresses the intent (numpy 2.x returns `Any` under `python_version = 3.9`, so assign to a `np.ndarray` local and return that).
 
 The `--pylint` flag on `run_all_tests.py` runs pylint automatically after all tests pass and writes the score to `tests/pylint-score.txt`.
 
