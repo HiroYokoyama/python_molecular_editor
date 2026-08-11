@@ -63,11 +63,17 @@ class TestInitManagerHook:
         assert font.pointSize() == 14
         assert font.weight() == QFont.Weight.Normal
 
-    def test_falls_back_when_the_scene_has_no_settings(self, app):
+    def test_falls_back_before_the_scene_exists(self, app):
+        """Warm-up can run before the scene is built, so a missing scene must
+        fall back to the default font rather than raise.
+
+        This previously asserted a scene that exists but lacks get_setting();
+        that path was a hasattr() guard for test fakes only — the app's only
+        scene is MoleculeScene, which always has it."""
         from moleditpy.ui.main_window_init import MainInitManager
 
         manager = MagicMock(spec=MainInitManager)
-        manager.scene = object()
+        manager.scene = None
 
         with patch("moleditpy.ui.main_window_init.warm_font_cache") as warm:
             MainInitManager._warm_font_cache(manager)

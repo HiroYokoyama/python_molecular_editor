@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import math
 import logging
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
 
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import (
@@ -43,6 +43,7 @@ from ..utils.constants import (
     FONT_WEIGHT_BOLD,
     HOVER_PEN_WIDTH,
 )
+from ..utils.hit_radius import scene_hit_radius
 
 if TYPE_CHECKING:
     from .atom_item import AtomItem
@@ -231,6 +232,10 @@ class BondItem(QGraphicsItem):
             # return zero line to prevent downstream crashes.
             return QLineF(0, 0, 0, 0)
 
+    def hit_radius(self) -> float:
+        """Return the click/hover half-width in scene units for the current zoom."""
+        return scene_hit_radius(self.scene())
+
     def boundingRect(self) -> QRectF:
         """Return the bounding rect encompassing all visual bond representations."""
         try:
@@ -239,10 +244,10 @@ class BondItem(QGraphicsItem):
             line = QLineF(0, 0, 0, 0)
 
         # Get dynamic bond offset (spacing)
-        scene = self.scene()
+        scene: Any = self.scene()
         bond_offset = 3.5
         wedge_width = 6.0
-        if scene is not None and hasattr(scene, "get_setting"):
+        if scene is not None:
             key = (
                 "bond_spacing_triple_2d"
                 if getattr(self, "order", 1) == 3
@@ -251,7 +256,9 @@ class BondItem(QGraphicsItem):
             bond_offset = scene.get_setting(key, 3.5)
             wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
 
+        # Qt prunes clicks whose shape() escapes boundingRect().
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
+        extra = max(extra, self.hit_radius() + 2.0)
         rect = (
             QRectF(line.p1(), line.p2())
             .normalized()
@@ -262,7 +269,7 @@ class BondItem(QGraphicsItem):
         if self.order == 2 and self.stereo in [3, 4]:
             font_size = 20
             font_family = FONT_FAMILY
-            if scene is not None and hasattr(scene, "get_setting"):
+            if scene is not None:
                 font_size = scene.get_setting("atom_font_size_2d", 20)
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
 
@@ -292,25 +299,9 @@ class BondItem(QGraphicsItem):
             path.moveTo(line.p1())
             path.lineTo(line.p2())
 
-            # Use the exact same setting as atom hover highlight and snapping, zoom-aware.
-            scene = self.scene()
-            if scene and scene.views():
-                view = scene.views()[0]
-                scale = view.transform().m11()
-                if scale <= 0.0:
-                    scale = 1.0
-                if hasattr(scene, "get_setting"):
-                    hit_px = scene.get_setting("bond_snapping_distance_2d", 14.0)
-                else:
-                    hit_px = 14.0
-                # width is diameter, so 2 * radius
-                scene_width = (hit_px * 2) / scale
-            else:
-                scene_width = 28.0
-
-            # Stroke it to give it some width
+            # Stroke it to give it some width (width is a diameter, so 2 * radius)
             stroker = QPainterPathStroker()
-            stroker.setWidth(scene_width)
+            stroker.setWidth(self.hit_radius() * 2.0)
             path = stroker.createStroke(path)
 
             # If there's an E/Z label, add its rect to the selection shape
@@ -362,8 +353,8 @@ class BondItem(QGraphicsItem):
         bond_color = QColor("#222222")
 
         try:
-            scene = self.scene()
-            if scene is not None and hasattr(scene, "get_setting"):
+            scene: Any = self.scene()
+            if scene is not None:
                 # Color
                 if self.isSelected():
                     bond_color = QColor("blue")
@@ -538,8 +529,8 @@ class BondItem(QGraphicsItem):
                         # --- Label Settings ---
                         font_size = 20
                         font_family = FONT_FAMILY
-                        _sc = self.scene()
-                        if _sc is not None and hasattr(_sc, "get_setting"):
+                        _sc: Any = self.scene()
+                        if _sc is not None:
                             font_size = _sc.get_setting("atom_font_size_2d", 20)
                             font_family = _sc.get_setting(
                                 "atom_font_family_2d", FONT_FAMILY

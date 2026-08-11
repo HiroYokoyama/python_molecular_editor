@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Optional, cast
 
-from PyQt6.QtCore import QEvent, QPointF, Qt
+from PyQt6.QtCore import QEvent, QPointF, Qt, QTimer
 from PyQt6.QtGui import QMouseEvent, QWheelEvent, QNativeGestureEvent
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QWidget
 
@@ -37,6 +37,14 @@ class ZoomableView(QGraphicsView):
         self._pan_start_pos = QPointF()
         self._pan_start_scroll_h = 0
         self._pan_start_scroll_v = 0
+
+        # Coalesces re-indexing to once per zoom gesture; doing it per wheel
+        # tick dirties every item and costs ~40x the zoom step on a large
+        # structure.
+        self._geometry_timer = QTimer(self)
+        self._geometry_timer.setSingleShot(True)
+        self._geometry_timer.setInterval(50)
+        self._geometry_timer.timeout.connect(self._invalidate_item_geometry)
 
     def wheelEvent(self, event: Optional[QWheelEvent]) -> None:
         """Event handler for mouse wheel rotation"""
@@ -122,6 +130,28 @@ class ZoomableView(QGraphicsView):
             event.accept()  # type: ignore[union-attr]
         else:
             super().mouseReleaseEvent(event)
+
+    def _invalidate_item_geometry(self) -> None:
+        """Re-index items: their pixel-sized hit geometry changes with zoom."""
+        scene = self.scene()
+        if scene is None:
+            return
+        for item in scene.items():
+            # A wrapper deleted mid-iteration (scene teardown) raises.
+            try:
+                item.prepareGeometryChange()
+            except RuntimeError:
+                continue
+
+    def scale(self, sx: float, sy: float) -> None:
+        """Scale the view, then re-index items once the gesture settles."""
+        super().scale(sx, sy)
+        self._geometry_timer.start()
+
+    def resetTransform(self) -> None:
+        """Reset the view transform and re-index items for the new scale."""
+        super().resetTransform()
+        self._geometry_timer.start()
 
     def viewportEvent(self, event: Optional[QEvent]) -> bool:
         """Handle native gestures (like pinch zoom on trackpads)"""

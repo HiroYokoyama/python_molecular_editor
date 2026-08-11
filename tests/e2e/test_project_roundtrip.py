@@ -120,6 +120,10 @@ def test_pmeraw_roundtrip(window, qtbot, tmp_path, monkeypatch):
     assert window.data.atoms == {}
 
     _patch_unsaved_prompt(monkeypatch, QMessageBox.StandardButton.No)
+    # Answer the .pmeraw pickle warning; the roundtrip is what is under test.
+    monkeypatch.setattr(
+        window.io_manager, "_confirm_pickle_load", lambda _p: True, raising=False
+    )
     window.io_manager.load_raw_data(str(saved))
     qtbot.wait(200)
 

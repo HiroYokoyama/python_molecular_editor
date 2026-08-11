@@ -115,21 +115,75 @@ def test_save_project_overwrite_json(mock_parser_host, tmp_path):
         io.statusBar().showMessage.assert_any_call(f"Project saved to {project_file}")
 
 
-def test_save_project_overwrite_raw(mock_parser_host, tmp_path):
-    """Verify overwriting an existing raw (pickle) project file."""
+def test_save_project_never_overwrites_raw(mock_parser_host, tmp_path):
+    """Ctrl+S on a .pmeraw must redirect to Save As (.pmeprj), not rewrite the pickle.
+
+    Writing back a pickle keeps the project in a format that executes code on
+    load; the raw format is export-only from 4.6.2 on.
+    """
     io = DummyProjectIo(mock_parser_host)
     raw_file = str(tmp_path / "existing.pmeraw")
     io.host.init_manager.current_file_path = raw_file
     io.host.state_manager.data.atoms = {1: {"symbol": "C"}}
 
-    with patch.object(
-        io.host.state_manager, "get_current_state", return_value={"atoms": "mock"}
-    ):
+    with patch.object(io, "save_project_as") as mock_save_as:
         io.save_project()
-        assert os.path.exists(raw_file)
-        with open(raw_file, "rb") as f:
-            data = pickle.load(f)
-            assert data["atoms"] == "mock"
+        assert mock_save_as.called
+
+    assert not os.path.exists(raw_file), "Ctrl+S must not write the .pmeraw file"
+
+
+def test_confirm_pickle_load_open(mock_parser_host):
+    """Choosing 'Open' in the raw-file warning proceeds with the load."""
+    io = DummyProjectIo(mock_parser_host)
+    with patch("moleditpy.ui.io_logic.QMessageBox") as mock_box_cls:
+        box = mock_box_cls.return_value
+        open_button = MagicMock()
+        box.addButton.side_effect = [open_button, MagicMock()]
+        box.clickedButton.return_value = open_button
+
+        assert io._confirm_pickle_load("danger.pmeraw") is True
+
+
+def test_confirm_pickle_load_cancel(mock_parser_host):
+    """Choosing Cancel in the raw-file warning refuses the load."""
+    io = DummyProjectIo(mock_parser_host)
+    with patch("moleditpy.ui.io_logic.QMessageBox") as mock_box_cls:
+        box = mock_box_cls.return_value
+        open_button, cancel_button = MagicMock(), MagicMock()
+        box.addButton.side_effect = [open_button, cancel_button]
+        box.clickedButton.return_value = cancel_button
+
+        assert io._confirm_pickle_load("danger.pmeraw") is False
+
+
+def test_confirm_pickle_load_cancel_aborts(mock_parser_host, tmp_path):
+    """Cancelling the raw-file warning must leave the document untouched."""
+    io = DummyProjectIo(mock_parser_host)
+    raw_file = tmp_path / "untrusted.pmeraw"
+    with open(raw_file, "wb") as f:
+        pickle.dump({"atoms": {}}, f)
+
+    with patch.object(io, "_confirm_pickle_load", return_value=False) as mock_confirm:
+        io.load_raw_data(str(raw_file))
+
+    mock_confirm.assert_called_once_with(str(raw_file))
+    io.host.edit_actions_manager.clear_all.assert_not_called()
+    io.host.state_manager.set_state_from_data.assert_not_called()
+
+
+def test_load_raw_data_asks_before_unpickling(mock_parser_host, tmp_path):
+    """Every .pmeraw load path must go through the confirmation."""
+    io = DummyProjectIo(mock_parser_host)
+    raw_file = str(tmp_path / "trusted.pmeraw")
+    with open(raw_file, "wb") as f:
+        pickle.dump({"atoms": {}}, f)
+
+    with patch.object(io, "_confirm_pickle_load", return_value=True) as mock_confirm:
+        io.load_raw_data(raw_file)
+
+    mock_confirm.assert_called_once_with(raw_file)
+    io.host.state_manager.set_state_from_data.assert_called_once()
 
 
 def test_save_project_redirect_to_save_as(mock_parser_host):
@@ -151,7 +205,10 @@ def test_load_raw_data_success(mock_parser_host, tmp_path):
     with open(raw_file, "wb") as f:
         pickle.dump(sample_data, f)
 
-    with patch.object(io.host.state_manager, "set_state_from_data") as mock_set_state:
+    with (
+        patch.object(io, "_confirm_pickle_load", return_value=True),
+        patch.object(io.host.state_manager, "set_state_from_data") as mock_set_state,
+    ):
         io.load_raw_data(raw_file)
         assert mock_set_state.called
         assert io.host.init_manager.current_file_path == raw_file
@@ -207,15 +264,20 @@ def test_save_as_json_trigger(mock_parser_host, tmp_path):
 def test_load_raw_data_error_paths(mock_parser_host):
     """Verify error handling during raw data loading (file not found, corrupt)."""
     io = DummyProjectIo(mock_parser_host)
-    io.load_raw_data("non_existent.pmeraw")
-    io.statusBar().showMessage.assert_called_with("File not found: non_existent.pmeraw")
+    # The pickle warning is answered explicitly: these assert the load paths, and
+    # must not depend on MOLEDITPY_HEADLESS being set to skip the dialog.
+    with patch.object(io, "_confirm_pickle_load", return_value=True):
+        io.load_raw_data("non_existent.pmeraw")
+        io.statusBar().showMessage.assert_called_with(
+            "File not found: non_existent.pmeraw"
+        )
 
-    with patch("builtins.open", MagicMock()):
-        with patch("pickle.load", side_effect=pickle.UnpicklingError("Corrupt")):
-            io.load_raw_data("dummy_data")
-            io.statusBar().showMessage.assert_called_with(
-                "Invalid project file format: Corrupt"
-            )
+        with patch("builtins.open", MagicMock()):
+            with patch("pickle.load", side_effect=pickle.UnpicklingError("Corrupt")):
+                io.load_raw_data("dummy_data")
+                io.statusBar().showMessage.assert_called_with(
+                    "Invalid project file format: Corrupt"
+                )
 
 
 def test_open_project_file_unsaved_check(mock_parser_host):
@@ -499,9 +561,12 @@ def test_load_raw_data_dialog_success(io, tmp_path):
     with open(load_path, "wb") as f:
         pickle.dump(sample_data, f)
 
-    with patch(
-        "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
-        return_value=(load_path, "Project Files (*.pmeraw)"),
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
+            return_value=(load_path, "Project Files (*.pmeraw)"),
+        ),
+        patch.object(io, "_confirm_pickle_load", return_value=True),
     ):
         io.load_raw_data()
 
@@ -526,7 +591,8 @@ def test_load_raw_data_io_error(io, tmp_path):
     with open(bad_path, "w") as f:
         f.write("not a pickle")
 
-    io.load_raw_data(bad_path)
+    with patch.object(io, "_confirm_pickle_load", return_value=True):
+        io.load_raw_data(bad_path)
     io.statusBar().showMessage.assert_called()
     msg = io.statusBar().showMessage.call_args[0][0]
     assert "Invalid project file format" in msg

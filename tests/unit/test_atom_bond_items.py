@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QPointF, QRectF, QLineF
-from PyQt6.QtGui import QPainterPath
+from PyQt6.QtGui import QPainterPath, QTransform
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
@@ -243,11 +243,25 @@ class TestAtomItem:
             )
 
 
+def _make_mock_scene():
+    """A fake scene that answers get_setting()/views() like the real one.
+
+    Items read zoom (view transform) and settings while computing their
+    geometry, so both must return real numbers, not MagicMocks.
+    """
+    scene = MagicMock()
+    scene.get_setting.side_effect = lambda key, default=None: default
+    view = MagicMock()
+    view.transform.return_value = QTransform()
+    scene.views.return_value = [view]
+    return scene
+
+
 # Helper for mocking scene() on BondItem
 class MockableBondItem(BondItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._mock_scene = MagicMock()
+        self._mock_scene = _make_mock_scene()
 
     def scene(self):
         return self._mock_scene
@@ -328,8 +342,10 @@ class TestBondItem:
         mock_window = MagicMock()
         mock_window.settings = {}  # Empty dict for defaults
         mock_scene.window = mock_window
-        mock_scene.views.return_value = [MagicMock()]
-        mock_scene.views.return_value[0].window.return_value = mock_window
+        mock_view = MagicMock()
+        mock_view.transform.return_value = QTransform()  # identity (m11 = 1.0)
+        mock_scene.views.return_value = [mock_view]
+        mock_view.window.return_value = mock_window
 
         bond_item.paint(mock_painter, option, widget)
 
@@ -446,8 +462,10 @@ class TestBondItem:
         mock_scene = bond_item.scene()
         mock_window = MagicMock()
         mock_window.settings = {"atom_font_size_2d": 20}
-        mock_scene.views.return_value = [MagicMock()]
-        mock_scene.views.return_value[0].window.return_value = mock_window
+        mock_view = MagicMock()
+        mock_view.transform.return_value = QTransform()  # identity (m11 = 1.0)
+        mock_scene.views.return_value = [mock_view]
+        mock_view.window.return_value = mock_window
         mock_scene.window = mock_window
 
         bond_item.boundingRect()
@@ -463,12 +481,20 @@ class TestBondItem:
         assert rect_stereo.height() >= rect_no_stereo.height()
 
 
+class _SettingsScene(QGraphicsScene):
+    """Stands in for MoleculeScene, which is the only scene that holds atom and
+    bond items in the app: they read their geometry settings via get_setting()."""
+
+    def get_setting(self, key, default=None):
+        return default
+
+
 class TestAtomDragPropagation:
     """Bonds must track atom positions live, without ever being dragged themselves."""
 
     def _bonded_pair(self):
         # Bonds only refresh once they are in a scene.
-        scene = QGraphicsScene()
+        scene = _SettingsScene()
         atom1 = AtomItem(1, "C", QPointF(0.0, 0.0))
         atom2 = AtomItem(2, "C", QPointF(50.0, 0.0))
         scene.addItem(atom1)

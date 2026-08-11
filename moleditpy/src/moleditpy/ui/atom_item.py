@@ -37,6 +37,7 @@ from ..utils.constants import (
     FONT_FAMILY,
     FONT_WEIGHT_BOLD,
 )
+from ..utils.hit_radius import scene_hit_radius
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 if TYPE_CHECKING:
@@ -111,8 +112,8 @@ class AtomItem(QGraphicsItem):
         font_italic = False
         font_underline = False
 
-        scene = self.scene()
-        if scene is not None and hasattr(scene, "get_setting"):
+        scene: Any = self.scene()
+        if scene is not None:
             font_size = scene.get_setting("atom_font_size_2d", 20)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
@@ -133,15 +134,15 @@ class AtomItem(QGraphicsItem):
         )
         self.update()
 
-    def boundingRect(self) -> QRectF:
-        """Calculate the bounding rectangle for the atom item."""
+    def visual_rect(self) -> QRectF:
+        """Return the rectangle the atom draws into; highlights use this."""
         font_size = 20
         font_family = FONT_FAMILY
         font_bold = True
         font_italic = False
         font_underline = False
-        scene = self.scene()
-        if scene is not None and hasattr(scene, "get_setting"):
+        scene: Any = self.scene()
+        if scene is not None:
             font_size = scene.get_setting("atom_font_size_2d", 20)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
@@ -251,6 +252,13 @@ class AtomItem(QGraphicsItem):
         # 3. Add final margins for selection highlights, etc.
         return full_visual_rect.adjusted(-3, -3, 3, 3)
 
+    def boundingRect(self) -> QRectF:
+        """Return the drawn rect plus the hit shape, which Qt requires it to cover."""
+        hit_r = self.hit_radius()
+        return self.visual_rect().united(
+            QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0)
+        )
+
     def get_bg_ellipse_path(self) -> QPainterPath:
         """Return the elliptical background path used for bond endpoint clipping."""
         path = QPainterPath()
@@ -262,8 +270,8 @@ class AtomItem(QGraphicsItem):
         font_bold = True
         font_italic = False
         font_underline = False
-        scene = self.scene()
-        if scene is not None and hasattr(scene, "get_setting"):
+        scene: Any = self.scene()
+        if scene is not None:
             font_size = scene.get_setting("atom_font_size_2d", 20)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
@@ -330,33 +338,13 @@ class AtomItem(QGraphicsItem):
         path.addEllipse(bg_rect)
         return path
 
+    def hit_radius(self) -> float:
+        """Return the hit/snap radius in scene units for the current zoom."""
+        return scene_hit_radius(self.scene(), fallback=max(4.0, ATOM_RADIUS - 6.0) * 2)
+
     def shape(self) -> QPainterPath:
-        """Define the shape of the atom item for collision detection.
-
-        The hit radius is derived from the ``bond_snapping_distance_2d``
-        setting so that hover highlight matches the snapping / keyboard
-        instant-switch zone exactly.  The radius is expressed in screen
-        pixels and divided by the current view scale.
-        """
-        scene = self.scene()
-        if not scene or not scene.views():
-            path = QPainterPath()
-            hit_r = max(4.0, ATOM_RADIUS - 6.0) * 2
-            path.addEllipse(QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0))
-            return path
-
-        view = scene.views()[0]
-        scale = view.transform().m11()
-        if scale <= 0.0:
-            scale = 1.0
-
-        # Use the same setting that find_atom_near() uses for snapping,
-        # so hover highlight and snap zones are identical.
-        if hasattr(scene, "get_setting"):
-            hit_px = scene.get_setting("bond_snapping_distance_2d", 14.0)
-        else:
-            hit_px = 14.0
-        scene_radius = hit_px / scale
+        """Define the collision area: a fixed pixel radius, never the drawn label."""
+        scene_radius = self.hit_radius()
 
         path = QPainterPath()
         path.addEllipse(QPointF(0, 0), scene_radius, scene_radius)
@@ -374,11 +362,11 @@ class AtomItem(QGraphicsItem):
         # Color logic: check if we should use bond color (uniform) or CPK (element-specific)
         color = CPK_COLORS.get(self.symbol, CPK_COLORS["DEFAULT"])
         # Use bond color if specified in settings
-        scene = self.scene()
-        if hasattr(scene, "get_setting") and (
-            self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)  # type: ignore[union-attr]
+        scene: Any = self.scene()
+        if scene is not None and (
+            self.symbol == "H" or scene.get_setting("atom_use_bond_color_2d", False)
         ):
-            custom_color = scene.get_setting("bond_color_2d", "#222222")  # type: ignore[union-attr]
+            custom_color = scene.get_setting("bond_color_2d", "#222222")
             if isinstance(custom_color, str):
                 color = QColor(custom_color)
 
@@ -533,17 +521,17 @@ class AtomItem(QGraphicsItem):
         if self.has_problem:
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(QColor(255, 0, 0, 200), 4))
-            painter.drawRect(self.boundingRect())
+            painter.drawRect(self.visual_rect())
         elif self.isSelected():
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(QColor(0, 100, 255), 3))
-            painter.drawRect(self.boundingRect())
+            painter.drawRect(self.visual_rect())
         if (not self.isSelected()) and getattr(self, "hovered", False):
             pen = QPen(QColor(144, 238, 144, 200), 3)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(pen)
-            painter.drawRect(self.boundingRect())
+            painter.drawRect(self.visual_rect())
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         """Propagate position and scene changes to connected bond items."""

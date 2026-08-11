@@ -1045,7 +1045,7 @@ class EditActionsManager:
                 # Only prepare a geometry change if the implicit H count
                 # changes (this may affect the item's bounding rect).
                 need_geometry = current != new_count
-                if need_geometry and hasattr(item, "prepareGeometryChange"):
+                if need_geometry:
                     item.prepareGeometryChange()
                 item.implicit_h_count = new_count
                 item.has_problem = bool(desired_prob)

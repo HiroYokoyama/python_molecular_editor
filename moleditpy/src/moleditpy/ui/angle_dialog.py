@@ -487,7 +487,10 @@ class AngleDialog(GeometryBaseDialog):
         if abs(achieved - requested) < 0.5:
             return
         with suppress_log(AttributeError, RuntimeError, TypeError):
-            self.main_window.statusBar().showMessage(
+            status_bar = self.main_window.statusBar()
+            if status_bar is None:
+                return
+            status_bar.showMessage(
                 f"Angle unchanged ({achieved:.2f} deg): the three atoms rotate "
                 "together, which happens for an angle inside a ring.",
                 5000,

@@ -22,6 +22,9 @@ def scene_setup(app):
     mock_window.settings = MockSettings(
         {"atom_label_font_size": 10, "bond_width": 2.0, "atom_color_C": "#000000"}
     )
+    # scene.get_setting() reads init_manager.settings; it must be a real dict so
+    # items get numeric geometry values instead of MagicMocks.
+    mock_window.init_manager.settings = {}
 
     # Use real dicts for data
     data = MagicMock()
@@ -30,7 +33,7 @@ def scene_setup(app):
 
     scene = MoleculeScene(data, mock_window)
     mock_view = MagicMock()
-    mock_view.transform.return_value = None
+    mock_view.transform.return_value = QTransform()  # identity (m11 = 1.0)
     scene.views = MagicMock(return_value=[mock_view])
 
     # Use real QPointF for all coordinates

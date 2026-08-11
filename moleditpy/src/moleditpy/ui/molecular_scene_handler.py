@@ -1396,6 +1396,7 @@ class SceneQueryMixin:
     items: Any
     update_all_items: Any
     window: Any
+    views: Any
     addItem: Any
     removeItem: Any
 
@@ -1592,20 +1593,15 @@ class SceneQueryMixin:
     def find_atom_near(self, pos: Any, tol: float = 14.0) -> Any:
         """Return the AtomItem within tolerance distance of pos, or None.
 
-        ``tol`` is specified in **screen pixels**.  It is divided by the
-        current view scale so that the effective snap radius stays constant
-        on screen regardless of zoom level — matching the behaviour of
-        ``AtomItem.shape()`` (hover highlight).
+        ``tol`` is in screen pixels, divided by the view scale to match shape().
         """
         if pos is None:
             return None
         # Convert screen-pixel tolerance to scene units (zoom-aware).
         if self.views():
-            xform = self.views()[0].transform()
-            if xform is not None:
-                scale = xform.m11()
-                if scale > 0:
-                    tol = tol / scale
+            scale = self.views()[0].transform().m11()
+            if scale > 0:
+                tol = tol / scale
         # Create a small search rectangle around the position
         search_rect = QRectF(pos.x() - tol, pos.y() - tol, 2 * tol, 2 * tol)
         nearby_items = self.items(search_rect)

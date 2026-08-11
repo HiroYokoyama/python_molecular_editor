@@ -3967,8 +3967,8 @@ _No description provided._
 - assert font.pointSize() == 14
 - assert font.weight() == QFont.Weight.Normal
 
-### TestInitManagerHook.test_falls_back_when_the_scene_has_no_settings
-_No description provided._
+### TestInitManagerHook.test_falls_back_before_the_scene_exists
+_Warm-up can run before the scene is built, so a missing scene must_
 
 - warm.assert_called_once_with(None)
 
@@ -4574,6 +4574,7 @@ _No description provided._
 ### test_hover_and_snap_use_same_default_radius
 _At default settings both radii must equal bond_snapping_distance_2d._
 
+- assert atom.hit_radius() == pytest.approx(DEFAULT_SNAP_PX)
 - assert scene.find_atom_near(QPointF(DEFAULT_SNAP_PX - 0.1, 0), tol=DEFAULT_SNAP_PX) is atom
 - assert scene.find_atom_near(QPointF(DEFAULT_SNAP_PX + 0.1, 0), tol=DEFAULT_SNAP_PX) is None
 - assert hover_radius == pytest.approx(DEFAULT_SNAP_PX, abs=0.5)
@@ -4586,11 +4587,28 @@ _When the setting is changed, both hover and snap must change together._
 - assert hover_radius == pytest.approx(custom_dist, abs=0.5)
 
 ### test_hover_and_snap_stay_consistent_at_different_zoom_levels
-_Both radii must stay identical in screen-pixel terms at any zoom._
+_Hover shape and snapping must agree at every point, at any zoom._
 
-- assert scene.find_atom_near(QPointF(boundary_scene - 0.01, 0), tol=DEFAULT_SNAP_PX) is atom
-- assert scene.find_atom_near(QPointF(boundary_scene + 0.5, 0), tol=DEFAULT_SNAP_PX) is None
-- assert hover_screen_px == pytest.approx(DEFAULT_SNAP_PX, abs=0.5)
+- assert atom.hit_radius() * scale == pytest.approx(DEFAULT_SNAP_PX)
+- assert hovered == snapped
+
+### test_visual_rect_ignores_the_hit_radius
+_Selection/hover highlights are drawn from visual_rect(), so it must track_
+
+- assert visual.width() < label.width() + 20.0
+- assert visual.height() < label.height() + 20.0
+
+### test_hit_shape_stays_inside_bounding_rect
+_Qt prunes hits by boundingRect, so shape() must never escape it._
+
+- assert bounding.contains(shape_rect)
+
+### test_hit_zone_does_not_grow_to_the_drawn_label_when_zoomed_in
+_Zooming in must sharpen targeting, not widen it._
+
+- assert glyph_w > atom.hit_radius()
+- assert not atom.contains(atom.mapFromScene(on_glyph_edge))
+- assert scene.find_atom_near(on_glyph_edge, tol=DEFAULT_SNAP_PX) is None
 
 ### test_bond_hover_uses_default_radius
 _At default settings, bond shape must use bond_snapping_distance_2d._
@@ -4601,6 +4619,11 @@ _At default settings, bond shape must use bond_snapping_distance_2d._
 _When the setting is changed, bond hover must change._
 
 - assert hover_radius == pytest.approx(custom_dist, abs=0.5)
+
+### test_bond_hit_shape_stays_inside_bounding_rect
+_Zoomed far out the hit band grows in scene units; boundingRect must follow._
+
+- assert bounding.contains(shape_rect)
 
 ### test_bond_hover_stays_consistent_at_different_zoom_levels
 _Bond radius must stay identical in screen-pixel terms at any zoom._
@@ -7773,11 +7796,34 @@ _Verify overwriting an existing JSON project file._
 - io.statusBar().showMessage.assert_any_call(f'Project saved to {project_file}')
 - assert data['format'] == 'PME Project'
 
-### test_save_project_overwrite_raw
-_Verify overwriting an existing raw (pickle) project file._
+### test_save_project_never_overwrites_raw
+_Ctrl+S on a .pmeraw must redirect to Save As (.pmeprj), not rewrite the pickle._
 
-- assert os.path.exists(raw_file)
-- assert data['atoms'] == 'mock'
+- assert not os.path.exists(raw_file)
+- assert mock_save_as.called
+
+### test_confirm_pickle_load_open
+_Choosing 'Open' in the raw-file warning proceeds with the load._
+
+- assert io._confirm_pickle_load('danger.pmeraw') is True
+
+### test_confirm_pickle_load_cancel
+_Choosing Cancel in the raw-file warning refuses the load._
+
+- assert io._confirm_pickle_load('danger.pmeraw') is False
+
+### test_confirm_pickle_load_cancel_aborts
+_Cancelling the raw-file warning must leave the document untouched._
+
+- mock_confirm.assert_called_once_with(str(raw_file))
+- io.host.edit_actions_manager.clear_all.assert_not_called()
+- io.host.state_manager.set_state_from_data.assert_not_called()
+
+### test_load_raw_data_asks_before_unpickling
+_Every .pmeraw load path must go through the confirmation._
+
+- mock_confirm.assert_called_once_with(raw_file)
+- io.host.state_manager.set_state_from_data.assert_called_once()
 
 ### test_save_project_redirect_to_save_as
 _Verify that 'save' redirects to 'save as' if the current file is not a project file._
@@ -11079,6 +11125,27 @@ _viewportEvent with ZoomNativeGesture scales the view and returns True._
 
 - assert result is True
 - assert view.transform().m11() > before
+
+### test_scale_notifies_items_of_geometry_change
+_AtomItem/BondItem hit areas are pixel-sized, so zooming changes their_
+
+- assert probe.notified >= 1
+
+### test_reset_transform_notifies_items_of_geometry_change
+_Reset-zoom must re-index items for the same reason as scale()._
+
+- assert probe.notified >= 1
+
+### test_wheel_zoom_notifies_items_of_geometry_change
+_Ctrl+wheel goes through scale(), so items must be re-indexed._
+
+- assert probe.notified >= 1
+
+### test_zoom_burst_re_indexes_once_not_per_step
+_Re-indexing per wheel tick dirties every item and made a zoom step ~40x_
+
+- assert probe.notified == 0
+- assert probe.notified == 1
 
 ## tests/integration/test_calculation_worker.py
 
