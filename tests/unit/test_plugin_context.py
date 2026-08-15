@@ -85,6 +85,66 @@ class TestMarkProjectModified(unittest.TestCase):
         self.assertTrue(callable(getattr(PluginContext, "mark_project_modified")))
 
 
+class TestCurrentFile(unittest.TestCase):
+    def test_set_records_the_path(self):
+        """set_current_file stores the path where the window title is read from."""
+        mw = MagicMock()
+        _make_context(mw).set_current_file("/tmp/job.out")
+        self.assertEqual(mw.init_manager.current_file_path, "/tmp/job.out")
+
+    def test_set_retitles_the_window(self):
+        """set_current_file rebuilds the title; the path alone would not show."""
+        mw = MagicMock()
+        _make_context(mw).set_current_file("/tmp/job.out")
+        mw.state_manager.update_window_title.assert_called_once()
+
+    def test_set_accepts_none(self):
+        """Passing None clears the path, titling the window Untitled."""
+        mw = MagicMock()
+        _make_context(mw).set_current_file(None)
+        self.assertIsNone(mw.init_manager.current_file_path)
+
+    def test_get_returns_the_path(self):
+        """get_current_file reads back what the application has open."""
+        mw = MagicMock()
+        mw.init_manager.current_file_path = "/tmp/job.out"
+        self.assertEqual(_make_context(mw).get_current_file(), "/tmp/job.out")
+
+    def test_get_returns_none_when_nothing_is_open(self):
+        """An empty path reads as None rather than an empty string."""
+        mw = MagicMock()
+        mw.init_manager.current_file_path = None
+        self.assertIsNone(_make_context(mw).get_current_file())
+
+    def test_get_round_trips_a_set(self):
+        """What set_current_file records is what get_current_file returns."""
+        mw = MagicMock()
+        ctx = _make_context(mw)
+        ctx.set_current_file("/tmp/job.out")
+        self.assertEqual(ctx.get_current_file(), "/tmp/job.out")
+
+    def test_get_returns_none_without_init_manager(self):
+        """get_current_file does not raise when init_manager is absent."""
+        self.assertIsNone(_make_context(MagicMock(spec=[])).get_current_file())
+
+    def test_set_no_crash_when_init_manager_missing(self):
+        """set_current_file does not raise when init_manager is absent."""
+        _make_context(MagicMock(spec=[])).set_current_file("/tmp/job.out")
+
+    def test_set_no_crash_when_update_window_title_missing(self):
+        """set_current_file still records the path when the title call is absent."""
+        mw = MagicMock()
+        del mw.state_manager.update_window_title
+        _make_context(mw).set_current_file("/tmp/job.out")
+        self.assertEqual(mw.init_manager.current_file_path, "/tmp/job.out")
+
+    def test_set_no_crash_when_state_manager_raises(self):
+        """set_current_file does not propagate exceptions from state_manager."""
+        mw = MagicMock()
+        mw.state_manager.update_window_title.side_effect = RuntimeError("boom")
+        _make_context(mw).set_current_file("/tmp/job.out")
+
+
 class TestRefreshUi(unittest.TestCase):
     def test_calls_all_required_managers(self):
         """refresh_ui calls update_realtime_info, update_undo_redo_actions, and update_window_title."""
@@ -204,6 +264,8 @@ class TestRefresh2dScene(unittest.TestCase):
         lambda ctx: ctx.set_analysis_enabled(True),
         lambda ctx: ctx.check_chemistry_problems(),
         lambda ctx: ctx.refresh_2d_scene(),
+        lambda ctx: ctx.set_current_file("/tmp/job.out"),
+        lambda ctx: ctx.get_current_file(),
     ],
     ids=[
         "mark_project_modified",
@@ -214,6 +276,8 @@ class TestRefresh2dScene(unittest.TestCase):
         "set_analysis_enabled",
         "check_chemistry_problems",
         "refresh_2d_scene",
+        "set_current_file",
+        "get_current_file",
     ],
 )
 def test_no_crash_when_mw_is_none(call):

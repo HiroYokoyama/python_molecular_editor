@@ -409,6 +409,43 @@ class PluginContext:
             mw.init_manager.settings[namespaced] = value
             mw.init_manager.settings_dirty = True
 
+    def get_current_file(self) -> Optional[str]:
+        """
+        Path of the file the application currently has open, or None.
+
+        Returns:
+            The path, or None when nothing is open.
+        """
+        mw = self.get_main_window()
+        if mw and hasattr(mw, "init_manager"):
+            path = mw.init_manager.current_file_path
+            return str(path) if path else None
+        return None
+
+    def set_current_file(self, path: Optional[str]) -> None:
+        """
+        Record *path* as the file the application has open and retitle its window.
+
+        Use this after a plugin file opener loads a file, so the window names it
+        the way it names a project. Assigning ``init_manager.current_file_path``
+        directly leaves the title showing the previous file: it is only rebuilt
+        on demand.
+
+        Args:
+            path: File path to show, or None for "Untitled".
+        """
+        mw = self.get_main_window()
+        if mw is None or not hasattr(mw, "init_manager"):
+            return
+        try:
+            mw.init_manager.current_file_path = path
+            if hasattr(mw, "state_manager"):
+                fn = getattr(mw.state_manager, "update_window_title", None)
+                if fn:
+                    fn()
+        except (AttributeError, RuntimeError):
+            logging.debug("set_current_file failed", exc_info=True)
+
     def mark_project_modified(self) -> None:
         """Mark the current project as having unsaved changes and update the window title."""
         mw = self.get_main_window()
