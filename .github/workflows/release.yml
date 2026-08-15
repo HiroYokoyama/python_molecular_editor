@@ -56,6 +56,21 @@ jobs:
             exit 1
           }
 
+          # The dispatched version must be the one already committed, so a typo
+          # cannot release a build under a version nobody reviewed.
+          $pyproject = "moleditpy/pyproject.toml"
+          $match = Select-String -Path $pyproject -Pattern '^version\s*=\s*["'']([^"'']+)["'']' |
+                   Select-Object -First 1
+          if (-not $match) {
+            Write-Error "Could not read a version from $pyproject"
+            exit 1
+          }
+          $declared = $match.Matches[0].Groups[1].Value
+          if ($declared -ne $VERSION) {
+            Write-Error "Version mismatch: dispatched '$VERSION' but $pyproject declares '$declared'. Bump the version on main first, or dispatch '$declared'."
+            exit 1
+          }
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:

@@ -94,13 +94,16 @@ Run it from GitHub Actions:
 2. Select **Release**.
 3. Click **Run workflow**.
 4. Select the `main` branch.
-5. Enter a release version such as `3.4.1`.
+5. Enter a release version such as `3.4.1`. It must equal the `version` already
+   in `moleditpy/pyproject.toml` on `main` — bump that first (in the release PR),
+   or the run stops before it builds anything.
 6. Optionally uncheck **Upload and publish to Zenodo after release** to skip Zenodo (default: checked).
 
 This workflow:
 
 1. Validates that it is running on `main`.
-2. Validates the version input.
+2. Validates the version input, and rejects it if it does not match the version
+   declared in `moleditpy/pyproject.toml`.
 3. Rejects the release if the tag already exists.
 4. Runs unit and integration tests on `windows-latest` with Python 3.12.
 5. Updates `moleditpy/pyproject.toml`.
