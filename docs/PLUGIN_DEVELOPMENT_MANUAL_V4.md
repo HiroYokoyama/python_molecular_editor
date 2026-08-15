@@ -128,6 +128,8 @@ The `context` object passed to `initialize(context)` is your safe proxy to the a
 | **UI** | `set_analysis_enabled(bool)` | Enable / disable the Analysis menu action |
 | **Files** | `register_file_opener(ext, cb, priority)` | Handle a file extension (Import + CLI) |
 | **Files** | `register_drop_handler(cb, priority)` | Handle drag-and-drop onto the window |
+| **Files** | `set_current_file(path)` | Name *path* in the window title as the open file |
+| **Files** | `get_current_file()` | Path the application currently has open, or `None` |
 | **Molecule** | `current_molecule` | Get / set the active RDKit mol |
 | **Molecule** | `load_from_smiles(smiles)` | Add molecule from SMILES string |
 | **Molecule** | `show_xyz_data(xyz_text, source_name="XYZ data")` | Display XYZ text in the 3D viewer |
@@ -276,6 +278,41 @@ context.register_file_opener(".xyz", fallback, priority=-1)     # last resort
 Register a handler for files dropped onto the main 2D/3D editor window. **This is distinct from `register_file_opener`** — drop handlers are only triggered by drag-and-drop, not by the Import menu or command-line file arguments. Register both if you need both paths.
 - **callback** (`Callable[[str], bool]`): Function that receives the dropped file path. Must return `True` if it successfully handled the file, `False` to pass to the next handler.
 - **priority** (`int`): Handlers with higher priority are checked first. Use negative values (e.g., `-1`) for fallback handlers that run only when nothing else claims the file.
+
+#### `set_current_file(path)` / `get_current_file()`
+
+Tell the application which file it now has open, and read it back. The window
+title is built from this path — `job.out - MoleditPy Ver. 4.x` — exactly as it
+is for a project file, so call `set_current_file()` at the end of a file opener
+or drop handler.
+
+> [!NOTE]
+> Both were added in MoleditPy **4.7.1**. A plugin that also supports earlier
+> 4.x hosts should guard the call:
+> `if hasattr(context, "set_current_file"): context.set_current_file(path)`.
+
+- **path** (`str | None`): Path to show. `None` retitles the window "Untitled".
+- **returns** (`get_current_file`): The path, or `None` when nothing is open.
+
+```python
+def open_my_format(path):
+    load(path)
+    context.set_current_file(path)   # window now reads "sample.myext - MoleditPy ..."
+```
+
+> [!IMPORTANT]
+> Assigning `mw.init_manager.current_file_path` yourself sets the value but does
+> **not** repaint the title — it is rebuilt only on demand, so the window keeps
+> naming the previous file. There is no `mw.current_file_path` attribute either;
+> reading one always came back empty. Use these two methods.
+
+Only the **File > Import** menu sets the path for you (the host does it around
+the callback). A file opened from the command line, dropped onto the window, or
+picked inside your own dialog does not, so a plugin that wants the file named
+must call `set_current_file()` on those paths.
+
+Saving is unaffected: **Ctrl+S** only writes back to a `.pmeprj`, so any other
+extension recorded here falls through to *Save As* rather than being overwritten.
 
 #### `register_atom_drag_handler(callback)`
 Register a callback to receive real-time notifications during 3D atom or group dragging (single atom drag, group translate, group rotate).
@@ -625,6 +662,8 @@ def highlight_selection(context):
 | `context.register_menu_action(path, text, cb)` | `context.add_menu_action(path, cb, text)` |
 | `mw.settings.get(key)` | `context.get_setting(key)` |
 | `mw.state_manager.has_unsaved_changes = True` + `mw.state_manager.update_window_title()` | `context.mark_project_modified()` |
+| `mw.init_manager.current_file_path = p` (title never repaints) | `context.set_current_file(p)` |
+| `mw.current_file_path` (not an attribute — always empty) | `context.get_current_file()` |
 | `mw.state_manager.update_realtime_info()` + `mw.edit_actions_manager.update_undo_redo_actions()` + `mw.state_manager.update_window_title()` | `context.refresh_ui()` |
 | `mw.view_3d_manager.fit_to_view()` | `context.fit_2d_view()` |
 | `mw.edit_actions_manager.clear_2d_editor(push_to_undo=False)` | `context.clear_canvas(push_to_undo=False)` |
@@ -1145,3 +1184,7 @@ class TestMyPlugin(unittest.TestCase):
 Thank you for contributing to the MoleditPy ecosystem! If you encounter any bugs or need new API features, please reach out via GitHub Issues.
 
 **Happy Coding!**
+
+---
+
+*Documents the Version 4.0 plugin API as shipped in **MoleditPy 4.7.1** (2026-08-15).*
