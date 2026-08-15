@@ -370,6 +370,16 @@ _No description provided._
 - assert title.startswith('benzene.pmeprj - MoleditPy')
 - assert not title.startswith('*')
 
+### test_plugin_set_current_file_titles_the_window
+_The plugin API names the file in the title, not just in a field._
+
+- assert mock_parser_host.setWindowTitle.call_args.args[0].startswith('job.out - MoleditPy')
+
+### test_plugin_set_current_file_none_restores_untitled
+_Clearing the path through the plugin API retitles the window Untitled._
+
+- assert mock_parser_host.setWindowTitle.call_args.args[0].startswith('Untitled - MoleditPy')
+
 ### test_update_window_title_named_file_dirty_marks_asterisk
 _No description provided._
 
@@ -6851,6 +6861,54 @@ _PluginContext exposes a callable mark_project_modified method._
 
 - self.assertTrue(hasattr(PluginContext, 'mark_project_modified'), 'PluginContext must expose mark_project_modified()')
 - self.assertTrue(callable(getattr(PluginContext, 'mark_project_modified')))
+
+### TestCurrentFile.test_set_records_the_path
+_set_current_file stores the path where the window title is read from._
+
+- self.assertEqual(mw.init_manager.current_file_path, '/tmp/job.out')
+
+### TestCurrentFile.test_set_retitles_the_window
+_set_current_file rebuilds the title; the path alone would not show._
+
+- mw.state_manager.update_window_title.assert_called_once()
+
+### TestCurrentFile.test_set_accepts_none
+_Passing None clears the path, titling the window Untitled._
+
+- self.assertIsNone(mw.init_manager.current_file_path)
+
+### TestCurrentFile.test_get_returns_the_path
+_get_current_file reads back what the application has open._
+
+- self.assertEqual(_make_context(mw).get_current_file(), '/tmp/job.out')
+
+### TestCurrentFile.test_get_returns_none_when_nothing_is_open
+_An empty path reads as None rather than an empty string._
+
+- self.assertIsNone(_make_context(mw).get_current_file())
+
+### TestCurrentFile.test_get_round_trips_a_set
+_What set_current_file records is what get_current_file returns._
+
+- self.assertEqual(ctx.get_current_file(), '/tmp/job.out')
+
+### TestCurrentFile.test_get_returns_none_without_init_manager
+_get_current_file does not raise when init_manager is absent._
+
+- self.assertIsNone(_make_context(MagicMock(spec=[])).get_current_file())
+
+### TestCurrentFile.test_set_no_crash_when_init_manager_missing
+_set_current_file does not raise when init_manager is absent._
+
+
+### TestCurrentFile.test_set_no_crash_when_update_window_title_missing
+_set_current_file still records the path when the title call is absent._
+
+- self.assertEqual(mw.init_manager.current_file_path, '/tmp/job.out')
+
+### TestCurrentFile.test_set_no_crash_when_state_manager_raises
+_set_current_file does not propagate exceptions from state_manager._
+
 
 ### TestRefreshUi.test_calls_all_required_managers
 _refresh_ui calls update_realtime_info, update_undo_redo_actions, and update_window_title._

@@ -647,6 +647,47 @@ def test_update_window_title_named_file_clean(mock_parser_host):
     assert not title.startswith("*")
 
 
+def test_plugin_set_current_file_titles_the_window(mock_parser_host):
+    """The plugin API names the file in the title, not just in a field.
+
+    Wired to the real StateManager: a plugin assigning current_file_path by
+    hand leaves the title on the previous file, which is the whole reason
+    set_current_file exists.
+    """
+    from moleditpy.plugins.plugin_interface import PluginContext
+
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = False
+    mock_parser_host.state_manager.update_window_title = sm.update_window_title
+
+    manager = MagicMock()
+    manager.get_main_window.return_value = mock_parser_host
+    PluginContext(manager, "TestPlugin").set_current_file("C:/tmp/job.out")
+
+    assert mock_parser_host.setWindowTitle.call_args.args[0].startswith(
+        "job.out - MoleditPy"
+    )
+
+
+def test_plugin_set_current_file_none_restores_untitled(mock_parser_host):
+    """Clearing the path through the plugin API retitles the window Untitled."""
+    from moleditpy.plugins.plugin_interface import PluginContext
+
+    sm = _make_state_manager(mock_parser_host)
+    sm.has_unsaved_changes = False
+    mock_parser_host.state_manager.update_window_title = sm.update_window_title
+
+    manager = MagicMock()
+    manager.get_main_window.return_value = mock_parser_host
+    ctx = PluginContext(manager, "TestPlugin")
+    ctx.set_current_file("C:/tmp/job.out")
+    ctx.set_current_file(None)
+
+    assert mock_parser_host.setWindowTitle.call_args.args[0].startswith(
+        "Untitled - MoleditPy"
+    )
+
+
 def test_update_window_title_named_file_dirty_marks_asterisk(mock_parser_host):
     sm = _make_state_manager(mock_parser_host)
     sm.has_unsaved_changes = True
