@@ -33,6 +33,7 @@ Covers:
 """
 
 import json
+import pytest
 from unittest.mock import MagicMock, patch
 from PyQt6.QtCore import QPointF, QRectF, QSize
 from PyQt6.QtGui import QImage, QPainter, QResizeEvent, QShowEvent
@@ -359,6 +360,157 @@ def test_paint_user_template_out_of_range_indices(app):
     _, p = _painter()
     item.paint_user_template(p)
     p.end()
+
+
+# ---------------------------------------------------------------------------
+# TemplatePreviewItem — ghost molecule built from the real AtomItem/BondItem
+# ---------------------------------------------------------------------------
+
+
+def test_ghost_items_mirror_the_template(app):
+    """The preview builds one AtomItem per point and one BondItem per bond."""
+    item = TemplatePreviewItem()
+    item.set_user_template_geometry(
+        [QPointF(0, 0), QPointF(50, 0), QPointF(75, 43)],
+        [(0, 1, 2, 0), (1, 2, 1, 0)],
+        [{"symbol": "N"}, {"symbol": "C"}, {"symbol": "C"}],
+    )
+    assert [a.symbol for a in item.ghost_atoms] == ["N", "C", "C"]
+    assert [b.order for b in item.ghost_bonds] == [2, 1]
+    # The bonds have to be registered on the atoms or carbons stay visible
+    assert len(item.ghost_atoms[1].bonds) == 2
+
+
+def test_ghost_atoms_get_implicit_hydrogens(app):
+    """Implicit H counts come from RDKit, so O of an alcohol previews as OH."""
+    item = TemplatePreviewItem()
+    item.set_user_template_geometry(
+        [QPointF(0, 0), QPointF(50, 0)],
+        [(0, 1, 1, 0)],
+        [{"symbol": "C"}, {"symbol": "O"}],
+    )
+    assert item.ghost_atoms[0].implicit_h_count == 3
+    assert item.ghost_atoms[1].implicit_h_count == 1
+
+
+def test_ghost_ring_bonds_carry_ring_center(app):
+    """Ring double bonds need is_in_ring/ring_center to draw the inner short line."""
+    item = TemplatePreviewItem()
+    item.set_geometry(_points(6), is_aromatic=True)
+    assert all(b.is_in_ring for b in item.ghost_bonds)
+    assert all(b.ring_center is not None for b in item.ghost_bonds)
+    # Kekulé alternation, matching what add_molecule_fragment creates
+    assert [b.order for b in item.ghost_bonds] == [2, 1, 2, 1, 2, 1]
+
+
+def test_impossible_valence_still_previews(app):
+    """The preview draws what the template says — the valence is never checked."""
+    item = TemplatePreviewItem()
+    pts = [QPointF(0, 0)] + _points(5)
+    bonds = [(0, i, 1, 0) for i in range(1, 6)]
+    atoms = [{"symbol": "C"}] * 6
+    item.set_user_template_geometry(pts, bonds, atoms)
+    assert len(item.ghost_bonds) == 5
+    # The five-bonded carbon simply gets no hydrogens; the rest keep theirs
+    assert item.ghost_atoms[0].implicit_h_count == 0
+    assert item.ghost_atoms[1].implicit_h_count == 3
+    _, p = _painter()
+    item.paint_ghost(p)
+    p.end()
+
+
+def test_geometry_change_is_announced_after_the_ghost_exists(app):
+    """Regression: the scene cached this item's empty boundingRect during the
+    rebuild (find_atom_near queries it), so Qt culled the preview and no ghost
+    was painted in the editor. The rebuild must announce the geometry again
+    once the ghost items are in place."""
+    item = TemplatePreviewItem()
+    seen = []
+    item.prepareGeometryChange = lambda: seen.append(len(item.ghost_atoms))
+
+    item.set_user_template_geometry(
+        [QPointF(0, 0), QPointF(50, 0)],
+        [(0, 1, 1, 0)],
+        [{"symbol": "N"}, {"symbol": "C"}],
+    )
+
+    assert seen[-1] == 2
+
+
+def test_moving_the_cursor_reuses_the_ghost_items(app):
+    """A cursor move must not rebuild the ghost; rebuilding every move made big
+    templates lag."""
+    item = TemplatePreviewItem()
+    bonds = [(0, 1, 1, 0)]
+    atoms = [{"symbol": "N"}, {"symbol": "C"}]
+    item.set_user_template_geometry([QPointF(0, 0), QPointF(50, 0)], bonds, atoms)
+    first_atoms = list(item.ghost_atoms)
+
+    item.set_user_template_geometry([QPointF(90, 30), QPointF(140, 30)], bonds, atoms)
+
+    assert item.ghost_atoms == first_atoms
+    assert item.ghost_atoms[0].pos() == QPointF(90, 30)
+    assert item.ghost_bonds[0].pos() == QPointF(90, 30)
+
+
+def test_changed_template_rebuilds_the_ghost(app):
+    """A different template must not reuse the previous ghost items."""
+    item = TemplatePreviewItem()
+    points = [QPointF(0, 0), QPointF(50, 0)]
+    item.set_user_template_geometry(
+        points, [(0, 1, 1, 0)], [{"symbol": "N"}, {"symbol": "C"}]
+    )
+    first_atoms = list(item.ghost_atoms)
+
+    item.set_user_template_geometry(
+        points, [(0, 1, 2, 0)], [{"symbol": "O"}, {"symbol": "C"}]
+    )
+
+    assert item.ghost_atoms != first_atoms
+    assert item.ghost_atoms[0].symbol == "O"
+    assert item.ghost_bonds[0].order == 2
+
+
+def test_ring_centres_follow_a_moved_ghost(app):
+    """The inner line of a ring double bond is placed from the ring centre, so the
+    centre has to move with the preview."""
+    item = TemplatePreviewItem()
+    item.set_geometry(_points(6), is_aromatic=True)
+    before = item.ghost_bonds[0].ring_center
+
+    item.set_geometry([p + QPointF(200, 0) for p in _points(6)], is_aromatic=True)
+    after = item.ghost_bonds[0].ring_center
+
+    assert after[0] == pytest.approx(before[0] + 200)
+    assert after[1] == pytest.approx(before[1])
+
+
+def test_first_atom_is_marked_for_user_templates_only(app):
+    """The attachment atom is highlighted for user templates, not for rings."""
+    item = TemplatePreviewItem()
+    item.set_user_template_geometry(
+        [QPointF(0, 0), QPointF(50, 0)],
+        [(0, 1, 1, 0)],
+        [{"symbol": "N"}, {"symbol": "C"}],
+    )
+    assert item.mark_first_atom is True
+    item.set_geometry(_points(6))
+    assert item.mark_first_atom is False
+
+
+def test_ghosts_stay_out_of_the_editor_scene(app):
+    """Ghost atoms must never enter the editor scene or hit tests would find them."""
+    scene = QGraphicsScene()
+    item = TemplatePreviewItem()
+    scene.addItem(item)
+    item.set_user_template_geometry(
+        [QPointF(0, 0), QPointF(50, 0)],
+        [(0, 1, 1, 0)],
+        [{"symbol": "C"}, {"symbol": "C"}],
+    )
+    assert item.ghost_atoms
+    assert all(a.scene() is item.ghost_scene for a in item.ghost_atoms)
+    assert scene.items() == [item]
 
 
 # ---------------------------------------------------------------------------
