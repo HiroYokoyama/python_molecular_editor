@@ -653,7 +653,7 @@ _CACHED_MAIN_WINDOW_CLASS = None
 
 
 @pytest.fixture
-def window(app, qtbot, monkeypatch):
+def window(app, qtbot, monkeypatch, tmp_path):
     """
     Creates a new MainWindow instance for each test and mocks
     time-consuming operations and external windows.
@@ -1351,6 +1351,11 @@ def window(app, qtbot, monkeypatch):
         monkeypatch.setattr(MainWindowClass, "__init__", patched_init)
 
     main_window = MainWindowClass()
+    # A test that touches settings must never rewrite the real ~/.moleditpy
+    main_window.init_manager.settings_dir = str(tmp_path / ".moleditpy")
+    main_window.init_manager.settings_file = str(
+        tmp_path / ".moleditpy" / "settings.json"
+    )
     qtbot.addWidget(main_window)
     main_window.show()
     # Allow GUI event loop to process showing the window

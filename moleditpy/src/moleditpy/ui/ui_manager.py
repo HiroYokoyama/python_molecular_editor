@@ -76,6 +76,9 @@ class UIManager(QObject):
         elif not mode_str.startswith("template"):
             self.host.init_manager.scene.template_preview.hide()
 
+        if not mode_str.startswith("template_user"):
+            self._clear_template_dialog_selection()
+
         # Set cursor shape
         if mode_str == "select":
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
@@ -143,44 +146,32 @@ class UIManager(QObject):
             )
             self.host.set_scene_bond_properties(1, 0)
 
+    def _clear_template_dialog_selection(self) -> None:
+        """Drop the template dialog's highlight once another mode takes over."""
+        dialog = getattr(self.host, "template_dialog", None)
+        if dialog is None:
+            return
+        try:
+            dialog.clear_selection()
+        except (AttributeError, RuntimeError):
+            logging.debug("Template dialog selection not cleared", exc_info=True)
+
     def set_mode_and_update_toolbar(self, mode_str: str) -> None:
         """Switch mode and synchronize the active toolbar button highlight."""
         self.set_mode(mode_str)
-        # Map QAction to QToolButton
-        toolbar = getattr(self.host.init_manager, "toolbar", None)
-        action_to_button = {}
-        if toolbar:
-            for key, action in self.host.init_manager.mode_actions.items():
-                btn = toolbar.widgetForAction(action)
-                if btn:
-                    action_to_button[action] = btn
-
-        # Reset all mode buttons
-        for key, action in self.host.init_manager.mode_actions.items():
+        for action in self.host.init_manager.mode_actions.values():
             action.setChecked(False)
-            btn = action_to_button.get(action)
-            if btn:
-                btn.setStyleSheet("")
 
-        # Apply style to matching mode buttons (exact match or prefix for user templates)
+        # Exact match, or the one USER button standing for every user template
         matched_key = None
         if mode_str in self.host.init_manager.mode_actions:
             matched_key = mode_str
         elif mode_str.startswith("template_user"):
             matched_key = "template_user"
 
-        if matched_key and matched_key in self.host.init_manager.mode_actions:
-            action = self.host.init_manager.mode_actions[matched_key]
-            action.setChecked(True)
-            btn = action_to_button.get(action)
-            if btn:
-                # Highlight templates with specific color
-                if mode_str.startswith("template"):
-                    btn.setStyleSheet(
-                        "background-color: #2196F3; color: white; border-radius: 4px;"
-                    )
-                else:
-                    btn.setStyleSheet("")
+        matched = self.host.init_manager.mode_actions.get(matched_key)
+        if matched is not None:
+            matched.setChecked(True)
 
     def activate_select_mode(self) -> None:
         """Switch to selection mode and check the select toolbar button."""

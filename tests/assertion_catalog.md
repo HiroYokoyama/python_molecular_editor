@@ -13,6 +13,7 @@ _Verify the easter egg triggers correctly on right click._
 
 - mock_parser_host.edit_actions_manager.clear_all.assert_called_once()
 - mock_parser_host.string_importer_manager.load_from_smiles.assert_called_once_with('C1=CN=C(N=C1)C2=NC=CC=N2')
+- mock_parser_host.compute_manager.trigger_conversion.assert_called_once()
 
 ### test_about_dialog_ignore_left_click
 _Verify left clicks do not trigger the easter egg._
@@ -2890,7 +2891,6 @@ _open_template_dialog_and_activate creates a new modeless dialog when none is op
 
 - MockUT.assert_called_once_with(dm.host, dm.host)
 - instance.show.assert_called_once()
-- instance.finished.connect.assert_called_once()
 
 ### TestOpenTemplateDialogAndActivate.test_raises_existing_visible_dialog
 _open_template_dialog_and_activate raises and activates an already-open dialog._
@@ -2899,17 +2899,10 @@ _open_template_dialog_and_activate raises and activates an already-open dialog._
 - existing.raise_.assert_called_once()
 - existing.activateWindow.assert_called_once()
 
-### TestOpenTemplateDialogAndActivate.test_on_finished_sets_mode_when_template_selected
-_Finishing with a template selected activates template mode and shows a status message._
+### TestOpenTemplateDialogAndActivate.test_opening_does_not_touch_the_mode
+_Opening the dialog only opens it; the template is armed when picked._
 
-- assert captured_cb
-- dm.host.ui_manager.set_mode.assert_called_once_with('template_user_benzene')
-- dm.host.statusBar_mock.showMessage.assert_called_once()
-
-### TestOpenTemplateDialogAndActivate.test_on_finished_noop_when_no_template_selected
-_Finishing without a selection does not change mode._
-
-- dm.host.ui_manager.set_mode.assert_not_called()
+- dm.host.ui_manager.set_mode_and_update_toolbar.assert_not_called()
 
 ### TestSave2DAsTemplate.test_warns_when_no_atoms
 _save_2d_as_template shows a warning when the canvas has no atoms._
@@ -8377,6 +8370,14 @@ _Test benzene template rotation alignment._
 
 - assert data.add_atom.called
 
+### test_user_template_replaces_clicked_atom_with_first_template_atom
+_Regression: clicking an existing atom with a user template kept the clicked_
+
+- assert clicked.symbol == 'N'
+- assert clicked.charge == 1
+- assert data.atoms[0]['symbol'] == 'N'
+- assert data.atoms[0]['charge'] == 1
+
 ### test_wedge_flip_via_key_w_pushes_undo
 _Regression: pressing W on an already-wedge bond flips its direction_
 
@@ -9593,34 +9594,35 @@ _Preview geometry snaps nearby polygon vertices to existing scene atoms._
 ## tests/unit/test_template_preview.py
 
 ### test_preview_item_init_defaults
-_TemplatePreviewItem initialises with all geometry and flag attributes at their defaults._
+_TemplatePreviewItem initialises with no ghost molecule and nothing to draw._
 
-- assert item.is_aromatic is False
-- assert item.is_user_template is False
-- assert item.user_template_points == []
-- assert item.user_template_bonds == []
-- assert item.user_template_atoms == []
+- assert item.ghost_atoms == []
+- assert item.ghost_bonds == []
+- assert item.is_chain is False
+- assert item.boundingRect().isNull()
 
-### test_set_geometry_updates_polygon
-_set_geometry stores the polygon and clears is_user_template and is_aromatic flags._
+### test_set_geometry_builds_a_ring
+_set_geometry turns the polygon into single-bonded ghost atoms._
 
-- assert not item.polygon.isEmpty()
-- assert item.is_aromatic is False
-- assert item.is_user_template is False
+- assert [atom.pos() for atom in item.ghost_atoms] == pts
+- assert [bond.order for bond in item.ghost_bonds] == [1] * 6
 
-### test_set_geometry_aromatic_flag
-_set_geometry sets is_aromatic=True when the flag is passed._
+### test_set_geometry_aromatic_alternates_bonds
+_An aromatic ring previews as the Kekulé structure that gets placed._
 
-- assert item.is_aromatic is True
+- assert [bond.order for bond in item.ghost_bonds] == [2, 1, 2, 1, 2, 1]
+
+### test_set_geometry_takes_given_bond_orders
+_The caller can pass the orders the placement will use._
+
+- assert [bond.order for bond in item.ghost_bonds] == [1, 2, 1, 2, 1, 2]
 
 ### test_set_user_template_geometry
-_set_user_template_geometry stores points, bonds, atoms and sets is_user_template._
+_set_user_template_geometry builds the template's atoms and bonds._
 
-- assert item.is_user_template is True
-- assert item.user_template_points == pts
-- assert item.user_template_bonds == bonds
-- assert item.user_template_atoms == atoms
-- assert item.is_aromatic is False
+- assert [atom.symbol for atom in item.ghost_atoms] == ['C', 'N', 'O']
+- assert [bond.order for bond in item.ghost_bonds] == [1, 2]
+- assert item.is_chain is False
 
 ### test_bounding_rect_empty_polygon
 _boundingRect returns a QRectF when the polygon is empty._
@@ -9647,23 +9649,23 @@ _boundingRect returns a QRectF for a user template with no points._
 _paint with a None painter returns without raising._
 
 
-### test_paint_regular_template_non_aromatic
-_paint_regular_template draws a non-aromatic polygon without raising._
+### test_paint_ring_template_non_aromatic
+_A plain ring template paints without raising._
 
 
-### test_paint_regular_template_aromatic
-_paint_regular_template draws an aromatic polygon without raising._
+### test_paint_ring_template_aromatic
+_An aromatic ring template paints without raising._
 
 
-### test_paint_regular_template_empty_polygon
-_paint_regular_template with an empty polygon does not raise._
+### test_paint_without_geometry_draws_nothing
+_A preview with no ghost molecule paints nothing and does not raise._
 
 
 ### test_set_chain_geometry_stores_points_and_label
 _set_chain_geometry switches the item into chain mode and clears other modes._
 
 - assert item.is_chain is True
-- assert item.is_user_template is False
+- assert item.ghost_atoms == []
 - assert item.chain_points == pts
 - assert item.chain_label == 'n = 1'
 - assert item.chain_label_pos == QPointF(60, 10)
@@ -9690,23 +9692,23 @@ _A chain preview with a single vertex paints nothing._
 - assert _painted_pixel_count(img) == 0
 
 ### test_paint_user_template_no_points_returns_early
-_paint_user_template with no points returns without raising._
+_A user template with no points paints nothing and does not raise._
 
 
 ### test_paint_user_template_single_bond
-_paint_user_template renders a single bond without raising._
+_paint_ghost renders a single bond without raising._
 
 
 ### test_paint_user_template_double_bond
-_paint_user_template renders a double bond without raising._
+_paint_ghost renders a double bond without raising._
 
 
 ### test_paint_user_template_triple_bond
-_paint_user_template renders a triple bond without raising._
+_paint_ghost renders a triple bond without raising._
 
 
 ### test_paint_user_template_non_carbon_atom
-_paint_user_template renders non-carbon atom labels without raising._
+_paint_ghost renders non-carbon atom labels without raising._
 
 
 ### test_paint_user_template_bond_info_2_elements
@@ -9716,6 +9718,77 @@ _bond_info with only 2 elements (no order) defaults to single bond._
 ### test_paint_user_template_out_of_range_indices
 _Bond indices beyond point list should be skipped without error._
 
+
+### test_ghost_items_mirror_the_template
+_The preview builds one AtomItem per point and one BondItem per bond._
+
+- assert [a.symbol for a in item.ghost_atoms] == ['N', 'C', 'C']
+- assert [b.order for b in item.ghost_bonds] == [2, 1]
+- assert len(item.ghost_atoms[1].bonds) == 2
+
+### test_ghost_atoms_get_implicit_hydrogens
+_Implicit H counts come from RDKit, so O of an alcohol previews as OH._
+
+- assert item.ghost_atoms[0].implicit_h_count == 3
+- assert item.ghost_atoms[1].implicit_h_count == 1
+
+### test_ghost_ring_bonds_carry_ring_center
+_Ring double bonds need is_in_ring/ring_center to draw the inner short line._
+
+- assert all((b.is_in_ring for b in item.ghost_bonds))
+- assert all((b.ring_center is not None for b in item.ghost_bonds))
+- assert [b.order for b in item.ghost_bonds] == [2, 1, 2, 1, 2, 1]
+
+### test_impossible_valence_still_previews
+_The preview draws what the template says — the valence is never checked._
+
+- assert len(item.ghost_bonds) == 5
+- assert item.ghost_atoms[0].implicit_h_count == 0
+- assert item.ghost_atoms[1].implicit_h_count == 3
+
+### test_repeated_bond_pair_still_previews
+_A template listing the same pair twice must not cost the whole preview its_
+
+- assert len(item.ghost_bonds) == 1
+- assert item.ghost_atoms[1].implicit_h_count == 1
+
+### test_geometry_change_is_announced_after_the_ghost_exists
+_Regression: the scene cached this item's empty boundingRect during the_
+
+- assert seen[-1] == 2
+
+### test_moving_the_cursor_reuses_the_ghost_items
+_A cursor move must not rebuild the ghost; rebuilding every move made big_
+
+- assert item.ghost_atoms == first_atoms
+- assert item.ghost_atoms[0].pos() == QPointF(90, 30)
+- assert item.ghost_bonds[0].pos() == QPointF(90, 30)
+
+### test_changed_template_rebuilds_the_ghost
+_A different template must not reuse the previous ghost items._
+
+- assert item.ghost_atoms != first_atoms
+- assert item.ghost_atoms[0].symbol == 'O'
+- assert item.ghost_bonds[0].order == 2
+
+### test_ring_centres_follow_a_moved_ghost
+_The inner line of a ring double bond is placed from the ring centre, so the_
+
+- assert after[0] == pytest.approx(before[0] + 200)
+- assert after[1] == pytest.approx(before[1])
+
+### test_first_atom_is_marked_for_user_templates_only
+_The attachment atom is highlighted for user templates, not for rings._
+
+- assert item.mark_first_atom is True
+- assert item.mark_first_atom is False
+
+### test_ghosts_stay_out_of_the_editor_scene
+_Ghost atoms must never enter the editor scene or hit tests would find them._
+
+- assert item.ghost_atoms
+- assert all((a.scene() is item.ghost_scene for a in item.ghost_atoms))
+- assert scene.items() == [item]
 
 ### test_preview_view_init_defaults
 _TemplatePreviewView initialises with original_scene_rect, template_data, and parent_dialog all None._
@@ -10240,13 +10313,17 @@ _No description provided._
 
 - atom_action.setChecked.assert_called_with(True)
 - select_action.setChecked.assert_called_with(False)
-- btn.setStyleSheet.assert_called_with('')
 
-### test_set_mode_and_update_toolbar_user_template_highlight
+### test_set_mode_and_update_toolbar_without_a_user_template_button
+_A host that never registered the USER action must not raise._
+
+- ui.host.init_manager.mode_actions['atom_C'].setChecked.assert_called_with(False)
+
+### test_set_mode_and_update_toolbar_user_template_checks_user_button
 _No description provided._
 
 - template_action.setChecked.assert_called_with(True)
-- assert 'background-color' in btn.setStyleSheet.call_args.args[0]
+- other_action.setChecked.assert_called_with(False)
 
 ### test_activate_select_mode_checks_select_action
 _No description provided._
@@ -11220,6 +11297,13 @@ _Re-indexing per wheel tick dirties every item and made a zoom step ~40x_
 - assert probe.notified == 0
 - assert probe.notified == 1
 
+## tests/integration/test_about_dialog_integration.py
+
+### test_right_click_loads_and_converts
+_Right-clicking the image loads the molecule and builds it in 3D._
+
+- assert len(window.state_manager.data.atoms) == 12
+
 ## tests/integration/test_calculation_worker.py
 
 ### test_calculation_worker_bond_length_validation
@@ -11620,6 +11704,82 @@ _No description provided._
 
 - assert 'QUICK UFF' not in im.opt3d_actions
 - assert 'Quick UFF' not in _menu_labels(im)
+
+## tests/integration/test_template_preview_in_editor.py
+
+### test_user_template_preview_appears
+_Moving the cursor in user-template mode shows the ghost molecule._
+
+- assert preview.isVisible()
+- assert len(preview.ghost_atoms) == 6
+- assert len(preview.ghost_bonds) == 6
+- assert not preview.boundingRect().isEmpty()
+
+### test_preview_is_indexed_where_it_is_drawn
+_Regression: the scene index kept an empty rect from before the ghost was_
+
+- assert preview.sceneBoundingRect().contains(where)
+- assert preview in scene.items(preview.sceneBoundingRect())
+- assert _painted_pixels(scene, preview.sceneBoundingRect()) > 0
+
+### test_fused_atom_keeps_its_own_element
+_A ring vertex landing on an existing atom previews that atom, not a carbon,_
+
+- assert fused
+- assert fused[0] in preview.existing_indices
+- assert preview.ghost_atoms[fused[0]].pos() == scene.atom_items[nitrogen].pos()
+
+### test_fusing_onto_another_atom_relabels_the_ghost
+_The fused atom's hydrogens come from the editor, so a ghost reused across_
+
+- assert fused and preview.ghost_atoms[fused[0]].implicit_h_count == 2
+- assert fused and preview.ghost_atoms[fused[0]].implicit_h_count == 1
+
+### test_user_template_previews_its_own_atoms_over_existing_ones
+_Only the first atom of a user template reuses an existing one; a vertex that_
+
+- assert preview.ghost_atoms[1].symbol == 'C'
+- assert not preview.existing_indices
+- assert len(scene.data.atoms) == 3
+
+### test_ghost_labels_use_the_editors_font_settings
+_update_style() reads the font through scene(), so the ghost items have to be_
+
+- assert scene.template_preview.ghost_atoms[0].font.pointSize() == 13
+
+### test_fused_ring_preview_uses_the_placement_rotation
+_A fused aromatic ring is rotated to fit the bonds already there, so the_
+
+- assert [bond.order for bond in preview.ghost_bonds] == [1, 2, 1, 2, 1, 2]
+- assert [order for _, _, order in scene.template_context['bonds_info']] == [2, 1, 2, 1, 2, 1]
+
+### test_leaving_template_mode_clears_the_dialog_selection
+_Picking another mode has to unhighlight the template dialog's selection._
+
+- assert dialog.selected_template is None
+- assert not dialog.delete_button.isEnabled()
+
+### test_using_a_user_template_checks_the_user_toolbar_button
+_The toolbar has to say which mode is live: picking a user template checks_
+
+- assert window.init_manager.scene.mode == 'template_user_pyridine'
+- assert actions['template_user'].isChecked()
+- assert not actions['atom_C'].isChecked()
+
+### test_escape_leaves_template_mode_like_the_close_button
+_Esc calls reject() and never reaches closeEvent, so it used to leave the_
+
+- assert window.init_manager.scene.mode == 'template_user_pyridine'
+- assert window.init_manager.scene.mode == 'atom_C'
+- assert dialog.selected_template is None
+- assert not window.init_manager.mode_actions['template_user'].isChecked()
+
+### test_ring_template_preview_appears
+_A built-in ring template previews as a ghost ring, Kekulé bonds included._
+
+- assert preview.isVisible()
+- assert [b.order for b in preview.ghost_bonds] == [2, 1, 2, 1, 2, 1]
+- assert all((b.is_in_ring for b in preview.ghost_bonds))
 
 ## tests/integration/test_trigger_conversion_plugin_wrap.py
 

@@ -68,14 +68,14 @@ class TemplatePreviewView(QGraphicsView):
             self.parent_dialog.draw_template_preview(
                 self.scene(), self.template_data, view_size
             )
-            bounding_rect = self.scene().itemsBoundingRect()
+            bounding_rect = self.scene().sceneRect()
             if (
                 not bounding_rect.isEmpty()
                 and bounding_rect.width() > 0
                 and bounding_rect.height() > 0
             ):
                 content_size = max(bounding_rect.width(), bounding_rect.height())
-                padding = max(20, content_size * 0.2)
+                padding = max(6, content_size * 0.05)
                 padded_rect = bounding_rect.adjusted(
                     -padding, -padding, padding, padding
                 )

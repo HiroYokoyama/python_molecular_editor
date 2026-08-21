@@ -252,7 +252,6 @@ class TestOpenTemplateDialogAndActivate:
             dm.open_template_dialog_and_activate()
         MockUT.assert_called_once_with(dm.host, dm.host)
         instance.show.assert_called_once()
-        instance.finished.connect.assert_called_once()
 
     def test_raises_existing_visible_dialog(self, dm):
         """open_template_dialog_and_activate raises and activates an already-open dialog."""
@@ -265,39 +264,15 @@ class TestOpenTemplateDialogAndActivate:
         existing.raise_.assert_called_once()
         existing.activateWindow.assert_called_once()
 
-    def test_on_finished_sets_mode_when_template_selected(self, dm):
-        """Finishing with a template selected activates template mode and shows a status message."""
+    def test_opening_does_not_touch_the_mode(self, dm):
+        """Opening the dialog only opens it; the template is armed when picked."""
         dm.host.template_dialog = None
-        captured_cb = []
 
         with patch("moleditpy.ui.dialog_logic.UserTemplateDialog") as MockUT:
-            instance = MagicMock()
-            MockUT.return_value = instance
-            instance.finished.connect.side_effect = lambda cb: captured_cb.append(cb)
+            MockUT.return_value = MagicMock()
             dm.open_template_dialog_and_activate()
 
-        # Simulate template selection on the newly stored dialog
-        dm.host.template_dialog.selected_template = {"name": "benzene"}
-        assert captured_cb, "finished.connect was never called"
-        captured_cb[0]()
-
-        dm.host.ui_manager.set_mode.assert_called_once_with("template_user_benzene")
-        dm.host.statusBar_mock.showMessage.assert_called_once()
-
-    def test_on_finished_noop_when_no_template_selected(self, dm):
-        """Finishing without a selection does not change mode."""
-        dm.host.template_dialog = None
-        captured_cb = []
-
-        with patch("moleditpy.ui.dialog_logic.UserTemplateDialog") as MockUT:
-            instance = MagicMock()
-            MockUT.return_value = instance
-            instance.finished.connect.side_effect = lambda cb: captured_cb.append(cb)
-            dm.open_template_dialog_and_activate()
-
-        dm.host.template_dialog.selected_template = None
-        captured_cb[0]()
-        dm.host.ui_manager.set_mode.assert_not_called()
+        dm.host.ui_manager.set_mode_and_update_toolbar.assert_not_called()
 
 
 # ===========================================================================

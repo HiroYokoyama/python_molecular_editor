@@ -28,6 +28,9 @@ class MockTemplateScene(TemplateMixin):
         self.find_atom_near_args.append((pos, tol))
         return None
 
+    def find_bond_between(self, atom1, atom2):
+        return None
+
     def items(self, *args):
         return self.items_returned
 

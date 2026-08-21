@@ -156,6 +156,9 @@ def full_window(app, qtbot, monkeypatch, tmp_path):
 
     # safe_mode keeps the developer's own plugin folder out of the run.
     win = MainWindow(initial_file=None, safe_mode=True)
+    # A test that touches settings must never rewrite the real ~/.moleditpy
+    win.init_manager.settings_dir = str(tmp_path / ".moleditpy")
+    win.init_manager.settings_file = str(tmp_path / ".moleditpy" / "settings.json")
     _make_rendering_synchronous(win)
     qtbot.addWidget(win)
     win.resize(1280, 800)

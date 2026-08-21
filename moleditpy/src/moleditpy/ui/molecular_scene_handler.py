@@ -448,6 +448,7 @@ class TemplateMixin:
             self.template_context["bonds_info"] = bonds_info
 
             # Snap individual preview vertices to nearby atoms to reflect template fusing visually
+            vertex_atoms: List[Optional[AtomItem]] = [None] * len(points)
             if self.get_setting("template_fusing_enabled_2d", True) and not alt_pressed:
                 fuse_dist = self.get_setting("template_fusing_distance_2d", 7.0)
                 mapped_atoms = set(self.template_context.get("items", []))
@@ -468,6 +469,7 @@ class TemplateMixin:
                         if best_idx != -1 and best_d <= click_map_threshold:
                             points[best_idx] = ex_pos
                             used_indices.add(best_idx)
+                            vertex_atoms[best_idx] = ex_item
                     except (AttributeError, TypeError, IndexError):
                         # Safe defensive fallback catching AttributeError, TypeError, IndexError
                         logging.debug("Suppressed non-critical error", exc_info=True)
@@ -497,8 +499,22 @@ class TemplateMixin:
                         if nearby and best_d <= fuse_dist:
                             points[i] = nearby.pos()
                             mapped_atoms.add(nearby)
+                            vertex_atoms[i] = nearby
 
-            self.template_preview.set_geometry(points, is_aromatic)
+            # add_molecule_fragment rotates a fused aromatic ring to match the
+            # bonds already there; the preview shows the same alternation. It
+            # rotates the placement copy itself, so template_context keeps the
+            # unrotated orders.
+            preview_bonds = bonds_info
+            if is_aromatic and n == 6:
+                rotation = self._calculate_6ring_rotation(n, bonds_info, vertex_atoms)
+                orders = [order for (_, _, order) in bonds_info]
+                preview_bonds = [
+                    (i, j, orders[(m + rotation) % n])
+                    for m, (i, j, _) in enumerate(bonds_info)
+                ]
+
+            self.template_preview.set_geometry(points, is_aromatic, preview_bonds)
 
             self.template_preview.show()
             if self.views():
@@ -555,6 +571,44 @@ class TemplateMixin:
             points.append(current_p)
         return points
 
+    def _apply_template_atom_to_existing(
+        self, atom_item: Any, atom_data: Dict[str, Any]
+    ) -> None:
+        """Overwrite an existing atom with a user template atom's element/charge/radical."""
+        symbol = atom_data.get("symbol", "C")
+        # A hand-written template may carry nulls here
+        charge = int(atom_data.get("charge") or 0)
+        radical = int(atom_data.get("radical") or 0)
+
+        if (
+            atom_item.symbol == symbol
+            and atom_item.charge == charge
+            and atom_item.radical == radical
+        ):
+            return
+
+        try:
+            atom_item.prepareGeometryChange()
+            atom_item.symbol = symbol
+            atom_item.charge = charge
+            atom_item.radical = radical
+
+            record = self.data.atoms.get(atom_item.atom_id)
+            if record is not None:
+                record["symbol"] = symbol
+                record["charge"] = charge
+                record["radical"] = radical
+
+            # A bonded carbon is drawn as a bare vertex; the new element needs a label
+            atom_item.update_style()
+            for bond in atom_item.bonds:
+                bond.update()
+                other = bond.atom1 if bond.atom2 is atom_item else bond.atom2
+                if other is not None:
+                    other.update_style()
+        except (AttributeError, RuntimeError, KeyError, TypeError) as e:
+            logging.warning(f"Error applying template atom to existing atom: {e}")
+
     def add_user_template_fragment(self, context: Dict[str, Any]) -> None:
         """Place user template fragment"""
         points = context.get("points", [])
@@ -569,9 +623,10 @@ class TemplateMixin:
         atom_id_map = {}  # template id -> scene atom id
 
         for i, (pos, atom_data) in enumerate(zip(points, atoms_data)):
-            # Skip first atom if attaching to existing atom
+            # Reuse the clicked atom for the template's first atom, overwriting its element
             if i == 0 and attachment_atom:
                 atom_id_map[atom_data["id"]] = attachment_atom.atom_id
+                self._apply_template_atom_to_existing(attachment_atom, atom_data)
                 continue
 
             symbol = atom_data.get("symbol", "C")

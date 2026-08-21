@@ -27,6 +27,7 @@ def test_about_dialog_easter_egg(app, mock_parser_host):
     mock_parser_host.string_importer_manager.load_from_smiles.assert_called_once_with(
         "C1=CN=C(N=C1)C2=NC=CC=N2"
     )
+    mock_parser_host.compute_manager.trigger_conversion.assert_called_once()
 
 
 def test_about_dialog_ignore_left_click(app, mock_parser_host):
