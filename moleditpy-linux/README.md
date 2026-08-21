@@ -83,7 +83,7 @@ This application combines a modern GUI built with **PyQt6**, powerful cheminform
 
 ## Installation and Execution
 
-For detailed instructions, please refer to the project [Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki). A [Docker version](https://github.com/HiroYokoyama/python_molecular_editor_docker) is also available. A [Windows installer](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer) is also distributed.
+For detailed instructions, please refer to the project [Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki). A [Docker version](https://github.com/HiroYokoyama/python_molecular_editor_docker) is also available. A [Windows installer](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer) and a [macOS app bundle](https://hiroyokoyama.github.io/python_molecular_editor/macos-installer/macos_installer) are also distributed.
 
 #### Requirements
 
@@ -219,7 +219,7 @@ Additionally, please cite the plugins you used.
 
 ## インストールと実行
 
-詳細な手順については、プロジェクトの[Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki)を参照してください。[Docker版](https://github.com/HiroYokoyama/python_molecular_editor_docker)も利用可能です。[Windows向けインストーラー](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer-jp)も使用できます。
+詳細な手順については、プロジェクトの[Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki)を参照してください。[Docker版](https://github.com/HiroYokoyama/python_molecular_editor_docker)も利用可能です。[Windows向けインストーラー](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer-jp)や[macOSアプリバンドル](https://hiroyokoyama.github.io/python_molecular_editor/macos-installer/macos_installer-jp)も使用できます。
 
 #### 必要ライブラリ
 
