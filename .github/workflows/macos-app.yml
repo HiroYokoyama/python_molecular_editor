@@ -14,10 +14,14 @@ on:
         required: true
         type: string
       ref:
-        description: "Git ref to build. Defaults to the caller's commit."
-        required: false
+        description: "Git ref to build. Callers must pass one; there is no tag yet."
+        required: true
         type: string
-        default: ""
+      attach_to_release:
+        description: "Upload the bundle to the v<version> release"
+        required: false
+        type: boolean
+        default: false
       artifact-name:
         description: "Name of the uploaded build artifact"
         required: false
@@ -67,12 +71,21 @@ jobs:
       - name: Resolve Build Ref
         id: resolve
         run: |
-          if [ -n "${{ inputs.ref }}" ]; then
-            REF="${{ inputs.ref }}"
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            REF="v${APP_VERSION}"
-          else
-            REF="${{ github.sha }}"
+          # Never branch on github.event_name here: a called workflow reports the
+          # caller's event, so release.yml (itself a workflow_dispatch) looked
+          # like a manual dispatch and tried to build a tag that does not exist
+          # until the end of the release. Callers pass ref; only a real manual
+          # dispatch leaves it empty.
+          REF="${{ inputs.ref }}"
+          if [ -z "$REF" ]; then
+            TAG="v${APP_VERSION}"
+            if git ls-remote --exit-code --tags \
+                 "https://github.com/${{ github.repository }}" "refs/tags/$TAG" >/dev/null 2>&1; then
+              REF="$TAG"
+            else
+              REF="${{ github.ref_name }}"
+              echo "No $TAG tag yet - building $REF instead."
+            fi
           fi
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "Building from $REF"
@@ -198,7 +211,7 @@ jobs:
           path: dist/macos/*
 
       - name: Attach Bundle to Existing Release
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.attach_to_release }}
+        if: ${{ inputs.attach_to_release }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

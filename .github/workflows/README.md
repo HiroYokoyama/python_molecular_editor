@@ -61,15 +61,18 @@ Run it from GitHub Actions:
 1. Open **Actions**.
 2. Select **macOS App Bundle**.
 3. Click **Run workflow**.
-4. Enter the version, for example `4.7.1`. By default the build uses the tag `v<version>`;
-   set **ref** to build from some other branch or commit.
+4. Enter the version, for example `4.7.1`. By default the build uses the tag `v<version>`
+   when it exists, and otherwise the branch the workflow was dispatched from; set **ref**
+   to pin some other branch or commit.
 5. Check **Upload the bundle to the existing v<version> release** to attach the ZIP to a
    release that already exists (uses `gh release upload --clobber`, so re-running replaces
    the asset). Leave it unchecked to produce a workflow artifact only.
 
 This workflow:
 
-1. Resolves the git ref, checks it out, and validates the version and that the runner is `arm64`.
+1. Resolves the git ref (callers pass one explicitly - `github.event_name` reports the
+   *caller's* event in a reusable workflow and must not be branched on), checks it out,
+   and validates the version and that the runner is `arm64`.
 2. Updates `moleditpy/pyproject.toml` and runs `python scripts/sync_linux_version.py`.
 3. Installs `moleditpy-linux` and builds `macos-installer/script/MoleditPy.spec` with PyInstaller.
 4. Verifies `Contents/MacOS/MoleditPy` exists and that `Info.plist` carries the release version.
@@ -147,7 +150,7 @@ This workflow:
 10. Creates `MoleditPy_<version>_win64_portable.zip`.
 11. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
 12. Commits the version bump, README sync, and Linux sync changes, then creates and pushes the release tag.
-13. In parallel, calls `macos-app.yml` on `macos-latest` to build `MoleditPy_<version>_macos_arm64.zip`.
+13. Before any of the above, calls `macos-app.yml` on `macos-latest` to build `MoleditPy_<version>_macos_arm64.zip`; the Windows job waits on it, so a failed macOS build cannot leave a release tagged but unpublished.
 14. Starts a separate `ubuntu-latest` publishing job.
 15. Publishes both Python packages to PyPI.
 16. Creates a GitHub Release and attaches the distributions, installer, portable ZIP, and macOS app bundle.
@@ -170,6 +173,7 @@ graph TD
     I --> J[Linux Runner: Publish to PyPI and TestPyPI via Trusted Publishing]
     J --> K[Create GitHub Release and attach all assets]
     A --> L[macOS Runner: PyInstaller BUNDLE, ad-hoc codesign, ditto zip]
+    L --> B
     L --> K
 ```
 

@@ -21,8 +21,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Runs before the Windows job so a broken macOS build cannot leave a release
+  # tagged and pushed but never published.
+  build-macos-app:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/macos-app.yml
+    with:
+      version: ${{ inputs.version }}
+      ref: ${{ github.sha }}
+      artifact-name: release-macos-artifacts
+
   build-and-release:
     runs-on: windows-latest
+    needs: build-macos-app
     permissions:
       contents: write
     env:
@@ -232,14 +244,6 @@ jobs:
           git tag "v${env:APP_VERSION}"
           git push origin HEAD:${{ github.ref_name }}
           git push origin "v${env:APP_VERSION}"
-
-  build-macos-app:
-    permissions:
-      contents: write
-    uses: ./.github/workflows/macos-app.yml
-    with:
-      version: ${{ inputs.version }}
-      artifact-name: release-macos-artifacts
 
   publish-and-create-release:
     runs-on: ubuntu-latest

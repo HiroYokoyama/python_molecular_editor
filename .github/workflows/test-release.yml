@@ -187,6 +187,7 @@ jobs:
     uses: ./.github/workflows/macos-app.yml
     with:
       version: ${{ inputs.version }}
+      ref: ${{ github.sha }}
       artifact-name: test-release-macos-artifacts
 
   publish-to-testpypi:
