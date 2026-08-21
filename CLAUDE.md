@@ -155,4 +155,4 @@ The same user documentation exists twice, and a user-visible change has to be wr
 
 They are not copies of each other — `manual/` is the long-form numbered manual, the wiki is a condensed rewrite with its own settings tables and cross-links — so sync the *facts*, not the markup, and keep the wording of a given fact as close as the two formats allow. Everything is bilingual: never update an English file without its `-JP` counterpart.
 
-Version stamps: `manual/manual.md` and `manual/manual-JP.md` carry the documented app version in section 11 (`**Version:** 4.8`) — bump it when the app's minor version changes. Wiki pages deliberately carry no version.
+Version stamps: `manual/manual.md` and `manual/manual-JP.md` carry the documented app version in section 11 — bump it when the app's minor version changes. Wiki pages deliberately carry no version.
