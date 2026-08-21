@@ -7,8 +7,7 @@ Covers:
     - set_geometry / set_user_template_geometry
     - boundingRect: empty polygon, regular polygon, user-template points
     - paint: None painter early-return
-    - paint_regular_template: non-aromatic, aromatic, empty polygon
-    - paint_user_template: no points, single/double/triple bonds, non-C atoms
+    - paint_ghost: ring and user templates, single/double/triple bonds, non-C atoms
     - set_chain_geometry / paint_chain: alkyl chain ghost + repeat-count label
 
   TemplatePreviewView (ui/template_preview_view.py):
@@ -75,44 +74,48 @@ def _points(n: int = 6) -> list:
 
 
 def test_preview_item_init_defaults(app):
-    """TemplatePreviewItem initialises with all geometry and flag attributes at their defaults."""
+    """TemplatePreviewItem initialises with no ghost molecule and nothing to draw."""
     item = TemplatePreviewItem()
-    assert item.is_aromatic is False
-    assert item.is_user_template is False
-    assert item.user_template_points == []
-    assert item.user_template_bonds == []
-    assert item.user_template_atoms == []
+    assert item.ghost_atoms == []
+    assert item.ghost_bonds == []
+    assert item.is_chain is False
+    assert item.boundingRect().isNull()
 
 
-def test_set_geometry_updates_polygon(app):
-    """set_geometry stores the polygon and clears is_user_template and is_aromatic flags."""
+def test_set_geometry_builds_a_ring(app):
+    """set_geometry turns the polygon into single-bonded ghost atoms."""
     item = TemplatePreviewItem()
     pts = _points(6)
     item.set_geometry(pts, is_aromatic=False)
-    assert not item.polygon.isEmpty()
-    assert item.is_aromatic is False
-    assert item.is_user_template is False
+    assert [atom.pos() for atom in item.ghost_atoms] == pts
+    assert [bond.order for bond in item.ghost_bonds] == [1] * 6
 
 
-def test_set_geometry_aromatic_flag(app):
-    """set_geometry sets is_aromatic=True when the flag is passed."""
+def test_set_geometry_aromatic_alternates_bonds(app):
+    """An aromatic ring previews as the Kekulé structure that gets placed."""
     item = TemplatePreviewItem()
     item.set_geometry(_points(6), is_aromatic=True)
-    assert item.is_aromatic is True
+    assert [bond.order for bond in item.ghost_bonds] == [2, 1, 2, 1, 2, 1]
+
+
+def test_set_geometry_takes_given_bond_orders(app):
+    """The caller can pass the orders the placement will use."""
+    item = TemplatePreviewItem()
+    orders = [(i, (i + 1) % 6, 1 if i % 2 == 0 else 2) for i in range(6)]
+    item.set_geometry(_points(6), is_aromatic=True, bonds_info=orders)
+    assert [bond.order for bond in item.ghost_bonds] == [1, 2, 1, 2, 1, 2]
 
 
 def test_set_user_template_geometry(app):
-    """set_user_template_geometry stores points, bonds, atoms and sets is_user_template."""
+    """set_user_template_geometry builds the template's atoms and bonds."""
     item = TemplatePreviewItem()
     pts = _points(3)
     bonds = [(0, 1, 1), (1, 2, 2)]
     atoms = [{"symbol": "C"}, {"symbol": "N"}, {"symbol": "O"}]
     item.set_user_template_geometry(pts, bonds, atoms)
-    assert item.is_user_template is True
-    assert item.user_template_points == pts
-    assert item.user_template_bonds == bonds
-    assert item.user_template_atoms == atoms
-    assert item.is_aromatic is False
+    assert [atom.symbol for atom in item.ghost_atoms] == ["C", "N", "O"]
+    assert [bond.order for bond in item.ghost_bonds] == [1, 2]
+    assert item.is_chain is False
 
 
 # ---------------------------------------------------------------------------
@@ -149,8 +152,7 @@ def test_bounding_rect_user_template_with_points(app):
 def test_bounding_rect_user_template_no_points(app):
     """boundingRect returns a QRectF for a user template with no points."""
     item = TemplatePreviewItem()
-    item.is_user_template = True
-    item.user_template_points = []
+    item.set_user_template_geometry([], [], [])
     rect = item.boundingRect()
     assert isinstance(rect, QRectF)
 
@@ -169,34 +171,33 @@ def test_paint_none_painter_returns_early(app):
 
 
 # ---------------------------------------------------------------------------
-# TemplatePreviewItem — paint_regular_template
+# TemplatePreviewItem — painting a ring template
 # ---------------------------------------------------------------------------
 
 
-def test_paint_regular_template_non_aromatic(app):
-    """paint_regular_template draws a non-aromatic polygon without raising."""
+def test_paint_ring_template_non_aromatic(app):
+    """A plain ring template paints without raising."""
     item = TemplatePreviewItem()
     item.set_geometry(_points(6), is_aromatic=False)
     _, p = _painter()
-    item.paint_regular_template(p)
+    item.paint_ghost(p)
     p.end()
 
 
-def test_paint_regular_template_aromatic(app):
-    """paint_regular_template draws an aromatic polygon without raising."""
+def test_paint_ring_template_aromatic(app):
+    """An aromatic ring template paints without raising."""
     item = TemplatePreviewItem()
     item.set_geometry(_points(6), is_aromatic=True)
     _, p = _painter()
-    item.paint_regular_template(p)
+    item.paint_ghost(p)
     p.end()
 
 
-def test_paint_regular_template_empty_polygon(app):
-    """paint_regular_template with an empty polygon does not raise."""
+def test_paint_without_geometry_draws_nothing(app):
+    """A preview with no ghost molecule paints nothing and does not raise."""
     item = TemplatePreviewItem()
-    # polygon is empty by default — should not raise
     _, p = _painter()
-    item.paint_regular_template(p)
+    item.paint_ghost(p)
     p.end()
 
 
@@ -229,7 +230,7 @@ def test_set_chain_geometry_stores_points_and_label(app):
     item.set_chain_geometry(pts, "n = 1", QPointF(60, 10))
 
     assert item.is_chain is True
-    assert item.is_user_template is False
+    assert item.ghost_atoms == []
     assert item.chain_points == pts
     assert item.chain_label == "n = 1"
     assert item.chain_label_pos == QPointF(60, 10)
@@ -277,64 +278,64 @@ def test_paint_chain_needs_at_least_one_bond(app):
 
 
 # ---------------------------------------------------------------------------
-# TemplatePreviewItem — paint_user_template
+# TemplatePreviewItem — painting a user template
 # ---------------------------------------------------------------------------
 
 
 def test_paint_user_template_no_points_returns_early(app):
-    """paint_user_template with no points returns without raising."""
+    """A user template with no points paints nothing and does not raise."""
     item = TemplatePreviewItem()
-    item.user_template_points = []
+    item.set_user_template_geometry([], [], [])
     _, p = _painter()
-    item.paint_user_template(p)  # should not raise
+    item.paint_ghost(p)
     p.end()
 
 
 def test_paint_user_template_single_bond(app):
-    """paint_user_template renders a single bond without raising."""
+    """paint_ghost renders a single bond without raising."""
     item = TemplatePreviewItem()
     pts = [QPointF(10, 10), QPointF(60, 10)]
     bonds = [(0, 1, 1)]
     atoms = [{"symbol": "C"}, {"symbol": "C"}]
     item.set_user_template_geometry(pts, bonds, atoms)
     _, p = _painter()
-    item.paint_user_template(p)
+    item.paint_ghost(p)
     p.end()
 
 
 def test_paint_user_template_double_bond(app):
-    """paint_user_template renders a double bond without raising."""
+    """paint_ghost renders a double bond without raising."""
     item = TemplatePreviewItem()
     pts = [QPointF(10, 10), QPointF(60, 10)]
     bonds = [(0, 1, 2)]
     atoms = [{"symbol": "C"}, {"symbol": "C"}]
     item.set_user_template_geometry(pts, bonds, atoms)
     _, p = _painter()
-    item.paint_user_template(p)
+    item.paint_ghost(p)
     p.end()
 
 
 def test_paint_user_template_triple_bond(app):
-    """paint_user_template renders a triple bond without raising."""
+    """paint_ghost renders a triple bond without raising."""
     item = TemplatePreviewItem()
     pts = [QPointF(10, 10), QPointF(60, 10)]
     bonds = [(0, 1, 3)]
     atoms = [{"symbol": "C"}, {"symbol": "C"}]
     item.set_user_template_geometry(pts, bonds, atoms)
     _, p = _painter()
-    item.paint_user_template(p)
+    item.paint_ghost(p)
     p.end()
 
 
 def test_paint_user_template_non_carbon_atom(app):
-    """paint_user_template renders non-carbon atom labels without raising."""
+    """paint_ghost renders non-carbon atom labels without raising."""
     item = TemplatePreviewItem()
     pts = [QPointF(50, 50), QPointF(100, 50)]
     bonds = [(0, 1, 1)]
     atoms = [{"symbol": "N"}, {"symbol": "O"}]
     item.set_user_template_geometry(pts, bonds, atoms)
     _, p = _painter()
-    item.paint_user_template(p)
+    item.paint_ghost(p)
     p.end()
 
 
@@ -346,7 +347,7 @@ def test_paint_user_template_bond_info_2_elements(app):
     atoms = [{"symbol": "C"}, {"symbol": "C"}]
     item.set_user_template_geometry(pts, bonds, atoms)
     _, p = _painter()
-    item.paint_user_template(p)
+    item.paint_ghost(p)
     p.end()
 
 
@@ -358,7 +359,7 @@ def test_paint_user_template_out_of_range_indices(app):
     atoms = [{"symbol": "C"}]
     item.set_user_template_geometry(pts, bonds, atoms)
     _, p = _painter()
-    item.paint_user_template(p)
+    item.paint_ghost(p)
     p.end()
 
 

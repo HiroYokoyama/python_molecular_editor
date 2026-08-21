@@ -23,7 +23,6 @@ from PyQt6.QtGui import (
     QPainter,
     QPainterPath,
     QPen,
-    QPolygonF,
 )
 from PyQt6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 
@@ -47,13 +46,6 @@ class TemplatePreviewItem(QGraphicsItem):
     def __init__(self) -> None:
         super().__init__()
         self.setZValue(2)
-        self.pen = QPen(GHOST_COLOR, 2)
-        self.polygon = QPolygonF()
-        self.is_aromatic = False
-        self.user_template_points: List[QPointF] = []
-        self.user_template_bonds: List[Any] = []
-        self.user_template_atoms: List[Any] = []
-        self.is_user_template = False
         self.chain_points: List[QPointF] = []
         self.chain_label = ""
         self.chain_label_pos = QPointF()
@@ -69,21 +61,27 @@ class TemplatePreviewItem(QGraphicsItem):
         self.ring_atoms: Dict[int, Any] = {}
         self.cached_rect = QRectF()
 
-    def set_geometry(self, points: list[QPointF], is_aromatic: bool = False) -> None:
-        """Set polygon points for a standard ring template preview."""
+    def set_geometry(
+        self,
+        points: list[QPointF],
+        is_aromatic: bool = False,
+        bonds_info: Optional[list[Any]] = None,
+    ) -> None:
+        """Set polygon points for a standard ring template preview.
+
+        ``bonds_info`` carries the orders the placement will use; without it the
+        ring falls back to a plain alternation.
+        """
         self.prepareGeometryChange()
-        self.polygon = QPolygonF(points)
-        self.is_aromatic = is_aromatic
-        self.is_user_template = False
         self.is_chain = False
         self.mark_first_atom = False
 
-        # add_molecule_fragment lays aromatic rings out as alternating Kekulé bonds
         n = len(points)
-        bonds_info = [
-            (i, (i + 1) % n, 2 if (is_aromatic and i % 2 == 0) else 1, 0)
-            for i in range(n)
-        ]
+        if bonds_info is None:
+            bonds_info = [
+                (i, (i + 1) % n, 2 if (is_aromatic and i % 2 == 0) else 1)
+                for i in range(n)
+            ]
         self._rebuild_ghost(points, bonds_info, [{"symbol": "C"} for _ in points])
         self.update()
 
@@ -96,10 +94,7 @@ class TemplatePreviewItem(QGraphicsItem):
         self.chain_label = label
         self.chain_label_pos = QPointF(label_pos)
         self.is_chain = True
-        self.is_user_template = False
-        self.is_aromatic = False
         self.mark_first_atom = False
-        self.polygon = QPolygonF()
         self._clear_ghost()
         self.update()
 
@@ -111,13 +106,7 @@ class TemplatePreviewItem(QGraphicsItem):
     ) -> None:
         """Set point and bond data for a user-defined template preview."""
         self.prepareGeometryChange()
-        self.user_template_points = points
-        self.user_template_bonds = bonds_info
-        self.user_template_atoms = atoms_data
-        self.is_user_template = True
         self.is_chain = False
-        self.is_aromatic = False
-        self.polygon = QPolygonF()
         # The first template atom is what a clicked existing atom turns into
         self.mark_first_atom = True
         self._rebuild_ghost(points, bonds_info, atoms_data)
@@ -302,11 +291,7 @@ class TemplatePreviewItem(QGraphicsItem):
             rect = rect.united(atom.boundingRect().translated(atom.pos()))
         for bond in self.ghost_bonds:
             rect = rect.united(bond.boundingRect().translated(bond.pos()))
-        self.cached_rect = (
-            rect.adjusted(-10, -10, 10, 10)
-            if not rect.isNull()
-            else self.polygon.boundingRect().adjusted(-5, -5, 5, 5)
-        )
+        self.cached_rect = rect.adjusted(-10, -10, 10, 10)
 
     def boundingRect(self) -> QRectF:
         """Return the bounding rect encompassing the preview geometry."""
@@ -364,14 +349,6 @@ class TemplatePreviewItem(QGraphicsItem):
         painter.drawRoundedRect(rect, 4, 4)
         painter.setPen(QPen(QColor(40, 40, 40)))
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, self.chain_label)
-
-    def paint_regular_template(self, painter: QPainter) -> None:
-        """Paint a ring template; rings and user templates share one renderer."""
-        self.paint_ghost(painter)
-
-    def paint_user_template(self, painter: QPainter) -> None:
-        """Paint a user template; rings and user templates share one renderer."""
-        self.paint_ghost(painter)
 
     def paint_ghost(
         self, painter: QPainter, option: Optional[QStyleOptionGraphicsItem] = None

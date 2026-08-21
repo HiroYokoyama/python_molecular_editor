@@ -124,6 +124,34 @@ def test_fusing_onto_another_atom_relabels_the_ghost(window):
     assert fused and preview.ghost_atoms[fused[0]].implicit_h_count == 1
 
 
+def test_fused_ring_preview_uses_the_placement_rotation(window):
+    """A fused aromatic ring is rotated to fit the bonds already there, so the
+    preview has to show the double bonds where the click will put them — while
+    the placement context keeps the unrotated orders it rotates itself."""
+    scene = window.init_manager.scene
+    left = scene.create_atom("C", QPointF(0, 0))
+    right = scene.create_atom("C", QPointF(50, 0))
+    scene.create_bond(scene.atom_items[left], scene.atom_items[right], 1, 0)
+    scene.update_all_items()
+
+    window.ui_manager.set_mode("template_benzene")
+    with patch.object(
+        type(scene), "_calculate_6ring_rotation", return_value=1, create=False
+    ):
+        scene.update_template_preview(QPointF(25, 2))
+
+    preview = scene.template_preview
+    assert [bond.order for bond in preview.ghost_bonds] == [1, 2, 1, 2, 1, 2]
+    assert [order for (_, _, order) in scene.template_context["bonds_info"]] == [
+        2,
+        1,
+        2,
+        1,
+        2,
+        1,
+    ]
+
+
 def test_leaving_template_mode_clears_the_dialog_selection(window):
     """Picking another mode has to unhighlight the template dialog's selection."""
     from moleditpy.ui.user_template_dialog import UserTemplateDialog

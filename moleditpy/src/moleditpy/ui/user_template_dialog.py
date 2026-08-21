@@ -345,7 +345,7 @@ class UserTemplateDialog(QDialog):
         """Return the editor scene, so thumbnails follow the user's 2D settings."""
         try:
             scene = self.main_window.init_manager.scene
-        except AttributeError:
+        except (AttributeError, RuntimeError):
             return None
         # A stand-in main window would answer get_setting() with junk sizes
         return scene if isinstance(scene, QGraphicsScene) else None
