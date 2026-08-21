@@ -161,8 +161,8 @@ class TemplatePreviewItem(QGraphicsItem):
                 replaced_label_path = existing.get_bg_ellipse_path().translated(
                     existing.pos()
                 )
-            elif existing is not None:
-                # A fused vertex keeps the atom already drawn there
+            elif existing is not None and not self.mark_first_atom:
+                # Only rings fuse; a user template's other vertices become new atoms
                 existing_indices.add(i)
                 # Its real H count comes from bonds the ghost molecule cannot see
                 existing_h_counts[i] = getattr(existing, "implicit_h_count", 0)

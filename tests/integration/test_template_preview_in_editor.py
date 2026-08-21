@@ -124,6 +124,33 @@ def test_fusing_onto_another_atom_relabels_the_ghost(window):
     assert fused and preview.ghost_atoms[fused[0]].implicit_h_count == 1
 
 
+def test_user_template_previews_its_own_atoms_over_existing_ones(window):
+    """Only the first atom of a user template reuses an existing one; a vertex that
+    merely lands on another becomes a new atom, so the ghost must not fuse it."""
+    scene = window.init_manager.scene
+    anchor = scene.create_atom("C", QPointF(0, 0))
+    scene.create_atom("N", QPointF(50, 0))
+    scene.update_all_items()
+
+    scene.user_template_data = {
+        "name": "ethanol_stub",
+        "atoms": [
+            {"id": 0, "symbol": "C", "x": 0, "y": 0},
+            {"id": 1, "symbol": "C", "x": 50, "y": 0},
+        ],
+        "bonds": [{"atom1": 0, "atom2": 1, "order": 1}],
+    }
+    window.ui_manager.set_mode("template_user_ethanol_stub")
+    scene.update_template_preview(scene.atom_items[anchor].pos())
+
+    preview = scene.template_preview
+    assert preview.ghost_atoms[1].symbol == "C"
+    assert not preview.existing_indices
+
+    scene.add_user_template_fragment(scene.template_context)
+    assert len(scene.data.atoms) == 3
+
+
 def test_fused_ring_preview_uses_the_placement_rotation(window):
     """A fused aromatic ring is rotated to fit the bonds already there, so the
     preview has to show the double bonds where the click will put them — while
@@ -166,6 +193,24 @@ def test_leaving_template_mode_clears_the_dialog_selection(window):
 
     assert dialog.selected_template is None
     assert not dialog.delete_button.isEnabled()
+
+
+def test_using_a_user_template_checks_the_user_toolbar_button(window):
+    """The toolbar has to say which mode is live: picking a user template checks
+    USER and drops the highlight from whatever was active before."""
+    from moleditpy.ui.user_template_dialog import UserTemplateDialog
+
+    with patch.object(UserTemplateDialog, "load_user_templates"):
+        dialog = UserTemplateDialog(window, window)
+    window.template_dialog = dialog
+    actions = window.init_manager.mode_actions
+    window.ui_manager.set_mode_and_update_toolbar("atom_C")
+
+    dialog.use_template(PYRIDINE)
+
+    assert window.init_manager.scene.mode == "template_user_pyridine"
+    assert actions["template_user"].isChecked()
+    assert not actions["atom_C"].isChecked()
 
 
 def test_ring_template_preview_appears(window):

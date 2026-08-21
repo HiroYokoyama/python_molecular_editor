@@ -420,6 +420,19 @@ def test_impossible_valence_still_previews(app):
     p.end()
 
 
+def test_repeated_bond_pair_still_previews(app):
+    """A template listing the same pair twice must not cost the whole preview its
+    hydrogens: RDKit rejects a duplicate bond and the topology pass would bail."""
+    item = TemplatePreviewItem()
+    item.set_user_template_geometry(
+        [QPointF(0, 0), QPointF(50, 0)],
+        [(0, 1, 1, 0), (1, 0, 1, 0)],
+        [{"symbol": "C"}, {"symbol": "O"}],
+    )
+    assert len(item.ghost_bonds) == 1
+    assert item.ghost_atoms[1].implicit_h_count == 1
+
+
 def test_geometry_change_is_announced_after_the_ghost_exists(app):
     """Regression: the scene cached this item's empty boundingRect during the
     rebuild (find_atom_near queries it), so Qt culled the preview and no ghost

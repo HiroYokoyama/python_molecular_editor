@@ -99,6 +99,7 @@ def build_preview_items(
         atom_items.append(item)
 
     bond_items: List[BondItem] = []
+    seen_pairs: set[Tuple[int, int]] = set()
     for bond in bonds:
         if len(bond) < 2:
             continue
@@ -107,6 +108,10 @@ def build_preview_items(
             continue
         if not (0 <= i < len(atom_items) and 0 <= j < len(atom_items)) or i == j:
             continue
+        # A repeated pair would make RDKit reject the whole preview molecule
+        if (min(i, j), max(i, j)) in seen_pairs:
+            continue
+        seen_pairs.add((min(i, j), max(i, j)))
         order = int(bond[2]) if len(bond) > 2 else 1
         stereo = int(bond[3]) if len(bond) > 3 else 0
         atom1, atom2 = atom_items[i], atom_items[j]

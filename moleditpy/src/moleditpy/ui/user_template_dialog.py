@@ -411,28 +411,9 @@ class UserTemplateDialog(QDialog):
             self.main_window.init_manager.scene.user_template_data = template_data
 
         try:
-            # Uncheck all mode actions first
-            if hasattr(self.main_window, "mode_actions") and isinstance(
-                self.main_window.init_manager.mode_actions, dict
-            ):
-                for act in self.main_window.init_manager.mode_actions.values():
-                    act.setChecked(False)
-
-            # Switch mode via UIManager
-            if hasattr(self.main_window, "ui_manager") and hasattr(
-                self.main_window.ui_manager, "set_mode"
-            ):
-                self.main_window.ui_manager.set_mode(mode_name)
-
+            # Goes through the toolbar so the USER button shows the active mode
+            self.main_window.ui_manager.set_mode_and_update_toolbar(mode_name)
             self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
-
-            # Check the matching action if present
-            if (
-                hasattr(self.main_window, "mode_actions")
-                and mode_name in self.main_window.init_manager.mode_actions
-            ):
-                self.main_window.init_manager.mode_actions[mode_name].setChecked(True)
-
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Failed to switch main window to template mode: {e}")
 
