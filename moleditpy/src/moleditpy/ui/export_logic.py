@@ -136,7 +136,7 @@ class ExportManager:
         """
         try:
             # Create MTL file
-            with open(mtl_path, "w") as mtl_file:
+            with open(mtl_path, "w", encoding="utf-8") as mtl_file:
                 mtl_file.write(f"# Material file for {os.path.basename(obj_path)}\n")
                 mtl_file.write("# Generated with individual object colors\n\n")
 
@@ -157,7 +157,7 @@ class ExportManager:
                     mtl_file.write("\n")
 
             # Create OBJ file
-            with open(obj_path, "w") as obj_file:
+            with open(obj_path, "w", encoding="utf-8") as obj_file:
                 obj_file.write("# OBJ file with multiple materials\n")
                 obj_file.write("# Generated with individual object colors\n")
                 obj_file.write(f"mtllib {os.path.basename(mtl_path)}\n\n")
@@ -225,8 +225,10 @@ class ExportManager:
                     vertex_offset += mesh.n_points
                     obj_file.write("\n")
 
-        except (AttributeError, RuntimeError, ValueError) as e:
-            raise Exception(f"Failed to create multi-material OBJ: {e}")
+        except (AttributeError, OSError, RuntimeError, ValueError) as e:
+            # ValueError, not Exception: export_obj_mtl catches this to report
+            # the failure in the status bar.
+            raise ValueError(f"Failed to create multi-material OBJ: {e}") from e
 
     def export_color_stl(self) -> None:
         """Export as Color STL."""

@@ -1,6 +1,7 @@
 """Unit tests for ExportManager file export operations."""
 
 import os
+import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.export_logic import ExportManager
@@ -987,4 +988,69 @@ def test_export_2d_svg_reports_render_exception(mock_parser_host, tmp_path):
     assert any(
         "error occurred during SVG export" in str(c.args[0])
         for c in mock_parser_host.statusBar().showMessage.call_args_list
+    )
+
+
+def _single_triangle_mesh():
+    """One VTK triangle, enough for create_multi_material_obj to write a file."""
+    mesh = MagicMock()
+    mesh.points = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=float)
+    mesh.n_points = 3
+    mesh.n_cells = 1
+    cell = MagicMock()
+    cell.type = 5  # VTK_TRIANGLE
+    cell.point_ids = [0, 1, 2]
+    mesh.get_cell.return_value = cell
+    return mesh
+
+
+def test_create_multi_material_obj_writes_utf8(mock_parser_host, tmp_path):
+    """The mtllib reference must be UTF-8, not the OS locale encoding.
+
+    Written in cp932 on a Japanese Windows, `mtllib 分子.mtl` is unreadable to
+    Blender and the model imports with no colors.
+    """
+    exporter = DummyExport(mock_parser_host)
+    meshes = [{"mesh": _single_triangle_mesh(), "color": [255, 0, 0], "name": "Atom1"}]
+    obj_path = str(tmp_path / "分子.obj")
+    mtl_path = str(tmp_path / "分子.mtl")
+
+    exporter.create_multi_material_obj(meshes, obj_path, mtl_path)
+
+    obj_bytes = open(obj_path, "rb").read()
+    mtl_bytes = open(mtl_path, "rb").read()
+    assert "mtllib 分子.mtl" in obj_bytes.decode("utf-8")
+    assert "分子.obj" in mtl_bytes.decode("utf-8")
+
+
+def test_create_multi_material_obj_raises_value_error(mock_parser_host, tmp_path):
+    """A write failure must raise what export_obj_mtl catches, not bare Exception."""
+    exporter = DummyExport(mock_parser_host)
+    meshes = [{"mesh": _single_triangle_mesh(), "color": [1, 2, 3], "name": "a"}]
+    missing_dir = tmp_path / "no_such_dir"
+
+    with pytest.raises(ValueError):
+        exporter.create_multi_material_obj(
+            meshes, str(missing_dir / "m.obj"), str(missing_dir / "m.mtl")
+        )
+
+
+def test_export_obj_mtl_reports_write_failure(mock_parser_host, tmp_path):
+    """A failed write is reported in the status bar, not raised at the user."""
+    exporter = DummyExport(mock_parser_host)
+    exporter.export_from_3d_view_with_colors = MagicMock(
+        return_value=[
+            {"mesh": _single_triangle_mesh(), "color": [1, 2, 3], "name": "a"}
+        ]
+    )
+    chosen = str(tmp_path / "no_such_dir" / "model.obj")
+
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
+    ):
+        exporter.export_obj_mtl()
+
+    assert any(
+        "Error exporting OBJ/MTL" in str(args)
+        for args, _ in exporter.statusBar().showMessage.call_args_list
     )

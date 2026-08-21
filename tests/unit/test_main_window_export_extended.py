@@ -231,8 +231,8 @@ def test_create_multi_material_obj_logic(window):
 
     with patch("builtins.open", mock_open()) as mock_file:
         window.create_multi_material_obj(meshes, obj_path, mtl_path)
-        mock_file.assert_any_call(obj_path, "w")
-        mock_file.assert_any_call(mtl_path, "w")
+        mock_file.assert_any_call(obj_path, "w", encoding="utf-8")
+        mock_file.assert_any_call(mtl_path, "w", encoding="utf-8")
 
         handle = mock_file()
         write_calls = handle.write.call_args_list
