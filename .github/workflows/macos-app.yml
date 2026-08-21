@@ -82,6 +82,16 @@ jobs:
         with:
           ref: ${{ steps.resolve.outputs.ref }}
 
+      - name: Verify Build Files Are Present
+        run: |
+          # A tag cut before macOS bundles existed has no spec to build; say so
+          # instead of failing later with "Spec file not found".
+          if [ ! -f macos-installer/script/MoleditPy.spec ]; then
+            echo "macos-installer/ is missing at ${{ steps.resolve.outputs.ref }}." >&2
+            echo "Re-run with ref set to a branch that has it, for example main." >&2
+            exit 1
+          fi
+
       - name: Validate Version
         run: |
           if ! echo "$APP_VERSION" | grep -qE '^[0-9]+(\.[0-9]+){2}([a-zA-Z0-9.-]+)?$'; then
