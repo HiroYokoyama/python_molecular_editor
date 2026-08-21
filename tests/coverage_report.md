@@ -33,7 +33,7 @@
 | moleditpy\src\moleditpy\ui\custom_interactor_style.py   |    775 |    113 |   85.4% |
 | moleditpy\src\moleditpy\ui\custom_qt_interactor.py      |     24 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\dialog_3d_picking_mixin.py   |    137 |     19 |   86.1% |
-| moleditpy\src\moleditpy\ui\dialog_logic.py              |    230 |     25 |   89.1% |
+| moleditpy\src\moleditpy\ui\dialog_logic.py              |    222 |     25 |   88.7% |
 | moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    280 |     33 |   88.2% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    221 |     32 |   85.5% |
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    817 |    127 |   84.5% |
@@ -57,7 +57,7 @@
 | moleditpy\src\moleditpy\ui\template_preview_view.py     |     46 |      4 |   91.3% |
 | moleditpy\src\moleditpy\ui\translation_dialog.py        |    276 |     21 |   92.4% |
 | moleditpy\src\moleditpy\ui\ui_manager.py                |    398 |     38 |   90.5% |
-| moleditpy\src\moleditpy\ui\user_template_dialog.py      |    295 |     34 |   88.5% |
+| moleditpy\src\moleditpy\ui\user_template_dialog.py      |    298 |     34 |   88.6% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1007 |    179 |   82.2% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |    101 |      5 |   95.0% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py |    144 |      0 |  100.0% |
@@ -70,12 +70,12 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **17110** | **1730** | **89.89%** |
+| **TOTAL** | **17105** | **1730** | **89.89%** |
 
 ## Test Suite Status
 - **Total tests passed**: 2261 (1 skipped)
-- **Unit tests**: PASSED (2055 passed)
-- **Integration tests**: PASSED (86 passed)
+- **Unit tests**: PASSED (2054 passed)
+- **Integration tests**: PASSED (87 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (86 passed)
 

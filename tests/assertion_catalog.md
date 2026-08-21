@@ -2891,7 +2891,6 @@ _open_template_dialog_and_activate creates a new modeless dialog when none is op
 
 - MockUT.assert_called_once_with(dm.host, dm.host)
 - instance.show.assert_called_once()
-- instance.finished.connect.assert_called_once()
 
 ### TestOpenTemplateDialogAndActivate.test_raises_existing_visible_dialog
 _open_template_dialog_and_activate raises and activates an already-open dialog._
@@ -2900,15 +2899,8 @@ _open_template_dialog_and_activate raises and activates an already-open dialog._
 - existing.raise_.assert_called_once()
 - existing.activateWindow.assert_called_once()
 
-### TestOpenTemplateDialogAndActivate.test_on_finished_sets_mode_when_template_selected
-_Finishing with a template selected activates template mode and shows a status message._
-
-- assert captured_cb
-- dm.host.ui_manager.set_mode_and_update_toolbar.assert_called_once_with('template_user_benzene')
-- dm.host.statusBar_mock.showMessage.assert_called_once()
-
-### TestOpenTemplateDialogAndActivate.test_on_finished_noop_when_no_template_selected
-_Finishing without a selection does not change mode: the dialog's own_
+### TestOpenTemplateDialogAndActivate.test_opening_does_not_touch_the_mode
+_Opening the dialog only opens it; the template is armed when picked._
 
 - dm.host.ui_manager.set_mode_and_update_toolbar.assert_not_called()
 
@@ -11773,6 +11765,14 @@ _The toolbar has to say which mode is live: picking a user template checks_
 - assert window.init_manager.scene.mode == 'template_user_pyridine'
 - assert actions['template_user'].isChecked()
 - assert not actions['atom_C'].isChecked()
+
+### test_escape_leaves_template_mode_like_the_close_button
+_Esc calls reject() and never reaches closeEvent, so it used to leave the_
+
+- assert window.init_manager.scene.mode == 'template_user_pyridine'
+- assert window.init_manager.scene.mode == 'atom_C'
+- assert dialog.selected_template is None
+- assert not window.init_manager.mode_actions['template_user'].isChecked()
 
 ### test_ring_template_preview_appears
 _A built-in ring template previews as a ghost ring, Kekulé bonds included._
