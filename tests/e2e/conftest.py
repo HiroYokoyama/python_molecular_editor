@@ -360,6 +360,9 @@ def window(app, qtbot, monkeypatch, tmp_path):
         f"{_PKG}.ui.main_window", fromlist=["MainWindow"]
     ).MainWindow
     win = MainWindow()
+    # A test that touches settings must never rewrite the real ~/.moleditpy
+    win.init_manager.settings_dir = str(tmp_path / ".moleditpy")
+    win.init_manager.settings_file = str(tmp_path / ".moleditpy" / "settings.json")
     qtbot.addWidget(win)
     monkeypatch.setattr(win, "isVisible", lambda *a, **k: True, raising=False)
 

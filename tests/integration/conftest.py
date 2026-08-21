@@ -301,7 +301,7 @@ def app():
 
 
 @pytest.fixture
-def window(app, qtbot, monkeypatch):
+def window(app, qtbot, monkeypatch, tmp_path):
     """
     Create a MainWindow instance with necessary mocks for integration tests.
     """
@@ -427,6 +427,9 @@ def window(app, qtbot, monkeypatch):
 
     # 6. Instantiate
     win = MainWindow()
+    # A test that touches settings must never rewrite the real ~/.moleditpy
+    win.init_manager.settings_dir = str(tmp_path / ".moleditpy")
+    win.init_manager.settings_file = str(tmp_path / ".moleditpy" / "settings.json")
     qtbot.addWidget(win)
     # Don't win.show() if headless to be safer, or win.show() if needed by qtbot
     if os.environ.get("MOLEDITPY_HEADLESS", "0") != "1":
