@@ -3934,6 +3934,21 @@ _No description provided._
 
 - assert any(('error occurred during SVG export' in str(c.args[0]) for c in mock_parser_host.statusBar().showMessage.call_args_list))
 
+### test_create_multi_material_obj_writes_utf8
+_The mtllib reference must be UTF-8, not the OS locale encoding._
+
+- assert 'mtllib 分子.mtl' in obj_bytes.decode('utf-8')
+- assert '分子.obj' in mtl_bytes.decode('utf-8')
+
+### test_create_multi_material_obj_raises_value_error
+_A write failure must raise what export_obj_mtl catches, not bare Exception._
+
+
+### test_export_obj_mtl_reports_write_failure
+_A failed write is reported in the status bar, not raised at the user._
+
+- assert any(('Error exporting OBJ/MTL' in str(args) for args, _ in exporter.statusBar().showMessage.call_args_list))
+
 ## tests/unit/test_font_cache_warmup.py
 
 ### TestSubscriptMap.test_maps_every_digit
@@ -5221,8 +5236,8 @@ _Test export_color_stl success path._
 ### test_create_multi_material_obj_logic
 _Test the file writing logic of create_multi_material_obj._
 
-- mock_file.assert_any_call(obj_path, 'w')
-- mock_file.assert_any_call(mtl_path, 'w')
+- mock_file.assert_any_call(obj_path, 'w', encoding='utf-8')
+- mock_file.assert_any_call(mtl_path, 'w', encoding='utf-8')
 - assert 'mtllib test.mtl' in content
 - assert 'usemtl material_0_test_mesh' in content
 - assert 'v 0.000000 0.000000 0.000000' in content
