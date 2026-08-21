@@ -100,15 +100,16 @@ class AboutDialog(QDialog):
         layout.addLayout(button_layout)
 
     def image_clicked(self, event: QMouseEvent) -> None:
-        """Easter egg: Clear all and load bipyrimidine from SMILES"""
+        """Clear all, load bipyrimidine from SMILES, and build it in 3D."""
         # Clear the current scene
         self.main_window.edit_actions_manager.clear_all()
 
         bipyrimidine_smiles = "C1=CN=C(N=C1)C2=NC=CC=N2"
         self.main_window.string_importer_manager.load_from_smiles(bipyrimidine_smiles)
 
-        # Close the dialog
+        # Close the dialog first: the conversion puts up its own
         self.accept()
+        self.main_window.compute_manager.trigger_conversion()
 
     def image_mouse_press_event(self, event: QMouseEvent) -> None:
         """Handle mouse press on the image: trigger easter egg only for right-click."""
@@ -118,6 +119,7 @@ class AboutDialog(QDialog):
             else:
                 event.ignore()
         except (AttributeError, RuntimeError, ValueError, TypeError):
+            logging.warning("Image click handling failed", exc_info=True)
             try:
                 event.ignore()
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:

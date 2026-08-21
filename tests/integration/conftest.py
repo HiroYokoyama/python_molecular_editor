@@ -335,6 +335,9 @@ def window(app, qtbot, monkeypatch, tmp_path):
         def discover_plugins(self, parent=None):
             return []
 
+        def invoke_document_reset_handlers(self):
+            pass
+
         def update_plugin_menu(self, menu):
             pass
 
