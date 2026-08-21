@@ -187,6 +187,46 @@ def test_benzene_template_rotation_logic(scene_setup):
     assert data.add_atom.called
 
 
+def test_user_template_replaces_clicked_atom_with_first_template_atom(scene_setup):
+    """Regression: clicking an existing atom with a user template kept the clicked
+    atom's element, so a template starting with N/O/charged atom silently placed a
+    carbon there. The clicked atom must become the template's first atom."""
+    scene, data, win = scene_setup
+
+    clicked = AtomItem(0, "C", QPointF(0, 0))
+    clicked.atom_id = 0
+    scene.atom_items[0] = clicked
+    data.atoms[0] = {"symbol": "C", "charge": 0, "radical": 0}
+
+    def mock_add_atom(symbol, pos, charge=0, radical=0):
+        new_id = len(data.atoms) + 100
+        data.atoms[new_id] = {"symbol": symbol, "charge": charge, "radical": radical}
+        return new_id
+
+    data.add_atom.side_effect = mock_add_atom
+    data.add_bond.side_effect = lambda id1, id2, order=1, stereo=0: (
+        (id1, id2),
+        "created",
+    )
+
+    context = {
+        "points": [QPointF(0, 0), QPointF(50, 0)],
+        "bonds_info": [(0, 1, 1, 0)],
+        "atoms_data": [
+            {"symbol": "N", "id": 0, "charge": 1, "radical": 0},
+            {"symbol": "O", "id": 1, "charge": 0, "radical": 0},
+        ],
+        "attachment_atom": clicked,
+    }
+
+    scene.add_user_template_fragment(context)
+
+    assert clicked.symbol == "N"
+    assert clicked.charge == 1
+    assert data.atoms[0]["symbol"] == "N"
+    assert data.atoms[0]["charge"] == 1
+
+
 def test_wedge_flip_via_key_w_pushes_undo(scene_setup):
     """Regression: pressing W on an already-wedge bond flips its direction
     (swaps the data-model key and the bond's atoms) but left order/stereo

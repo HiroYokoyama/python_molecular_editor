@@ -555,6 +555,41 @@ class TemplateMixin:
             points.append(current_p)
         return points
 
+    def _apply_template_atom_to_existing(
+        self, atom_item: Any, atom_data: Dict[str, Any]
+    ) -> None:
+        """Overwrite an existing atom with a user template atom's element/charge/radical."""
+        symbol = atom_data.get("symbol", "C")
+        charge = atom_data.get("charge", 0)
+        radical = atom_data.get("radical", 0)
+
+        if (
+            atom_item.symbol == symbol
+            and atom_item.charge == charge
+            and atom_item.radical == radical
+        ):
+            return
+
+        try:
+            atom_item.prepareGeometryChange()
+            atom_item.symbol = symbol
+            atom_item.charge = charge
+            atom_item.radical = radical
+
+            record = self.data.atoms.get(atom_item.atom_id)
+            if record is not None:
+                record["symbol"] = symbol
+                record["charge"] = charge
+                record["radical"] = radical
+
+            for bond in atom_item.bonds:
+                bond.update()
+                other = bond.atom1 if bond.atom2 is atom_item else bond.atom2
+                if other is not None:
+                    other.update_style()
+        except (AttributeError, RuntimeError, KeyError, TypeError) as e:
+            logging.warning(f"Error applying template atom to existing atom: {e}")
+
     def add_user_template_fragment(self, context: Dict[str, Any]) -> None:
         """Place user template fragment"""
         points = context.get("points", [])
@@ -569,9 +604,10 @@ class TemplateMixin:
         atom_id_map = {}  # template id -> scene atom id
 
         for i, (pos, atom_data) in enumerate(zip(points, atoms_data)):
-            # Skip first atom if attaching to existing atom
+            # Reuse the clicked atom for the template's first atom, overwriting its element
             if i == 0 and attachment_atom:
                 atom_id_map[atom_data["id"]] = attachment_atom.atom_id
+                self._apply_template_atom_to_existing(attachment_atom, atom_data)
                 continue
 
             symbol = atom_data.get("symbol", "C")
