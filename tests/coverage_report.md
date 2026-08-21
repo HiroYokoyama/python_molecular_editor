@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **89.73%**
+- **Overall Project Coverage**: **89.75%**
 
 ### Coverage Breakdown
 
@@ -10,7 +10,7 @@
 | moleditpy\src\moleditpy\main.py                         |    170 |     35 |   79.4% |
 | moleditpy\src\moleditpy\core\mol_geometry.py            |    292 |      4 |   98.6% |
 | moleditpy\src\moleditpy\core\molecular_data.py          |    284 |      0 |  100.0% |
-| moleditpy\src\moleditpy\plugins\plugin_interface.py     |    238 |      6 |   97.5% |
+| moleditpy\src\moleditpy\plugins\plugin_interface.py     |    256 |      6 |   97.7% |
 | moleditpy\src\moleditpy\plugins\plugin_manager.py       |    407 |     11 |   97.3% |
 | moleditpy\src\moleditpy\plugins\plugin_manager_window.py |    187 |      2 |   98.9% |
 | moleditpy\src\moleditpy\ui\__init__.py                  |      7 |      3 |   57.1% |
@@ -37,7 +37,7 @@
 | moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    280 |     33 |   88.2% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    221 |     32 |   85.5% |
 | moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    817 |    127 |   84.5% |
-| moleditpy\src\moleditpy\ui\export_logic.py              |    520 |     85 |   83.7% |
+| moleditpy\src\moleditpy\ui\export_logic.py              |    520 |     83 |   84.0% |
 | moleditpy\src\moleditpy\ui\geometry_base_dialog.py      |     52 |      1 |   98.1% |
 | moleditpy\src\moleditpy\ui\io_logic.py                  |    751 |     76 |   89.9% |
 | moleditpy\src\moleditpy\ui\main_window.py               |    195 |     13 |   93.3% |
@@ -69,11 +69,11 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **16927** | **1739** | **89.73%** |
+| **TOTAL** | **16945** | **1737** | **89.75%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2219 (1 skipped)
-- **Unit tests**: PASSED (2024 passed)
+- **Total tests passed**: 2236 (1 skipped)
+- **Unit tests**: PASSED (2041 passed)
 - **Integration tests**: PASSED (75 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (86 passed)
