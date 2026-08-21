@@ -430,7 +430,7 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
         * Atom label font size
         * Use Bond Color for Atoms (unified color)
     * **Atom Hit / Snap Settings:**
-        * Atom Hit / Snap Distance (px): One distance, in screen pixels and therefore independent of the zoom level, that controls how close the cursor has to be for a drawn bond to snap to an existing atom, for a keyboard shortcut to instantly edit the atom under the cursor, and for atoms and bonds to show their hover highlight and respond to clicks.
+        * Atom Hit / Snap Distance (px) (was "Bond Snapping Distance"): Zoom-independent screen distance for bond snapping, hover highlight, click hit areas, and keyboard instant edit.
     * **Template Settings:**
         * Snapping Distance (px): The distance within which a template will snap to existing atoms or bonds.
         * Enable Atom Fusing: Toggles whether templates connect to existing atoms when placed nearby.

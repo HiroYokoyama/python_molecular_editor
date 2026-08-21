@@ -143,3 +143,16 @@ moleditpy --safe           # skip plugin loading
 - `docs/old/PLUGIN_DEVELOPMENT_MANUAL_V3.md` — plugin API for authors (v3, archived)
 - `DESIGN_PRINCIPLES.md` — project philosophy
 - `CONTRIBUTING.md` — full contribution workflow and PR checklist
+
+### The User Manual Lives in Two Repos
+
+The same user documentation exists twice, and a user-visible change has to be written into both:
+
+| Where | Files |
+|---|---|
+| This repo | `manual/manual.md`, `manual/manual-JP.md` |
+| The wiki repo (`python_molecular_editor.wiki`, a sibling checkout) | `User-Manual.md`, `User-Manual-JP.md`, plus the topic pages `File-Formats-and-Import-Export*.md`, `Keyboard-Shortcuts*.md`, `Using-Plugins*.md`, `Troubleshooting-Common-Issues*.md` |
+
+They are not copies of each other — `manual/` is the long-form numbered manual, the wiki is a condensed rewrite with its own settings tables and cross-links — so sync the *facts*, not the markup, and keep the wording of a given fact as close as the two formats allow. Everything is bilingual: never update an English file without its `-JP` counterpart.
+
+Version stamps: `manual/manual.md` and `manual/manual-JP.md` carry the documented app version in section 11 (`**Version:** 4.8`) — bump it when the app's minor version changes. Wiki pages deliberately carry no version.
