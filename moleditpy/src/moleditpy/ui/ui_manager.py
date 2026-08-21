@@ -169,8 +169,9 @@ class UIManager(QObject):
         elif mode_str.startswith("template_user"):
             matched_key = "template_user"
 
-        if matched_key:
-            self.host.init_manager.mode_actions[matched_key].setChecked(True)
+        matched = self.host.init_manager.mode_actions.get(matched_key)
+        if matched is not None:
+            matched.setChecked(True)
 
     def activate_select_mode(self) -> None:
         """Switch to selection mode and check the select toolbar button."""

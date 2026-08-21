@@ -287,6 +287,16 @@ def test_set_mode_and_update_toolbar_checks_matching_action():
     select_action.setChecked.assert_called_with(False)
 
 
+def test_set_mode_and_update_toolbar_without_a_user_template_button():
+    """A host that never registered the USER action must not raise."""
+    ui = _make_ui_manager()
+    ui.host.init_manager.mode_actions = {"atom_C": MagicMock()}
+
+    ui.set_mode_and_update_toolbar("template_user_MyFrag")
+
+    ui.host.init_manager.mode_actions["atom_C"].setChecked.assert_called_with(False)
+
+
 def test_set_mode_and_update_toolbar_user_template_checks_user_button():
     ui = _make_ui_manager()
     template_action = MagicMock()
