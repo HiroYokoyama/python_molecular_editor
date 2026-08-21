@@ -183,6 +183,8 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
     1.  Click the 'USER' button on the template toolbar or use the menu `File` \> `Save 2D as Template...` to save the current structure as a template.
     2.  Clicking the 'USER' button opens the user template dialog.
     3.  Click the template you want to use in the dialog to enter that template's mode. Click on the canvas to place it. The dialog remains open, allowing you to continuously use different templates.
+    4.  **The template's first atom is its attachment point.** Clicking empty space centres the template on the cursor, but clicking an existing atom lands the template's *first* atom on that atom and merges the two — the existing atom is **overwritten** with the first atom's element, charge and radical, so placing a template that starts with `N⁺` on a carbon turns that carbon into `N⁺`.
+    5.  The first atom is simply the atom that was drawn first in the structure you saved, so draw the intended attachment atom first when you create a template. In the placement preview, that atom is marked with a **pale blue circle** so you can always see which atom will merge with the atom under the cursor.
 
     ![](img/template.png)
 
@@ -540,7 +542,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 4.6
+  * **Version:** 4.8
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
