@@ -114,28 +114,10 @@ class DialogManager:
             _template_dialog.activateWindow()
             return
 
-        # Create new dialog
+        # Create new dialog. Picking a template arms it right away, and closing
+        # the dialog cleans the mode up, so there is nothing to do on finish.
         self.host.template_dialog = UserTemplateDialog(self.host, self.host)
         self.host.template_dialog.show()
-
-        # Activate if a template is selected after dialog is closed
-        def on_dialog_finished() -> None:
-            if self.host.template_dialog.selected_template:
-                template_name = self.host.template_dialog.selected_template.get(
-                    "name", "user_template"
-                )
-                mode_name = f"template_user_{template_name}"
-
-                # Store template data for the scene to use
-                self.host.set_scene_user_template_data(
-                    self.host.template_dialog.selected_template
-                )
-                self.host.ui_manager.set_mode_and_update_toolbar(mode_name)
-
-                # Update status
-                self.host.update_status_message(f"Template mode: {template_name}")
-
-        self.host.template_dialog.finished.connect(on_dialog_finished)
 
     def save_2d_as_template(self) -> None:
         """Save current 2D structure as a template"""

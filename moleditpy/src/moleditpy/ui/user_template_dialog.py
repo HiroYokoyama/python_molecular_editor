@@ -114,6 +114,11 @@ class UserTemplateDialog(QDialog):
         self.cleanup_template_mode()
         super().closeEvent(event)
 
+    def reject(self) -> None:
+        """Esc never reaches closeEvent, so leave template mode from here too."""
+        self.cleanup_template_mode()
+        super().reject()
+
     def cleanup_template_mode(self) -> None:
         """Exit template mode and revert to atom_C (Carbon) mode."""
         # 1. Reset Dialog State

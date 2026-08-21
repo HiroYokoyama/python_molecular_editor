@@ -226,6 +226,24 @@ def test_using_a_user_template_checks_the_user_toolbar_button(window):
     assert not actions["atom_C"].isChecked()
 
 
+def test_escape_leaves_template_mode_like_the_close_button(window):
+    """Esc calls reject() and never reaches closeEvent, so it used to leave the
+    editor armed with a template the dialog had already forgotten."""
+    from moleditpy.ui.user_template_dialog import UserTemplateDialog
+
+    with patch.object(UserTemplateDialog, "load_user_templates"):
+        dialog = UserTemplateDialog(window, window)
+    window.template_dialog = dialog
+    dialog.use_template(PYRIDINE)
+    assert window.init_manager.scene.mode == "template_user_pyridine"
+
+    dialog.reject()
+
+    assert window.init_manager.scene.mode == "atom_C"
+    assert dialog.selected_template is None
+    assert not window.init_manager.mode_actions["template_user"].isChecked()
+
+
 def test_ring_template_preview_appears(window):
     """A built-in ring template previews as a ghost ring, Kekulé bonds included."""
     scene = window.init_manager.scene
