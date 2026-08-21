@@ -159,11 +159,14 @@ class UIManager(QObject):
     def set_mode_and_update_toolbar(self, mode_str: str) -> None:
         """Switch mode and synchronize the active toolbar button highlight."""
         self.set_mode(mode_str)
-        # Map QAction to QToolButton
-        toolbar = getattr(self.host.init_manager, "toolbar", None)
+        # Map QAction to QToolButton. The templates live on the second toolbar,
+        # so looking at the main one alone never finds them.
         action_to_button = {}
-        if toolbar:
-            for key, action in self.host.init_manager.mode_actions.items():
+        for name in ("toolbar", "toolbar_bottom"):
+            toolbar = getattr(self.host.init_manager, name, None)
+            if not toolbar:
+                continue
+            for action in self.host.init_manager.mode_actions.values():
                 btn = toolbar.widgetForAction(action)
                 if btn:
                     action_to_button[action] = btn

@@ -283,6 +283,7 @@ def test_set_mode_and_update_toolbar_checks_matching_action():
     }
     btn = MagicMock()
     ui.host.init_manager.toolbar.widgetForAction.return_value = btn
+    ui.host.init_manager.toolbar_bottom.widgetForAction.return_value = None
 
     ui.set_mode_and_update_toolbar("atom_C")
 
@@ -296,7 +297,9 @@ def test_set_mode_and_update_toolbar_user_template_highlight():
     template_action = MagicMock()
     ui.host.init_manager.mode_actions = {"template_user": template_action}
     btn = MagicMock()
-    ui.host.init_manager.toolbar.widgetForAction.return_value = btn
+    # The template buttons live on the second toolbar, not the main one
+    ui.host.init_manager.toolbar.widgetForAction.return_value = None
+    ui.host.init_manager.toolbar_bottom.widgetForAction.return_value = btn
 
     ui.set_mode_and_update_toolbar("template_user_MyFrag")
 
