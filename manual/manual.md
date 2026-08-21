@@ -97,6 +97,12 @@ MoleditPy offers a Windows installer. This allows you to easily install MoleditP
 
 [Windows Installer](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer)
 
+**macOS App Bundle**
+
+A self-contained `MoleditPy.app` for Apple Silicon is also available, with the same "no Python setup required" trade-offs.
+
+[macOS App Bundle](https://hiroyokoyama.github.io/python_molecular_editor/macos-installer/macos_installer)
+
 
 -----
 

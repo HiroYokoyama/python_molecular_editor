@@ -44,10 +44,43 @@ This workflow:
 8. Creates `MoleditPy_<version>_win64_portable.zip`.
 9. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
 10. Uploads all built artifacts to the workflow run.
-11. Starts a separate `ubuntu-latest` publishing job.
-12. Publishes both Python packages to TestPyPI.
+11. In parallel, calls `macos-app.yml` to build the macOS app bundle (artifact only).
+12. Starts a separate `ubuntu-latest` publishing job.
+13. Publishes both Python packages to TestPyPI.
 
 It does not commit, tag, push, or create a GitHub Release.
+
+## `macos-app.yml` - macOS App Bundle
+
+Builds the self-contained `MoleditPy.app` for Apple Silicon on `macos-latest`. It is a
+reusable workflow: `release.yml` and `test-release.yml` call it, and it can also be
+dispatched on its own.
+
+Run it from GitHub Actions:
+
+1. Open **Actions**.
+2. Select **macOS App Bundle**.
+3. Click **Run workflow**.
+4. Enter the version, for example `4.7.1`. By default the build uses the tag `v<version>`;
+   set **ref** to build from some other branch or commit.
+5. Check **Upload the bundle to the existing v<version> release** to attach the ZIP to a
+   release that already exists (uses `gh release upload --clobber`, so re-running replaces
+   the asset). Leave it unchecked to produce a workflow artifact only.
+
+This workflow:
+
+1. Resolves the git ref, checks it out, and validates the version and that the runner is `arm64`.
+2. Updates `moleditpy/pyproject.toml` and runs `python scripts/sync_linux_version.py`.
+3. Installs `moleditpy-linux` and builds `macos-installer/script/MoleditPy.spec` with PyInstaller.
+4. Verifies `Contents/MacOS/MoleditPy` exists and that `Info.plist` carries the release version.
+5. Smoke-tests the frozen bundle with `--version` (catches a broken freeze or a lost version string).
+6. Ad-hoc signs the bundle with `codesign --force --deep --sign -` — required on Apple Silicon — and verifies the signature.
+7. Packs it with `ditto -c -k --keepParent` into `MoleditPy_<version>_macos_arm64.zip`.
+8. Uploads it as an artifact, and to the GitHub Release when dispatched with **attach_to_release**.
+
+The bundle's limitations (no `pip` for plugins, no terminal window — use the log file
+instead, no file associations) are documented in `macos-installer/macos_installer.md` and
+`macos-installer/macos_installer-jp.md`.
 
 ## `test-pip-install.yml` - Pip Install Verification
 
@@ -114,10 +147,11 @@ This workflow:
 10. Creates `MoleditPy_<version>_win64_portable.zip`.
 11. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
 12. Commits the version bump, README sync, and Linux sync changes, then creates and pushes the release tag.
-13. Starts a separate `ubuntu-latest` publishing job.
-14. Publishes both Python packages to PyPI.
-15. Creates a GitHub Release and attaches the distributions, installer, and portable ZIP.
-16. If the **Zenodo** checkbox is checked: downloads the release assets and publishes them to the production Zenodo record via `scripts/update_zenodo.py`.
+13. In parallel, calls `macos-app.yml` on `macos-latest` to build `MoleditPy_<version>_macos_arm64.zip`.
+14. Starts a separate `ubuntu-latest` publishing job.
+15. Publishes both Python packages to PyPI.
+16. Creates a GitHub Release and attaches the distributions, installer, portable ZIP, and macOS app bundle.
+17. If the **Zenodo** checkbox is checked: downloads the release assets and publishes them to the production Zenodo record via `scripts/update_zenodo.py`.
 
 ## Release Workflow Architecture
 
@@ -135,6 +169,8 @@ graph TD
     H --> I[Commit version bumps, create Git tag & push to GitHub]
     I --> J[Linux Runner: Publish to PyPI and TestPyPI via Trusted Publishing]
     J --> K[Create GitHub Release and attach all assets]
+    A --> L[macOS Runner: PyInstaller BUNDLE, ad-hoc codesign, ditto zip]
+    L --> K
 ```
 
 ### Execution Process & Validation Steps
@@ -144,7 +180,7 @@ graph TD
    - Confirms that the target tag does not already exist locally/remotely to prevent overwrite.
 2. **Dynamic Replacement & Cross-Compilation Sync**:
    - Modifies `pyproject.toml` (version tag).
-   - Injects the new download version string into `windows_installer.md` and `windows_installer-jp.md`.
+   - Injects the new download version string into `windows_installer.md`, `windows_installer-jp.md`, `macos_installer.md`, and `macos_installer-jp.md`.
    - Runs `scripts/sync_linux_version.py` to keep the sibling package `moleditpy-linux/pyproject.toml` in lockstep.
 3. **Stand-alone Executable & Installer Packaging**:
    - Executes PyInstaller using the specification file `windows-installer/script/MoleditPy.spec`.

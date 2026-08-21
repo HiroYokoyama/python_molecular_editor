@@ -113,7 +113,7 @@ jobs:
               raise SystemExit("Could not update moleditpy/pyproject.toml")
           path.write_text(text, encoding="utf-8")
 
-      - name: Update Windows Installer Download URLs
+      - name: Update Installer Download URLs
         shell: python
         run: |
           import os
@@ -121,14 +121,16 @@ jobs:
           from pathlib import Path
 
           version = os.environ["APP_VERSION"]
-          for path in [
-              Path("windows-installer/windows_installer.md"),
-              Path("windows-installer/windows_installer-jp.md"),
+          for path, flavor in [
+              (Path("windows-installer/windows_installer.md"), "win64"),
+              (Path("windows-installer/windows_installer-jp.md"), "win64"),
+              (Path("macos-installer/macos_installer.md"), "macos"),
+              (Path("macos-installer/macos_installer-jp.md"), "macos"),
           ]:
               text = path.read_text(encoding="utf-8")
               text = re.sub(
-                  r'releases/download/[^/]+/MoleditPy_[^_]+_win64_',
-                  f'releases/download/v{version}/MoleditPy_{version}_win64_',
+                  rf'releases/download/[^/]+/MoleditPy_[^_]+_{flavor}_',
+                  f'releases/download/v{version}/MoleditPy_{version}_{flavor}_',
                   text,
               )
               path.write_text(text, encoding="utf-8")
@@ -225,15 +227,23 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add moleditpy/pyproject.toml moleditpy/README.md moleditpy-linux/ windows-installer/script/script.iss windows-installer/script/MoleditPy.spec windows-installer/windows_installer.md windows-installer/windows_installer-jp.md
+          git add moleditpy/pyproject.toml moleditpy/README.md moleditpy-linux/ windows-installer/script/script.iss windows-installer/script/MoleditPy.spec windows-installer/windows_installer.md windows-installer/windows_installer-jp.md macos-installer/script/MoleditPy.spec macos-installer/macos_installer.md macos-installer/macos_installer-jp.md
           if (git diff --staged --name-only) { git commit -m "Bump version to ${env:APP_VERSION}" }
           git tag "v${env:APP_VERSION}"
           git push origin HEAD:${{ github.ref_name }}
           git push origin "v${env:APP_VERSION}"
 
+  build-macos-app:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/macos-app.yml
+    with:
+      version: ${{ inputs.version }}
+      artifact-name: release-macos-artifacts
+
   publish-and-create-release:
     runs-on: ubuntu-latest
-    needs: build-and-release
+    needs: [build-and-release, build-macos-app]
     permissions:
       id-token: write
       contents: write
@@ -258,6 +268,12 @@ jobs:
         with:
           name: release-windows-artifacts
           path: dist/windows
+
+      - name: Download macOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-macos-artifacts
+          path: dist/macos
 
       - name: Publish Main Package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -287,6 +303,7 @@ jobs:
             dist/moleditpy/*
             dist/moleditpy-linux/*
             dist/windows/*
+            dist/macos/*
           generate_release_notes: true
 
   zenodo-upload:

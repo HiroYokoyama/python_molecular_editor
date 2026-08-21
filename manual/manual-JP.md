@@ -98,6 +98,12 @@ Moleditpy は Windows 用のインストーラーを提供しています。イ�
 
 [Windows インストーラー](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer-jp)
 
+**macOS アプリバンドル**
+
+Apple Silicon 向けに、単体で動作する `MoleditPy.app` も提供しています。Python 環境のセットアップが不要な代わりに、同様の制限があります。
+
+[macOS アプリバンドル](https://hiroyokoyama.github.io/python_molecular_editor/macos-installer/macos_installer-jp)
+
 -----
 
 ## 3\. 画面構成
