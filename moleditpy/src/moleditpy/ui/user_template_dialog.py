@@ -436,9 +436,8 @@ class UserTemplateDialog(QDialog):
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Failed to switch main window to template mode: {e}")
 
-    def select_template(self, template_data: Any, widget: Any) -> None:
-        """Select a template and activate template placement mode."""
-        # Clear previous selection styling
+    def clear_selection(self) -> None:
+        """Unhighlight every template; the editor left user-template mode."""
         for i in range(self.template_layout.count()):
             item = self.template_layout.itemAt(i)
             if item and item.widget():
@@ -453,6 +452,13 @@ class UserTemplateDialog(QDialog):
                         background-color: #f0f8ff;
                     }
                 """)
+        self.selected_template = None
+        if self.delete_button is not None:
+            self.delete_button.setEnabled(False)
+
+    def select_template(self, template_data: Any, widget: Any) -> None:
+        """Select a template and activate template placement mode."""
+        self.clear_selection()
 
         # Highlight selected widget
         widget.setStyleSheet("""

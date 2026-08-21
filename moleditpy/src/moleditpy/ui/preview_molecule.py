@@ -59,10 +59,18 @@ def ensure_preview_settings(scene: Any, host: Any = None) -> None:
     """Give a plain QGraphicsScene the get_setting() the preview items call."""
     if hasattr(scene, "get_setting"):
         return
-    if host is not None and hasattr(host, "get_setting"):
-        scene.get_setting = host.get_setting
-    else:
-        scene.get_setting = lambda key, default=None: default
+
+    def get_setting(key: str, default: Any = None) -> Any:
+        if host is None or not hasattr(host, "get_setting"):
+            return default
+        try:
+            # The host outlives the preview normally, but a closed editor would
+            # otherwise raise out of paint()
+            return host.get_setting(key, default)
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            return default
+
+    scene.get_setting = get_setting
 
 
 def build_preview_items(

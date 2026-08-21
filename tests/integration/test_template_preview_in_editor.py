@@ -1,5 +1,7 @@
 """The template ghost preview has to actually appear in the real 2D editor."""
 
+from unittest.mock import patch
+
 from PyQt6.QtCore import QPointF, QRectF
 from PyQt6.QtGui import QColor, QImage, QPainter
 
@@ -96,6 +98,46 @@ def test_fused_atom_keeps_its_own_element(window):
     assert fused, "the ring should have picked up the existing nitrogen"
     assert fused[0] in preview.existing_indices
     assert preview.ghost_atoms[fused[0]].pos() == scene.atom_items[nitrogen].pos()
+
+
+def test_fusing_onto_another_atom_relabels_the_ghost(window):
+    """The fused atom's hydrogens come from the editor, so a ghost reused across
+    cursor moves must not keep the label of the atom it was fused to before."""
+    scene = window.init_manager.scene
+    lone = scene.create_atom("O", QPointF(0, 0))
+    bonded = scene.create_atom("O", QPointF(300, 0))
+    partner = scene.create_atom("C", QPointF(350, 0))
+    scene.create_bond(scene.atom_items[bonded], scene.atom_items[partner], 1, 0)
+    scene.atom_items[lone].implicit_h_count = 2
+    scene.atom_items[bonded].implicit_h_count = 1
+    scene.update_all_items()
+
+    window.ui_manager.set_mode("template_benzene")
+    preview = scene.template_preview
+
+    scene.update_template_preview(scene.atom_items[lone].pos())
+    fused = [i for i in preview.existing_indices]
+    assert fused and preview.ghost_atoms[fused[0]].implicit_h_count == 2
+
+    scene.update_template_preview(scene.atom_items[bonded].pos())
+    fused = [i for i in preview.existing_indices]
+    assert fused and preview.ghost_atoms[fused[0]].implicit_h_count == 1
+
+
+def test_leaving_template_mode_clears_the_dialog_selection(window):
+    """Picking another mode has to unhighlight the template dialog's selection."""
+    from moleditpy.ui.user_template_dialog import UserTemplateDialog
+
+    with patch.object(UserTemplateDialog, "load_user_templates"):
+        dialog = UserTemplateDialog(window, window)
+    window.template_dialog = dialog
+    dialog.selected_template = PYRIDINE
+    dialog.delete_button.setEnabled(True)
+
+    window.ui_manager.set_mode("select")
+
+    assert dialog.selected_template is None
+    assert not dialog.delete_button.isEnabled()
 
 
 def test_ring_template_preview_appears(window):

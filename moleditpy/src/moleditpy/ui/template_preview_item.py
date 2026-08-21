@@ -185,7 +185,7 @@ class TemplatePreviewItem(QGraphicsItem):
             atom_data["pos"] = QPointF(point)
             preview_atoms.append(atom_data)
 
-        signature = self._signature(preview_atoms, bonds_info, existing_indices)
+        signature = self._signature(preview_atoms, bonds_info, existing_h_counts)
         self.existing_indices = existing_indices
         self.existing_h_counts = existing_h_counts
         self.replaced_label_path = replaced_label_path
@@ -220,9 +220,14 @@ class TemplatePreviewItem(QGraphicsItem):
     def _signature(
         preview_atoms: List[Dict[str, Any]],
         bonds_info: list[Any],
-        existing_indices: Set[int],
+        existing_h_counts: Dict[int, int],
     ) -> Any:
-        """Identify the ghost molecule, ignoring where the cursor put it."""
+        """Identify the ghost molecule, ignoring where the cursor put it.
+
+        The fused atoms' hydrogen counts belong here: they come from the editor,
+        not from the template, so a ghost reused across cursor moves would keep
+        the label of whichever atom it was fused to before.
+        """
         return (
             tuple(
                 (
@@ -233,7 +238,7 @@ class TemplatePreviewItem(QGraphicsItem):
                 for atom in preview_atoms
             ),
             tuple(tuple(bond) for bond in bonds_info),
-            tuple(sorted(existing_indices)),
+            tuple(sorted(existing_h_counts.items())),
         )
 
     def _move_ghost(self, points: list[QPointF]) -> None:
@@ -395,16 +400,16 @@ class TemplatePreviewItem(QGraphicsItem):
         painter.restore()
 
     def _paint_label_backings(self, painter: QPainter) -> None:
-        """Lay a light backing under the ghost labels and mark the first atom."""
+        """Cover the label the first atom replaces and mark that atom.
+
+        Ghost labels themselves need no backing: the bonds are shortened around
+        them, exactly as in the editor.
+        """
         painter.save()
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(LABEL_BACKING))
         if not self.replaced_label_path.isEmpty():
             painter.drawPath(self.replaced_label_path)
-        for i, atom in enumerate(self.ghost_atoms):
-            if i in self.existing_indices or not atom.is_visible:
-                continue
-            painter.drawPath(atom.get_bg_ellipse_path().translated(atom.pos()))
 
         if self.mark_first_atom and self.ghost_atoms:
             first = self.ghost_atoms[0]

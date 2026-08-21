@@ -76,6 +76,9 @@ class UIManager(QObject):
         elif not mode_str.startswith("template"):
             self.host.init_manager.scene.template_preview.hide()
 
+        if not mode_str.startswith("template_user"):
+            self._clear_template_dialog_selection()
+
         # Set cursor shape
         if mode_str == "select":
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
@@ -142,6 +145,16 @@ class UIManager(QObject):
                 QGraphicsView.DragMode.RubberBandDrag
             )
             self.host.set_scene_bond_properties(1, 0)
+
+    def _clear_template_dialog_selection(self) -> None:
+        """Drop the template dialog's highlight once another mode takes over."""
+        dialog = getattr(self.host, "template_dialog", None)
+        if dialog is None:
+            return
+        try:
+            dialog.clear_selection()
+        except (AttributeError, RuntimeError):
+            logging.debug("Template dialog selection not cleared", exc_info=True)
 
     def set_mode_and_update_toolbar(self, mode_str: str) -> None:
         """Switch mode and synchronize the active toolbar button highlight."""
