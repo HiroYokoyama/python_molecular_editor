@@ -281,30 +281,25 @@ def test_set_mode_and_update_toolbar_checks_matching_action():
         "select": select_action,
         "atom_C": atom_action,
     }
-    btn = MagicMock()
-    ui.host.init_manager.toolbar.widgetForAction.return_value = btn
-    ui.host.init_manager.toolbar_bottom.widgetForAction.return_value = None
-
     ui.set_mode_and_update_toolbar("atom_C")
 
     atom_action.setChecked.assert_called_with(True)
     select_action.setChecked.assert_called_with(False)
-    btn.setStyleSheet.assert_called_with("")
 
 
-def test_set_mode_and_update_toolbar_user_template_highlight():
+def test_set_mode_and_update_toolbar_user_template_checks_user_button():
     ui = _make_ui_manager()
     template_action = MagicMock()
-    ui.host.init_manager.mode_actions = {"template_user": template_action}
-    btn = MagicMock()
-    # The template buttons live on the second toolbar, not the main one
-    ui.host.init_manager.toolbar.widgetForAction.return_value = None
-    ui.host.init_manager.toolbar_bottom.widgetForAction.return_value = btn
+    other_action = MagicMock()
+    ui.host.init_manager.mode_actions = {
+        "template_user": template_action,
+        "atom_C": other_action,
+    }
 
     ui.set_mode_and_update_toolbar("template_user_MyFrag")
 
     template_action.setChecked.assert_called_with(True)
-    assert "background-color" in btn.setStyleSheet.call_args.args[0]
+    other_action.setChecked.assert_called_with(False)
 
 
 def test_activate_select_mode_checks_select_action():

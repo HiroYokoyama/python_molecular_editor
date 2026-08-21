@@ -225,13 +225,6 @@ def test_using_a_user_template_checks_the_user_toolbar_button(window):
     assert actions["template_user"].isChecked()
     assert not actions["atom_C"].isChecked()
 
-    button = window.init_manager.toolbar_bottom.widgetForAction(
-        actions["template_user"]
-    )
-    assert "background-color" in button.styleSheet()
-    window.ui_manager.set_mode_and_update_toolbar("select")
-    assert button.styleSheet() == ""
-
 
 def test_ring_template_preview_appears(window):
     """A built-in ring template previews as a ghost ring, Kekulé bonds included."""

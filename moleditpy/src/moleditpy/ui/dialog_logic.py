@@ -112,7 +112,6 @@ class DialogManager:
             # Bring existing dialog to front
             _template_dialog.raise_()
             _template_dialog.activateWindow()
-            self._sync_toolbar_to_mode()
             return
 
         # Create new dialog
@@ -135,16 +134,8 @@ class DialogManager:
 
                 # Update status
                 self.host.update_status_message(f"Template mode: {template_name}")
-            else:
-                self._sync_toolbar_to_mode()
 
         self.host.template_dialog.finished.connect(on_dialog_finished)
-
-    def _sync_toolbar_to_mode(self) -> None:
-        """Re-highlight the live mode; the USER button checked itself on click."""
-        self.host.ui_manager.set_mode_and_update_toolbar(
-            getattr(self.host.init_manager.scene, "mode", "select")
-        )
 
     def save_2d_as_template(self) -> None:
         """Save current 2D structure as a template"""

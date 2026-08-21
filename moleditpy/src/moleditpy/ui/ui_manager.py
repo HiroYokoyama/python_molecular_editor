@@ -159,44 +159,18 @@ class UIManager(QObject):
     def set_mode_and_update_toolbar(self, mode_str: str) -> None:
         """Switch mode and synchronize the active toolbar button highlight."""
         self.set_mode(mode_str)
-        # Map QAction to QToolButton. The templates live on the second toolbar,
-        # so looking at the main one alone never finds them.
-        action_to_button = {}
-        for name in ("toolbar", "toolbar_bottom"):
-            toolbar = getattr(self.host.init_manager, name, None)
-            if not toolbar:
-                continue
-            for action in self.host.init_manager.mode_actions.values():
-                btn = toolbar.widgetForAction(action)
-                if btn:
-                    action_to_button[action] = btn
-
-        # Reset all mode buttons
-        for key, action in self.host.init_manager.mode_actions.items():
+        for action in self.host.init_manager.mode_actions.values():
             action.setChecked(False)
-            btn = action_to_button.get(action)
-            if btn:
-                btn.setStyleSheet("")
 
-        # Apply style to matching mode buttons (exact match or prefix for user templates)
+        # Exact match, or the one USER button standing for every user template
         matched_key = None
         if mode_str in self.host.init_manager.mode_actions:
             matched_key = mode_str
         elif mode_str.startswith("template_user"):
             matched_key = "template_user"
 
-        if matched_key and matched_key in self.host.init_manager.mode_actions:
-            action = self.host.init_manager.mode_actions[matched_key]
-            action.setChecked(True)
-            btn = action_to_button.get(action)
-            if btn:
-                # Highlight templates with specific color
-                if mode_str.startswith("template"):
-                    btn.setStyleSheet(
-                        "background-color: #2196F3; color: white; border-radius: 4px;"
-                    )
-                else:
-                    btn.setStyleSheet("")
+        if matched_key:
+            self.host.init_manager.mode_actions[matched_key].setChecked(True)
 
     def activate_select_mode(self) -> None:
         """Switch to selection mode and check the select toolbar button."""

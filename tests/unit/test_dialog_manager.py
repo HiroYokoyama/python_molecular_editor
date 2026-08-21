@@ -287,7 +287,8 @@ class TestOpenTemplateDialogAndActivate:
         dm.host.statusBar_mock.showMessage.assert_called_once()
 
     def test_on_finished_noop_when_no_template_selected(self, dm):
-        """Finishing without a selection restores the toolbar to the live mode."""
+        """Finishing without a selection does not change mode: the dialog's own
+        closeEvent has already put the toolbar back."""
         dm.host.template_dialog = None
         captured_cb = []
 
@@ -299,9 +300,7 @@ class TestOpenTemplateDialogAndActivate:
 
         dm.host.template_dialog.selected_template = None
         captured_cb[0]()
-        dm.host.ui_manager.set_mode_and_update_toolbar.assert_called_once_with(
-            dm.host.init_manager.scene.mode
-        )
+        dm.host.ui_manager.set_mode_and_update_toolbar.assert_not_called()
 
 
 # ===========================================================================
