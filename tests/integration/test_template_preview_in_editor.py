@@ -151,6 +151,19 @@ def test_user_template_previews_its_own_atoms_over_existing_ones(window):
     assert len(scene.data.atoms) == 3
 
 
+def test_ghost_labels_use_the_editors_font_settings(window):
+    """update_style() reads the font through scene(), so the ghost items have to be
+    styled after they join a scene or they keep the built-in default size."""
+    scene = window.init_manager.scene
+    window.init_manager.settings["atom_font_size_2d"] = 13
+    scene.user_template_data = PYRIDINE
+    window.ui_manager.set_mode("template_user_pyridine")
+
+    scene.update_template_preview(QPointF(300, 250))
+
+    assert scene.template_preview.ghost_atoms[0].font.pointSize() == 13
+
+
 def test_fused_ring_preview_uses_the_placement_rotation(window):
     """A fused aromatic ring is rotated to fit the bonds already there, so the
     preview has to show the double bonds where the click will put them — while
