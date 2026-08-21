@@ -12,8 +12,8 @@ DOI: 10.5281/zenodo.17268532
 
 from typing import Any, List
 
-from PyQt6.QtCore import QDateTime, QLineF, QPointF, QRectF, Qt, QTimer
-from PyQt6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PyQt6.QtCore import QDateTime, QPointF, QRectF, Qt, QTimer
+from PyQt6.QtGui import QColor, QFont, QPainter
 from PyQt6.QtWidgets import (
     QDialog,
     QGraphicsScene,
@@ -28,9 +28,14 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from .preview_molecule import (
+    build_preview_items,
+    ensure_preview_settings,
+    preview_content_rect,
+)
 from .template_preview_view import TemplatePreviewView
 
-from ..utils.constants import CPK_COLORS, VERSION
+from ..utils.constants import VERSION
 import json
 import logging
 import os
@@ -108,6 +113,11 @@ class UserTemplateDialog(QDialog):
         """Reset mode when the dialog is closed."""
         self.cleanup_template_mode()
         super().closeEvent(event)
+
+    def reject(self) -> None:
+        """Esc never reaches closeEvent, so leave template mode from here too."""
+        self.cleanup_template_mode()
+        super().reject()
 
     def cleanup_template_mode(self) -> None:
         """Exit template mode and revert to atom_C (Carbon) mode."""
@@ -283,15 +293,14 @@ class UserTemplateDialog(QDialog):
         self.draw_template_preview(preview_scene, template_data, view_size)
 
         # Improved fitting approach with better error handling
-        bounding_rect = preview_scene.itemsBoundingRect()
+        bounding_rect = preview_scene.sceneRect()
         if (
             not bounding_rect.isEmpty()
             and bounding_rect.width() > 0
             and bounding_rect.height() > 0
         ):
-            # Calculate appropriate padding based on content size
             content_size = max(bounding_rect.width(), bounding_rect.height())
-            padding = max(20, content_size * 0.2)  # At least 20 units or 20% of content
+            padding = max(6, content_size * 0.05)
 
             padded_rect = bounding_rect.adjusted(-padding, -padding, padding, padding)
             preview_scene.setSceneRect(padded_rect)
@@ -337,186 +346,62 @@ class UserTemplateDialog(QDialog):
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Warning: Failed to fit preview view: {e}")
 
+    def _editor_scene(self) -> Any:
+        """Return the editor scene, so thumbnails follow the user's 2D settings."""
+        try:
+            scene = self.main_window.init_manager.scene
+        except (AttributeError, RuntimeError):
+            return None
+        # A stand-in main window would answer get_setting() with junk sizes
+        return scene if isinstance(scene, QGraphicsScene) else None
+
     def draw_template_preview(
-        self, scene: Any, template_data: Any, view_size: Any = None
+        self,
+        scene: Any,
+        template_data: Any,
+        view_size: Any = None,  # pylint: disable=unused-argument
     ) -> None:
-        """Draw the molecular structure in the preview scene with dynamic scaling."""
+        """Draw the template into the preview scene using the editor's own items.
+
+        ``view_size`` is kept for callers; the items are sized like the editor's
+        and the view's fitInView does the scaling.
+        """
         atoms = template_data.get("atoms", [])
         bonds = template_data.get("bonds", [])
+        ensure_preview_settings(scene, self._editor_scene())
 
         if not atoms:
-            # Add placeholder text when no atoms
             text = scene.addText("No structure", QFont("Arial", 12))
             text.setDefaultTextColor(QColor("gray"))
             return
 
-        # Calculate molecular dimensions
-        positions = [QPointF(atom["x"], atom["y"]) for atom in atoms]
-        min_x = min(pos.x() for pos in positions)
-        max_x = max(pos.x() for pos in positions)
-        min_y = min(pos.y() for pos in positions)
-        max_y = max(pos.y() for pos in positions)
-
-        mol_width = max_x - min_x
-        mol_height = max_y - min_y
-        mol_size = max(mol_width, mol_height)
-
-        # Calculate fit scale factor (how much fitInView will shrink the content)
-        if view_size is None:
-            view_size = (160, 140)  # Default preview view size
-
-        view_width, view_height = view_size
-
-        if mol_size > 0 and mol_width > 0 and mol_height > 0:
-            # Calculate the padding that will be added
-            padding = max(20, mol_size * 0.2)
-            padded_width = mol_width + 2 * padding
-            padded_height = mol_height + 2 * padding
-
-            # Calculate how much fitInView will scale down the content
-            # fitInView fits the padded rectangle into the view while maintaining aspect ratio
-            fit_scale_x = view_width / padded_width
-            fit_scale_y = view_height / padded_height
-            fit_scale = min(
-                fit_scale_x, fit_scale_y
-            )  # fitInView uses the smaller scale
-
-            # Compensate for the fit scaling to maintain visual thickness
-            # When fit_scale is small (content heavily shrunk), we need thicker lines/fonts
-            if fit_scale > 0:
-                scale_factor = max(0.4, min(4.0, 1.0 / fit_scale))
-            else:
-                scale_factor = 4.0
-
-            # Debug info (can be removed in production)
-            # logging.debug(f"Mol size: {mol_size:.1f}, Fit scale: {fit_scale:.3f}, Scale factor: {scale_factor:.2f}")
-        else:
-            scale_factor = 1.0
-
-        # Base sizes that look good at 1:1 scale
-        base_bond_width = 1.8
-        base_font_size = 11
-        base_ellipse_width = 18
-        base_ellipse_height = 14
-        base_double_bond_offset = 3.5
-        base_triple_bond_offset = 2.5
-
-        # Apply inverse fit scaling to maintain visual consistency
-        bond_width = max(1.0, min(8.0, base_bond_width * scale_factor))
-        font_size = max(8, min(24, int(base_font_size * scale_factor)))
-        ellipse_width = max(10, min(40, base_ellipse_width * scale_factor))
-        ellipse_height = max(8, min(30, base_ellipse_height * scale_factor))
-        double_bond_offset = max(2.0, min(10.0, base_double_bond_offset * scale_factor))
-        triple_bond_offset = max(1.5, min(8.0, base_triple_bond_offset * scale_factor))
-
-        # Create atom ID to index mapping for bond drawing
-        atom_id_to_index = {}
-        for i, atom in enumerate(atoms):
-            atom_id = atom.get("id", i)  # Use id if available, otherwise use index
-            atom_id_to_index[atom_id] = i
-
-        # Draw bonds first using original coordinates with dynamic sizing
+        index_of_id = {atom.get("id", i): i for i, atom in enumerate(atoms)}
+        preview_atoms = [
+            {
+                "symbol": atom.get("symbol", "C"),
+                "charge": atom.get("charge", 0),
+                "radical": atom.get("radical", 0),
+                "pos": QPointF(atom["x"], atom["y"]),
+            }
+            for atom in atoms
+        ]
+        preview_bonds = []
         for bond in bonds:
-            atom1_id, atom2_id = bond["atom1"], bond["atom2"]
-
-            # Get atom indices from IDs
-            atom1_idx = atom_id_to_index.get(atom1_id)
-            atom2_idx = atom_id_to_index.get(atom2_id)
-
-            if (
-                atom1_idx is not None
-                and atom2_idx is not None
-                and atom1_idx < len(atoms)
-                and atom2_idx < len(atoms)
-            ):
-                pos1 = QPointF(atoms[atom1_idx]["x"], atoms[atom1_idx]["y"])
-                pos2 = QPointF(atoms[atom2_idx]["x"], atoms[atom2_idx]["y"])
-
-                # Draw bonds with proper order - dynamic thickness
-                bond_order = bond.get("order", 1)
-                pen = QPen(QColor("black"), bond_width)
-
-                if bond_order == 2:
-                    # Double bond - draw two parallel lines
-                    line = QLineF(pos1, pos2)
-                    if line.length() > 0:
-                        normal = line.normalVector()
-                        normal.setLength(double_bond_offset)
-
-                        line1 = QLineF(
-                            pos1 + normal.p2() - normal.p1(),
-                            pos2 + normal.p2() - normal.p1(),
-                        )
-                        line2 = QLineF(
-                            pos1 - normal.p2() + normal.p1(),
-                            pos2 - normal.p2() + normal.p1(),
-                        )
-
-                        scene.addLine(line1, pen)
-                        scene.addLine(line2, pen)
-                    else:
-                        scene.addLine(line, pen)
-                elif bond_order == 3:
-                    # Triple bond - draw three parallel lines
-                    line = QLineF(pos1, pos2)
-                    if line.length() > 0:
-                        normal = line.normalVector()
-                        normal.setLength(triple_bond_offset)
-
-                        # Center line
-                        scene.addLine(line, pen)
-                        # Side lines
-                        line1 = QLineF(
-                            pos1 + normal.p2() - normal.p1(),
-                            pos2 + normal.p2() - normal.p1(),
-                        )
-                        line2 = QLineF(
-                            pos1 - normal.p2() + normal.p1(),
-                            pos2 - normal.p2() + normal.p1(),
-                        )
-
-                        scene.addLine(line1, pen)
-                        scene.addLine(line2, pen)
-                    else:
-                        scene.addLine(line, pen)
-                else:
-                    # Single bond
-                    scene.addLine(QLineF(pos1, pos2), pen)
-
-        # Draw only non-carbon atom labels with dynamic sizing
-        for i, atom in enumerate(atoms):
-            try:
-                pos = QPointF(atom["x"], atom["y"])
-                symbol = atom.get("symbol", "C")
-
-                # Draw atoms - white ellipse background to hide bonds, then CPK colored text
-                if symbol != "C":
-                    # All non-carbon atoms including hydrogen: white background ellipse + CPK colored text
-                    color = CPK_COLORS.get(
-                        symbol, CPK_COLORS.get("DEFAULT", QColor("#FF1493"))
-                    )
-
-                    # Add white background ellipse to hide bonds - dynamic size
-                    pen = QPen(Qt.GlobalColor.white, 0)  # No border
-                    brush = QBrush(Qt.GlobalColor.white)
-                    ellipse_x = pos.x() - ellipse_width / 2
-                    ellipse_y = pos.y() - ellipse_height / 2
-                    scene.addEllipse(
-                        ellipse_x, ellipse_y, ellipse_width, ellipse_height, pen, brush
-                    )
-
-                    # Add CPK colored text label on top - dynamic font size
-                    font = QFont("Arial", font_size, QFont.Weight.Bold)
-                    text = scene.addText(symbol, font)
-                    text.setDefaultTextColor(color)  # CPK colored text
-                    text_rect = text.boundingRect()
-                    text.setPos(
-                        pos.x() - text_rect.width() / 2,
-                        pos.y() - text_rect.height() / 2,
-                    )
-
-            except (AttributeError, RuntimeError, ValueError, TypeError):
+            atom1_idx = index_of_id.get(bond.get("atom1"))
+            atom2_idx = index_of_id.get(bond.get("atom2"))
+            if atom1_idx is None or atom2_idx is None:
                 continue
+            preview_bonds.append(
+                (atom1_idx, atom2_idx, bond.get("order", 1), bond.get("stereo", 0))
+            )
+
+        atom_items, bond_items, _ = build_preview_items(preview_atoms, preview_bonds)
+        for bond_item in bond_items:
+            scene.addItem(bond_item)
+        for atom_item in atom_items:
+            scene.addItem(atom_item)
+        # The item bounding rects carry hit padding; fit to what is drawn instead
+        scene.setSceneRect(preview_content_rect(atom_items, bond_items))
 
     def _activate_template_mode(self, template_data: Any) -> None:
         """Switch the main window into template placement mode for the given template."""
@@ -531,34 +416,14 @@ class UserTemplateDialog(QDialog):
             self.main_window.init_manager.scene.user_template_data = template_data
 
         try:
-            # Uncheck all mode actions first
-            if hasattr(self.main_window, "mode_actions") and isinstance(
-                self.main_window.init_manager.mode_actions, dict
-            ):
-                for act in self.main_window.init_manager.mode_actions.values():
-                    act.setChecked(False)
-
-            # Switch mode via UIManager
-            if hasattr(self.main_window, "ui_manager") and hasattr(
-                self.main_window.ui_manager, "set_mode"
-            ):
-                self.main_window.ui_manager.set_mode(mode_name)
-
+            # Goes through the toolbar so the USER button shows the active mode
+            self.main_window.ui_manager.set_mode_and_update_toolbar(mode_name)
             self.main_window.statusBar().showMessage(f"Template mode: {template_name}")
-
-            # Check the matching action if present
-            if (
-                hasattr(self.main_window, "mode_actions")
-                and mode_name in self.main_window.init_manager.mode_actions
-            ):
-                self.main_window.init_manager.mode_actions[mode_name].setChecked(True)
-
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.warning(f"Failed to switch main window to template mode: {e}")
 
-    def select_template(self, template_data: Any, widget: Any) -> None:
-        """Select a template and activate template placement mode."""
-        # Clear previous selection styling
+    def clear_selection(self) -> None:
+        """Unhighlight every template; the editor left user-template mode."""
         for i in range(self.template_layout.count()):
             item = self.template_layout.itemAt(i)
             if item and item.widget():
@@ -573,6 +438,13 @@ class UserTemplateDialog(QDialog):
                         background-color: #f0f8ff;
                     }
                 """)
+        self.selected_template = None
+        if self.delete_button is not None:
+            self.delete_button.setEnabled(False)
+
+    def select_template(self, template_data: Any, widget: Any) -> None:
+        """Select a template and activate template placement mode."""
+        self.clear_selection()
 
         # Highlight selected widget
         widget.setStyleSheet("""

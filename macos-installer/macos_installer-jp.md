@@ -23,7 +23,7 @@ Open Babelのフォールバックが必要な複雑な分子では、3D変換�
 以下のリンクからアプリバンドルをダウンロードしてください。
 クリックするとダウンロードが開始されます。
 
-[MoleditPy for macOS (Apple Silicon) をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.7.2/MoleditPy_4.7.2_macos_arm64.zip)
+[MoleditPy for macOS (Apple Silicon) をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.8.0/MoleditPy_4.8.0_macos_arm64.zip)
 
 ## インストール手順
 
