@@ -451,8 +451,13 @@ class PluginManager:
         text: str,
         icon: str,
         shortcut: str,
+        pin: Optional[str] = None,
     ) -> None:
-        """Register a plugin menu action with its path, callback, and display metadata."""
+        """Register a plugin menu action with its path, callback, and display metadata.
+
+        ``pin`` is optional so a V3-era caller reaching this method directly
+        keeps working.
+        """
         self.menu_actions.append(
             {
                 "plugin": plugin_name,
@@ -461,6 +466,7 @@ class PluginManager:
                 "text": text,
                 "icon": icon,
                 "shortcut": shortcut,
+                "pin": pin,
             }
         )
 

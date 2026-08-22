@@ -7061,27 +7061,27 @@ _Test Plugin3DController.set_bond_color._
 ### TestPluginInterface.test_add_plugin_menu
 _add_plugin_menu prepends 'Plugin/' to the path._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/Utility/My Tool...', callback, None, None, None)
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/Utility/My Tool...', callback, None, None, None, None)
 
 ### TestPluginInterface.test_add_plugin_menu_strips_leading_slash
 _add_plugin_menu strips a leading slash from the path._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/Analysis/Viewer', callback, None, None, None)
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/Analysis/Viewer', callback, None, None, None, None)
 
 ### TestPluginInterface.test_add_plugin_menu_with_text_and_shortcut
 _add_plugin_menu passes optional text/icon/shortcut through._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/File/Export...', callback, 'Export', None, 'Ctrl+E')
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/File/Export...', callback, 'Export', None, 'Ctrl+E', None)
 
 ### TestPluginInterface.test_register_menu_action_new_style
 _register_menu_action (new style: path, callback) delegates correctly._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Open', callback, None, None, None)
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Open', callback, None, None, None, None)
 
 ### TestPluginInterface.test_register_menu_action_old_style
 _register_menu_action (old style: path, text, callback) delegates correctly._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Import', callback, 'Import PubChem...', None, None)
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Import', callback, 'Import PubChem...', None, None, None)
 
 ### TestPluginInterface.test_get_setting_returns_default_when_missing
 _get_setting returns the default if the key is absent._
@@ -7935,40 +7935,45 @@ _Without context-injected entries the header divider is enough._
 
 - assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Folder/']
 
-### TestPluginInstallerPinning.test_installer_sits_directly_below_the_manager
-_The installer joins the header pair with no divider between them._
+### TestHeaderPin.test_pinned_entry_sits_directly_below_the_manager
+_The entry joins the header pair with no divider between them._
 
 - assert _shape(plugin_menu) == ['Plugin Manager...', 'Plugin Installer...', 'sep', 'Folder/']
 
-### TestPluginInstallerPinning.test_installer_stays_above_other_injected_plugins
+### TestHeaderPin.test_pinned_entry_stays_above_other_injected_plugins
 _Ordinary context-injected entries stay below the divider._
 
 - assert _shape(plugin_menu) == ['Plugin Manager...', 'Plugin Installer...', 'sep', 'Injected']
 
-### TestPluginInstallerPinning.test_registration_order_does_not_matter
-_Registering the installer first gives the same layout._
+### TestHeaderPin.test_registration_order_does_not_matter
+_Registering the pinned entry first gives the same layout._
 
 - assert _shape(plugin_menu) == ['Plugin Manager...', 'Plugin Installer...', 'sep', 'Injected']
 
-### TestPluginInstallerPinning.test_installer_alone_leaves_no_dangling_divider
+### TestHeaderPin.test_pinned_entry_alone_leaves_no_dangling_divider
 _With nothing under it, the header divider is dropped._
 
 - assert _shape(plugin_menu) == ['Plugin Manager...', 'Plugin Installer...']
 
-### TestPluginInstallerPinning.test_matched_case_insensitively_by_label
-_A differently-cased PLUGIN_NAME or label still pins._
+### TestHeaderPin.test_the_name_alone_does_not_pin
+_Placement is granted on request only — the app knows no plugin names._
 
-- assert _shape(plugin_menu) == ['Plugin Manager...', 'Plugin installer']
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Plugin Installer...']
 
-### TestPluginInstallerPinning.test_unrelated_plugin_is_not_pinned
-_A plugin merely mentioning install is left below the divider._
+### TestHeaderPin.test_unknown_pin_value_is_ignored
+_An unrecognised pin leaves the entry in the ordinary group._
 
-- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Install Helper']
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Plugin Installer...']
 
-### TestPluginInstallerPinning.test_nested_installer_path_is_not_pinned
-_Only a direct Plugin/<entry> registration is pinned._
+### TestHeaderPin.test_pin_needs_a_direct_plugin_path
+_pin="header" on a nested path is ignored._
 
 - assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Tools/']
+
+### TestHeaderPin.test_pin_outside_the_plugin_menu_is_ignored
+_A pin request only means anything inside the Plugin menu._
+
+- assert _shape(tools) == ['Native A', 'sep', 'Pinned']
 
 ## tests/unit/test_project_io.py
 

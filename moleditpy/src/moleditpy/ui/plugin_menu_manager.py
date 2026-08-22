@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, TYPE_CHECKING
 
 from PyQt6.QtGui import QAction, QIcon, QKeySequence
 from PyQt6.QtWidgets import QFileDialog, QMenu, QMessageBox
@@ -41,11 +41,10 @@ class PluginMenuManager:
     # Title of the menu that hosts "Plugin/<path>" registrations.
     _PLUGIN_MENU_TITLE = "Plugin"
 
-    # Plugins that manage the plugin system itself. When installed, these sit
-    # with "Plugin Manager..." above the first divider instead of down among
-    # the plugins they install. Compared casefolded, with trailing dots
-    # stripped, against PLUGIN_NAME and the registered label.
-    _MANAGER_COMPANIONS = frozenset({"plugin installer"})
+    # Value of add_menu_action(pin=...) requesting the header slot: placed with
+    # "Plugin Manager..." above the first divider, for plugins that manage the
+    # plugin system itself rather than acting on a molecule.
+    _PIN_HEADER = "header"
 
     def __init__(self, init_manager: MainInitManager) -> None:
         self._im = init_manager
@@ -238,26 +237,20 @@ class PluginMenuManager:
                 sep.setData(self._PLUGIN_ACTION_TAG)
 
     @classmethod
-    def _is_manager_companion(
-        cls,
-        top_level_title: str,
-        parts: List[str],
-        plugin_name: Optional[str],
-        label: str,
+    def _wants_header_slot(
+        cls, top_level_title: str, parts: List[str], action_def: Dict[str, Any]
     ) -> bool:
-        """Return True for a plugin that belongs beside the Plugin Manager.
+        """Return True for an entry that asked to sit beside the Plugin Manager.
 
-        The Plugin Installer extends the Plugin Manager rather than acting on a
-        molecule, so it reads as part of the menu's header pair instead of as
-        one more installed plugin. Matched by name (its own PLUGIN_NAME, or the
-        label it registered) so the app needs no hard dependency on it.
+        A plugin that manages the plugin system itself — the Plugin Installer —
+        reads as part of the menu's header pair rather than as one more
+        installed plugin, and says so with ``pin="header"``. The app therefore
+        needs to know no plugin by name.
         """
-        if top_level_title != cls._PLUGIN_MENU_TITLE or len(parts) != 2:
-            return False
-        candidates = (plugin_name or "", label)
-        return any(
-            c.strip().rstrip(".").casefold() in cls._MANAGER_COMPANIONS
-            for c in candidates
+        return (
+            top_level_title == cls._PLUGIN_MENU_TITLE
+            and len(parts) == 2
+            and action_def.get("pin") == cls._PIN_HEADER
         )
 
     @staticmethod
@@ -324,9 +317,7 @@ class PluginMenuManager:
                 current_menu.menuAction().setData(self._PLUGIN_ACTION_TAG)
 
             label = text or parts[-1]
-            pinned = self._is_manager_companion(
-                top_level_title, parts, action_def.get("plugin"), label
-            )
+            pinned = self._wants_header_slot(top_level_title, parts, action_def)
             if not pinned:
                 self._ensure_plugin_separator(current_menu)
 

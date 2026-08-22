@@ -959,7 +959,7 @@ class TestPluginMenuComposition:
 
 
 # ---------------------------------------------------------------------------
-# Plugin Installer — pinned beside the Plugin Manager
+# pin="header" — an entry placed beside the Plugin Manager on request
 # ---------------------------------------------------------------------------
 
 
@@ -970,17 +970,20 @@ def _v4_plugin(name):
     return p
 
 
-def _installer_entry(plugin="Plugin Installer", label="Plugin Installer..."):
+def _pinned_entry(label="Plugin Installer...", pin="header"):
+    """A direct Plugin/<entry> registration asking for the header slot."""
     entry = _entry("Plugin/" + label, label)
-    entry["plugin"] = plugin
+    entry["plugin"] = "Plugin Installer"
+    if pin is not None:
+        entry["pin"] = pin
     return entry
 
 
-class TestPluginInstallerPinning:
-    def test_installer_sits_directly_below_the_manager(self, im, pmm, app):
-        """The installer joins the header pair with no divider between them."""
+class TestHeaderPin:
+    def test_pinned_entry_sits_directly_below_the_manager(self, im, pmm, app):
+        """The entry joins the header pair with no divider between them."""
         _bar, plugin_menu = _menubar_with_plugin_menu(im)
-        im.host.plugin_manager.menu_actions = [_installer_entry()]
+        im.host.plugin_manager.menu_actions = [_pinned_entry()]
         im.host.plugin_manager.plugins = [_legacy_plugin("Filed", "Folder")]
 
         pmm.rebuild_plugin_menus()
@@ -992,12 +995,12 @@ class TestPluginInstallerPinning:
             "Folder/",
         ]
 
-    def test_installer_stays_above_other_injected_plugins(self, im, pmm, app):
+    def test_pinned_entry_stays_above_other_injected_plugins(self, im, pmm, app):
         """Ordinary context-injected entries stay below the divider."""
         _bar, plugin_menu = _menubar_with_plugin_menu(im)
         im.host.plugin_manager.menu_actions = [
             _entry("Plugin/Injected", "Injected"),
-            _installer_entry(),
+            _pinned_entry(),
         ]
         im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
 
@@ -1011,10 +1014,10 @@ class TestPluginInstallerPinning:
         ]
 
     def test_registration_order_does_not_matter(self, im, pmm, app):
-        """Registering the installer first gives the same layout."""
+        """Registering the pinned entry first gives the same layout."""
         _bar, plugin_menu = _menubar_with_plugin_menu(im)
         im.host.plugin_manager.menu_actions = [
-            _installer_entry(),
+            _pinned_entry(),
             _entry("Plugin/Injected", "Injected"),
         ]
         im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
@@ -1028,34 +1031,20 @@ class TestPluginInstallerPinning:
             "Injected",
         ]
 
-    def test_installer_alone_leaves_no_dangling_divider(self, im, pmm, app):
+    def test_pinned_entry_alone_leaves_no_dangling_divider(self, im, pmm, app):
         """With nothing under it, the header divider is dropped."""
         _bar, plugin_menu = _menubar_with_plugin_menu(im)
-        im.host.plugin_manager.menu_actions = [_installer_entry()]
+        im.host.plugin_manager.menu_actions = [_pinned_entry()]
         im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
 
         pmm.rebuild_plugin_menus()
 
         assert _shape(plugin_menu) == ["Plugin Manager...", "Plugin Installer..."]
 
-    def test_matched_case_insensitively_by_label(self, im, pmm, app):
-        """A differently-cased PLUGIN_NAME or label still pins."""
+    def test_the_name_alone_does_not_pin(self, im, pmm, app):
+        """Placement is granted on request only — the app knows no plugin names."""
         _bar, plugin_menu = _menubar_with_plugin_menu(im)
-        im.host.plugin_manager.menu_actions = [
-            _installer_entry(plugin="Some Author Bundle", label="Plugin installer")
-        ]
-        im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
-
-        pmm.rebuild_plugin_menus()
-
-        assert _shape(plugin_menu) == ["Plugin Manager...", "Plugin installer"]
-
-    def test_unrelated_plugin_is_not_pinned(self, im, pmm, app):
-        """A plugin merely mentioning install is left below the divider."""
-        _bar, plugin_menu = _menubar_with_plugin_menu(im)
-        im.host.plugin_manager.menu_actions = [
-            _installer_entry(plugin="Installer Helper", label="Install Helper")
-        ]
+        im.host.plugin_manager.menu_actions = [_pinned_entry(pin=None)]
         im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
 
         pmm.rebuild_plugin_menus()
@@ -1063,17 +1052,48 @@ class TestPluginInstallerPinning:
         assert _shape(plugin_menu) == [
             "Plugin Manager...",
             "sep",
-            "Install Helper",
+            "Plugin Installer...",
         ]
 
-    def test_nested_installer_path_is_not_pinned(self, im, pmm, app):
-        """Only a direct Plugin/<entry> registration is pinned."""
+    def test_unknown_pin_value_is_ignored(self, im, pmm, app):
+        """An unrecognised pin leaves the entry in the ordinary group."""
         _bar, plugin_menu = _menubar_with_plugin_menu(im)
-        entry = _entry("Plugin/Tools/Plugin Installer...", "Plugin Installer...")
-        entry["plugin"] = "Plugin Installer"
+        im.host.plugin_manager.menu_actions = [_pinned_entry(pin="footer")]
+        im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == [
+            "Plugin Manager...",
+            "sep",
+            "Plugin Installer...",
+        ]
+
+    def test_pin_needs_a_direct_plugin_path(self, im, pmm, app):
+        """pin="header" on a nested path is ignored."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        entry = _entry("Plugin/Tools/Installer", "Installer")
+        entry["pin"] = "header"
         im.host.plugin_manager.menu_actions = [entry]
         im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
 
         pmm.rebuild_plugin_menus()
 
         assert _shape(plugin_menu) == ["Plugin Manager...", "sep", "Tools/"]
+
+    def test_pin_outside_the_plugin_menu_is_ignored(self, im, pmm, app):
+        """A pin request only means anything inside the Plugin menu."""
+        from PyQt6.QtWidgets import QMenuBar
+
+        bar = QMenuBar()
+        tools = bar.addMenu("Tools")
+        tools.addAction("Native A")
+        im.host.menuBar = MagicMock(return_value=bar)
+        del im.plugin_menu
+        entry = _entry("Tools/Pinned", "Pinned")
+        entry["pin"] = "header"
+        im.host.plugin_manager.menu_actions = [entry]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(tools) == ["Native A", "sep", "Pinned"]
