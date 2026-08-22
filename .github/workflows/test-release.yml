@@ -108,6 +108,20 @@ jobs:
               )
               path.write_text(text, encoding="utf-8")
 
+      - name: Copy root README to packages
+        shell: python
+        run: |
+          from pathlib import Path
+
+          src = Path("README.md").read_text(encoding="utf-8")
+          for dest_path in ("moleditpy/README.md", "moleditpy-linux/README.md"):
+              dest = Path(dest_path)
+              if not dest.exists() or dest.read_text(encoding="utf-8") != src:
+                  dest.write_text(src, encoding="utf-8")
+                  print(f"Updated {dest_path}")
+              else:
+                  print(f"No change: {dest_path}")
+
       - name: Sync Linux Package
         run: |
           python scripts/sync_linux_version.py
