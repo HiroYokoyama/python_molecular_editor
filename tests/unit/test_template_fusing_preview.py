@@ -65,6 +65,9 @@ def test_update_template_preview_snaps_points_for_fusing(qapp):
 
     snapped_atom = MagicMock(spec=AtomItem)
     snapped_atom.pos.return_value = QPointF(0.0, 0.0)
+    snapped_atom.bonds = []  # spec=AtomItem misses instance attributes
+    snapped_atom.symbol = "C"
+    snapped_atom.charge = 0
     scene.items_returned = [snapped_atom]
 
     # Place an existing atom in the scene at (10.5, 0.5), which is close to point 1 (10.0, 0.0)

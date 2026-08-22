@@ -11708,6 +11708,21 @@ _Test that mirror transformation inverts the chiral label in 3D._
 - assert new_label in labels
 - assert initial_label not in labels
 
+## tests/integration/test_fused_ring_valence.py
+
+### test_fusing_benzene_onto_naphthalene_stays_valid
+_No rim bond may give a carbon a fifth bond._
+
+- assert not overloaded
+- assert mol is not None
+- assert not Chem.DetectChemistryProblems(mol)
+
+### test_fusing_keeps_aromatic_ring_when_it_fits
+_The fallback must not fire where a full Kekulé ring is still valid._
+
+- assert len(added) == 4
+- assert new_doubles > 0
+
 ## tests/integration/test_headless_install.py
 
 ### test_headless_install_success

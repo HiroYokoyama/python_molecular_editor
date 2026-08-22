@@ -24,6 +24,7 @@ from .bond_item import BondItem
 
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
+from ..core.mol_geometry import is_problematic_valence
 from ..utils.constants import DEFAULT_BOND_LENGTH, SUM_TOLERANCE
 
 
@@ -197,6 +198,54 @@ class TemplateMixin:
 
         return not atom1_has_other_double and not atom2_has_other_double
 
+    @staticmethod
+    def _bond_load(atom: Optional[AtomItem]) -> float:
+        """Total bond order already attached to *atom*."""
+        if atom is None:
+            return 0.0
+        return sum(b.order for b in atom.bonds)
+
+    def _fit_bond_orders_to_valence(
+        self,
+        bonds: List[Tuple[int, int, int]],
+        vertex_atoms: List[Optional[AtomItem]],
+    ) -> List[Tuple[int, int, int]]:
+        """Lower template bond orders that would overfill an atom.
+
+        A Kekulé ring always carries a double next to its fused bond, so fusing
+        benzene onto a bond whose atoms each already hold a double — every
+        peripheral single bond of naphthalene — hands one of them a fifth bond.
+        Adding the ring with those bonds single instead leaves the new carbons
+        as methylene: a real molecule rather than a hypervalent one.
+
+        Loads are carried across the ring so several new bonds on the same atom
+        are counted together, and bonds that already exist are skipped — the
+        placement keeps those, and their order is in the load already.
+        """
+        loads = {i: self._bond_load(atom) for i, atom in enumerate(vertex_atoms)}
+        for i in range(len(bonds)):
+            loads.setdefault(i, 0.0)
+
+        def overloads(index: int, order: int) -> bool:
+            atom = vertex_atoms[index] if index < len(vertex_atoms) else None
+            symbol = getattr(atom, "symbol", "C")
+            charge = int(getattr(atom, "charge", 0) or 0)
+            return is_problematic_valence(symbol, loads.get(index, 0.0) + order, charge)
+
+        resolved: List[Tuple[int, int, int]] = []
+        for i, j, order in bonds:
+            atom_i = vertex_atoms[i] if i < len(vertex_atoms) else None
+            atom_j = vertex_atoms[j] if j < len(vertex_atoms) else None
+            if atom_i and atom_j and self.find_bond_between(atom_i, atom_j):
+                resolved.append((i, j, order))
+                continue
+            while order > 1 and (overloads(i, order) or overloads(j, order)):
+                order -= 1
+            loads[i] = loads.get(i, 0.0) + order
+            loads[j] = loads.get(j, 0.0) + order
+            resolved.append((i, j, order))
+        return resolved
+
     def _resolve_shared_bonds(
         self,
         bonds: List[Tuple[int, int, int]],
@@ -350,6 +399,12 @@ class TemplateMixin:
                 new_order = orig_orders[(m + best_rot) % num_points]
                 new_tb.append((i_idx, j_idx, new_order))
             template_bonds_to_use = new_tb
+
+        # Atoms exist but carry no template bonds yet, so their loads are the
+        # ones the fusion has to fit into.
+        template_bonds_to_use = self._fit_bond_orders_to_valence(
+            list(template_bonds_to_use), atom_items
+        )
 
         # --- 5) Bond Creation/Update ---
         for id1_idx, id2_idx, order in template_bonds_to_use:
@@ -549,6 +604,9 @@ class TemplateMixin:
                 ]
 
             preview_bonds, editor_drawn = self._resolve_shared_bonds(
+                preview_bonds, vertex_atoms
+            )
+            preview_bonds = self._fit_bond_orders_to_valence(
                 preview_bonds, vertex_atoms
             )
             self.template_preview.set_geometry(
