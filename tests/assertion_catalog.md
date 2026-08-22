@@ -7975,6 +7975,34 @@ _A pin request only means anything inside the Plugin menu._
 
 - assert _shape(tools) == ['Native A', 'sep', 'Pinned']
 
+### TestCleanupDoesNotStrandObjects.test_repeated_cycles_do_not_strand_submenus
+_A plugin submenu is destroyed with its entry, not merely detached._
+
+- assert [a.text() for a in tools.actions() if a.menu()] == ['Sub']
+- assert len(tools.findChildren(QMenu)) == 1
+
+### TestCleanupDoesNotStrandObjects.test_native_submenu_survives_cleanup
+_An empty native submenu is neither removed nor destroyed._
+
+- assert [a.text() for a in tools.actions() if a.menu()] == ['Native Sub']
+- assert native_sub.title() == 'Native Sub'
+
+### TestCleanupDoesNotStrandObjects.test_manager_entry_is_reused_across_resets
+_The manager entry survives a reset — it may be the running handler._
+
+- assert menu.actions()[0] is first
+- assert first.text() == 'Plugin Manager...'
+
+### TestCleanupDoesNotStrandObjects.test_reset_retires_the_outgoing_entries
+_Entries dropped by a reset are deleted, not left on the host._
+
+
+### TestCleanupDoesNotStrandObjects.test_plugin_menu_subtree_is_retired_on_reset
+_Rebuilding the Plugin menu destroys its old submenus._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Nested/', 'sep', 'Folder/']
+- assert counts == [2, 2, 2, 2]
+
 ## tests/unit/test_project_io.py
 
 ### test_save_project_no_data

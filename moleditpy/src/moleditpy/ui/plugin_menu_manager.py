@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Callable, Dict, List, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
 from PyQt6.QtGui import QAction, QIcon, QKeySequence
 from PyQt6.QtWidgets import QFileDialog, QMenu, QMessageBox
@@ -48,6 +48,8 @@ class PluginMenuManager:
 
     def __init__(self, init_manager: MainInitManager) -> None:
         self._im = init_manager
+        # Built once and re-added on every reset; see _reset_plugin_menu.
+        self._manage_action: Optional[QAction] = None
 
     def _make_safe_callback(self, callback: Callable, plugin_name: str) -> Callable:
         """Wrap a plugin callback so exceptions don't propagate into Qt's signal machinery."""
@@ -122,10 +124,29 @@ class PluginMenuManager:
         self.integrate_plugin_optimization_methods()
 
     def _reset_plugin_menu(self, plugin_menu: QMenu) -> None:
-        """Empty the Plugin menu and re-add its fixed header."""
+        """Empty the Plugin menu and re-add its fixed header.
+
+        Menu entries are parented to the host, not to the menu, so ``clear()``
+        only detaches them — without retiring the outgoing ones every rebuild
+        strands another set on the main window for the life of the process.
+
+        The manager entry is kept and re-added rather than rebuilt: a rebuild
+        can start from inside its own ``triggered`` handler (Plugin Manager ▸
+        Reload), and that handler is still on the stack, so this is the one
+        action that must not be deleted here.
+        """
+        manage_action = self._manage_action
+        self._retire_menu_tree(plugin_menu, manage_action)
         plugin_menu.clear()
-        manage_action = QAction("Plugin Manager...", self._im.host)
-        manage_action.triggered.connect(lambda: self._show_plugin_manager(plugin_menu))
+
+        if manage_action is None:
+            # Bound to the menu it was first built for, which in the app is
+            # always MainInitManager.plugin_menu.
+            manage_action = QAction("Plugin Manager...", self._im.host)
+            manage_action.triggered.connect(
+                lambda: self._show_plugin_manager(plugin_menu)
+            )
+            self._manage_action = manage_action
         plugin_menu.addAction(manage_action)
         plugin_menu.addSeparator()
 
@@ -144,23 +165,9 @@ class PluginMenuManager:
         folder entries instead used to flip the two groups on every reload.
         """
 
-        def _clean_menu(menu: QMenu) -> None:
-            for action in list(menu.actions()):
-                submenu = action.menu()
-                if submenu is not None:
-                    _clean_menu(submenu)
-                    # Only drop submenus the plugin system created. Native
-                    # submenus that happen to be empty are not ours to remove.
-                    if action.data() == self._PLUGIN_ACTION_TAG and not any(
-                        not a.isSeparator() for a in submenu.actions()
-                    ):
-                        menu.removeAction(action)
-                elif action.data() == self._PLUGIN_ACTION_TAG:
-                    self._remove_action(menu, action)
-
         try:
             for menu in self._get_plugin_target_menus():
-                _clean_menu(menu)
+                self._strip_plugin_actions(menu)
         except Exception:
             logging.warning("Plugin rebuild: menu cleanup error", exc_info=True)
 
@@ -190,6 +197,51 @@ class PluginMenuManager:
                 method()
             except Exception:
                 logging.warning("Plugin rebuild: %s error", label, exc_info=True)
+
+    def _retire_menu_tree(self, menu: QMenu, keep: Optional[QAction]) -> None:
+        """Destroy a menu subtree that ``clear()`` would only detach.
+
+        ``clear()`` deletes the actions a menu owns, but plugin entries are
+        parented to the host and submenus are child widgets of the menu, so
+        both outlive it — a submenu's menuAction going away does not take the
+        QMenu with it. Retiring the tree explicitly keeps a reload from
+        stranding another copy of every folder submenu and its entries.
+
+        *keep* is spared: it is the manager entry, which may be the handler
+        the current rebuild was started from.
+        """
+        for action in menu.actions():
+            submenu = action.menu()
+            if submenu is not None:
+                self._retire_menu_tree(submenu, keep)
+                submenu.deleteLater()
+            elif action is not keep:
+                action.deleteLater()
+
+    def _strip_plugin_actions(self, menu: QMenu) -> None:
+        """Remove every tagged action from *menu* and its submenus.
+
+        Recurses before removing, so a plugin-created submenu is emptied
+        first and only then dropped — and destroyed with it. Detaching a
+        submenu without destroying it leaves the QMenu alive as a child of
+        its former parent, and the next populate pass, no longer finding it
+        among the parent's actions, builds another: one stranded menu per
+        rebuild for the life of the process.
+
+        Native submenus that happen to be empty are not ours to remove, hence
+        the tag check.
+        """
+        for action in list(menu.actions()):
+            submenu = action.menu()
+            if submenu is not None:
+                self._strip_plugin_actions(submenu)
+                if action.data() == self._PLUGIN_ACTION_TAG and not any(
+                    not a.isSeparator() for a in submenu.actions()
+                ):
+                    menu.removeAction(action)
+                    submenu.deleteLater()
+            elif action.data() == self._PLUGIN_ACTION_TAG:
+                self._remove_action(menu, action)
 
     def _clear_plugin_menubar_entries(self) -> None:
         """Drop emptied plugin-created top-level menus and the menubar divider.
@@ -380,18 +432,9 @@ class PluginMenuManager:
         owns that, so both the update and the rebuild path clear it the same
         way.
         """
-
-        def clear_menu(menu: Any) -> None:
-            if not menu:
-                return
-            for act in list(menu.actions()):
-                if act.data() == self._PLUGIN_ACTION_TAG:
-                    self._remove_action(menu, act)
-                elif act.menu():
-                    clear_menu(act.menu())
-
         for menu in self._get_plugin_target_menus():
-            clear_menu(menu)
+            if menu:
+                self._strip_plugin_actions(menu)
         self._clear_plugin_menubar_entries()
 
     def update_style_menu_with_plugins(self) -> None:

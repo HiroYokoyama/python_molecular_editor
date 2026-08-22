@@ -1097,3 +1097,107 @@ class TestHeaderPin:
         pmm.rebuild_plugin_menus()
 
         assert _shape(tools) == ["Native A", "sep", "Pinned"]
+
+
+# ---------------------------------------------------------------------------
+# Cleanup must retire what it detaches, not just unhook it
+# ---------------------------------------------------------------------------
+
+
+def _drain_deferred_deletes(app):
+    """Run the event-loop turn that deleteLater() waits for."""
+    from PyQt6.QtCore import QCoreApplication, QEvent
+
+    app.processEvents()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+
+class TestCleanupDoesNotStrandObjects:
+    def test_repeated_cycles_do_not_strand_submenus(self, im, pmm, app):
+        """A plugin submenu is destroyed with its entry, not merely detached.
+
+        Tagging plugin-created submenus made the clear pass remove them
+        without recursing, leaving each one alive as a child of its former
+        parent while the next pass built a replacement — one stranded QMenu
+        per Plugin Manager cycle.
+        """
+        _bar, tools = _menubar_with_tools(im, app)
+        im.host.plugin_manager.menu_actions = [_entry("Tools/Sub/Item", "Item")]
+
+        for _ in range(4):
+            pmm.add_registered_plugin_actions()
+            pmm._clear_all_plugin_actions()
+            _drain_deferred_deletes(app)
+        pmm.add_registered_plugin_actions()
+        _drain_deferred_deletes(app)
+
+        assert [a.text() for a in tools.actions() if a.menu()] == ["Sub"]
+        assert len(tools.findChildren(QMenu)) == 1
+
+    def test_native_submenu_survives_cleanup(self, im, pmm, app):
+        """An empty native submenu is neither removed nor destroyed."""
+        _bar, tools = _menubar_with_tools(im, app)
+        native_sub = tools.addMenu("Native Sub")
+
+        pmm._clear_all_plugin_actions()
+        _drain_deferred_deletes(app)
+
+        assert [a.text() for a in tools.actions() if a.menu()] == ["Native Sub"]
+        assert native_sub.title() == "Native Sub"  # not deleted
+
+    def test_manager_entry_is_reused_across_resets(self, im, pmm, app):
+        """The manager entry survives a reset — it may be the running handler.
+
+        A rebuild can start from inside its own triggered handler (Plugin
+        Manager > Reload), so this is the one entry the reset must not delete.
+        """
+        menu = QMenu()
+
+        pmm._reset_plugin_menu(menu)
+        first = menu.actions()[0]
+        pmm._reset_plugin_menu(menu)
+
+        assert menu.actions()[0] is first
+        assert first.text() == "Plugin Manager..."
+
+    def test_reset_retires_the_outgoing_entries(self, im, pmm, app):
+        """Entries dropped by a reset are deleted, not left on the host."""
+        menu = QMenu()
+        pmm._reset_plugin_menu(menu)
+        stale = QAction("Stale", None)
+        menu.addAction(stale)
+
+        pmm._reset_plugin_menu(menu)
+        _drain_deferred_deletes(app)
+
+        with pytest.raises(RuntimeError):
+            stale.text()
+
+    def test_plugin_menu_subtree_is_retired_on_reset(self, im, pmm, app):
+        """Rebuilding the Plugin menu destroys its old submenus.
+
+        clear() deletes the actions a menu owns, but a submenu is a child
+        widget: dropping its menuAction leaves the QMenu behind, so every
+        reload used to strand another copy of each folder submenu.
+        """
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [_entry("Plugin/Nested/Item", "Item")]
+        im.host.plugin_manager.plugins = [_legacy_plugin("Filed", "Folder")]
+        im.host.plugin_manager.discover_plugins = MagicMock(
+            return_value=im.host.plugin_manager.plugins
+        )
+
+        counts = []
+        for _ in range(4):
+            pmm.update_plugin_menu(plugin_menu)
+            _drain_deferred_deletes(app)
+            counts.append(len(plugin_menu.findChildren(QMenu)))
+
+        assert _shape(plugin_menu) == [
+            "Plugin Manager...",
+            "sep",
+            "Nested/",
+            "sep",
+            "Folder/",
+        ]
+        assert counts == [2, 2, 2, 2], f"submenus stranded across reloads: {counts}"
