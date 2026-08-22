@@ -197,6 +197,40 @@ class TemplateMixin:
 
         return not atom1_has_other_double and not atom2_has_other_double
 
+    def _resolve_shared_bonds(
+        self,
+        bonds: List[Tuple[int, int, int]],
+        vertex_atoms: List[Optional[AtomItem]],
+    ) -> Tuple[List[Tuple[int, int, int]], List[Tuple[int, int]]]:
+        """Reconcile the template's bond orders with the bonds already drawn.
+
+        A vertex that snapped onto an existing atom may share a bond with
+        another such vertex, and ``add_molecule_fragment`` leaves that bond
+        alone unless the benzene overwrite policy applies.
+
+        Returns the orders placement will actually leave, plus the vertex pairs
+        the editor is already drawing. The orders keep the ghost's implicit
+        hydrogens honest; the pairs keep the ghost from painting a second copy
+        of a bond that is not changing — over an existing double bond that
+        second copy reads as a triple.
+        """
+        is_benzene_template = len(bonds) == 6 and any(o == 2 for _, _, o in bonds)
+        resolved: List[Tuple[int, int, int]] = []
+        unchanged: List[Tuple[int, int]] = []
+        for i, j, order in bonds:
+            atom_i = vertex_atoms[i] if i < len(vertex_atoms) else None
+            atom_j = vertex_atoms[j] if j < len(vertex_atoms) else None
+            exist_b = (
+                self.find_bond_between(atom_i, atom_j) if atom_i and atom_j else None
+            )
+            if exist_b is not None and not (
+                is_benzene_template and self._should_overwrite_benzene_bond(exist_b)
+            ):
+                order = getattr(exist_b, "order", order)
+                unchanged.append((i, j))
+            resolved.append((i, j, order))
+        return resolved, unchanged
+
     def add_molecule_fragment(
         self,
         points: List[Union[QPointF, Tuple[float, float]]],
@@ -514,7 +548,12 @@ class TemplateMixin:
                     for m, (i, j, _) in enumerate(bonds_info)
                 ]
 
-            self.template_preview.set_geometry(points, is_aromatic, preview_bonds)
+            preview_bonds, editor_drawn = self._resolve_shared_bonds(
+                preview_bonds, vertex_atoms
+            )
+            self.template_preview.set_geometry(
+                points, is_aromatic, preview_bonds, editor_drawn
+            )
 
             self.template_preview.show()
             if self.views():

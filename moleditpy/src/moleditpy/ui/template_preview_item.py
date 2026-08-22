@@ -54,6 +54,7 @@ class TemplatePreviewItem(QGraphicsItem):
         self.ghost_atoms: List[AtomItem] = []
         self.ghost_bonds: List[BondItem] = []
         self.existing_indices: Set[int] = set()
+        self.editor_drawn_bonds: Set[frozenset] = set()
         self.existing_h_counts: Dict[int, int] = {}
         self.replaced_label_path = QPainterPath()
         self.mark_first_atom = False
@@ -66,15 +67,20 @@ class TemplatePreviewItem(QGraphicsItem):
         points: list[QPointF],
         is_aromatic: bool = False,
         bonds_info: Optional[list[Any]] = None,
+        editor_drawn_bonds: Optional[list[Any]] = None,
     ) -> None:
         """Set polygon points for a standard ring template preview.
 
         ``bonds_info`` carries the orders the placement will use; without it the
-        ring falls back to a plain alternation.
+        ring falls back to a plain alternation. ``editor_drawn_bonds`` lists the
+        vertex pairs the editor already draws, which the ghost must leave alone.
         """
         self.prepareGeometryChange()
         self.is_chain = False
         self.mark_first_atom = False
+        self.editor_drawn_bonds = {
+            frozenset(pair) for pair in (editor_drawn_bonds or ())
+        }
 
         n = len(points)
         if bonds_info is None:
@@ -130,6 +136,7 @@ class TemplatePreviewItem(QGraphicsItem):
         """Drop the ghost molecule and everything derived from the editor scene."""
         self._clear_ghost_items()
         self.existing_indices = set()
+        self.editor_drawn_bonds = set()
         self.existing_h_counts = {}
         self.replaced_label_path = QPainterPath()
 
@@ -362,6 +369,11 @@ class TemplatePreviewItem(QGraphicsItem):
         painter.save()
         painter.setOpacity(GHOST_OPACITY)
         for bond in self.ghost_bonds:
+            pair = frozenset((bond.atom1.atom_id, bond.atom2.atom_id))
+            if pair in self.editor_drawn_bonds:
+                # Placement leaves this bond alone and the editor already draws
+                # it; a ghost copy on top of a real double bond reads as a triple
+                continue
             painter.save()
             painter.translate(bond.pos())
             bond.paint(painter, option)  # type: ignore[arg-type]

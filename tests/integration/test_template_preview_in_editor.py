@@ -1,5 +1,6 @@
 """The template ghost preview has to actually appear in the real 2D editor."""
 
+import math
 from unittest.mock import patch
 
 from PyQt6.QtCore import QPointF, QRectF
@@ -255,3 +256,133 @@ def test_ring_template_preview_appears(window):
     assert preview.isVisible()
     assert [b.order for b in preview.ghost_bonds] == [2, 1, 2, 1, 2, 1]
     assert all(b.is_in_ring for b in preview.ghost_bonds)
+
+
+# ---------------------------------------------------------------------------
+# Fusing: the ghost must show the order placement will leave on a shared bond
+# ---------------------------------------------------------------------------
+
+_HEX_SIDE = 75.0  # the app's default 2D bond length
+_HEX_START = math.radians(-120.0)  # matches the ring template's start angle
+_HEX_STEP = math.radians(60.0)
+_KEKULE = [(0, 1, 2), (1, 2, 1), (2, 3, 2), (3, 4, 1), (4, 5, 2), (5, 0, 1)]
+
+
+def _hex_points(centre=QPointF(0.0, 0.0)):
+    """The six vertices a benzene template lands on when centred at *centre*."""
+    return [
+        centre
+        + QPointF(
+            _HEX_SIDE * math.cos(_HEX_START + i * _HEX_STEP),
+            _HEX_SIDE * math.sin(_HEX_START + i * _HEX_STEP),
+        )
+        for i in range(6)
+    ]
+
+
+def _shared_ghost_orders(preview):
+    """Orders of ghost bonds whose two ends both sit on existing atoms."""
+    return [
+        bond.order
+        for bond in preview.ghost_bonds
+        if bond.atom1.atom_id in preview.existing_indices
+        and bond.atom2.atom_id in preview.existing_indices
+    ]
+
+
+def test_fusing_ghost_keeps_an_untouched_bond_order(window):
+    """Fusing onto a ring must not draw a double over a bond that stays single.
+
+    add_molecule_fragment refuses to re-order an existing bond whose atoms
+    already carry a double, so the alternation the rotation picks never reaches
+    the shared bond. The ghost used to draw it anyway, leaving a second line
+    along every single bond of the ring being fused to.
+    """
+    scene = window.init_manager.scene
+    points = _hex_points()
+    atoms = [scene.atom_items[scene.create_atom("C", p)] for p in points]
+    for i, j, order in _KEKULE:
+        scene.create_bond(atoms[i], atoms[j], bond_order=order)
+    window.ui_manager.set_mode("template_benzene")
+
+    apothem = _HEX_SIDE * math.sqrt(3) / 2.0
+    for i, j, order in _KEKULE:
+        mid = (points[i] + points[j]) / 2.0
+        length = math.hypot(mid.x(), mid.y()) or 1.0
+        scene.update_template_preview(
+            mid + QPointF(mid.x() / length * apothem, mid.y() / length * apothem)
+        )
+        preview = scene.template_preview
+
+        shared = _shared_ghost_orders(preview)
+        assert shared, f"nothing fused when hovering over bond ({i}, {j})"
+        assert shared == [order], (
+            f"ghost promises {shared} on bond ({i}, {j}), which stays {order}"
+        )
+
+
+def test_fusing_ghost_still_previews_an_allowed_overwrite(window):
+    """A lone single bond does get upgraded, and the ghost must say so."""
+    scene = window.init_manager.scene
+    points = _hex_points()
+    first = scene.atom_items[scene.create_atom("C", points[0])]
+    second = scene.atom_items[scene.create_atom("C", points[1])]
+    scene.create_bond(first, second, bond_order=1)
+    window.ui_manager.set_mode("template_benzene")
+
+    scene.update_template_preview(QPointF(0.0, 0.0))
+    preview = scene.template_preview
+    assert _shared_ghost_orders(preview) == [2]
+
+    context = scene.template_context
+    scene.add_molecule_fragment(
+        list(context["points"]),
+        list(context["bonds_info"]),
+        context.get("items") or [],
+    )
+
+    assert scene.find_bond_between(first, second).order == 2
+
+
+def test_fusing_ghost_does_not_redraw_an_unchanged_bond(window):
+    """The ghost leaves a bond it will not change to the editor.
+
+    Painting a ghost copy on top of the real bond doubles every line: over an
+    existing double bond the overlay reads as a triple.
+    """
+    scene = window.init_manager.scene
+    points = _hex_points()
+    atoms = [scene.atom_items[scene.create_atom("C", p)] for p in points]
+    for i, j, order in _KEKULE:
+        scene.create_bond(atoms[i], atoms[j], bond_order=order)
+    window.ui_manager.set_mode("template_benzene")
+
+    # Fuse onto bond (0, 1), which is a double and stays one
+    apothem = _HEX_SIDE * math.sqrt(3) / 2.0
+    mid = (points[0] + points[1]) / 2.0
+    length = math.hypot(mid.x(), mid.y()) or 1.0
+    scene.update_template_preview(
+        mid + QPointF(mid.x() / length * apothem, mid.y() / length * apothem)
+    )
+    preview = scene.template_preview
+    assert preview.isVisible()
+
+    # Ghost items are indexed by template vertex, not by editor atom id
+    shared_pairs = {
+        frozenset((b.atom1.atom_id, b.atom2.atom_id))
+        for b in preview.ghost_bonds
+        if b.atom1.atom_id in preview.existing_indices
+        and b.atom2.atom_id in preview.existing_indices
+    }
+    assert len(shared_pairs) == 1, "expected exactly one fused bond"
+    assert shared_pairs <= preview.editor_drawn_bonds
+
+    # A tight box on the shared bond must look the same with and without the ghost
+    region = QRectF(mid.x() - 12, mid.y() - 12, 24, 24)
+    with_ghost = _painted_pixels(scene, region)
+    preview.hide()
+    without_ghost = _painted_pixels(scene, region)
+
+    assert with_ghost == without_ghost, (
+        f"ghost added {with_ghost - without_ghost} px over an unchanged bond"
+    )

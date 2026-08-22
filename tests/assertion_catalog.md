@@ -11936,6 +11936,26 @@ _A built-in ring template previews as a ghost ring, Kekulé bonds included._
 - assert [b.order for b in preview.ghost_bonds] == [2, 1, 2, 1, 2, 1]
 - assert all((b.is_in_ring for b in preview.ghost_bonds))
 
+### test_fusing_ghost_keeps_an_untouched_bond_order
+_Fusing onto a ring must not draw a double over a bond that stays single._
+
+- assert shared
+- assert shared == [order]
+
+### test_fusing_ghost_still_previews_an_allowed_overwrite
+_A lone single bond does get upgraded, and the ghost must say so._
+
+- assert _shared_ghost_orders(preview) == [2]
+- assert scene.find_bond_between(first, second).order == 2
+
+### test_fusing_ghost_does_not_redraw_an_unchanged_bond
+_The ghost leaves a bond it will not change to the editor._
+
+- assert preview.isVisible()
+- assert len(shared_pairs) == 1
+- assert shared_pairs <= preview.editor_drawn_bonds
+- assert with_ghost == without_ghost
+
 ## tests/integration/test_trigger_conversion_plugin_wrap.py
 
 ### TestTriggerConversionTempMode.test_temp_mode_stored_and_consumed
