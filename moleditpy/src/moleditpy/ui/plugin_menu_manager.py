@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Callable, Dict, List, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
 from PyQt6.QtGui import QAction, QIcon, QKeySequence
 from PyQt6.QtWidgets import QFileDialog, QMenu, QMessageBox
@@ -37,6 +37,15 @@ class PluginMenuManager:
     # QAction.data() marker stamped on every plugin-owned menu entry/separator
     # so the rebuild pass can find and remove exactly those on the next reload.
     _PLUGIN_ACTION_TAG = "plugin_managed"
+
+    # Title of the menu that hosts "Plugin/<path>" registrations.
+    _PLUGIN_MENU_TITLE = "Plugin"
+
+    # Plugins that manage the plugin system itself. When installed, these sit
+    # with "Plugin Manager..." above the first divider instead of down among
+    # the plugins they install. Compared casefolded, with trailing dots
+    # stripped, against PLUGIN_NAME and the registered label.
+    _MANAGER_COMPANIONS = frozenset({"plugin installer"})
 
     def __init__(self, init_manager: MainInitManager) -> None:
         self._im = init_manager
@@ -99,12 +108,8 @@ class PluginMenuManager:
         if not self._im.host.plugin_manager:
             return
 
-        self._clear_all_plugin_actions(plugin_menu)
-
-        manage_action = QAction("Plugin Manager...", self._im.host)
-        manage_action.triggered.connect(lambda: self._show_plugin_manager(plugin_menu))
-        plugin_menu.addAction(manage_action)
-        plugin_menu.addSeparator()
+        self._clear_all_plugin_actions()
+        self._reset_plugin_menu(plugin_menu)
 
         plugins = self._im.host.plugin_manager.discover_plugins(self._im.host)
 
@@ -117,6 +122,14 @@ class PluginMenuManager:
         self.integrate_plugin_analysis_tools()
         self.integrate_plugin_optimization_methods()
 
+    def _reset_plugin_menu(self, plugin_menu: QMenu) -> None:
+        """Empty the Plugin menu and re-add its fixed header."""
+        plugin_menu.clear()
+        manage_action = QAction("Plugin Manager...", self._im.host)
+        manage_action.triggered.connect(lambda: self._show_plugin_manager(plugin_menu))
+        plugin_menu.addAction(manage_action)
+        plugin_menu.addSeparator()
+
     def rebuild_plugin_menus(self) -> None:
         """Fully rebuild all plugin-managed UI after an install/uninstall.
 
@@ -124,7 +137,12 @@ class PluginMenuManager:
         ``PluginManager.discover_plugins`` has already been called and the
         registries are fresh.  It cleans the existing tagged actions and
         re-populates every integration point: menus, toolbars, export,
-        file-openers, analysis tools, and 3D styles.
+        file-openers, analysis tools, legacy run() entries, and 3D styles.
+
+        The Plugin menu is emptied and rebuilt rather than topped up, so a
+        reload lands the context-injected entries above the folder-derived ones
+        exactly as a fresh launch does. Appending to the surviving (untagged)
+        folder entries instead used to flip the two groups on every reload.
         """
 
         def _clean_menu(menu: QMenu) -> None:
@@ -132,7 +150,11 @@ class PluginMenuManager:
                 submenu = action.menu()
                 if submenu is not None:
                     _clean_menu(submenu)
-                    if not any(not a.isSeparator() for a in submenu.actions()):
+                    # Only drop submenus the plugin system created. Native
+                    # submenus that happen to be empty are not ours to remove.
+                    if action.data() == self._PLUGIN_ACTION_TAG and not any(
+                        not a.isSeparator() for a in submenu.actions()
+                    ):
                         menu.removeAction(action)
                 elif action.data() == self._PLUGIN_ACTION_TAG:
                     self._remove_action(menu, action)
@@ -143,24 +165,21 @@ class PluginMenuManager:
         except Exception:
             logging.warning("Plugin rebuild: menu cleanup error", exc_info=True)
 
-        # Drop tagged (plugin-created) top-level menus the clean pass emptied
-        try:
-            menu_bar = self._im.host.menuBar()
-            for top_action in list(menu_bar.actions()):
-                if top_action.data() != self._PLUGIN_ACTION_TAG:
-                    continue
-                submenu = top_action.menu()
-                if submenu is None or not any(
-                    not a.isSeparator() for a in submenu.actions()
-                ):
-                    menu_bar.removeAction(top_action)
-        except Exception:
-            logging.warning("Plugin rebuild: menubar cleanup error", exc_info=True)
+        self._clear_plugin_menubar_entries()
 
-        self._im.plugin_menubar_separator_added = False
+        plugin_menu = getattr(self._im, "plugin_menu", None)
+        if plugin_menu is not None:
+            self._reset_plugin_menu(plugin_menu)
+
+        def _rebuild_legacy_actions() -> None:
+            if plugin_menu is not None:
+                self._add_legacy_plugin_actions(
+                    plugin_menu, self._im.host.plugin_manager.plugins
+                )
 
         for method, label in [
             (self.add_registered_plugin_actions, "menu actions"),
+            (_rebuild_legacy_actions, "legacy plugin actions"),
             (self.add_plugin_toolbar_actions, "toolbar actions"),
             (self.integrate_plugin_export_actions, "export actions"),
             (self.integrate_plugin_file_openers, "file openers"),
@@ -172,6 +191,90 @@ class PluginMenuManager:
                 method()
             except Exception:
                 logging.warning("Plugin rebuild: %s error", label, exc_info=True)
+
+    def _clear_plugin_menubar_entries(self) -> None:
+        """Drop emptied plugin-created top-level menus and the menubar divider.
+
+        Both clear paths need this. ``_get_plugin_target_menus`` walks *into*
+        the menus on the bar but never the bar itself, so without this pass an
+        uninstalled plugin's own top-level menu survives as an empty stub and
+        the divider in front of it is never reclaimed. Resetting the flag lets
+        the following populate pass re-add that divider.
+        """
+        try:
+            menu_bar = self._im.host.menuBar()
+            for top_action in list(menu_bar.actions()):
+                if top_action.data() != self._PLUGIN_ACTION_TAG:
+                    continue
+                submenu = top_action.menu()
+                if submenu is None or not any(
+                    not a.isSeparator() for a in submenu.actions()
+                ):
+                    menu_bar.removeAction(top_action)
+        except Exception:
+            logging.warning("Plugin menubar cleanup error", exc_info=True)
+
+        self._im.plugin_menubar_separator_added = False
+
+    def _ensure_plugin_separator(self, menu: QMenu) -> None:
+        """Add a tagged divider before the first plugin entry appended to *menu*.
+
+        The divider must land where the plugin content actually starts. For a
+        nested path like ``Tools/Sub/Item`` that is the *parent* menu, just
+        before ``Sub`` is created -- checking the freshly made (and therefore
+        empty) leaf instead placed no divider at all, and the next sibling
+        entry then saw an untagged submenu as the last action and inserted the
+        divider after the plugin submenu, splitting the plugin group instead of
+        separating it from the native entries.
+        """
+        actions = menu.actions()
+        if (
+            actions
+            and not actions[-1].isSeparator()
+            and actions[-1].data() != self._PLUGIN_ACTION_TAG
+        ):
+            sep = menu.addSeparator()
+            if sep is not None:
+                sep.setData(self._PLUGIN_ACTION_TAG)
+
+    @classmethod
+    def _is_manager_companion(
+        cls,
+        top_level_title: str,
+        parts: List[str],
+        plugin_name: Optional[str],
+        label: str,
+    ) -> bool:
+        """Return True for a plugin that belongs beside the Plugin Manager.
+
+        The Plugin Installer extends the Plugin Manager rather than acting on a
+        molecule, so it reads as part of the menu's header pair instead of as
+        one more installed plugin. Matched by name (its own PLUGIN_NAME, or the
+        label it registered) so the app needs no hard dependency on it.
+        """
+        if top_level_title != cls._PLUGIN_MENU_TITLE or len(parts) != 2:
+            return False
+        candidates = (plugin_name or "", label)
+        return any(
+            c.strip().rstrip(".").casefold() in cls._MANAGER_COMPANIONS
+            for c in candidates
+        )
+
+    @staticmethod
+    def _trim_trailing_separator(menu: QMenu) -> None:
+        """Drop a divider left dangling at the end of *menu*."""
+        actions = menu.actions()
+        if actions and actions[-1].isSeparator():
+            menu.removeAction(actions[-1])
+
+    @staticmethod
+    def _add_beside_plugin_manager(menu: QMenu, action: QAction) -> None:
+        """Add *action* to the menu's header group, above the first divider."""
+        anchor = next((a for a in menu.actions() if a.isSeparator()), None)
+        if anchor is None:
+            menu.addAction(action)
+        else:
+            menu.insertAction(anchor, action)
 
     def add_registered_plugin_actions(self) -> None:
         """Add menu actions explicitly registered by V3/V4 plugins."""
@@ -211,25 +314,33 @@ class PluginMenuManager:
                     ),
                     None,
                 )
-                current_menu = sub if sub else current_menu.addMenu(part)
+                if sub is not None:
+                    # Descending into an existing submenu appends nothing to
+                    # the parent, so no divider is due here.
+                    current_menu = sub
+                    continue
+                self._ensure_plugin_separator(current_menu)
+                current_menu = current_menu.addMenu(part)
+                current_menu.menuAction().setData(self._PLUGIN_ACTION_TAG)
 
-            actions = current_menu.actions()
-            if (
-                actions
-                and not actions[-1].isSeparator()
-                and actions[-1].data() != self._PLUGIN_ACTION_TAG
-            ):
-                sep = current_menu.addSeparator()
-                sep.setData(self._PLUGIN_ACTION_TAG)
+            label = text or parts[-1]
+            pinned = self._is_manager_companion(
+                top_level_title, parts, action_def.get("plugin"), label
+            )
+            if not pinned:
+                self._ensure_plugin_separator(current_menu)
 
-            action = QAction(text or parts[-1], self._im.host)
+            action = QAction(label, self._im.host)
             action.triggered.connect(
                 self._make_safe_callback(callback, action_def.get("plugin", "Plugin"))
             )
             if action_def.get("shortcut"):
                 action.setShortcut(QKeySequence(action_def["shortcut"]))
             action.setData(self._PLUGIN_ACTION_TAG)
-            current_menu.addAction(action)
+            if pinned:
+                self._add_beside_plugin_manager(current_menu, action)
+            else:
+                current_menu.addAction(action)
 
     def add_plugin_toolbar_actions(self) -> None:
         """Populate the plugin toolbar from registered toolbar actions."""
@@ -271,8 +382,13 @@ class PluginMenuManager:
         dlg.exec()
         self.update_plugin_menu(plugin_menu)
 
-    def _clear_all_plugin_actions(self, plugin_menu: QMenu) -> None:
-        """Remove all tagged plugin actions from every menu and the export button."""
+    def _clear_all_plugin_actions(self) -> None:
+        """Remove all tagged plugin actions from every menu and the export button.
+
+        The Plugin menu itself is not emptied here — ``_reset_plugin_menu``
+        owns that, so both the update and the rebuild path clear it the same
+        way.
+        """
 
         def clear_menu(menu: Any) -> None:
             if not menu:
@@ -283,9 +399,9 @@ class PluginMenuManager:
                 elif act.menu():
                     clear_menu(act.menu())
 
-        plugin_menu.clear()
         for menu in self._get_plugin_target_menus():
             clear_menu(menu)
+        self._clear_plugin_menubar_entries()
 
     def update_style_menu_with_plugins(self) -> None:
         """Append custom 3D styles registered by plugins to the style menu."""
@@ -329,15 +445,36 @@ class PluginMenuManager:
         root = []
         for p in plugins:
             if hasattr(p["module"], "run"):
-                cat = p.get("category", p.get("rel_folder", "")).strip()
+                cat = str(p.get("category") or "").strip()
                 if cat:
                     categorized.setdefault(cat, []).append(p)
                 else:
                     root.append(p)
 
+        # This is the last step of Plugin-menu construction on both the update
+        # and the rebuild path, so it also drops the header divider when there
+        # turns out to be nothing under it -- an install of only the Plugin
+        # Installer would otherwise end on a dangling divider.
+        if not categorized and not root:
+            self._trim_trailing_separator(plugin_menu)
+            return
+
+        # Divide the folder-derived entries below from the context-injected
+        # ones ("Plugin/XXX" paths) that add_registered_plugin_actions already
+        # placed above: two different organizing schemes should not read as one
+        # list. Deferred until we know there is content, so an app with only
+        # context-injected plugins gets no dangling trailing divider.
+        existing = plugin_menu.actions()
+        if existing and not existing[-1].isSeparator():
+            plugin_menu.addSeparator()
+
         for cat in sorted(categorized.keys()):
             current_parent: Any = plugin_menu
-            for part in cat.split(os.sep):
+            # A folder category arrives with os.sep; a root plugin's own
+            # PLUGIN_CATEGORY is hand-written and usually uses "/".
+            for part in cat.replace("/", os.sep).split(os.sep):
+                if not part:
+                    continue
                 sub = next(
                     (
                         a.menu()

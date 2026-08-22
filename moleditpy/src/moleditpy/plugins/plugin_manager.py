@@ -358,7 +358,13 @@ class PluginManager:
                 plugin_desc = getattr(
                     module, "PLUGIN_DESCRIPTION", getattr(module, "__doc__", "")
                 )
-                plugin_category = getattr(module, "PLUGIN_CATEGORY", category)
+                # The folder the user filed the plugin under wins: that
+                # placement is a deliberate, user-controlled ordering. A
+                # plugin's own PLUGIN_CATEGORY only applies when the file sits
+                # at the plugins root, where there is no folder to honour.
+                plugin_category = category or str(
+                    getattr(module, "PLUGIN_CATEGORY", "") or ""
+                )
 
                 # Additional cleanup for docstring (strip whitespace)
                 if plugin_desc is None:

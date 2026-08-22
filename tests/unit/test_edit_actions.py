@@ -414,6 +414,17 @@ class TestEditActionsExtended:
         assert result is True
         manager.host.statusBar().showMessage.assert_called_with("Cleared all data.")
 
+    def test_clear_all_restores_launch_zoom(self, manager):
+        """clear_all resets the 2D view to the default zoom, not the identity transform.
+
+        resetTransform() left the view at 100% while a freshly launched app
+        starts at 75%, so Clear All used to come back zoomed in.
+        """
+        manager.clear_all(skip_check=True)
+
+        manager.host.view_3d_manager.reset_zoom.assert_called_once()
+        manager.host.init_manager.view_2d.resetTransform.assert_not_called()
+
     def test_cut_selection(self, manager):
         """cut_selection copies then deletes the selected items."""
         manager.copy_selection = MagicMock()

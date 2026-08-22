@@ -589,13 +589,16 @@ class TestIntegratePluginFileOpeners:
 
 
 class TestClearAllPluginActions:
-    def test_clears_plugin_menu(self, im, pmm):
-        """_clear_all_plugin_actions clears the plugin menu."""
+    def test_reset_plugin_menu_clears_and_re_adds_the_header(self, im, pmm):
+        """_reset_plugin_menu empties the Plugin menu and restores its header."""
         plugin_menu = MagicMock(spec=QMenu)
         plugin_menu.actions.return_value = []
-        im.host.menuBar.return_value.actions.return_value = []
-        pmm._clear_all_plugin_actions(plugin_menu)
+
+        pmm._reset_plugin_menu(plugin_menu)
+
         plugin_menu.clear.assert_called_once()
+        plugin_menu.addAction.assert_called_once()
+        plugin_menu.addSeparator.assert_called_once()
 
     def test_removes_tagged_actions_from_all_menus(self, im, pmm):
         """_clear_all_plugin_actions removes all plugin_managed tagged actions from all menus."""
@@ -615,10 +618,8 @@ class TestClearAllPluginActions:
         top_action.menu.return_value = top_menu
 
         im.host.menuBar.return_value.actions.return_value = [top_action]
-        plugin_menu = MagicMock(spec=QMenu)
-        plugin_menu.actions.return_value = []
 
-        pmm._clear_all_plugin_actions(plugin_menu)
+        pmm._clear_all_plugin_actions()
 
         sub_menu.removeAction.assert_called_with(tagged)
 
@@ -692,3 +693,387 @@ class TestAddLegacyPluginActions:
         im.host.plugin_manager.run_plugin.assert_called_once_with(
             plugin["module"], im.host
         )
+
+
+# ---------------------------------------------------------------------------
+# add_registered_plugin_actions — divider placement in tree-structured menus
+# ---------------------------------------------------------------------------
+
+TAG = PluginMenuManager._PLUGIN_ACTION_TAG
+
+
+def _menubar_with_tools(im, app):
+    """Give *im* a real menu bar holding a native 'Tools' menu with two entries."""
+    from PyQt6.QtWidgets import QMenuBar
+
+    bar = QMenuBar()
+    tools = bar.addMenu("Tools")
+    tools.addAction("Native A")
+    tools.addAction("Native B")
+    im.host.menuBar = MagicMock(return_value=bar)
+    return bar, tools
+
+
+def _entry(path, text):
+    return {
+        "plugin": "P",
+        "path": path,
+        "callback": lambda: None,
+        "text": text,
+        "icon": None,
+        "shortcut": None,
+    }
+
+
+class TestPluginSeparatorPlacement:
+    def test_divider_precedes_a_nested_plugin_submenu(self, im, pmm, app):
+        """A nested path puts the divider before the submenu, not after it.
+
+        The divider used to be checked against the freshly created (empty) leaf
+        submenu, so no divider was added at all and the plugin submenu sat
+        flush against the native entries.
+        """
+        _bar, tools = _menubar_with_tools(im, app)
+        im.host.plugin_manager.menu_actions = [_entry("Tools/Sub/Item", "Item")]
+
+        pmm.add_registered_plugin_actions()
+
+        kinds = [
+            "sep" if a.isSeparator() else ("menu" if a.menu() else a.text())
+            for a in tools.actions()
+        ]
+        assert kinds == ["Native A", "Native B", "sep", "menu"]
+
+    def test_no_extra_divider_between_plugin_siblings(self, im, pmm, app):
+        """An entry following a plugin submenu does not get its own divider.
+
+        The submenu action is tagged, so the dedupe check recognises it as
+        plugin-owned instead of mistaking it for a native entry.
+        """
+        _bar, tools = _menubar_with_tools(im, app)
+        im.host.plugin_manager.menu_actions = [
+            _entry("Tools/Sub/Item", "Item"),
+            _entry("Tools/Direct", "Direct"),
+        ]
+
+        pmm.add_registered_plugin_actions()
+
+        kinds = [
+            "sep" if a.isSeparator() else ("menu" if a.menu() else a.text())
+            for a in tools.actions()
+        ]
+        assert kinds == ["Native A", "Native B", "sep", "menu", "Direct"]
+
+    def test_plugin_created_submenu_is_tagged(self, im, pmm, app):
+        """Submenus built for a plugin path carry the plugin tag for cleanup."""
+        _bar, tools = _menubar_with_tools(im, app)
+        im.host.plugin_manager.menu_actions = [_entry("Tools/Sub/Item", "Item")]
+
+        pmm.add_registered_plugin_actions()
+
+        sub_action = next(a for a in tools.actions() if a.menu())
+        assert sub_action.data() == TAG
+
+    def test_shared_submenu_gets_one_divider_and_no_duplicate(self, im, pmm, app):
+        """Two plugins under the same submenu reuse it without extra dividers."""
+        _bar, tools = _menubar_with_tools(im, app)
+        im.host.plugin_manager.menu_actions = [
+            _entry("Tools/Sub/One", "One"),
+            _entry("Tools/Sub/Two", "Two"),
+        ]
+
+        pmm.add_registered_plugin_actions()
+
+        submenus = [a.menu() for a in tools.actions() if a.menu()]
+        assert len(submenus) == 1
+        assert [a.text() for a in submenus[0].actions()] == ["One", "Two"]
+        assert sum(1 for a in tools.actions() if a.isSeparator()) == 1
+
+
+# ---------------------------------------------------------------------------
+# Menu-bar cleanup — shared by both clear paths
+# ---------------------------------------------------------------------------
+
+
+def _menubar_with_plugin_top_level(im):
+    """Build a bar holding a native menu plus a tagged divider and plugin menu."""
+    from PyQt6.QtWidgets import QMenuBar
+
+    bar = QMenuBar()
+    bar.addMenu("Tools").addAction("Native A")
+
+    sep = bar.addSeparator()
+    sep.setData(TAG)
+
+    plugin_top = bar.addMenu("MyPlugin")
+    plugin_top.menuAction().setData(TAG)
+    entry = plugin_top.addAction("Gone")
+    entry.setData(TAG)
+
+    im.host.menuBar = MagicMock(return_value=bar)
+    im.plugin_menubar_separator_added = True
+    return bar
+
+
+class TestClearPluginMenubarEntries:
+    def test_clear_all_drops_stale_plugin_top_level_menu(self, im, pmm, app):
+        """_clear_all_plugin_actions reclaims the menu bar, not just the menus.
+
+        _get_plugin_target_menus walks into the bar's menus but never the bar
+        itself, so an uninstalled plugin's own top-level menu used to survive
+        as an empty stub with an orphaned divider in front of it.
+        """
+        bar = _menubar_with_plugin_top_level(im)
+
+        pmm._clear_all_plugin_actions()
+
+        titles = [a.text() for a in bar.actions() if a.menu()]
+        assert titles == ["Tools"]
+        assert not any(a.isSeparator() for a in bar.actions())
+
+    def test_clear_all_resets_separator_flag(self, im, pmm, app):
+        """The flag is reset so the next populate pass re-adds the divider."""
+        _menubar_with_plugin_top_level(im)
+
+        pmm._clear_all_plugin_actions()
+
+        assert im.plugin_menubar_separator_added is False
+
+    def test_native_top_level_menu_is_never_removed(self, im, pmm, app):
+        """An untagged top-level menu survives even when it is empty."""
+        from PyQt6.QtWidgets import QMenuBar
+
+        bar = QMenuBar()
+        bar.addMenu("Empty Native")
+        im.host.menuBar = MagicMock(return_value=bar)
+
+        pmm._clear_all_plugin_actions()
+
+        assert [a.text() for a in bar.actions() if a.menu()] == ["Empty Native"]
+
+    def test_rebuild_uses_the_same_menubar_cleanup(self, im, pmm, app):
+        """rebuild_plugin_menus drops the stale top-level menu too."""
+        bar = _menubar_with_plugin_top_level(im)
+
+        pmm.rebuild_plugin_menus()
+
+        assert [a.text() for a in bar.actions() if a.menu()] == ["Tools"]
+        assert im.plugin_menubar_separator_added is False
+
+
+# ---------------------------------------------------------------------------
+# Plugin menu composition — context-injected vs folder-derived groups
+# ---------------------------------------------------------------------------
+
+
+def _menubar_with_plugin_menu(im):
+    """Give *im* a real menu bar whose only menu is the Plugin menu."""
+    from PyQt6.QtWidgets import QMenuBar
+
+    bar = QMenuBar()
+    plugin_menu = bar.addMenu("&Plugin")
+    im.host.menuBar = MagicMock(return_value=bar)
+    im.plugin_menu = plugin_menu
+    return bar, plugin_menu
+
+
+def _shape(menu):
+    """Describe a menu as a list of 'sep' / submenu titles / action labels."""
+    return [
+        "sep" if a.isSeparator() else (a.menu().title() + "/" if a.menu() else a.text())
+        for a in menu.actions()
+    ]
+
+
+class TestPluginMenuComposition:
+    def test_update_puts_context_entries_above_folder_ones(self, im, pmm, app):
+        """A fresh build lists context-injected entries, a divider, then folders."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [_entry("Plugin/Injected", "Injected")]
+        im.host.plugin_manager.discover_plugins.return_value = [
+            _legacy_plugin("Filed", "Folder")
+        ]
+
+        pmm.update_plugin_menu(plugin_menu)
+
+        assert _shape(plugin_menu) == [
+            "Plugin Manager...",
+            "sep",
+            "Injected",
+            "sep",
+            "Folder/",
+        ]
+
+    def test_rebuild_preserves_that_order(self, im, pmm, app):
+        """A reload must not flip the two groups.
+
+        rebuild_plugin_menus used to strip only the tagged (context-injected)
+        entries and append the fresh ones after the surviving folder entries,
+        so every reload swapped the order.
+        """
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [_entry("Plugin/Injected", "Injected")]
+        im.host.plugin_manager.plugins = [_legacy_plugin("Filed", "Folder")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == [
+            "Plugin Manager...",
+            "sep",
+            "Injected",
+            "sep",
+            "Folder/",
+        ]
+
+    def test_repeated_rebuilds_are_stable(self, im, pmm, app):
+        """Reloading twice yields the same menu, with no accumulation."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [_entry("Plugin/Injected", "Injected")]
+        im.host.plugin_manager.plugins = [_legacy_plugin("Filed", "Folder")]
+
+        pmm.rebuild_plugin_menus()
+        first = _shape(plugin_menu)
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == first
+
+    def test_no_trailing_divider_without_folder_plugins(self, im, pmm, app):
+        """With only context-injected entries the menu ends on a real entry."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [_entry("Plugin/Injected", "Injected")]
+        im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == ["Plugin Manager...", "sep", "Injected"]
+
+    def test_folder_plugins_alone_get_no_leading_divider(self, im, pmm, app):
+        """Without context-injected entries the header divider is enough."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = []
+        im.host.plugin_manager.plugins = [_legacy_plugin("Filed", "Folder")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == ["Plugin Manager...", "sep", "Folder/"]
+
+
+# ---------------------------------------------------------------------------
+# Plugin Installer — pinned beside the Plugin Manager
+# ---------------------------------------------------------------------------
+
+
+def _v4_plugin(name):
+    """A discovered initialize()-style plugin: present, but with no run()."""
+    p = _legacy_plugin(name)
+    del p["module"].run
+    return p
+
+
+def _installer_entry(plugin="Plugin Installer", label="Plugin Installer..."):
+    entry = _entry("Plugin/" + label, label)
+    entry["plugin"] = plugin
+    return entry
+
+
+class TestPluginInstallerPinning:
+    def test_installer_sits_directly_below_the_manager(self, im, pmm, app):
+        """The installer joins the header pair with no divider between them."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [_installer_entry()]
+        im.host.plugin_manager.plugins = [_legacy_plugin("Filed", "Folder")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == [
+            "Plugin Manager...",
+            "Plugin Installer...",
+            "sep",
+            "Folder/",
+        ]
+
+    def test_installer_stays_above_other_injected_plugins(self, im, pmm, app):
+        """Ordinary context-injected entries stay below the divider."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [
+            _entry("Plugin/Injected", "Injected"),
+            _installer_entry(),
+        ]
+        im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == [
+            "Plugin Manager...",
+            "Plugin Installer...",
+            "sep",
+            "Injected",
+        ]
+
+    def test_registration_order_does_not_matter(self, im, pmm, app):
+        """Registering the installer first gives the same layout."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [
+            _installer_entry(),
+            _entry("Plugin/Injected", "Injected"),
+        ]
+        im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == [
+            "Plugin Manager...",
+            "Plugin Installer...",
+            "sep",
+            "Injected",
+        ]
+
+    def test_installer_alone_leaves_no_dangling_divider(self, im, pmm, app):
+        """With nothing under it, the header divider is dropped."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [_installer_entry()]
+        im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == ["Plugin Manager...", "Plugin Installer..."]
+
+    def test_matched_case_insensitively_by_label(self, im, pmm, app):
+        """A differently-cased PLUGIN_NAME or label still pins."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [
+            _installer_entry(plugin="Some Author Bundle", label="Plugin installer")
+        ]
+        im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == ["Plugin Manager...", "Plugin installer"]
+
+    def test_unrelated_plugin_is_not_pinned(self, im, pmm, app):
+        """A plugin merely mentioning install is left below the divider."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        im.host.plugin_manager.menu_actions = [
+            _installer_entry(plugin="Installer Helper", label="Install Helper")
+        ]
+        im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == [
+            "Plugin Manager...",
+            "sep",
+            "Install Helper",
+        ]
+
+    def test_nested_installer_path_is_not_pinned(self, im, pmm, app):
+        """Only a direct Plugin/<entry> registration is pinned."""
+        _bar, plugin_menu = _menubar_with_plugin_menu(im)
+        entry = _entry("Plugin/Tools/Plugin Installer...", "Plugin Installer...")
+        entry["plugin"] = "Plugin Installer"
+        im.host.plugin_manager.menu_actions = [entry]
+        im.host.plugin_manager.plugins = [_v4_plugin("Modern")]
+
+        pmm.rebuild_plugin_menus()
+
+        assert _shape(plugin_menu) == ["Plugin Manager...", "sep", "Tools/"]
