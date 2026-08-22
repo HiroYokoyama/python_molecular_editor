@@ -75,7 +75,7 @@ Define these at the top of your script. They are used for the UI and the interna
 | `PLUGIN_VERSION` | Version string (e.g., `"1.0.2"` or `"2026.03.31"`). |
 | `PLUGIN_AUTHOR` | Name of the developer. |
 | `PLUGIN_DESCRIPTION` | A short summary shown in the Plugin Manager. |
-| `PLUGIN_CATEGORY` | Optional category (e.g., `"Analysis"`, `"Visualization"`). |
+| `PLUGIN_CATEGORY` | Optional category (e.g., `"Analysis"`, `"Visualization"`), used as the sub-menu for `run()`-based plugins. **Applies only when the plugin file sits directly in the plugins root.** If the user filed it inside a category folder, that folder wins — where they put it is their decision, not the plugin's. |
 | `PLUGIN_SUPPORTED_MOLEDITPY_VERSION` | Optional: Version specifier matching the current MoleditPy app version (e.g., `"3.*"`, `">=3.5"`). |
 | `PLUGIN_TAGS` | Optional: List of tags/categories (e.g., `["Utility", "Analysis"]`). |
 | `PLUGIN_DEPENDENCIES` | Optional: List of package dependency strings the plugin **requires**. Supports standard PEP-508 version constraints (e.g. `["numpy>=1.20", "rdkit>=2022.03"]`) or packages without version constraints. |
@@ -170,7 +170,7 @@ Display a temporary message in the application's bottom status bar.
 - **message** (`str`): The text to display.
 - **timeout** (`int`): Duration in milliseconds before the message disappears. Default is 3000ms.
 
-#### `add_menu_action(path, callback, text=None, icon=None, shortcut=None)`
+#### `add_menu_action(path, callback, text=None, icon=None, shortcut=None, pin=None)`
 Register a custom item in the main menu. MoleditPy will automatically create any sub-menus defined in the path.
 - **path** (`str`): The full menu path.
     - Use `File/My Action` to add to existing menus.
@@ -179,17 +179,41 @@ Register a custom item in the main menu. MoleditPy will automatically create any
 - **text** (`str`, optional): The label of the menu item. Defaults to the last part of `path`.
 - **icon** (`str`, optional): Path to an image file or a standard icon name.
 - **shortcut** (`str`, optional): Keyboard shortcut (e.g., `"Ctrl+Shift+X"`).
+- **pin** (`str`, optional): Placement request — see [Pinning to the Plugin menu header](#pinning-to-the-plugin-menu-header) below. Added in 4.8.1.
 
 > [!NOTE]
 > `register_menu_action` is a deprecated alias kept for V2 compatibility. New plugins should always use `add_menu_action`.
 
-#### `add_plugin_menu(path, callback, text=None, icon=None, shortcut=None)`
+##### Pinning to the Plugin menu header
+
+The Plugin menu opens with `Plugin Manager...`, then a divider, then the installed plugins. A plugin that **manages the plugin system itself** — rather than acting on a molecule — belongs with the manager above that divider, not among the plugins it installs. Pass `pin="header"` to ask for that slot:
+
+```python
+context.add_menu_action("Plugin/My Installer...", open_installer, pin="header")
+```
+
+The request is granted only for a direct `Plugin/<entry>` path — a nested path such as `Plugin/Tools/My Installer...` is placed normally. Any other `pin` value is ignored, so unrecognised values stay forward compatible.
+
+This is for plugin-management tools. An ordinary plugin that pins itself just crowds the header and pushes the real plugin list further down.
+
+> [!WARNING]
+> `pin` did not exist before 4.8.1, and passing it to an older MoleditPy raises `TypeError` out of `initialize()` — which drops your plugin entirely, not just its placement. If you support older releases, guard the call:
+>
+> ```python
+> try:
+>     context.add_menu_action("Plugin/My Installer...", open_installer, pin="header")
+> except TypeError:
+>     context.add_menu_action("Plugin/My Installer...", open_installer)
+> ```
+
+#### `add_plugin_menu(path, callback, text=None, icon=None, shortcut=None, pin=None)`
 Register an action nested inside the **Plugins** menu. This is the preferred way to keep the main menu bar clean if your plugin has many tools.
 - **path** (`str`): The sub-path within the Plugin menu (e.g., `"Utils/My Tool"`).
 - **callback** (`Callable`): Function to execute.
 - **text** (`str`, optional): Label for the action.
 - **icon** (`str`, optional): Icon path.
 - **shortcut** (`str`, optional): Keyboard shortcut.
+- **pin** (`str`, optional): Placement request; see `add_menu_action`. Added in 4.8.1.
 
 #### `add_toolbar_action(callback, text, icon=None, tooltip=None)`
 Add a button to the dedicated **Plugin Toolbar**. The toolbar is hidden until at least one plugin registers an action — it appears automatically the first time this method is called.

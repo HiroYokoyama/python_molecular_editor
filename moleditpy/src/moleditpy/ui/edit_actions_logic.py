@@ -883,9 +883,11 @@ class EditActionsManager:
         self.host.set_current_file_path(None)
         self.host.state_manager.update_window_title()
 
-        # Reset 2D zoom
+        # Reset 2D zoom to the launch default (75%), not the bare identity
+        # transform -- resetTransform() left the view at 100%, so Clear All
+        # came back zoomed in compared to a freshly started session.
         if self.host.init_manager.view_2d:
-            self.host.init_manager.view_2d.resetTransform()
+            self.host.view_3d_manager.reset_zoom()
 
         # Update scene and view
         self.host.init_manager.scene.update()

@@ -3394,6 +3394,12 @@ _clear_all(skip_check=True) returns True and shows the cleared status message._
 - assert result is True
 - manager.host.statusBar().showMessage.assert_called_with('Cleared all data.')
 
+### TestEditActionsExtended.test_clear_all_restores_launch_zoom
+_clear_all resets the 2D view to the default zoom, not the identity transform._
+
+- manager.host.view_3d_manager.reset_zoom.assert_called_once()
+- manager.host.init_manager.view_2d.resetTransform.assert_not_called()
+
 ### TestEditActionsExtended.test_cut_selection
 _cut_selection copies then deletes the selected items._
 
@@ -7055,27 +7061,27 @@ _Test Plugin3DController.set_bond_color._
 ### TestPluginInterface.test_add_plugin_menu
 _add_plugin_menu prepends 'Plugin/' to the path._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/Utility/My Tool...', callback, None, None, None)
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/Utility/My Tool...', callback, None, None, None, None)
 
 ### TestPluginInterface.test_add_plugin_menu_strips_leading_slash
 _add_plugin_menu strips a leading slash from the path._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/Analysis/Viewer', callback, None, None, None)
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/Analysis/Viewer', callback, None, None, None, None)
 
 ### TestPluginInterface.test_add_plugin_menu_with_text_and_shortcut
 _add_plugin_menu passes optional text/icon/shortcut through._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/File/Export...', callback, 'Export', None, 'Ctrl+E')
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'Plugin/File/Export...', callback, 'Export', None, 'Ctrl+E', None)
 
 ### TestPluginInterface.test_register_menu_action_new_style
 _register_menu_action (new style: path, callback) delegates correctly._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Open', callback, None, None, None)
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Open', callback, None, None, None, None)
 
 ### TestPluginInterface.test_register_menu_action_old_style
 _register_menu_action (old style: path, text, callback) delegates correctly._
 
-- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Import', callback, 'Import PubChem...', None, None)
+- mock_manager.register_menu_action.assert_called_once_with('TestPlugin', 'File/Import', callback, 'Import PubChem...', None, None, None)
 
 ### TestPluginInterface.test_get_setting_returns_default_when_missing
 _get_setting returns the default if the key is absent._
@@ -7428,6 +7434,16 @@ _Plugins raising in initialize or autorun are recorded with an error status._
 __load_single_plugin converts a PLUGIN_VERSION tuple to a dotted string._
 
 - assert pm.plugins[0]['version'] == '3.1.4'
+
+### TestPluginManagerExtended.test_folder_overrides_declared_category
+_The containing folder wins over a plugin's own PLUGIN_CATEGORY._
+
+- assert plugin['category'] == 'Tools'
+
+### TestPluginManagerExtended.test_declared_category_applies_at_plugin_root
+_PLUGIN_CATEGORY still applies when the file sits at the plugins root._
+
+- assert plugin['category'] == 'AuthorChoice'
 
 ### TestPluginManagerExtended.test_run_plugin_exceptions
 _run_plugin shows a critical dialog when the plugin run() raises._
@@ -7801,10 +7817,12 @@ _integrate_plugin_file_openers adds a separator and action for each file opener.
 - im.import_menu.addSeparator.assert_called_once()
 - im.import_menu.addAction.assert_called_once()
 
-### TestClearAllPluginActions.test_clears_plugin_menu
-__clear_all_plugin_actions clears the plugin menu._
+### TestClearAllPluginActions.test_reset_plugin_menu_clears_and_re_adds_the_header
+__reset_plugin_menu empties the Plugin menu and restores its header._
 
 - plugin_menu.clear.assert_called_once()
+- plugin_menu.addAction.assert_called_once()
+- plugin_menu.addSeparator.assert_called_once()
 
 ### TestClearAllPluginActions.test_removes_tagged_actions_from_all_menus
 __clear_all_plugin_actions removes all plugin_managed tagged actions from all menus._
@@ -7847,6 +7865,143 @@ _No description provided._
 _No description provided._
 
 - im.host.plugin_manager.run_plugin.assert_called_once_with(plugin['module'], im.host)
+
+### TestPluginSeparatorPlacement.test_divider_precedes_a_nested_plugin_submenu
+_A nested path puts the divider before the submenu, not after it._
+
+- assert kinds == ['Native A', 'Native B', 'sep', 'menu']
+
+### TestPluginSeparatorPlacement.test_no_extra_divider_between_plugin_siblings
+_An entry following a plugin submenu does not get its own divider._
+
+- assert kinds == ['Native A', 'Native B', 'sep', 'menu', 'Direct']
+
+### TestPluginSeparatorPlacement.test_plugin_created_submenu_is_tagged
+_Submenus built for a plugin path carry the plugin tag for cleanup._
+
+- assert sub_action.data() == TAG
+
+### TestPluginSeparatorPlacement.test_shared_submenu_gets_one_divider_and_no_duplicate
+_Two plugins under the same submenu reuse it without extra dividers._
+
+- assert len(submenus) == 1
+- assert [a.text() for a in submenus[0].actions()] == ['One', 'Two']
+- assert sum((1 for a in tools.actions() if a.isSeparator())) == 1
+
+### TestClearPluginMenubarEntries.test_clear_all_drops_stale_plugin_top_level_menu
+__clear_all_plugin_actions reclaims the menu bar, not just the menus._
+
+- assert titles == ['Tools']
+- assert not any((a.isSeparator() for a in bar.actions()))
+
+### TestClearPluginMenubarEntries.test_clear_all_resets_separator_flag
+_The flag is reset so the next populate pass re-adds the divider._
+
+- assert im.plugin_menubar_separator_added is False
+
+### TestClearPluginMenubarEntries.test_native_top_level_menu_is_never_removed
+_An untagged top-level menu survives even when it is empty._
+
+- assert [a.text() for a in bar.actions() if a.menu()] == ['Empty Native']
+
+### TestClearPluginMenubarEntries.test_rebuild_uses_the_same_menubar_cleanup
+_rebuild_plugin_menus drops the stale top-level menu too._
+
+- assert [a.text() for a in bar.actions() if a.menu()] == ['Tools']
+- assert im.plugin_menubar_separator_added is False
+
+### TestPluginMenuComposition.test_update_puts_context_entries_above_folder_ones
+_A fresh build lists context-injected entries, a divider, then folders._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Injected', 'sep', 'Folder/']
+
+### TestPluginMenuComposition.test_rebuild_preserves_that_order
+_A reload must not flip the two groups._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Injected', 'sep', 'Folder/']
+
+### TestPluginMenuComposition.test_repeated_rebuilds_are_stable
+_Reloading twice yields the same menu, with no accumulation._
+
+- assert _shape(plugin_menu) == first
+
+### TestPluginMenuComposition.test_no_trailing_divider_without_folder_plugins
+_With only context-injected entries the menu ends on a real entry._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Injected']
+
+### TestPluginMenuComposition.test_folder_plugins_alone_get_no_leading_divider
+_Without context-injected entries the header divider is enough._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Folder/']
+
+### TestHeaderPin.test_pinned_entry_sits_directly_below_the_manager
+_The entry joins the header pair with no divider between them._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'Plugin Installer...', 'sep', 'Folder/']
+
+### TestHeaderPin.test_pinned_entry_stays_above_other_injected_plugins
+_Ordinary context-injected entries stay below the divider._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'Plugin Installer...', 'sep', 'Injected']
+
+### TestHeaderPin.test_registration_order_does_not_matter
+_Registering the pinned entry first gives the same layout._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'Plugin Installer...', 'sep', 'Injected']
+
+### TestHeaderPin.test_pinned_entry_alone_leaves_no_dangling_divider
+_With nothing under it, the header divider is dropped._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'Plugin Installer...']
+
+### TestHeaderPin.test_the_name_alone_does_not_pin
+_Placement is granted on request only — the app knows no plugin names._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Plugin Installer...']
+
+### TestHeaderPin.test_unknown_pin_value_is_ignored
+_An unrecognised pin leaves the entry in the ordinary group._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Plugin Installer...']
+
+### TestHeaderPin.test_pin_needs_a_direct_plugin_path
+_pin="header" on a nested path is ignored._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Tools/']
+
+### TestHeaderPin.test_pin_outside_the_plugin_menu_is_ignored
+_A pin request only means anything inside the Plugin menu._
+
+- assert _shape(tools) == ['Native A', 'sep', 'Pinned']
+
+### TestCleanupDoesNotStrandObjects.test_repeated_cycles_do_not_strand_submenus
+_A plugin submenu is destroyed with its entry, not merely detached._
+
+- assert [a.text() for a in tools.actions() if a.menu()] == ['Sub']
+- assert len(tools.findChildren(QMenu)) == 1
+
+### TestCleanupDoesNotStrandObjects.test_native_submenu_survives_cleanup
+_An empty native submenu is neither removed nor destroyed._
+
+- assert [a.text() for a in tools.actions() if a.menu()] == ['Native Sub']
+- assert native_sub.title() == 'Native Sub'
+
+### TestCleanupDoesNotStrandObjects.test_manager_entry_is_reused_across_resets
+_The manager entry survives a reset — it may be the running handler._
+
+- assert menu.actions()[0] is first
+- assert first.text() == 'Plugin Manager...'
+
+### TestCleanupDoesNotStrandObjects.test_reset_retires_the_outgoing_entries
+_Entries dropped by a reset are deleted, not left on the host._
+
+
+### TestCleanupDoesNotStrandObjects.test_plugin_menu_subtree_is_retired_on_reset
+_Rebuilding the Plugin menu destroys its old submenus._
+
+- assert _shape(plugin_menu) == ['Plugin Manager...', 'sep', 'Nested/', 'sep', 'Folder/']
+- assert counts == [2, 2, 2, 2]
 
 ## tests/unit/test_project_io.py
 
@@ -11553,6 +11708,27 @@ _Test that mirror transformation inverts the chiral label in 3D._
 - assert new_label in labels
 - assert initial_label not in labels
 
+## tests/integration/test_fused_ring_valence.py
+
+### test_fusing_benzene_onto_naphthalene_stays_valid
+_No rim bond may give a carbon a fifth bond._
+
+- assert not overloaded
+- assert mol is not None
+- assert not Chem.DetectChemistryProblems(mol)
+
+### test_fusing_keeps_aromatic_ring_when_it_fits
+_The fallback must not fire where a full Kekulé ring is still valid._
+
+- assert len(added) == 4
+- assert new_doubles > 0
+
+### test_fusing_onto_a_crowded_bond_stays_valid
+_An upgrade must fit too, not merely avoid a neighbouring double._
+
+- assert not overloaded
+- assert scene.find_bond_between(first, second).order == 1
+
 ## tests/integration/test_headless_install.py
 
 ### test_headless_install_success
@@ -11781,6 +11957,33 @@ _A built-in ring template previews as a ghost ring, Kekulé bonds included._
 - assert [b.order for b in preview.ghost_bonds] == [2, 1, 2, 1, 2, 1]
 - assert all((b.is_in_ring for b in preview.ghost_bonds))
 
+### test_fusing_ghost_keeps_an_untouched_bond_order
+_Fusing onto a ring must not draw a double over a bond that stays single._
+
+- assert shared
+- assert shared == [order]
+
+### test_fusing_ghost_still_previews_an_allowed_overwrite
+_A lone single bond does get upgraded, and the ghost must say so._
+
+- assert _shared_ghost_orders(preview) == [2]
+- assert scene.find_bond_between(first, second).order == 2
+
+### test_fusing_ghost_does_not_redraw_an_unchanged_bond
+_The ghost leaves a bond it will not change to the editor._
+
+- assert preview.isVisible()
+- assert len(shared_pairs) == 1
+- assert shared_pairs <= preview.editor_drawn_bonds
+- assert with_ghost == without_ghost
+
+### test_user_template_ghost_ignores_a_previous_fusion
+_Switching template kinds must not carry the fused pairs across._
+
+- assert scene.template_preview.editor_drawn_bonds
+- assert scene.template_preview.editor_drawn_bonds == set()
+- assert not hidden
+
 ## tests/integration/test_trigger_conversion_plugin_wrap.py
 
 ### TestTriggerConversionTempMode.test_temp_mode_stored_and_consumed
@@ -11983,7 +12186,6 @@ _2D->3D Conversion: Test for the conversion button._
 - assert len(window.state_manager.data.atoms) == 2
 - assert len(window.state_manager.data.bonds) == 1
 - assert convert_button.isEnabled()
-- assert window.view_3d_manager.current_mol is not None
 - assert window.init_manager.optimize_3d_button.isEnabled()
 - assert window.init_manager.export_button.isEnabled()
 - assert window.init_manager.analysis_action.isEnabled()
@@ -11993,7 +12195,6 @@ _3D Optimization: Test for the 3D optimization button._
 
 - assert window.view_3d_manager.current_mol is not None
 - assert window.init_manager.optimize_3d_button.isEnabled()
-- assert 'Optimization completed' in msg or 'optimization successful' in msg or 'Process completed' in msg
 
 ### test_change_3d_style
 _3D Style Change: Test for the style menu._

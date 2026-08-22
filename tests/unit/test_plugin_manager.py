@@ -646,6 +646,43 @@ except BaseException:
         pm._load_single_plugin("a.py", "VPlugin", "")
         assert pm.plugins[0]["version"] == "3.1.4"
 
+    def test_folder_overrides_declared_category(self, tmpdir):
+        """The containing folder wins over a plugin's own PLUGIN_CATEGORY.
+
+        Folder placement is the user's ordering decision, so a plugin filed
+        under a category folder stays there even if its source declares
+        something else.
+        """
+        pm = PluginManager()
+        root = tmpdir.mkdir("cat_plugins")
+        pm.plugin_dir = str(root)
+        root.mkdir("Tools").join("filed.py").write(
+            "PLUGIN_NAME = 'Filed'\n"
+            "PLUGIN_CATEGORY = 'AuthorChoice'\n"
+            "def run(mw):\n    pass\n"
+        )
+
+        pm.discover_plugins()
+
+        plugin = next(p for p in pm.plugins if p["name"] == "Filed")
+        assert plugin["category"] == "Tools"
+
+    def test_declared_category_applies_at_plugin_root(self, tmpdir):
+        """PLUGIN_CATEGORY still applies when the file sits at the plugins root."""
+        pm = PluginManager()
+        root = tmpdir.mkdir("root_plugins")
+        pm.plugin_dir = str(root)
+        root.join("loose.py").write(
+            "PLUGIN_NAME = 'Loose'\n"
+            "PLUGIN_CATEGORY = 'AuthorChoice'\n"
+            "def run(mw):\n    pass\n"
+        )
+
+        pm.discover_plugins()
+
+        plugin = next(p for p in pm.plugins if p["name"] == "Loose")
+        assert plugin["category"] == "AuthorChoice"
+
     @patch("moleditpy.plugins.plugin_manager.QMessageBox.critical")
     def test_run_plugin_exceptions(self, mock_crit):
         """run_plugin shows a critical dialog when the plugin run() raises."""

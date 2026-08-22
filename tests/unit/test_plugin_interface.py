@@ -30,7 +30,13 @@ class TestPluginInterface:
                     "File/Test", cb, "Test Action", "icon.png", "Ctrl+T"
                 ),
                 lambda mgr, cb: mgr.register_menu_action.assert_called_once_with(
-                    "TestPlugin", "File/Test", cb, "Test Action", "icon.png", "Ctrl+T"
+                    "TestPlugin",
+                    "File/Test",
+                    cb,
+                    "Test Action",
+                    "icon.png",
+                    "Ctrl+T",
+                    None,
                 ),
             ),
             (
@@ -248,7 +254,7 @@ class TestPluginInterface:
         callback = MagicMock()
         ctx.add_plugin_menu("Utility/My Tool...", callback)
         mock_manager.register_menu_action.assert_called_once_with(
-            "TestPlugin", "Plugin/Utility/My Tool...", callback, None, None, None
+            "TestPlugin", "Plugin/Utility/My Tool...", callback, None, None, None, None
         )
 
     def test_add_plugin_menu_strips_leading_slash(self, mock_manager):
@@ -257,7 +263,7 @@ class TestPluginInterface:
         callback = MagicMock()
         ctx.add_plugin_menu("/Analysis/Viewer", callback)
         mock_manager.register_menu_action.assert_called_once_with(
-            "TestPlugin", "Plugin/Analysis/Viewer", callback, None, None, None
+            "TestPlugin", "Plugin/Analysis/Viewer", callback, None, None, None, None
         )
 
     def test_add_plugin_menu_with_text_and_shortcut(self, mock_manager):
@@ -268,7 +274,13 @@ class TestPluginInterface:
             "File/Export...", callback, text="Export", shortcut="Ctrl+E"
         )
         mock_manager.register_menu_action.assert_called_once_with(
-            "TestPlugin", "Plugin/File/Export...", callback, "Export", None, "Ctrl+E"
+            "TestPlugin",
+            "Plugin/File/Export...",
+            callback,
+            "Export",
+            None,
+            "Ctrl+E",
+            None,
         )
 
     def test_register_menu_action_new_style(self, mock_manager):
@@ -277,7 +289,7 @@ class TestPluginInterface:
         callback = MagicMock()
         ctx.register_menu_action("File/Open", callback)
         mock_manager.register_menu_action.assert_called_once_with(
-            "TestPlugin", "File/Open", callback, None, None, None
+            "TestPlugin", "File/Open", callback, None, None, None, None
         )
 
     def test_register_menu_action_old_style(self, mock_manager):
@@ -286,7 +298,7 @@ class TestPluginInterface:
         callback = MagicMock()
         ctx.register_menu_action("File/Import", "Import PubChem...", callback)
         mock_manager.register_menu_action.assert_called_once_with(
-            "TestPlugin", "File/Import", callback, "Import PubChem...", None, None
+            "TestPlugin", "File/Import", callback, "Import PubChem...", None, None, None
         )
 
     # ------------------------------------------------------------------

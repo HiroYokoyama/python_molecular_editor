@@ -24,6 +24,7 @@ from .bond_item import BondItem
 
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
+from ..core.mol_geometry import is_problematic_valence
 from ..utils.constants import DEFAULT_BOND_LENGTH, SUM_TOLERANCE
 
 
@@ -197,6 +198,106 @@ class TemplateMixin:
 
         return not atom1_has_other_double and not atom2_has_other_double
 
+    @staticmethod
+    def _bond_load(atom: Optional[AtomItem]) -> float:
+        """Total bond order already attached to *atom*."""
+        if atom is None:
+            return 0.0
+        return sum(b.order for b in atom.bonds)
+
+    def _plan_template_bonds(
+        self,
+        bonds: List[Tuple[int, int, int]],
+        vertex_atoms: List[Optional[AtomItem]],
+    ) -> Tuple[List[Tuple[int, int, int]], List[Tuple[int, int]]]:
+        """Decide the order every template bond ends up with once placed.
+
+        Two things constrain the template's own alternation:
+
+        * a bond that already exists is kept, unless the benzene policy allows
+          re-ordering it *and* both atoms have room for the extra order;
+        * a Kekule ring always carries a double next to its fused bond, so
+          fusing onto a single bond whose atoms each already hold a double --
+          every peripheral single bond of naphthalene -- would hand one of them
+          a fifth bond. Those bonds are lowered instead, which leaves the new
+          carbons as methylene: a real molecule rather than a hypervalent one.
+
+        Existing bonds are settled first so that an allowed upgrade is in the
+        atom's load before the new bonds hanging off it are fitted, and loads
+        are carried across the ring so several new bonds on one atom count
+        together.
+
+        Returns the planned orders and the vertex pairs the editor already
+        draws unchanged -- the ghost skips those, since painting a second copy
+        over a real double bond reads as a triple.
+        """
+        is_benzene_template = len(bonds) == 6 and any(o == 2 for _, _, o in bonds)
+        loads = {i: self._bond_load(atom) for i, atom in enumerate(vertex_atoms)}
+
+        def vertex(index: int) -> Optional[AtomItem]:
+            return vertex_atoms[index] if index < len(vertex_atoms) else None
+
+        def fits(index: int, extra: float) -> bool:
+            atom = vertex(index)
+            if atom is None or extra <= 0:
+                return True
+            return not is_problematic_valence(
+                getattr(atom, "symbol", "C"),
+                loads.get(index, 0.0) + extra,
+                int(getattr(atom, "charge", 0) or 0),
+            )
+
+        planned: Dict[int, int] = {}
+        unchanged: List[Tuple[int, int]] = []
+
+        # Every new bond needs at least a single, so an upgrade has to leave
+        # room for the ones still to come as well as for itself
+        incoming: Dict[int, int] = {}
+        for i, j, _order in bonds:
+            atom_i, atom_j = vertex(i), vertex(j)
+            if atom_i and atom_j and self.find_bond_between(atom_i, atom_j):
+                continue
+            incoming[i] = incoming.get(i, 0) + 1
+            incoming[j] = incoming.get(j, 0) + 1
+
+        # Pass 1 -- bonds that are already drawn
+        for position, (i, j, order) in enumerate(bonds):
+            atom_i, atom_j = vertex(i), vertex(j)
+            exist_b = (
+                self.find_bond_between(atom_i, atom_j) if atom_i and atom_j else None
+            )
+            if exist_b is None:
+                continue
+            current = int(getattr(exist_b, "order", order))
+            extra = order - current
+            if (
+                is_benzene_template
+                and self._should_overwrite_benzene_bond(exist_b)
+                and fits(i, extra + incoming.get(i, 0))
+                and fits(j, extra + incoming.get(j, 0))
+            ):
+                loads[i] = loads.get(i, 0.0) + extra
+                loads[j] = loads.get(j, 0.0) + extra
+                planned[position] = order
+            else:
+                planned[position] = current
+                unchanged.append((i, j))
+
+        # Pass 2 -- bonds the placement will create
+        for position, (i, j, order) in enumerate(bonds):
+            if position in planned:
+                continue
+            while order > 1 and not (fits(i, order) and fits(j, order)):
+                order -= 1
+            loads[i] = loads.get(i, 0.0) + order
+            loads[j] = loads.get(j, 0.0) + order
+            planned[position] = order
+
+        return (
+            [(i, j, planned[position]) for position, (i, j, _) in enumerate(bonds)],
+            unchanged,
+        )
+
     def add_molecule_fragment(
         self,
         points: List[Union[QPointF, Tuple[float, float]]],
@@ -213,8 +314,6 @@ class TemplateMixin:
 
         num_points = len(points)
         atom_items: List[Optional[AtomItem]] = [None] * num_points
-
-        is_benzene_template = num_points == 6 and any(o == 2 for _, _, o in bonds_info)
 
         def coords(p: Any) -> Any:
             if hasattr(p, "x") and hasattr(p, "y"):
@@ -317,6 +416,12 @@ class TemplateMixin:
                 new_tb.append((i_idx, j_idx, new_order))
             template_bonds_to_use = new_tb
 
+        # Atoms exist but carry no template bonds yet, so their loads are the
+        # ones the fusion has to fit into.
+        template_bonds_to_use, _unchanged = self._plan_template_bonds(
+            list(template_bonds_to_use), atom_items
+        )
+
         # --- 5) Bond Creation/Update ---
         for id1_idx, id2_idx, order in template_bonds_to_use:
             if id1_idx < len(atom_items) and id2_idx < len(atom_items):
@@ -331,22 +436,15 @@ class TemplateMixin:
                 exist_b = self.find_bond_between(a_item, b_item)
 
                 if exist_b:
-                    # Keep existing bonds by default unless it's a safe benzene overwrite
-                    should_overwrite = (
-                        is_benzene_template
-                        and self._should_overwrite_benzene_bond(exist_b)
-                    )
-
-                    if should_overwrite:
-                        # Update bond order if conditions met
-                        exist_b.order = order
-                        exist_b.stereo = 0
-                        self.data.bonds[(id1, id2)]["order"] = order
-                        self.data.bonds[(id1, id2)]["stereo"] = 0
-                        exist_b.update()
-                    else:
-                        # Keep existing bond if conditions not met
+                    # _plan_template_bonds already applied the keep-or-overwrite
+                    # policy, so an unchanged order means keep this bond
+                    if order == exist_b.order:
                         continue
+                    exist_b.order = order
+                    exist_b.stereo = 0
+                    self.data.bonds[(id1, id2)]["order"] = order
+                    self.data.bonds[(id1, id2)]["stereo"] = 0
+                    exist_b.update()
                 else:
                     # Create new bond
                     self.create_bond(a_item, b_item, bond_order=order, bond_stereo=0)
@@ -514,7 +612,12 @@ class TemplateMixin:
                     for m, (i, j, _) in enumerate(bonds_info)
                 ]
 
-            self.template_preview.set_geometry(points, is_aromatic, preview_bonds)
+            preview_bonds, editor_drawn = self._plan_template_bonds(
+                preview_bonds, vertex_atoms
+            )
+            self.template_preview.set_geometry(
+                points, is_aromatic, preview_bonds, editor_drawn
+            )
 
             self.template_preview.show()
             if self.views():

@@ -352,10 +352,14 @@ def test_2d_to_3d_conversion(window, qtbot, monkeypatch):
     assert convert_button.isEnabled()
 
     qtbot.mouseClick(convert_button, Qt.MouseButton.LeftButton)
-    qtbot.wait(100)  # Wait for asynchronous processing
 
-    # 3. Verify current_mol is set (mocked in conftest.py)
-    assert window.view_3d_manager.current_mol is not None
+    # 3. Verify current_mol is set (mocked in conftest.py). Conversion runs on
+    # a worker thread, so poll for the result rather than betting on a fixed
+    # delay: under coverage the old wait(100) could expire first, leaving the
+    # status bar still on "Creating 3D structure...".
+    qtbot.waitUntil(
+        lambda: window.view_3d_manager.current_mol is not None, timeout=5000
+    )
 
     # Verify 3D features are enabled
     assert window.init_manager.optimize_3d_button.isEnabled()
@@ -385,16 +389,19 @@ def test_optimize_3d(window, qtbot, monkeypatch):
         traceback.print_exc()
 
     # 3. Click 3D optimization button
-    qtbot.mouseClick(window.init_manager.optimize_3d_button, Qt.MouseButton.LeftButton)
-    qtbot.wait(50)
+    def optimization_reported() -> bool:
+        msg = window.statusBar().currentMessage()
+        return (
+            "Optimization completed" in msg
+            or "optimization successful" in msg
+            or "Process completed" in msg
+        )
 
-    # 4. Verify success via status bar message
-    msg = window.statusBar().currentMessage()
-    assert (
-        "Optimization completed" in msg
-        or "optimization successful" in msg
-        or "Process completed" in msg
-    )
+    qtbot.mouseClick(window.init_manager.optimize_3d_button, Qt.MouseButton.LeftButton)
+
+    # 4. Verify success via status bar message. The optimization is handed to a
+    # worker thread, so wait on the message itself instead of a fixed delay.
+    qtbot.waitUntil(optimization_reported, timeout=5000)
 
 
 @pytest.mark.gui
