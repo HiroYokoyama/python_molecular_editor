@@ -31,6 +31,7 @@ class PluginContext:
         text: Optional[str] = None,
         icon: Optional[str] = None,
         shortcut: Optional[str] = None,
+        pin: Optional[str] = None,
     ) -> None:
         """
         Register a menu action.
@@ -41,9 +42,16 @@ class PluginContext:
             text: Label for the action (defaults to last part of path if None).
             icon: Path to icon or icon name (optional).
             shortcut: Keyboard shortcut (optional).
+            pin: Placement request. ``"header"`` puts a direct "Plugin/<entry>"
+                registration next to "Plugin Manager..." above the first
+                divider, for plugins that manage the plugin system itself.
+                Anything else is ignored, so unknown values stay forward
+                compatible. Added in 4.8.1 — passing it to an older MoleditPy
+                raises TypeError, so guard the call if your plugin supports
+                both (see PLUGIN_DEVELOPMENT_MANUAL_V4.md).
         """
         self._manager.register_menu_action(
-            self._plugin_name, path, callback, text, icon, shortcut
+            self._plugin_name, path, callback, text, icon, shortcut, pin
         )
 
     def register_menu_action(
@@ -72,6 +80,7 @@ class PluginContext:
         text: Optional[str] = None,
         icon: Optional[str] = None,
         shortcut: Optional[str] = None,
+        pin: Optional[str] = None,
     ) -> None:
         """
         Register an action nested inside the Plugin menu.
@@ -87,9 +96,10 @@ class PluginContext:
             text: Label override (defaults to last part of path).
             icon: Path to icon (optional).
             shortcut: Keyboard shortcut (optional).
+            pin: Placement request; see add_menu_action.
         """
         full_path = f"Plugin/{path.lstrip('/')}"
-        self.add_menu_action(full_path, callback, text, icon, shortcut)
+        self.add_menu_action(full_path, callback, text, icon, shortcut, pin)
 
     def add_toolbar_action(
         self,
