@@ -12138,7 +12138,6 @@ _2D->3D Conversion: Test for the conversion button._
 - assert len(window.state_manager.data.atoms) == 2
 - assert len(window.state_manager.data.bonds) == 1
 - assert convert_button.isEnabled()
-- assert window.view_3d_manager.current_mol is not None
 - assert window.init_manager.optimize_3d_button.isEnabled()
 - assert window.init_manager.export_button.isEnabled()
 - assert window.init_manager.analysis_action.isEnabled()
@@ -12148,7 +12147,6 @@ _3D Optimization: Test for the 3D optimization button._
 
 - assert window.view_3d_manager.current_mol is not None
 - assert window.init_manager.optimize_3d_button.isEnabled()
-- assert 'Optimization completed' in msg or 'optimization successful' in msg or 'Process completed' in msg
 
 ### test_change_3d_style
 _3D Style Change: Test for the style menu._
