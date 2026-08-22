@@ -386,3 +386,33 @@ def test_fusing_ghost_does_not_redraw_an_unchanged_bond(window):
     assert with_ghost == without_ghost, (
         f"ghost added {with_ghost - without_ghost} px over an unchanged bond"
     )
+
+
+def test_user_template_ghost_ignores_a_previous_fusion(window):
+    """Switching template kinds must not carry the fused pairs across.
+
+    The vertex pairs a fused ring records are indices, so they collide with a
+    user template's own vertices and would silently hide one of its bonds.
+    """
+    scene = window.init_manager.scene
+    points = _hex_points()
+    first = scene.atom_items[scene.create_atom("C", points[0])]
+    second = scene.atom_items[scene.create_atom("C", points[1])]
+    scene.create_bond(first, second, bond_order=2)
+
+    window.ui_manager.set_mode("template_benzene")
+    scene.update_template_preview(QPointF(0.0, 0.0))
+    assert scene.template_preview.editor_drawn_bonds, "expected a fused pair"
+
+    scene.user_template_data = PYRIDINE
+    window.ui_manager.set_mode("template_user_pyridine")
+    scene.update_template_preview(QPointF(600.0, 600.0))
+
+    assert scene.template_preview.editor_drawn_bonds == set()
+    hidden = [
+        (b.atom1.atom_id, b.atom2.atom_id)
+        for b in scene.template_preview.ghost_bonds
+        if frozenset((b.atom1.atom_id, b.atom2.atom_id))
+        in scene.template_preview.editor_drawn_bonds
+    ]
+    assert not hidden, f"user-template ghost bonds suppressed: {hidden}"

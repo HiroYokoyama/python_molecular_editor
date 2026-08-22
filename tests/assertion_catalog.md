@@ -11723,6 +11723,12 @@ _The fallback must not fire where a full Kekulé ring is still valid._
 - assert len(added) == 4
 - assert new_doubles > 0
 
+### test_fusing_onto_a_crowded_bond_stays_valid
+_An upgrade must fit too, not merely avoid a neighbouring double._
+
+- assert not overloaded
+- assert scene.find_bond_between(first, second).order == 1
+
 ## tests/integration/test_headless_install.py
 
 ### test_headless_install_success
@@ -11970,6 +11976,13 @@ _The ghost leaves a bond it will not change to the editor._
 - assert len(shared_pairs) == 1
 - assert shared_pairs <= preview.editor_drawn_bonds
 - assert with_ghost == without_ghost
+
+### test_user_template_ghost_ignores_a_previous_fusion
+_Switching template kinds must not carry the fused pairs across._
+
+- assert scene.template_preview.editor_drawn_bonds
+- assert scene.template_preview.editor_drawn_bonds == set()
+- assert not hidden
 
 ## tests/integration/test_trigger_conversion_plugin_wrap.py
 

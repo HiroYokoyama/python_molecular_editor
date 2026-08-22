@@ -134,3 +134,48 @@ def test_fusing_keeps_aromatic_ring_when_it_fits(window):
         1 for item in scene.atom_items.values() for b in item.bonds if b.order == 2
     )
     assert new_doubles > 0, "the fused ring lost all of its double bonds"
+
+
+def test_fusing_onto_a_crowded_bond_stays_valid(window):
+    """An upgrade must fit too, not merely avoid a neighbouring double.
+
+    x-a-b-y with a-w and b-z leaves a and b holding three single bonds each.
+    Re-ordering a-b to a double takes both to four, so the ring hanging off
+    them has nowhere to go; the upgrade has to be declined.
+    """
+    scene = window.init_manager.scene
+    ring = _hex_points(RING_A)
+    first = scene.atom_items[scene.create_atom("C", ring[0])]
+    second = scene.atom_items[scene.create_atom("C", ring[1])]
+    subs = [
+        scene.atom_items[scene.create_atom("C", ring[0] + QPointF(-BOND_LEN, 0))],
+        scene.atom_items[
+            scene.create_atom("C", ring[0] + QPointF(-BOND_LEN, BOND_LEN))
+        ],
+        scene.atom_items[scene.create_atom("C", ring[1] + QPointF(BOND_LEN, 0))],
+        scene.atom_items[scene.create_atom("C", ring[1] + QPointF(BOND_LEN, BOND_LEN))],
+    ]
+    scene.create_bond(first, second, bond_order=1)
+    scene.create_bond(first, subs[0], bond_order=1)
+    scene.create_bond(first, subs[1], bond_order=1)
+    scene.create_bond(second, subs[2], bond_order=1)
+    scene.create_bond(second, subs[3], bond_order=1)
+
+    window.ui_manager.set_mode("template_benzene")
+    scene.update_template_preview(QPointF(*RING_A))
+    context = scene.template_context
+    scene.add_molecule_fragment(
+        list(context["points"]),
+        list(context["bonds_info"]),
+        context.get("items") or [],
+    )
+
+    overloaded = {
+        atom_id: sum(b.order for b in item.bonds)
+        for atom_id, item in scene.atom_items.items()
+        if sum(b.order for b in item.bonds) > 4
+    }
+    assert not overloaded, "fusing onto a fully substituted bond overfilled an atom"
+    assert scene.find_bond_between(first, second).order == 1, (
+        "the shared bond had no room to become a double"
+    )

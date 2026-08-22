@@ -78,9 +78,6 @@ class TemplatePreviewItem(QGraphicsItem):
         self.prepareGeometryChange()
         self.is_chain = False
         self.mark_first_atom = False
-        self.editor_drawn_bonds = {
-            frozenset(pair) for pair in (editor_drawn_bonds or ())
-        }
 
         n = len(points)
         if bonds_info is None:
@@ -89,6 +86,10 @@ class TemplatePreviewItem(QGraphicsItem):
                 for i in range(n)
             ]
         self._rebuild_ghost(points, bonds_info, [{"symbol": "C"} for _ in points])
+        # After the rebuild, which clears whatever the last preview recorded
+        self.editor_drawn_bonds = {
+            frozenset(pair) for pair in (editor_drawn_bonds or ())
+        }
         self.update()
 
     def set_chain_geometry(
@@ -147,6 +148,9 @@ class TemplatePreviewItem(QGraphicsItem):
         atoms_data: list[dict[str, Any]],
     ) -> None:
         """Rebuild the preview as real atom/bond items so it renders like the result."""
+        # Every preview kind lands here, so this is the one place that can keep
+        # a user template from inheriting the pairs a fused ring recorded
+        self.editor_drawn_bonds = set()
         self.ghost_scene.host = self.scene()
         if not points:
             self._clear_ghost()
