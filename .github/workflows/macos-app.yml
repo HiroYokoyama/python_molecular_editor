@@ -175,6 +175,20 @@ jobs:
         run: |
           python -m pip install -e moleditpy-linux/
 
+      # This job gates the release: it runs before the Windows job pushes the
+      # tag, so a failure here costs nothing but a red run. Unit only and
+      # fail-fast to keep the gate quick -- the Windows job runs unit plus
+      # integration straight after. Deps come from the editable install above;
+      # conftest puts moleditpy/src on sys.path, so the suite imports the
+      # freshly synced source rather than anything installed.
+      - name: Run Fast Tests
+        env:
+          MOLEDITPY_HEADLESS: "1"
+          QT_QPA_PLATFORM: "offscreen"
+        run: |
+          python -m pip install pytest pytest-qt pytest-mock pytest-timeout
+          python tests/run_all_tests.py --unit --no-cov --no-report -x
+
       - name: Build App Bundle
         run: |
           pyinstaller --clean --noconfirm \
