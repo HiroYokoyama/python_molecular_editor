@@ -18,6 +18,9 @@ We believe in keeping the core software simple and fast. Instead of packing ever
 ### Open and Transparent
 Trust is essential for science. MoleditPy is designed to be transparent, allowing you to see exactly how your data is processed. Whether you are checking a calculation or learning how the code works, the logic is always accessible.
 
+### Private by Default
+Research data is often confidential long before it is published. The core application never connects to the network: it contains no networking code, sends no telemetry, and checks nothing online. Everything you sketch, convert, and export stays on your machine. Connectivity enters only through plugins you choose to install yourself — the Plugin Installer, for instance, downloads from the plugin registry — so going online is always something you opt into. The one network-facing element in the core is the "Explore Plugins Online" button, which hands a URL to your own web browser and transmits none of your data.
+
 ### Freedom to Create
 Your research is unique, and your tools should be too. MoleditPy gives you the freedom to go beyond standard menus. Start with intuitive built-in tools, and when you are ready, extend your workflow with Python scripts to automate tasks and interact with molecules in ways that fit your specific goals.
 
