@@ -26,6 +26,8 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, rdGeometry
 from rdkit.DistanceGeometry import DoTriangleSmoothing
 
+from ..utils.constants import DEFAULT_BOND_LENGTH_ANGSTROM
+
 from .. import OBABEL_AVAILABLE
 
 # Only import pybel on demand
@@ -367,6 +369,50 @@ def _apply_explicit_stereo(
                     bond.SetStereo(stereo_type)
 
 
+# Typical X-H distances used when placing hydrogens the 2D sketch never had.
+_DIRECT_XH_LENGTHS = {6: 1.09, 7: 1.01, 8: 0.97, 15: 1.42, 16: 1.34}
+_DIRECT_XH_DEFAULT = 1.10
+# Out-of-plane tilt applied to added H and to wedge/hash bonds.
+_DIRECT_H_TILT = math.radians(20.0)
+_DIRECT_WEDGE_TILT = math.radians(35.0)
+
+
+def _rescale_2d_layout(
+    coords: list, mol: Chem.Mol, _safe_status: Callable[[str], None]
+) -> list:
+    """Scale parsed 2D coordinates so the median bond is a chemically sane length."""
+    lengths = []
+    for bond in mol.GetBonds():
+        i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+        if i < len(coords) and j < len(coords):
+            d = math.hypot(coords[i][0] - coords[j][0], coords[i][1] - coords[j][1])
+            if d > 1e-6:
+                lengths.append(d)
+    if not lengths:
+        return coords
+
+    median = float(np.median(lengths))
+    if median < 1e-6 or abs(median - DEFAULT_BOND_LENGTH_ANGSTROM) < 0.05:
+        return coords
+
+    scale = DEFAULT_BOND_LENGTH_ANGSTROM / median
+    _safe_status(f"Rescaling 2D layout (x{scale:.3f})...")
+    return [(x * scale, y * scale, z * scale) for x, y, z in coords]
+
+
+def _center_conformer(conf: Chem.Conformer) -> None:
+    """Move the conformer's centroid to the origin."""
+    n = conf.GetNumAtoms()
+    if n == 0:
+        return
+    pos = np.array(
+        [[p.x, p.y, p.z] for p in (conf.GetAtomPosition(i) for i in range(n))],
+        dtype=float,
+    )
+    for i, (x, y, z) in enumerate(pos - pos.mean(axis=0)):
+        conf.SetAtomPosition(i, rdGeometry.Point3D(float(x), float(y), float(z)))
+
+
 def _perform_direct_conversion(
     mol_block: str,
     mol: Chem.Mol,
@@ -446,6 +492,8 @@ def _perform_direct_conversion(
     if not parsed_coords:
         raise ValueError("Failed to parse coordinates for direct conversion.")
 
+    parsed_coords = _rescale_2d_layout(parsed_coords, mol, _safe_status)
+
     num_existing = len(parsed_coords)
     conf = Chem.Conformer(mol.GetNumAtoms())
     for i in range(mol.GetNumAtoms()):
@@ -480,28 +528,45 @@ def _perform_direct_conversion(
                                 vecs[0][0],
                                 math.hypot(-vecs[0][1], vecs[0][0]),
                             )
-                        angle = sum(
+                        n_placed = sum(
                             1
                             for n in mol.GetAtomWithIdx(parent_idx).GetNeighbors()
                             if n.GetIdx() < i and n.GetAtomicNum() == 1
-                        ) * (math.pi / 6.0)
+                        )
+                        angle = n_placed * (math.pi / 6.0)
                         rx, ry = (
                             (fx / fn) * math.cos(angle) - (fy / fn) * math.sin(angle),
                             (fx / fn) * math.sin(angle) + (fy / fn) * math.cos(angle),
                         )
+                        bond_len = _DIRECT_XH_LENGTHS.get(
+                            mol.GetAtomWithIdx(parent_idx).GetAtomicNum(),
+                            _DIRECT_XH_DEFAULT,
+                        )
+                        in_plane = bond_len * math.cos(_DIRECT_H_TILT)
+                        # Alternate the pucker so a CH2's two hydrogens straddle
+                        # the plane instead of stacking on the same side.
+                        dz = bond_len * math.sin(_DIRECT_H_TILT)
+                        if n_placed % 2:
+                            dz = -dz
                         conf.SetAtomPosition(
                             i,
                             rdGeometry.Point3D(
-                                float(parent_pos.x) + rx, float(parent_pos.y) + ry, 0.3
+                                float(parent_pos.x) + rx * in_plane,
+                                float(parent_pos.y) + ry * in_plane,
+                                float(parent_pos.z) + dz,
                             ),
                         )
                     else:
+                        bond_len = _DIRECT_XH_LENGTHS.get(
+                            mol.GetAtomWithIdx(parent_idx).GetAtomicNum(),
+                            _DIRECT_XH_DEFAULT,
+                        )
                         conf.SetAtomPosition(
                             i,
                             rdGeometry.Point3D(
-                                float(parent_pos.x) + 0.5,
-                                float(parent_pos.y) + 0.5,
-                                0.3,
+                                float(parent_pos.x) + bond_len,
+                                float(parent_pos.y),
+                                float(parent_pos.z),
                             ),
                         )
                 else:
@@ -511,15 +576,27 @@ def _perform_direct_conversion(
     with suppress_log(AttributeError, RuntimeError, TypeError, IndexError):
         for b, e, flag in stereo_dirs:
             if b < num_existing and e < num_existing:
-                pos = conf.GetAtomPosition(e)
+                start, pos = conf.GetAtomPosition(b), conf.GetAtomPosition(e)
+                vx, vy = float(pos.x) - float(start.x), float(pos.y) - float(start.y)
+                length = math.hypot(vx, vy)
+                if length < 1e-6:
+                    continue
+                # Rotate the bond out of plane so it keeps its length; adding a
+                # flat +/-1.5 A of z stretched every wedge bond instead.
+                sign = 1.0 if flag == 1 else -1.0
+                scale = math.cos(_DIRECT_WEDGE_TILT)
                 conf.SetAtomPosition(
                     e,
                     rdGeometry.Point3D(
-                        float(pos.x),
-                        float(pos.y),
-                        float(pos.z) + (1.5 if flag == 1 else -1.5),
+                        float(start.x) + vx * scale,
+                        float(start.y) + vy * scale,
+                        float(start.z) + sign * length * math.sin(_DIRECT_WEDGE_TILT),
                     ),
                 )
+
+    # The sketch sits wherever it was drawn on the canvas, which can be hundreds
+    # of angstroms from the origin; centre it before handing it to the 3D view.
+    _center_conformer(conf)
 
     mol.RemoveAllConformers()
     mol.AddConformer(conf, assignId=True)

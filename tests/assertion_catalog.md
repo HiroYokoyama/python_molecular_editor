@@ -11489,12 +11489,27 @@ _Integration test: 2D to 3D without optimization._
 ### test_calculation_worker_direct_mode
 _Integration test: Direct conversion mode._
 
-- assert p1.z == pytest.approx(0.0)
-- assert p2.z == pytest.approx(0.0)
-- assert p1.x == pytest.approx(10.0 * scale)
-- assert p1.y == pytest.approx(-20.0 * scale)
+- assert p1.z == pytest.approx(p2.z)
+- assert p2.x - p1.x == pytest.approx(1.5)
+- assert p2.y - p1.y == pytest.approx(0.0)
+- assert sum((p.x for p in positions)) / n == pytest.approx(0.0, abs=1e-06)
+- assert sum((p.y for p in positions)) / n == pytest.approx(0.0, abs=1e-06)
+- assert sum((p.z for p in positions)) / n == pytest.approx(0.0, abs=1e-06)
 - assert len(h_atoms) > 0
 - assert abs(hp.z) > 0.05
+
+### test_calculation_worker_direct_mode_far_from_canvas_origin
+_Regression: a sketch drawn far from the canvas origin used to come out of direct_
+
+- assert sum((p.x for p in positions)) / n == pytest.approx(0.0, abs=1e-06)
+- assert sum((p.y for p in positions)) / n == pytest.approx(0.0, abs=1e-06)
+- assert sum((p.z for p in positions)) / n == pytest.approx(0.0, abs=1e-06)
+- assert max((math.dist((p.x, p.y, p.z), (0.0, 0.0, 0.0)) for p in positions)) < 10.0
+
+### test_calculation_worker_direct_mode_rescales_stretched_sketch
+_Direct mode should normalise the drawn bond length: atoms dragged to a 300 px_
+
+- assert math.dist((p1.x, p1.y, p1.z), (p2.x, p2.y, p2.z)) == pytest.approx(1.5)
 
 ### test_calculation_worker_halt_logic
 _Integration test: Verify halt mechanism._
@@ -11521,9 +11536,9 @@ _Ensure worker_id correctly isolates halt signals._
 ### test_calculation_worker_direct_mode_stereo
 _Integration test: Direct mode with wedge/dash bonds._
 
-- assert p1.z == pytest.approx(0.0)
-- assert p2.z == pytest.approx(0.0)
-- assert p3.z == pytest.approx(1.5)
+- assert p1.z == pytest.approx(p2.z)
+- assert p3.z - p1.z == pytest.approx(1.5 * math.sin(math.radians(35.0)))
+- assert math.dist((p1.x, p1.y, p1.z), (p3.x, p3.y, p3.z)) == pytest.approx(1.5)
 
 ### test_calculation_worker_constraint_embedding_fallback
 _Test the fallback to constraint-based embedding when initial embedding fails._
@@ -11663,7 +11678,8 @@ _Integration test: multi-fragment molecule triggers collision avoidance in RDKit
 ### test_calculation_worker_direct_dash_stereo
 _Integration test: direct mode with a dash bond._
 
-- assert p3.z == pytest.approx(-1.5)
+- assert p3.z - p1.z == pytest.approx(-1.5 * math.sin(math.radians(35.0)))
+- assert math.dist((p1.x, p1.y, p1.z), (p3.x, p3.y, p3.z)) == pytest.approx(1.5)
 
 ### test_calculation_worker_direct_mmff94_rdkit_variant
 _Integration test: direct mode with do_optimize=True and MMFF94_RDKIT variant._
