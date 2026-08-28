@@ -1,5 +1,6 @@
 """Integration tests for CalculationWorker with real RDKit computation."""
 
+import math
 import pytest
 import sys
 from rdkit import Chem
@@ -216,7 +217,8 @@ def test_calculation_worker_conversion_no_optimize(qtbot, app):
 def test_calculation_worker_direct_mode(qtbot, app):
     """
     Integration test: Direct conversion mode.
-    Ensures 2D coordinates are preserved as Z=0 and added Hs get a small Z offset.
+    Ensures the sketch is centred on the origin, rescaled to ~1.5 A bonds and kept
+    flat at Z=0, while added Hs get a small Z offset.
     """
     data = MolecularData()
     c1 = data.add_atom("C", QPointF(10, 20))
@@ -239,12 +241,18 @@ def test_calculation_worker_direct_mode(qtbot, app):
     p1 = conf.GetAtomPosition(0)
     p2 = conf.GetAtomPosition(1)
 
-    # ANGSTROM_PER_PIXEL is 1.5 / 75 = 0.02
-    scale = 0.02
-    assert p1.z == pytest.approx(0.0)
-    assert p2.z == pytest.approx(0.0)
-    assert p1.x == pytest.approx(10.0 * scale)
-    assert p1.y == pytest.approx(-20.0 * scale)  # MolecularData Y is inverted
+    # Heavy atoms stay coplanar (centring shifts the shared z off exactly 0)
+    assert p1.z == pytest.approx(p2.z)
+    # The 50 px bond is rescaled to the standard 1.5 A, not left at 50*0.02 = 1.0 A
+    assert p2.x - p1.x == pytest.approx(1.5)
+    assert p2.y - p1.y == pytest.approx(0.0)
+
+    # The sketch was drawn away from the canvas origin; the result must be centred
+    positions = [conf.GetAtomPosition(i) for i in range(mol_3d.GetNumAtoms())]
+    n = len(positions)
+    assert sum(p.x for p in positions) / n == pytest.approx(0.0, abs=1e-6)
+    assert sum(p.y for p in positions) / n == pytest.approx(0.0, abs=1e-6)
+    assert sum(p.z for p in positions) / n == pytest.approx(0.0, abs=1e-6)
 
     # Check added hydrogens (should have non-zero Z)
     h_atoms = [a.GetIdx() for a in mol_3d.GetAtoms() if a.GetSymbol() == "H"]
@@ -252,6 +260,57 @@ def test_calculation_worker_direct_mode(qtbot, app):
     for h_idx in h_atoms:
         hp = conf.GetAtomPosition(h_idx)
         assert abs(hp.z) > 0.05
+
+
+def test_calculation_worker_direct_mode_far_from_canvas_origin(qtbot, app):
+    """
+    Regression: a sketch drawn far from the canvas origin used to come out of direct
+    conversion at its raw canvas position (centroid near 50, 50), so the 3D view
+    showed the molecule hundreds of angstroms off-centre.
+    """
+    data = MolecularData()
+    ids = [data.add_atom("C", QPointF(2500 + 75 * i, -2500)) for i in range(4)]
+    for a, b in zip(ids, ids[1:]):
+        data.add_bond(a, b, order=1)
+    mol_block = data.to_mol_block()
+
+    worker = CalculationWorker()
+    settings = {"conversion_mode": "direct", "do_optimize": False}
+
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(mol_block, settings)
+
+    mol_3d = blocker.args[0][1]
+    conf = mol_3d.GetConformer()
+    positions = [conf.GetAtomPosition(i) for i in range(mol_3d.GetNumAtoms())]
+
+    n = len(positions)
+    assert sum(p.x for p in positions) / n == pytest.approx(0.0, abs=1e-6)
+    assert sum(p.y for p in positions) / n == pytest.approx(0.0, abs=1e-6)
+    assert sum(p.z for p in positions) / n == pytest.approx(0.0, abs=1e-6)
+    # Nothing should sit further out than the molecule's own size
+    assert max(math.dist((p.x, p.y, p.z), (0.0, 0.0, 0.0)) for p in positions) < 10.0
+
+
+def test_calculation_worker_direct_mode_rescales_stretched_sketch(qtbot, app):
+    """
+    Direct mode should normalise the drawn bond length: atoms dragged to a 300 px
+    separation must not become a 6 A bond in the 3D result.
+    """
+    data = MolecularData()
+    c1 = data.add_atom("C", QPointF(0, 0))
+    c2 = data.add_atom("C", QPointF(300, 0))
+    data.add_bond(c1, c2, order=1)
+
+    worker = CalculationWorker()
+    with qtbot.waitSignal(worker.finished, timeout=10000) as blocker:
+        worker.run_calculation(
+            data.to_mol_block(), {"conversion_mode": "direct", "do_optimize": False}
+        )
+
+    conf = blocker.args[0][1].GetConformer()
+    p1, p2 = conf.GetAtomPosition(0), conf.GetAtomPosition(1)
+    assert math.dist((p1.x, p1.y, p1.z), (p2.x, p2.y, p2.z)) == pytest.approx(1.5)
 
 
 def test_calculation_worker_halt_logic(qtbot, app):
@@ -354,9 +413,10 @@ def test_calculation_worker_direct_mode_stereo(qtbot, app):
     p2 = conf.GetAtomPosition(1)
     p3 = conf.GetAtomPosition(2)
 
-    assert p1.z == pytest.approx(0.0)
-    assert p2.z == pytest.approx(0.0)
-    assert p3.z == pytest.approx(1.5)  # stereo_z_offset = 1.5 for wedge
+    assert p1.z == pytest.approx(p2.z)
+    # The wedge is tilted out of plane by 35 deg, which keeps the bond at 1.5 A
+    assert p3.z - p1.z == pytest.approx(1.5 * math.sin(math.radians(35.0)))
+    assert math.dist((p1.x, p1.y, p1.z), (p3.x, p3.y, p3.z)) == pytest.approx(1.5)
 
 
 def test_calculation_worker_constraint_embedding_fallback(qtbot, app):
@@ -896,9 +956,11 @@ def test_calculation_worker_direct_dash_stereo(qtbot, app):
 
     mol_3d = blocker.args[0][1]
     conf = mol_3d.GetConformer()
-    # The dash end atom should have negative Z
+    # The dash end atom should be tilted below the plane without stretching the bond
+    p1 = conf.GetAtomPosition(0)
     p3 = conf.GetAtomPosition(2)
-    assert p3.z == pytest.approx(-1.5)
+    assert p3.z - p1.z == pytest.approx(-1.5 * math.sin(math.radians(35.0)))
+    assert math.dist((p1.x, p1.y, p1.z), (p3.x, p3.y, p3.z)) == pytest.approx(1.5)
 
 
 def test_calculation_worker_direct_mmff94_rdkit_variant(qtbot, app):
