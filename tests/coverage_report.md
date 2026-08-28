@@ -23,9 +23,9 @@
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    327 |     30 |   90.8% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |    167 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     81 |      4 |   95.1% |
-| moleditpy\src\moleditpy\ui\bond_item.py                 |    370 |     53 |   85.7% |
+| moleditpy\src\moleditpy\ui\bond_item.py                 |    370 |     54 |   85.4% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    260 |     18 |   93.1% |
-| moleditpy\src\moleditpy\ui\calculation_worker.py        |    583 |     90 |   84.6% |
+| moleditpy\src\moleditpy\ui\calculation_worker.py        |    626 |     93 |   85.1% |
 | moleditpy\src\moleditpy\ui\chain_mixin.py               |     97 |      2 |   97.9% |
 | moleditpy\src\moleditpy\ui\color_settings_dialog.py     |    166 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\compute_logic.py             |    451 |      7 |   98.4% |
@@ -43,7 +43,7 @@
 | moleditpy\src\moleditpy\ui\main_window.py               |    195 |     13 |   93.3% |
 | moleditpy\src\moleditpy\ui\main_window_init.py          |   1103 |     86 |   92.2% |
 | moleditpy\src\moleditpy\ui\mirror_dialog.py             |     72 |      7 |   90.3% |
-| moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |   1085 |    123 |   88.7% |
+| moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |   1085 |    124 |   88.6% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    637 |     82 |   87.1% |
 | moleditpy\src\moleditpy\ui\move_group_dialog.py         |    386 |     41 |   89.4% |
 | moleditpy\src\moleditpy\ui\move_selected_atoms_dialog.py |    464 |     44 |   90.5% |
@@ -70,12 +70,12 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **17214** | **1714** | **90.04%** |
+| **TOTAL** | **17257** | **1719** | **90.04%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2306 (1 skipped)
+- **Total tests passed**: 2308 (1 skipped)
 - **Unit tests**: PASSED (2083 passed)
-- **Integration tests**: PASSED (103 passed)
+- **Integration tests**: PASSED (105 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (86 passed)
 
