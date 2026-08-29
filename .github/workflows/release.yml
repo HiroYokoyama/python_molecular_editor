@@ -191,6 +191,14 @@ jobs:
             Write-Error "PyInstaller did not create $exePath"
             exit 1
           }
+          # Launching it is the only check that catches a freeze missing an
+          # import the module graph could not see (rdkit.ForceField, 4.8.3).
+          $output = & $exePath --version | Select-Object -Last 1
+          Write-Host $output
+          if ($output -ne "MoleditPy (Linux) ${env:APP_VERSION}") {
+            Write-Error "Unexpected --version output from the frozen executable"
+            exit 1
+          }
 
       - name: Create Portable Package
         shell: pwsh

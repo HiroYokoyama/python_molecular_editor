@@ -15,7 +15,14 @@ a = Analysis(
     [str(spec_dir / '_launcher.py')],
     pathex=[str(src_dir)],
     binaries=[],
-    hiddenimports=[],
+    hiddenimports=[
+        # rdkit.Chem.rdForceFieldHelpers is a C extension and imports these at
+        # runtime, where the module graph cannot see it. Nothing in the reachable
+        # Python graph pulls them in since 4.8.3 stopped importing AllChem, so the
+        # frozen app died on its first import without them.
+        'rdkit.ForceField',
+        'rdkit.ForceField.rdForceField',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
