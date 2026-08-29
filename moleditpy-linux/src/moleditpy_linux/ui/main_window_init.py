@@ -166,7 +166,7 @@ class MainInitManager:
         self.measurement_action: Any = None
         self.next_conversion_id = 1
         self.opt3d_actions: Any = None
-        self.opt3d_method_labels: dict = {}
+        self.opt3d_method_labels: Dict[str, str] = {}
         self.paste_action: Any = None
         self.plugin_menu: Any = None
         self.show_atom_coords_action: Any = None

@@ -18,7 +18,7 @@ from rdkit import Chem
 from ..utils.constants import ANGSTROM_PER_PIXEL
 
 
-class PointTuple(tuple):
+class PointTuple(Tuple[float, ...]):
     """Backward-compatible tuple that allows .x() and .y() access like QPointF."""
 
     def x(self) -> float:

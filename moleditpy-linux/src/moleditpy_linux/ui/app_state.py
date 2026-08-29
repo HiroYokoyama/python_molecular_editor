@@ -19,7 +19,7 @@ import copy
 import logging
 import os
 from ..utils.suppress_log import suppress_log
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 import numpy as np
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
 
 # --- Class Definition ---
-def _serialize_constraints(constraints: list) -> list:
+def _serialize_constraints(constraints: List[Any]) -> List[List[Any]]:
     """Convert internal constraint tuples to JSON-serializable lists."""
     result = []
     for const in constraints:
@@ -54,7 +54,7 @@ def _serialize_constraints(constraints: list) -> list:
     return result
 
 
-def _deserialize_constraints(raw: list) -> list:
+def _deserialize_constraints(raw: List[Any]) -> List[Tuple[Any, ...]]:
     """Convert JSON-loaded constraint lists back to internal tuples."""
     result = []
     for const in raw:
@@ -228,7 +228,7 @@ class StateManager:
                     if self.host.view_3d_manager.plotter and not getattr(
                         self.host, "is_restoring_state", False
                     ):
-                        self.host.view_3d_manager.plotter.reset_camera()
+                        self.host.view_3d_manager.plotter.reset_camera()  # type: ignore[call-arg]
 
                     self.host.ui_manager.enable_3d_features(True)
                     self.host.view_3d_manager.setup_3d_hover()
@@ -481,7 +481,9 @@ class StateManager:
                     json_data["molecular_info"] = {
                         "num_atoms": self.host.view_3d_manager.current_mol.GetNumAtoms(),
                         "num_bonds": self.host.view_3d_manager.current_mol.GetNumBonds(),
-                        "molecular_weight": Descriptors.MolWt(
+                        # Generated at import time from rdkit's descriptor
+                        # table, so no stub can declare it.
+                        "molecular_weight": Descriptors.MolWt(  # type: ignore[attr-defined]
                             self.host.view_3d_manager.current_mol
                         ),
                         "formula": rdMolDescriptors.CalcMolFormula(
@@ -620,7 +622,11 @@ class StateManager:
                 mol_base64 = structure_3d.get("mol_binary_base64")
                 if mol_base64:
                     mol_binary = base64.b64decode(mol_base64.encode("ascii"))
-                    self.host.set_current_molecule(Chem.Mol(mol_binary))
+                    # Chem.Mol accepts a pickled binary block at runtime;
+                    # the stub only overloads Mol/str.
+                    self.host.set_current_molecule(
+                        Chem.Mol(mol_binary)  # type: ignore[call-overload]
+                    )
                     if self.host.view_3d_manager.current_mol:
                         # Set 3D coordinates
                         if self.host.view_3d_manager.current_mol.GetNumConformers() > 0:
@@ -686,7 +692,7 @@ class StateManager:
                             self.host.set_is_2d_editable(True)
 
                         if self.host.view_3d_manager.plotter:
-                            self.host.view_3d_manager.plotter.reset_camera()
+                            self.host.view_3d_manager.plotter.reset_camera()  # type: ignore[call-arg]
 
                         # Enable 3D-related UI
                         try:

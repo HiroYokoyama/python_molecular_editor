@@ -923,7 +923,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             logging.debug("Suppressed non-critical error", exc_info=True)
 
     def _compute_delta_rotation_matrix(
-        self, renderer: Any, start_pos: tuple, current_pos: tuple
+        self,
+        renderer: Any,
+        start_pos: Tuple[float, float],
+        current_pos: Tuple[float, float],
     ) -> Optional[np.ndarray]:
         """Compute 3D rotation matrix from screen mouse displacement (dx, dy)."""
         try:

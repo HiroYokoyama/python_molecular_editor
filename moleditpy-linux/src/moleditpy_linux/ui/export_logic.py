@@ -271,7 +271,7 @@ class ExportManager:
             renderer = self.host.view_3d_manager.plotter.renderer
             actors = renderer.actors
 
-            for actor_name, actor in actors.items():
+            for _actor_name, actor in actors.items():
                 try:
                     # Attempt to get polydata from VTK actor
                     mesh = None
@@ -380,7 +380,7 @@ class ExportManager:
             renderer = self.host.view_3d_manager.plotter.renderer
             actors = renderer.actors
 
-            for actor_name, actor in actors.items():
+            for _actor_name, actor in actors.items():
                 try:
                     # Attempt to get polydata from VTK actor
                     mesh = None

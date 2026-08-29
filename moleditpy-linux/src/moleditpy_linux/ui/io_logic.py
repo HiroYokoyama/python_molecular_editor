@@ -17,7 +17,7 @@ import os
 import json
 import pickle
 from ..utils.suppress_log import suppress_log
-from typing import Any, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from PyQt6.QtCore import QPointF, QTimer
 from PyQt6.QtWidgets import (
@@ -33,7 +33,14 @@ from PyQt6.QtWidgets import (
 )
 
 from rdkit import Chem
-from rdkit.Chem import AllChem, rdGeometry, rdMolTransforms, Descriptors
+from rdkit.Chem import (
+    Descriptors,
+    rdDepictor,
+    rdDistGeom,
+    rdGeometry,
+    rdMolTransforms,
+    rdmolops,
+)
 
 from ..utils.constants import (
     COVALENT_RADII,
@@ -774,7 +781,12 @@ class IOManager:
                 with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
                     raw = fh.read()
                 fixed_block = self.fix_mol_block(raw)
-                mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
+                # Both readers can come back empty on a malformed file; the
+                # stub for MolFromMolBlock does not say so, hence the explicit
+                # declaration. The None check below covers both branches.
+                mol: Optional[Chem.Mol] = Chem.MolFromMolBlock(
+                    fixed_block, sanitize=True, removeHs=False
+                )
             else:
                 suppl = Chem.SDMolSupplier(file_path, removeHs=False)
                 mol = next(suppl, None)
@@ -785,11 +797,11 @@ class IOManager:
             Chem.Kekulize(mol)
 
             if mol.GetNumConformers() == 0:
-                AllChem.Compute2DCoords(mol)
+                rdDepictor.Compute2DCoords(mol)
 
-            AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
+            rdmolops.AssignStereochemistry(mol, cleanIt=True, force=True)
             conf = mol.GetConformer()
-            AllChem.WedgeMolBonds(mol, conf)
+            rdmolops.WedgeMolBonds(mol, conf)
 
             SCALE_FACTOR = 50.0
             existing_atoms = self.host.state_manager.data.atoms
@@ -991,7 +1003,7 @@ class IOManager:
             if mol is None:
                 raise ValueError("Failed to load molecule.")
             if mol.GetNumConformers() == 0:
-                AllChem.EmbedMolecule(mol)
+                rdDistGeom.EmbedMolecule(mol)
 
             self.host.edit_actions_manager.clear_all(skip_check=True)
             self.host.set_current_molecule(mol)
@@ -1207,7 +1219,14 @@ class IOManager:
         try:
             if not mol.HasProp(prop_name):
                 return default
-            for getter in [mol.GetIntProp, mol.GetDoubleProp, mol.GetProp]:
+            # The three getters have different return types, so the list
+            # element type collapses to object unless it is spelled out.
+            getters: List[Callable[[str], Any]] = [
+                mol.GetIntProp,
+                mol.GetDoubleProp,
+                mol.GetProp,
+            ]
+            for getter in getters:
                 try:
                     return getter(prop_name)
                 except (RuntimeError, ValueError, AttributeError, TypeError):

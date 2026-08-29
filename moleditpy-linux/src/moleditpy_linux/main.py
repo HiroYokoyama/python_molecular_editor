@@ -20,7 +20,7 @@ import sys
 import argparse
 import time
 import traceback
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Set
 
 from .utils.constants import VERSION
 
@@ -81,7 +81,7 @@ class _ErrorDialogHandler(logging.Handler):
         # signature -> monotonic timestamp of its last shown dialog.
         self._last_shown: Dict[str, float] = {}
         # Held so a non-blocking box is not garbage-collected before it closes.
-        self._open_boxes: set = set()
+        self._open_boxes: Set[QMessageBox] = set()
         self._log_path = log_path
 
     def emit(self, record: logging.LogRecord) -> None:

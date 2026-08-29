@@ -92,8 +92,8 @@ class PluginManager:
         self.optimization_methods: Dict[str, Dict[str, Any]] = {}
         self.file_openers: Dict[str, List[Dict[str, Any]]] = {}
         self.analysis_tools: List[Dict[str, Any]] = []
-        self.save_handlers: Dict[str, Callable] = {}
-        self.load_handlers: Dict[str, Callable] = {}
+        self.save_handlers: Dict[str, Callable[..., Any]] = {}
+        self.load_handlers: Dict[str, Callable[..., Any]] = {}
         self.custom_3d_styles: Dict[str, Dict[str, Any]] = {}
         self.document_reset_handlers: List[Dict[str, Any]] = []
         self.atom_drag_handlers: List[Dict[str, Any]] = []
@@ -447,7 +447,7 @@ class PluginManager:
         self,
         plugin_name: str,
         path: str,
-        callback: Callable,
+        callback: Callable[..., Any],
         text: str,
         icon: str,
         shortcut: str,
@@ -471,7 +471,12 @@ class PluginManager:
         )
 
     def register_toolbar_action(
-        self, plugin_name: str, callback: Callable, text: str, icon: str, tooltip: str
+        self,
+        plugin_name: str,
+        callback: Callable[..., Any],
+        text: str,
+        icon: str,
+        tooltip: str,
     ) -> None:
         """Register a plugin toolbar button with its callback and display metadata."""
         self.toolbar_actions.append(
@@ -485,7 +490,7 @@ class PluginManager:
         )
 
     def register_drop_handler(
-        self, plugin_name: str, callback: Callable, priority: int
+        self, plugin_name: str, callback: Callable[..., Any], priority: int
     ) -> None:
         """Register a drag-and-drop handler with a given priority."""
         self.drop_handlers.append(
@@ -495,7 +500,7 @@ class PluginManager:
         self.drop_handlers.sort(key=lambda x: x["priority"], reverse=True)
 
     def register_export_action(
-        self, plugin_name: str, label: str, callback: Callable
+        self, plugin_name: str, label: str, callback: Callable[..., Any]
     ) -> None:
         """Register a plugin export action with its label and callback."""
         self.export_actions.append(
@@ -503,7 +508,7 @@ class PluginManager:
         )
 
     def register_optimization_method(
-        self, plugin_name: str, method_name: str, callback: Callable
+        self, plugin_name: str, method_name: str, callback: Callable[..., Any]
     ) -> None:
         """Register a named 3D optimization method provided by a plugin."""
         method_key = method_name.upper()
@@ -520,7 +525,11 @@ class PluginManager:
             )
 
     def register_file_opener(
-        self, plugin_name: str, extension: str, callback: Callable, priority: int = 0
+        self,
+        plugin_name: str,
+        extension: str,
+        callback: Callable[..., Any],
+        priority: int = 0,
     ) -> None:
         """Register a file-type handler for the given extension."""
         # Normalize extension to lowercase
@@ -540,7 +549,7 @@ class PluginManager:
 
     # Analysis Tools registration
     def register_analysis_tool(
-        self, plugin_name: str, label: str, callback: Callable
+        self, plugin_name: str, label: str, callback: Callable[..., Any]
     ) -> None:
         """Register a plugin analysis tool with its label and callback."""
         self.analysis_tools.append(
@@ -548,16 +557,20 @@ class PluginManager:
         )
 
     # State Persistence registration
-    def register_save_handler(self, plugin_name: str, callback: Callable) -> None:
+    def register_save_handler(
+        self, plugin_name: str, callback: Callable[..., Any]
+    ) -> None:
         """Register a plugin session-save callback."""
         self.save_handlers[plugin_name] = callback
 
-    def register_load_handler(self, plugin_name: str, callback: Callable) -> None:
+    def register_load_handler(
+        self, plugin_name: str, callback: Callable[..., Any]
+    ) -> None:
         """Register a plugin session-load callback."""
         self.load_handlers[plugin_name] = callback
 
     def register_3d_style(
-        self, plugin_name: str, style_name: str, callback: Callable
+        self, plugin_name: str, style_name: str, callback: Callable[..., Any]
     ) -> None:
         """Register a named custom 3D rendering style."""
         self.custom_3d_styles[style_name] = {
@@ -566,14 +579,16 @@ class PluginManager:
         }
 
     def register_document_reset_handler(
-        self, plugin_name: str, callback: Callable
+        self, plugin_name: str, callback: Callable[..., Any]
     ) -> None:
         """Register callback to be invoked when a new document is created."""
         self.document_reset_handlers.append(
             {"plugin": plugin_name, "callback": callback}
         )
 
-    def register_atom_drag_handler(self, plugin_name: str, callback: Callable) -> None:
+    def register_atom_drag_handler(
+        self, plugin_name: str, callback: Callable[..., Any]
+    ) -> None:
         """Register a handler called during 3D atom/group dragging."""
         self.atom_drag_handlers.append({"plugin": plugin_name, "callback": callback})
 
@@ -676,7 +691,7 @@ class PluginManager:
         self,
         event_type: str,
         atom_indices: List[int],
-        positions: Dict[int, tuple],
+        positions: Dict[int, Tuple[float, ...]],
     ) -> None:
         """Call all registered atom drag handlers."""
         for handler in self.atom_drag_handlers:

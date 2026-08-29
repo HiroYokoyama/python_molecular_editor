@@ -299,7 +299,13 @@ class TranslationDialog(BasePickingDialog):
 
     def apply_absolute(self) -> None:
         """Translate selected atoms so their centroid reaches the target coordinates."""
-        self.mol = self.main_window.view_3d_manager.current_mol
+        # current_mol is Optional; BasePickingDialog guarantees self.mol is not,
+        # so check before rebinding rather than widening the base attribute.
+        current_mol = self.main_window.view_3d_manager.current_mol
+        if current_mol is None:
+            QMessageBox.warning(self, "Warning", "No molecule is loaded.")
+            return
+        self.mol = current_mol
         if not self.selected_atoms:
             QMessageBox.warning(self, "Warning", "Please select at least one atom.")
             return
@@ -360,7 +366,13 @@ class TranslationDialog(BasePickingDialog):
 
     def apply_translation(self) -> None:
         """Apply relative translation vector to selected atoms."""
-        self.mol = self.main_window.view_3d_manager.current_mol
+        # current_mol is Optional; BasePickingDialog guarantees self.mol is not,
+        # so check before rebinding rather than widening the base attribute.
+        current_mol = self.main_window.view_3d_manager.current_mol
+        if current_mol is None:
+            QMessageBox.warning(self, "Warning", "No molecule is loaded.")
+            return
+        self.mol = current_mol
         if not self.selected_atoms:
             QMessageBox.warning(self, "Warning", "Please select at least one atom.")
             return

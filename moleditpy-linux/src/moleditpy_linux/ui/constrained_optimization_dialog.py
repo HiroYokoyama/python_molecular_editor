@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QVBoxLayout,
 )
-from rdkit.Chem import AllChem, rdMolTransforms
+from rdkit.Chem import rdForceFieldHelpers, rdMolTransforms
 
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
 
@@ -378,7 +378,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     def remove_constraint(self) -> None:
         """Delete the selected constraint rows from the table."""
         selected_rows = sorted(
-            list(set(index.row() for index in self.constraint_table.selectedIndexes())),
+            {index.row() for index in self.constraint_table.selectedIndexes()},
             reverse=True,
         )
         if not selected_rows:
@@ -511,8 +511,10 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 "optimize_intermolecular_interaction_rdkit", True
             )
             if ff_name.startswith("MMFF"):
-                props = AllChem.MMFFGetMoleculeProperties(self.mol, mmffVariant=ff_name)
-                ff = AllChem.MMFFGetMoleculeForceField(
+                props = rdForceFieldHelpers.MMFFGetMoleculeProperties(
+                    self.mol, mmffVariant=ff_name
+                )
+                ff = rdForceFieldHelpers.MMFFGetMoleculeForceField(
                     self.mol,
                     props,
                     confId=0,
@@ -522,7 +524,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 add_angle_constraint = ff.MMFFAddAngleConstraint
                 add_torsion_constraint = ff.MMFFAddTorsionConstraint
             else:  # UFF
-                ff = AllChem.UFFGetMoleculeForceField(
+                ff = rdForceFieldHelpers.UFFGetMoleculeForceField(
                     self.mol, confId=0, ignoreInterfragInteractions=ignore_interfrag
                 )
                 add_dist_constraint = ff.UFFAddDistanceConstraint

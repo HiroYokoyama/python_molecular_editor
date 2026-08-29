@@ -168,7 +168,7 @@ class PlanarizeDialog(BasePickingDialog):
 
         try:
             # Get positions of selected atoms
-            selected_indices = list(sorted(self.selected_atoms))
+            selected_indices = sorted(self.selected_atoms)
             if self.main_window.view_3d_manager.atom_positions_3d is None:
                 logging.warning("atom_positions_3d is None in apply_planarize")
                 return

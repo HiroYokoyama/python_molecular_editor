@@ -211,7 +211,9 @@ class MoleculeScene(
         if self.views():
             self.views()[0].viewport().update()
 
-    def restore_atoms_and_bonds(self, raw_atoms: dict, raw_bonds: dict) -> None:
+    def restore_atoms_and_bonds(
+        self, raw_atoms: Dict[int, Any], raw_bonds: Dict[Tuple[int, int], Any]
+    ) -> None:
         """Restore scene items from undo/redo state (dict-of-dicts format)."""
         for atom_id, data in raw_atoms.items():
             raw_pos = tuple(data["pos"])
@@ -251,7 +253,9 @@ class MoleculeScene(
             atom_item.update_style()
         self.update_all_items()
 
-    def restore_atoms_and_bonds_from_json(self, atoms_2d: list, bonds_2d: list) -> None:
+    def restore_atoms_and_bonds_from_json(
+        self, atoms_2d: List[Dict[str, Any]], bonds_2d: List[Dict[str, Any]]
+    ) -> None:
         """Restore scene items from PMEPRJ JSON (list-of-dicts format)."""
         for atom_data in atoms_2d:
             atom_id = atom_data["id"]
