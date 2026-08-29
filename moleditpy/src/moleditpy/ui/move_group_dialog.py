@@ -523,7 +523,7 @@ class MoveGroupDialog(BasePickingDialog):
         plotter = self.main_window.view_3d_manager.plotter
         if plotter is not None:
             try:
-                plotter.remove_actor("move_group_highlight")
+                plotter.remove_actor("move_group_highlight")  # type: ignore[arg-type]
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 logging.debug("Suppressed non-critical error", exc_info=True)

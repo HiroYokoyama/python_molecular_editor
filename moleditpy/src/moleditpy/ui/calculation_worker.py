@@ -23,7 +23,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
 # RDKit
 from rdkit import Chem
-from rdkit.Chem import AllChem, rdGeometry
+from rdkit.Chem import rdDistGeom, rdForceFieldHelpers, rdGeometry
 from rdkit.DistanceGeometry import DoTriangleSmoothing
 
 from ..utils.constants import DEFAULT_BOND_LENGTH_ANGSTROM
@@ -235,14 +235,16 @@ def _iterative_optimize(
         )
         ff = None
         if method == "UFF":
-            ff = AllChem.UFFGetMoleculeForceField(
+            ff = rdForceFieldHelpers.UFFGetMoleculeForceField(
                 mol, confId=0, ignoreInterfragInteractions=ignore_interfrag
             )
         elif "MMFF94" in method:
             mmff_variant = "MMFF94" if method == "MMFF94" else "MMFF94s"
-            props = AllChem.MMFFGetMoleculeProperties(mol, mmffVariant=mmff_variant)
+            props = rdForceFieldHelpers.MMFFGetMoleculeProperties(
+                mol, mmffVariant=mmff_variant
+            )
             if props:
-                ff = AllChem.MMFFGetMoleculeForceField(
+                ff = rdForceFieldHelpers.MMFFGetMoleculeForceField(
                     mol, props, confId=0, ignoreInterfragInteractions=ignore_interfrag
                 )
 
@@ -419,8 +421,12 @@ def _perform_direct_conversion(
     options: Optional[Dict[str, Any]],
     _check_halted: Callable[[], bool],
     _safe_status: Callable[[str], None],
-) -> Optional[Chem.Mol]:
-    """Direct 3D conversion using 2D coordinates and adding missing H without embedding."""
+) -> Chem.Mol:
+    """Direct 3D conversion using 2D coordinates and adding missing H without embedding.
+
+    Returns the same molecule it was given: the conversion mutates ``mol`` in
+    place and never rebinds it, so the result is never None.
+    """
     parsed_coords, stereo_dirs = [], []
     # Best-effort attempt to parse 2D coordinates from MOL block for direct conversion.
     # We suppress AttributeError/RuntimeError if the block is malformed or RDKit fails internally.
@@ -953,11 +959,15 @@ class CalculationWorker(QObject):
         _safe_finished = helpers["finished"]
         w_id = options.get("worker_id")
 
-        params = AllChem.ETKDGv2()
-        params.randomSeed = 42
-        params.useExpTorsionAnglePrefs = params.useBasicKnowledge = (
-            params.enforceChirality
-        ) = True
+        # rdkit's stub declares these EmbedParameters properties with bare
+        # `*args, **kwargs` and no annotations, so every assignment through them
+        # is reported as a type error. Unchained here so each one can carry the
+        # narrowest possible ignore.
+        params = rdDistGeom.ETKDGv2()
+        params.randomSeed = 42  # type: ignore[assignment]
+        params.useExpTorsionAnglePrefs = True  # type: ignore[assignment]
+        params.useBasicKnowledge = True  # type: ignore[assignment]
+        params.enforceChirality = True  # type: ignore[assignment]
 
         # Track existing/explicit stereo to restore after embedding
         orig_stereo = []
@@ -980,22 +990,18 @@ class CalculationWorker(QObject):
 
         conf_id = -1
         with suppress_log(RuntimeError, ValueError):
-            conf_id = AllChem.EmbedMolecule(mol, params)
+            conf_id = rdDistGeom.EmbedMolecule(mol, params)
 
         # Fallback embedding strategies
         if conf_id == -1:
             with suppress_log(AttributeError, RuntimeError, ValueError, TypeError):
-                bm = AllChem.GetMoleculeBoundsMatrix(mol)
+                bm = rdDistGeom.GetMoleculeBoundsMatrix(mol)
                 for b_idx, s, satoms in orig_stereo:
                     if len(satoms) == 2:
                         t = 3.0 if s == Chem.BondStereo.STEREOZ else 5.0
                         bm[satoms[0]][satoms[1]] = bm[satoms[1]][satoms[0]] = t
                 DoTriangleSmoothing(bm)
-                conf_id = AllChem.EmbedMolecule(mol, bm, params)
-
-        if conf_id == -1:
-            with suppress_log(AttributeError, RuntimeError, ValueError, TypeError):
-                conf_id = AllChem.EmbedMolecule(mol, AllChem.ETKDGv2(randomSeed=42))
+                conf_id = rdDistGeom.EmbedMolecule(mol, bm, params)
 
         if conf_id == -1:
             return False

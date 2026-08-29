@@ -16,7 +16,7 @@ import json
 import copy
 import logging
 import math
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, TypedDict
 
 import numpy as np
 
@@ -46,6 +46,24 @@ from .bond_item import BondItem
 from ..utils.constants import CLIPBOARD_MIME_TYPE, UNDO_STACK_MAX_DEPTH
 from ..core.molecular_data import MolecularData
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
+
+
+class _FragInfo(TypedDict):
+    """Per-fragment geometry cached by the collision-avoidance pass.
+
+    A plain dict collapses to a union of every value type it holds, which loses
+    the fact that the bbox/position entries are arrays and makes indexing them
+    untypable. Spelling the keys out keeps each one precise.
+    """
+
+    indices: List[int]
+    centroid: np.ndarray
+    positions_np: np.ndarray
+    vdw_radii_np: np.ndarray
+    max_vdw_radius: float
+    bbox_min: np.ndarray
+    bbox_max: np.ndarray
+
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -1289,7 +1307,7 @@ class EditActionsManager:
         pt = Chem.GetPeriodicTable()
 
         # 1. Precompute fragment info (indices, VDW radii)
-        frag_info = []
+        frag_info: List[_FragInfo] = []
         for frag_indices in frags:
             positions = []
             vdw_radii = []
@@ -1308,7 +1326,7 @@ class EditActionsManager:
             vdw_radii_np = np.array(vdw_radii)
 
             # Max VDW for box margin
-            max_vdw = np.max(vdw_radii_np) if len(vdw_radii_np) > 0 else 0.0
+            max_vdw = float(np.max(vdw_radii_np)) if len(vdw_radii_np) > 0 else 0.0
 
             frag_info.append(
                 {

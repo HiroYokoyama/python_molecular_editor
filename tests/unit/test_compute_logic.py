@@ -1760,7 +1760,7 @@ def test_ez_block_falls_back_when_layout_fails(mock_parser_host):
     _but2ene_drawn_trans(compute.data, 3)
 
     with patch(
-        "moleditpy.ui.compute_logic.AllChem.Compute2DCoords",
+        "moleditpy.ui.compute_logic.rdDepictor.Compute2DCoords",
         side_effect=RuntimeError("depiction failed"),
     ):
         assert compute._ez_consistent_mol_block() is None

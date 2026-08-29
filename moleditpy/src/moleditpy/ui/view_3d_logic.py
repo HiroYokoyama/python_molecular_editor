@@ -1059,7 +1059,7 @@ class View3DManager:
                         pts.append(coord)
                         labels.append(lbl if lbl is not None else "?")
                     try:
-                        self.plotter.remove_actor("chiral_labels")  # type: ignore[union-attr]
+                        self.plotter.remove_actor("chiral_labels")  # type: ignore[arg-type, union-attr]
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1193,7 +1193,7 @@ class View3DManager:
             and "ez_labels" in self.plotter.renderer.actors  # type: ignore[union-attr]
         ):
             try:
-                self.plotter.remove_actor("ez_labels")  # type: ignore[union-attr]
+                self.plotter.remove_actor("ez_labels")  # type: ignore[arg-type, union-attr]
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.warning(f"Failed to remove EZ labels: {e}")
 
@@ -1666,7 +1666,7 @@ class View3DManager:
             if self.atom_label_legend_names:
                 for nm in self.atom_label_legend_names:
                     try:
-                        self.plotter.remove_actor(nm)  # type: ignore[union-attr]
+                        self.plotter.remove_actor(nm)  # type: ignore[arg-type, union-attr]
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1757,7 +1757,7 @@ class View3DManager:
             if self.atom_label_legend_names:
                 for nm in list(self.atom_label_legend_names):
                     try:
-                        self.plotter.remove_actor(nm)  # type: ignore[union-attr]
+                        self.plotter.remove_actor(nm)  # type: ignore[arg-type, union-attr]
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1932,7 +1932,7 @@ class View3DManager:
                 self.axes_widget.SetEnabled(True)
                 self.axes_widget.InteractiveOff()
             else:
-                self.plotter.hide_axes()  # type: ignore[union-attr]
+                self.plotter.hide_axes()  # type: ignore[call-arg, union-attr]
 
             # Re-render to show axes
             self.plotter.render()  # type: ignore[union-attr]
@@ -1947,13 +1947,13 @@ class View3DManager:
             # Explicitly render to show change
             self.plotter.render()  # type: ignore[union-attr]
 
-        if redraw:
+        if redraw and self.current_mol is not None:
             self.draw_molecule_3d(self.current_mol)
 
         # Do not reset camera on settings change (reset only once)
         if not getattr(self, "_camera_initialized", False):
             try:
-                self.plotter.reset_camera()  # type: ignore[union-attr]
+                self.plotter.reset_camera()  # type: ignore[call-arg, union-attr]
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(
                     f"Suppressed exception: {e}"

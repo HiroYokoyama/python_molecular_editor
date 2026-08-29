@@ -154,12 +154,15 @@ class AnalysisWindow(QDialog):
 
                 # Calculate various properties
                 mol_formula = rdMolDescriptors.CalcMolFormula(self.mol)
-                mol_wt = Descriptors.MolWt(self.mol)
-                exact_mw = Descriptors.ExactMolWt(self.mol)
+                # Descriptors.MolWt is generated at import time from rdkit's
+                # descriptor table, so no stub can declare it; the rest have
+                # direct rdMolDescriptors equivalents used elsewhere here.
+                mol_wt = Descriptors.MolWt(self.mol)  # type: ignore[attr-defined]
+                exact_mw = rdMolDescriptors.CalcExactMolWt(self.mol)
                 num_heavy_atoms = self.mol.GetNumHeavyAtoms()
                 num_rings = rdMolDescriptors.CalcNumRings(self.mol)
-                log_p = Descriptors.MolLogP(self.mol)
-                tpsa = Descriptors.TPSA(self.mol)
+                log_p = rdMolDescriptors.CalcCrippenDescriptors(self.mol)[0]
+                tpsa = rdMolDescriptors.CalcTPSA(self.mol)
                 num_h_donors = rdMolDescriptors.CalcNumHBD(self.mol)
                 num_h_acceptors = rdMolDescriptors.CalcNumHBA(self.mol)
 

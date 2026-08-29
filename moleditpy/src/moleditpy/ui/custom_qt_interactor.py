@@ -21,6 +21,11 @@ from pyvistaqt import QtInteractor
 class CustomQtInteractor(QtInteractor):
     """PyVista QtInteractor subclass that exposes the main window for event handling."""
 
+    # Attached by MainWindow.set_plotter_picker and read back in ui_manager.
+    # pyvista's own picker property lives on the render window interactor, not
+    # on the plotter, so this is the application's own slot.
+    picker: Any
+
     def __init__(
         self,
         parent: Optional[Any] = None,
