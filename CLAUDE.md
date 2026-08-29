@@ -58,11 +58,24 @@ MOLEDITPY_HEADLESS=1 QT_QPA_PLATFORM=offscreen python tests/run_all_tests.py --p
 
 ## Linting and Type Checking
 
+Install the pinned toolchain first — `requirements-lint.txt` holds exact versions
+so a local run and the CI `lint` job check the same thing:
+
+```bash
+pip install -r requirements-lint.txt
+```
+
 ```bash
 pylint moleditpy/src/moleditpy/
 ruff format moleditpy/src tests && ruff check moleditpy/src
-mypy moleditpy/src/moleditpy/          # config in mypy.ini; must stay at zero errors
+mypy                                   # config in mypy.ini; must stay at zero errors
+for p in win32 linux darwin; do mypy --platform "$p"; done   # what CI runs
 ```
+
+Config lives at the repo root: `ruff.toml`, `mypy.ini`, `.pylintrc`.
+`mypy` defaults to the platform it runs on, so a Windows-only branch is invisible
+to a Linux-only check — CI runs all three platforms and so should you before
+touching anything under `utils/` or the installer paths.
 
 Target pylint score: > 9.0/10. PEP 8 compliance required. Type hints required for all functions and methods.
 
