@@ -15,15 +15,3 @@ mypy==1.20.2
 ruff==0.14.5
 pylint==4.0.4
 
-# numpy is pinned here even though it is a runtime dependency, because mypy
-# reads its bundled stubs and those are not stable across releases. numpy 2.5.2
-# ships `type X = ...` (PEP 695) in numpy/__init__.pyi, which mypy rejects with
-# "Type statement is only supported in Python 3.12 and greater" under
-# mypy.ini's python_version = 3.9 -- it aborts before checking any of our code.
-# That combination cannot occur in practice anyway: numpy 2.x requires Python
-# >= 3.10, so a real 3.9 install resolves to numpy 1.x. Installing this file
-# before `pip install -e moleditpy/` holds the version, since pyproject.toml
-# requires only a bare "numpy".
-#
-# Bumping: raise this pin, run the three linters, and only then commit.
-numpy==2.3.5

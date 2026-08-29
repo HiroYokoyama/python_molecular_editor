@@ -79,7 +79,7 @@ touching anything under `utils/` or the installer paths.
 
 Target pylint score: > 9.0/10. PEP 8 compliance required. Type hints required for all functions and methods.
 
-Run all three before committing. `mypy` is clean as of 4.7.0 — do not add errors, and do not silence one with `# type: ignore` where a real guard or an explicitly typed local expresses the intent (numpy 2.x returns `Any` under `python_version = 3.9`, so assign to a `np.ndarray` local and return that).
+Run all three before committing. `mypy` is clean as of 4.7.0 — do not add errors, and do not silence one with `# type: ignore` where a real guard or an explicitly typed local expresses the intent (where numpy hands back `Any`, assign to a `np.ndarray` local and return that).
 
 The `--pylint` flag on `run_all_tests.py` runs pylint automatically after all tests pass and writes the score to `tests/pylint-score.txt`.
 
