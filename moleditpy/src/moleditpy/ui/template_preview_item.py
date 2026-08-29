@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, FrozenSet, List, Optional, Set
 
 from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
 from PyQt6.QtGui import (
@@ -54,7 +54,7 @@ class TemplatePreviewItem(QGraphicsItem):
         self.ghost_atoms: List[AtomItem] = []
         self.ghost_bonds: List[BondItem] = []
         self.existing_indices: Set[int] = set()
-        self.editor_drawn_bonds: Set[frozenset] = set()
+        self.editor_drawn_bonds: Set[FrozenSet[int]] = set()
         self.existing_h_counts: Dict[int, int] = {}
         self.replaced_label_path = QPainterPath()
         self.mark_first_atom = False

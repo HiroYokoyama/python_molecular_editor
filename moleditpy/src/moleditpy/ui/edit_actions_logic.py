@@ -1033,7 +1033,7 @@ class EditActionsManager:
         is_deleted_func = sip_isdeleted_safe
 
         items_to_update = []
-        for atom_id, atom_data in atoms_snapshot.items():
+        for atom_id, _atom_data in atoms_snapshot.items():
             try:
                 item = self.host.init_manager.scene.atom_items.get(atom_id)
                 if not item:

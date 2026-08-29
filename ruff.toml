@@ -18,23 +18,25 @@ target-version = "py39"
 extend-exclude = ["moleditpy-linux", "moleditpy/src/moleditpy/assets"]
 
 [lint]
-# Clean on the current tree (0 violations), so this is safe to gate CI on today.
-select = ["E4", "E7", "E9", "F"]
+# All clean on the current tree, so CI gates on them.
+#   B  (flake8-bugbear) found a real defect: an `except` tuple ended in
+#      `vtk.vtkException if hasattr(vtk, "vtkException") else Exception`, and
+#      since VTK has no vtkException it always resolved to Exception -- the
+#      three narrow types listed above it were decorative.
+select = ["E4", "E7", "E9", "F", "B", "C4"]
 
-# Measured counts if the rule set is widened (ruff 0.14.5, target py39).
-# None of these are clean yet; each needs a one-time code pass:
-#   B    13   flake8-bugbear      (B904 raise-without-from x4, B007 x8, B030 x1)
-#   C4    5   comprehensions
-#   RUF  31   ruff-specific       (13 are ambiguous-unicode in Japanese docstrings)
-#   RET   9   superfluous-else-return
-#   SIM  34   collapsible-if etc.
-#   I    55   unsorted-imports        (autofixable)
-#   UP  665   pyupgrade               (autofixable; 69x UP009 redundant
-#                                      "# -*- coding: utf-8 -*-", 298x UP006)
-#   PTH 133   os.path -> pathlib
+# Measured counts if the rule set is widened further (ruff 0.14.5, target py39).
+# Each still needs a one-time code pass:
+#   RUF  32   ruff-specific   (13 are ambiguous-unicode in Japanese docstrings)
+#   RET  10   superfluous-else-return
+#   SIM  38   collapsible-if etc.
+#   I    56   unsorted-imports          (autofixable)
+#   UP  689   pyupgrade                 (autofixable; 69x UP009 redundant
+#                                        "# -*- coding: utf-8 -*-", 298x UP006)
+#   PTH 151   os.path -> pathlib
 #   E501 313  line-too-long -- do NOT enable: the formatter owns line breaking,
 #                              and these are long strings/comments it cannot split.
-# Recommended order: I -> UP -> C4/RET/SIM -> B -> PTH.
+# Recommended order: I -> UP -> RET/SIM -> RUF -> PTH.
 
 [lint.per-file-ignores]
 "tests/**" = ["E402"]

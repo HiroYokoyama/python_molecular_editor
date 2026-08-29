@@ -51,7 +51,9 @@ class PluginMenuManager:
         # Built once and re-added on every reset; see _reset_plugin_menu.
         self._manage_action: Optional[QAction] = None
 
-    def _make_safe_callback(self, callback: Callable, plugin_name: str) -> Callable:
+    def _make_safe_callback(
+        self, callback: Callable[..., Any], plugin_name: str
+    ) -> Callable[..., None]:
         """Wrap a plugin callback so exceptions don't propagate into Qt's signal machinery."""
 
         def _safe(*args: Any, **kwargs: Any) -> None:

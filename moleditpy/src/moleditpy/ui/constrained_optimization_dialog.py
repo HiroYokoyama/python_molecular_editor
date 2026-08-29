@@ -378,7 +378,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     def remove_constraint(self) -> None:
         """Delete the selected constraint rows from the table."""
         selected_rows = sorted(
-            list(set(index.row() for index in self.constraint_table.selectedIndexes())),
+            {index.row() for index in self.constraint_table.selectedIndexes()},
             reverse=True,
         )
         if not selected_rows:

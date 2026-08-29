@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Optional, Any
+from typing import Any, Dict, Optional
 import logging
 import numpy as np
 import pyvista as pv
@@ -55,7 +55,7 @@ class MoveGroupDialog(BasePickingDialog):
 
         self.clicked_atom_for_toggle: Optional[int] = None
         # State for group movement (used by CustomInteractorStyle)
-        self.initial_positions: dict = {}
+        self.initial_positions: Dict[int, np.ndarray] = {}
         self.is_dragging_group_vtk = False
         self.is_rotating_group_vtk = False
         self.drag_atom_idx_vtk: Optional[int] = None

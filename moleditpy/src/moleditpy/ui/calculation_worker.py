@@ -17,7 +17,7 @@ import re
 import numpy as np
 import sys
 import subprocess
-from typing import Any, Callable, Dict, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 
@@ -380,8 +380,10 @@ _DIRECT_WEDGE_TILT = math.radians(35.0)
 
 
 def _rescale_2d_layout(
-    coords: list, mol: Chem.Mol, _safe_status: Callable[[str], None]
-) -> list:
+    coords: List[Tuple[float, float, float]],
+    mol: Chem.Mol,
+    _safe_status: Callable[[str], None],
+) -> List[Tuple[float, float, float]]:
     """Scale parsed 2D coordinates so the median bond is a chemically sane length."""
     lengths = []
     for bond in mol.GetBonds():
@@ -730,10 +732,10 @@ print(ob_mol.write("mol"))
                     f"Subprocess crashed or failed. Error: {result.stderr.strip()}"
                 )
             out_mol_block = result.stdout
-        except subprocess.TimeoutExpired:
-            raise RuntimeError("Open Babel make3D() timed out.")
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("Open Babel make3D() timed out.") from exc
         except Exception as e:
-            raise RuntimeError(f"Open Babel isolated execution failed: {e}")
+            raise RuntimeError(f"Open Babel isolated execution failed: {e}") from e
 
         rd_mol = Chem.MolFromMolBlock(out_mol_block, removeHs=False)
         if not rd_mol:
@@ -792,7 +794,7 @@ print(ob_mol.write("mol"))
         raise
     except (AttributeError, RuntimeError, ValueError, TypeError) as e:
         if mode == "obabel":
-            raise RuntimeError(f"Open Babel conversion failed: {e}")
+            raise RuntimeError(f"Open Babel conversion failed: {e}") from e
         _safe_status(f"Open Babel failed: {e}. Falling back...")
     return False
 
@@ -996,7 +998,7 @@ class CalculationWorker(QObject):
         if conf_id == -1:
             with suppress_log(AttributeError, RuntimeError, ValueError, TypeError):
                 bm = rdDistGeom.GetMoleculeBoundsMatrix(mol)
-                for b_idx, s, satoms in orig_stereo:
+                for _b_idx, s, satoms in orig_stereo:
                     if len(satoms) == 2:
                         t = 3.0 if s == Chem.BondStereo.STEREOZ else 5.0
                         bm[satoms[0]][satoms[1]] = bm[satoms[1]][satoms[0]] = t

@@ -75,7 +75,7 @@ class AnalysisWindow(QDialog):
                 total_atoms = len(xyz_atoms)
                 num_heavy_atoms = 0
 
-                for symbol, x, y, z in xyz_atoms:
+                for symbol, _x, _y, _z in xyz_atoms:
                     atom_counts[symbol] = atom_counts.get(symbol, 0) + 1
                     if symbol != "H":  # Non-hydrogen
                         num_heavy_atoms += 1

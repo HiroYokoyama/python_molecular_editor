@@ -19,7 +19,7 @@ import copy
 import logging
 import os
 from ..utils.suppress_log import suppress_log
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 import numpy as np
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
 
 # --- Class Definition ---
-def _serialize_constraints(constraints: list) -> list:
+def _serialize_constraints(constraints: List[Any]) -> List[List[Any]]:
     """Convert internal constraint tuples to JSON-serializable lists."""
     result = []
     for const in constraints:
@@ -54,7 +54,7 @@ def _serialize_constraints(constraints: list) -> list:
     return result
 
 
-def _deserialize_constraints(raw: list) -> list:
+def _deserialize_constraints(raw: List[Any]) -> List[Tuple[Any, ...]]:
     """Convert JSON-loaded constraint lists back to internal tuples."""
     result = []
     for const in raw:
