@@ -13,13 +13,23 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 from ..utils.suppress_log import suppress_log
-from typing import Any, Dict, List, Optional, Set, Tuple, Union, TYPE_CHECKING
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    TYPE_CHECKING,
+)
 
 from PyQt6.QtCore import QThread, QTimer, QPoint
 from PyQt6.QtGui import QAction, QColor
 from PyQt6.QtWidgets import QMenu, QMessageBox, QWidget
 from rdkit import Chem
-from rdkit.Chem import AllChem
+from rdkit.Chem import rdDepictor
 
 from . import OBABEL_AVAILABLE
 
@@ -387,6 +397,11 @@ class ComputeManager:
         """
         mol = self.host.view_3d_manager.current_mol
         label = entry.get("label", method)
+        if mol is None:
+            self.host.update_status_message(
+                f"Optimization with {label} needs a 3D structure."
+            )
+            return
         self.host.update_status_message(f"Optimizing 3D structure ({label})...")
         try:
             success = bool(entry["callback"](mol))
@@ -410,7 +425,7 @@ class ComputeManager:
         self._refresh_ui_state()
         self.host.edit_actions_manager.push_undo_state()
         if self.host.view_3d_manager.plotter:
-            self.host.view_3d_manager.plotter.reset_camera()
+            self.host.view_3d_manager.plotter.reset_camera()  # type: ignore[call-arg]
         self.host.update_status_message(f"Process completed ({label}).")
 
     def _prepare_rdkit_mol_for_conversion(self) -> Optional[Chem.Mol]:
@@ -439,7 +454,9 @@ class ComputeManager:
             return None
         return mol
 
-    def _handle_chemistry_problems(self, mol: Chem.Mol, problems: List[Any]) -> None:
+    def _handle_chemistry_problems(
+        self, mol: Chem.Mol, problems: Sequence[Any]
+    ) -> None:
         self.host.init_manager.scene.clear_all_problem_flags()
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
         self.host.statusBar().showMessage(msg)  # type: ignore[union-attr]
@@ -474,7 +491,7 @@ class ComputeManager:
             # 3D generation; the 2D canvas keeps the user's own layout.
             planar = Chem.Mol(stereo_mol)
             planar.RemoveAllConformers()
-            AllChem.Compute2DCoords(planar)
+            rdDepictor.Compute2DCoords(planar)
             return str(Chem.MolToMolBlock(planar, includeStereo=True))
         except (RuntimeError, ValueError) as e:
             logging.warning("E/Z-consistent 2D layout failed: %s", e)
@@ -556,7 +573,7 @@ class ComputeManager:
         self._refresh_ui_state()
         self.host.edit_actions_manager.push_undo_state()
         if self.host.view_3d_manager.plotter:
-            self.host.view_3d_manager.plotter.reset_camera()
+            self.host.view_3d_manager.plotter.reset_camera()  # type: ignore[call-arg]
 
         # Record the successful optimization method from mol property or current setting
         try:

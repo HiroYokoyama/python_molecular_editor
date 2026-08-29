@@ -27,7 +27,7 @@ class PluginContext:
     def add_menu_action(
         self,
         path: str,
-        callback: Callable,
+        callback: Callable[..., Any],
         text: Optional[str] = None,
         icon: Optional[str] = None,
         shortcut: Optional[str] = None,
@@ -57,8 +57,8 @@ class PluginContext:
     def register_menu_action(
         self,
         path: str,
-        text_or_callback: Union[str, Callable],
-        callback: Optional[Callable] = None,
+        text_or_callback: Union[str, Callable[..., Any]],
+        callback: Optional[Callable[..., Any]] = None,
         icon: Optional[str] = None,
         shortcut: Optional[str] = None,
     ) -> None:
@@ -76,7 +76,7 @@ class PluginContext:
     def add_plugin_menu(
         self,
         path: str,
-        callback: Callable,
+        callback: Callable[..., Any],
         text: Optional[str] = None,
         icon: Optional[str] = None,
         shortcut: Optional[str] = None,
@@ -103,7 +103,7 @@ class PluginContext:
 
     def add_toolbar_action(
         self,
-        callback: Callable,
+        callback: Callable[..., Any],
         text: str,
         icon: Optional[str] = None,
         tooltip: Optional[str] = None,
@@ -262,7 +262,7 @@ class PluginContext:
         if mw and hasattr(mw, "view_3d_manager") and mw.view_3d_manager.plotter:
             mw.view_3d_manager.plotter.reset_camera()
 
-    def add_export_action(self, label: str, callback: Callable) -> None:
+    def add_export_action(self, label: str, callback: Callable[..., Any]) -> None:
         """
         Register a custom export action.
 
@@ -303,7 +303,7 @@ class PluginContext:
             self._plugin_name, extension, callback, priority
         )
 
-    def add_analysis_tool(self, label: str, callback: Callable) -> None:
+    def add_analysis_tool(self, label: str, callback: Callable[..., Any]) -> None:
         """
         Register a tool in the Analysis menu.
 
@@ -313,7 +313,7 @@ class PluginContext:
         """
         self._manager.register_analysis_tool(self._plugin_name, label, callback)
 
-    def register_save_handler(self, callback: Callable[[], dict]) -> None:
+    def register_save_handler(self, callback: Callable[[], Dict[str, Any]]) -> None:
         """
         Register a callback to save state into the project file.
 
@@ -322,7 +322,7 @@ class PluginContext:
         """
         self._manager.register_save_handler(self._plugin_name, callback)
 
-    def register_load_handler(self, callback: Callable[[dict], None]) -> None:
+    def register_load_handler(self, callback: Callable[[Dict[str, Any]], None]) -> None:
         """
         Register a callback to restore state from the project file.
 
@@ -331,7 +331,9 @@ class PluginContext:
         """
         self._manager.register_load_handler(self._plugin_name, callback)
 
-    def register_3d_context_menu(self, callback: Callable, label: str) -> None:
+    def register_3d_context_menu(
+        self, callback: Callable[..., Any], label: str
+    ) -> None:
         """Deprecated: This method does nothing. Kept for backward compatibility."""
         import warnings
 

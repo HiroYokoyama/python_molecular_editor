@@ -88,9 +88,28 @@ jobs:
     - name: Install Python Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pylint
+        # Pinned toolchain (see requirements-lint.txt) so a new linter release
+        # cannot turn this job red without a change to this repository.
+        pip install -r requirements-lint.txt
         # Install local package + dependencies from pyproject.toml
         pip install -e moleditpy/
+
+    - name: Run Ruff
+      run: |
+        # `ruff format` is part of the documented workflow and the tree is
+        # already clean at the default line length, so gate on it too.
+        ruff format --check moleditpy/src tests
+        ruff check moleditpy/src/moleditpy/
+
+    - name: Run Mypy
+      run: |
+        # The tree has Windows-, macOS- and Linux-only branches, and mypy
+        # defaults to the platform it runs on. Check all three so a
+        # Windows-only regression cannot pass a Linux-only CI job.
+        for plat in win32 linux darwin; do
+          echo "--- mypy --platform $plat ---"
+          mypy --platform "$plat"
+        done
 
     - name: Run Pylint
       run: |

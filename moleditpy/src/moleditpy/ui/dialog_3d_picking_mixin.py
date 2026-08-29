@@ -23,8 +23,15 @@ if TYPE_CHECKING:
     from .main_window import MainWindow
     from rdkit import Chem
 
+    # The mixin is only ever combined with a QDialog, so `self` really is a
+    # QObject; saying so lets installEventFilter/removeEventFilter type-check.
+    # At runtime the base stays `object`, leaving the MRO untouched.
+    _MixinBase = QObject
+else:
+    _MixinBase = object
 
-class Dialog3DPickingMixin:
+
+class Dialog3DPickingMixin(_MixinBase):
     """Mixin providing common functionality for 3D atom selection."""
 
     main_window: MainWindow

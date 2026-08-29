@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import Any, List, Optional, Union, TYPE_CHECKING
 
 import numpy as np
 from PyQt6.QtCore import Qt, QTimer
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from .main_window import MainWindow
 
 
-class SelectionList(list):
+class SelectionList(List[int]):
     """Order-preserving list that compares equal to sets/lists/tuples of same elements."""
 
     def __eq__(self, other: object) -> bool:

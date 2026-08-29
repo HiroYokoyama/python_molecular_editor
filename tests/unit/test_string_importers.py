@@ -291,7 +291,7 @@ def test_smiles_truly_empty_after_strip_reports_empty(mock_parser_host):
 def test_smiles_parse_runtime_error_reported(mock_parser_host):
     importer = DummyImporter(mock_parser_host)
     with patch(
-        "moleditpy.ui.string_importers.AllChem.Compute2DCoords",
+        "moleditpy.ui.string_importers.rdDepictor.Compute2DCoords",
         side_effect=RuntimeError("rdkit exploded"),
     ):
         importer.load_from_smiles("CCO")
@@ -316,7 +316,7 @@ def test_inchi_truly_empty_after_strip_reports_empty(mock_parser_host):
 def test_inchi_parse_runtime_error_reported(mock_parser_host):
     importer = DummyImporter(mock_parser_host)
     with patch(
-        "moleditpy.ui.string_importers.AllChem.Compute2DCoords",
+        "moleditpy.ui.string_importers.rdDepictor.Compute2DCoords",
         side_effect=RuntimeError("rdkit exploded"),
     ):
         importer.load_from_inchi("InChI=1S/CH4/h1H4")

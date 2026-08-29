@@ -16,7 +16,7 @@ from typing import Any, Dict
 
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
-from rdkit.Chem import AllChem
+from rdkit.Chem import rdDepictor, rdmolops
 
 # PyQt6 Modules
 from PyQt6.QtCore import QPointF, QTimer
@@ -135,11 +135,11 @@ class StringImporterManager:
                     raise ValueError("SMILES string was empty.")
                 raise ValueError("Invalid SMILES string.")
 
-            AllChem.Compute2DCoords(mol)
+            rdDepictor.Compute2DCoords(mol)
             Chem.Kekulize(mol)
-            AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
+            rdmolops.AssignStereochemistry(mol, cleanIt=True, force=True)
             conf = mol.GetConformer()
-            AllChem.WedgeMolBonds(mol, conf)
+            rdmolops.WedgeMolBonds(mol, conf)
         except ValueError as e:
             self.host.statusBar().showMessage(f"Invalid SMILES: {e}")
             return
@@ -173,11 +173,11 @@ class StringImporterManager:
                     raise ValueError("InChI string was empty.")
                 raise ValueError("Invalid InChI string.")
 
-            AllChem.Compute2DCoords(mol)
+            rdDepictor.Compute2DCoords(mol)
             Chem.Kekulize(mol)
-            AllChem.AssignStereochemistry(mol, cleanIt=True, force=True)
+            rdmolops.AssignStereochemistry(mol, cleanIt=True, force=True)
             conf = mol.GetConformer()
-            AllChem.WedgeMolBonds(mol, conf)
+            rdmolops.WedgeMolBonds(mol, conf)
         except ValueError as e:
             self.host.statusBar().showMessage(f"Invalid InChI: {e}")
             return

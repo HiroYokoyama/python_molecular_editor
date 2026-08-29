@@ -107,9 +107,9 @@ class TemplateMixin:
                 safe_connection_score = 0
 
                 # Identify template-side indices corresponding to fusing k
-                used_template_indices = set(
+                used_template_indices = {
                     (k + rot) % num_points for k in existing_orders
-                )
+                }
 
                 for t_idx in used_template_indices:
                     # Neighbor indices in the template
@@ -320,8 +320,8 @@ class TemplateMixin:
                 return (p.x(), p.y())
             try:
                 return (p[0], p[1])
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                raise ValueError("point has no x/y")
+            except (AttributeError, RuntimeError, ValueError, TypeError) as exc:
+                raise ValueError("point has no x/y") from exc
 
         def dist_pts(a: Any, b: Any) -> Any:
             ax, ay = coords(a)

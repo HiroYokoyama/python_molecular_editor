@@ -1,0 +1,17 @@
+# Pinned lint toolchain.
+#
+# Why pinned: the CI lint job previously ran `pip install pylint` with no
+# version, so every run picked up whatever was newest on PyPI and a new release
+# could turn a green build red without any change to this repository. Local runs
+# used whatever each developer happened to have installed, so "passes here" and
+# "passes in CI" were not the same statement.
+#
+# Bump these deliberately, in their own commit, after confirming the tree is
+# still clean:
+#     pip install -r requirements-lint.txt
+#     mypy && ruff check moleditpy/src/moleditpy/ && pylint moleditpy/src/moleditpy/ --errors-only
+
+mypy==1.20.2
+ruff==0.14.5
+pylint==4.0.4
+

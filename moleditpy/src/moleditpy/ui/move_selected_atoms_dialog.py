@@ -549,7 +549,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         plotter = self.main_window.view_3d_manager.plotter
         if plotter is not None:
             try:
-                plotter.remove_actor("move_selected_atoms_highlight")
+                plotter.remove_actor("move_selected_atoms_highlight")  # type: ignore[arg-type]
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 logging.debug("Suppressed non-critical error", exc_info=True)
@@ -687,7 +687,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
                 self.original_style = plotter.interactor.GetInteractorStyle()
 
             # Using PyVista's built-in picking which reliably draws the box correctly
-            plotter.enable_rectangle_picking(
+            plotter.enable_rectangle_picking(  # type: ignore[call-arg]
                 callback=self.on_rectangle_picked,
                 show_message=False,
                 start=True,
@@ -695,7 +695,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
             )
         else:
             btn.setText("Box Selection: OFF")
-            plotter.disable_picking()
+            plotter.disable_picking()  # type: ignore[call-arg]
             # Restore original style via pyvista's bookkeeping so its
             # update_style() re-asserts ours instead of RubberBandPick
             if self.original_style is not None:

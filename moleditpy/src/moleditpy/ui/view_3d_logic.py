@@ -269,12 +269,12 @@ class View3DManager:
                         logging.debug("Suppressed non-critical error", exc_info=True)
 
         # Define common mesh properties
-        mesh_props = dict(
-            smooth_shading=True,
-            specular=self.host.init_manager.settings.get("specular", 0.2),
-            specular_power=self.host.init_manager.settings.get("specular_power", 20),
-            lighting=is_lighting_enabled,
-        )
+        mesh_props = {
+            "smooth_shading": True,
+            "specular": self.host.init_manager.settings.get("specular", 0.2),
+            "specular_power": self.host.init_manager.settings.get("specular_power", 20),
+            "lighting": is_lighting_enabled,
+        }
 
         self._add_3d_atom_glyphs(
             mol_to_draw, conf, sym, col, current_style, is_lighting_enabled, mesh_props
@@ -502,7 +502,7 @@ class View3DManager:
 
                     # Add split atoms
                     # Use calculated sphere_radius (with radius_factor applied)
-                    for atom_idx, bond_order, offset_vecs, s_radius in split_atoms:
+                    for atom_idx, _bond_order, offset_vecs, s_radius in split_atoms:
                         pos = self.atom_positions_3d[atom_idx]
                         # Get radius from bond (calculated above)
                         for offset_vec in offset_vecs:
@@ -1059,7 +1059,7 @@ class View3DManager:
                         pts.append(coord)
                         labels.append(lbl if lbl is not None else "?")
                     try:
-                        self.plotter.remove_actor("chiral_labels")  # type: ignore[union-attr]
+                        self.plotter.remove_actor("chiral_labels")  # type: ignore[arg-type, union-attr]
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1193,7 +1193,7 @@ class View3DManager:
             and "ez_labels" in self.plotter.renderer.actors  # type: ignore[union-attr]
         ):
             try:
-                self.plotter.remove_actor("ez_labels")  # type: ignore[union-attr]
+                self.plotter.remove_actor("ez_labels")  # type: ignore[arg-type, union-attr]
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.warning(f"Failed to remove EZ labels: {e}")
 
@@ -1666,7 +1666,7 @@ class View3DManager:
             if self.atom_label_legend_names:
                 for nm in self.atom_label_legend_names:
                     try:
-                        self.plotter.remove_actor(nm)  # type: ignore[union-attr]
+                        self.plotter.remove_actor(nm)  # type: ignore[arg-type, union-attr]
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1757,7 +1757,7 @@ class View3DManager:
             if self.atom_label_legend_names:
                 for nm in list(self.atom_label_legend_names):
                     try:
-                        self.plotter.remove_actor(nm)  # type: ignore[union-attr]
+                        self.plotter.remove_actor(nm)  # type: ignore[arg-type, union-attr]
                     except (AttributeError, RuntimeError, TypeError) as e:
                         logging.debug(
                             f"Suppressed exception: {e}"
@@ -1932,28 +1932,28 @@ class View3DManager:
                 self.axes_widget.SetEnabled(True)
                 self.axes_widget.InteractiveOff()
             else:
-                self.plotter.hide_axes()  # type: ignore[union-attr]
+                self.plotter.hide_axes()  # type: ignore[call-arg, union-attr]
 
             # Re-render to show axes
             self.plotter.render()  # type: ignore[union-attr]
-        except (
-            AttributeError,
-            RuntimeError,
-            TypeError,
-            vtk.vtkException if hasattr(vtk, "vtkException") else Exception,
-        ) as e:
+        # VTK has no vtkException, so the old `vtk.vtkException if hasattr(...)
+        # else Exception` entry always resolved to Exception and the three named
+        # types above it were decorative. Kept broad on purpose -- toggling axes
+        # goes through VTK/Qt, which can surface almost anything -- but stated
+        # plainly instead of hidden behind a probe that never matched.
+        except Exception as e:
             logging.debug(f"Failed to toggle 3D axes: {e}")
 
             # Explicitly render to show change
             self.plotter.render()  # type: ignore[union-attr]
 
-        if redraw:
+        if redraw and self.current_mol is not None:
             self.draw_molecule_3d(self.current_mol)
 
         # Do not reset camera on settings change (reset only once)
         if not getattr(self, "_camera_initialized", False):
             try:
-                self.plotter.reset_camera()  # type: ignore[union-attr]
+                self.plotter.reset_camera()  # type: ignore[call-arg, union-attr]
             except (AttributeError, RuntimeError, TypeError) as e:
                 logging.debug(
                     f"Suppressed exception: {e}"

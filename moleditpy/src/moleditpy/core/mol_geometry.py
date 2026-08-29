@@ -593,9 +593,9 @@ def _identify_problems_rdkit(
 
 def optimize_2d_coords(mol: Chem.Mol) -> Dict[int, Tuple[float, float]]:
     """Generate 2D coordinates using RDKit and return a map of (x, y) tuples."""
-    from rdkit.Chem import AllChem
+    from rdkit.Chem import rdDepictor
 
-    AllChem.Compute2DCoords(mol)
+    rdDepictor.Compute2DCoords(mol)
     conf = mol.GetConformer()
     new_positions = {}
     for rdkit_atom in mol.GetAtoms():

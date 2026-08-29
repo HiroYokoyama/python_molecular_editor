@@ -115,9 +115,11 @@ def test_calculation_worker_rdkit_embedding_fail_fallback(worker):
     mol_block = Chem.MolToMolBlock(Chem.MolFromSmiles("C"))
 
     with (
-        patch("moleditpy.ui.calculation_worker.AllChem.EmbedMolecule", return_value=-1),
         patch(
-            "moleditpy.ui.calculation_worker.AllChem.GetMoleculeBoundsMatrix",
+            "moleditpy.ui.calculation_worker.rdDistGeom.EmbedMolecule", return_value=-1
+        ),
+        patch(
+            "moleditpy.ui.calculation_worker.rdDistGeom.GetMoleculeBoundsMatrix",
             side_effect=RuntimeError("Bounds fail"),
         ),
     ):
@@ -402,7 +404,7 @@ def test_iterative_optimize_mmff_unsupported_returns_false():
         status_msgs.append(msg)
 
     with patch(
-        "moleditpy.ui.calculation_worker.AllChem.MMFFGetMoleculeProperties",
+        "moleditpy.ui.calculation_worker.rdForceFieldHelpers.MMFFGetMoleculeProperties",
         return_value=None,
     ):
         result = _iterative_optimize(mol, "MMFF94s", check_halted, safe_status)
@@ -432,7 +434,7 @@ def test_optimize_only_mmff_unsupported_emits_error():
     }
 
     with patch(
-        "moleditpy.ui.calculation_worker.AllChem.MMFFGetMoleculeProperties",
+        "moleditpy.ui.calculation_worker.rdForceFieldHelpers.MMFFGetMoleculeProperties",
         return_value=None,
     ):
         worker.run_calculation(mol_block, options)

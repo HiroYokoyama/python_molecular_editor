@@ -10,7 +10,7 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Optional, Any
+from typing import Any, Dict, Optional
 import logging
 import numpy as np
 import pyvista as pv
@@ -55,7 +55,7 @@ class MoveGroupDialog(BasePickingDialog):
 
         self.clicked_atom_for_toggle: Optional[int] = None
         # State for group movement (used by CustomInteractorStyle)
-        self.initial_positions: dict = {}
+        self.initial_positions: Dict[int, np.ndarray] = {}
         self.is_dragging_group_vtk = False
         self.is_rotating_group_vtk = False
         self.drag_atom_idx_vtk: Optional[int] = None
@@ -523,7 +523,7 @@ class MoveGroupDialog(BasePickingDialog):
         plotter = self.main_window.view_3d_manager.plotter
         if plotter is not None:
             try:
-                plotter.remove_actor("move_group_highlight")
+                plotter.remove_actor("move_group_highlight")  # type: ignore[arg-type]
             except (AttributeError, RuntimeError, ValueError, TypeError):
                 # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
                 logging.debug("Suppressed non-critical error", exc_info=True)
