@@ -421,6 +421,16 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
           * 原子の融合 (Enable Atom Fusing): 有効にすると、テンプレートを既存の原子の近くに配置した際に融合 (接続) させます。
           * 原子の融合距離 (Fusing Distance): テンプレートの原子が既存の原子と融合する距離の閾値を設定します。
 
+  * **2D Cleanup タブ:**
+
+    `Clean Up 2D` (4.6 参照) が 2D 構造を再配置する方法を設定します。
+
+      * **CoordGen を優先 (Prefer CoordGen for Cleanup):** RDKit の CoordGen アルゴリズムを使用します。標準の生成器より環構造が綺麗に配置されることが多いです。有効にしている間、以下の 3 つの項目は CoordGen では無視されるため、グレー表示になります。
+      * **正準の向き (Canonical Orientation):** 生成結果を RDKit の正準の向きに回転させます。クリーンアップは常に座標を最初から再生成するため、この項目をオフにしても生成器そのままの向きになるだけで、クリーンアップ前の向きが保持されるわけではない点にご注意ください。*(Prefer CoordGen 有効時は無視されます)*
+      * **環テンプレートを使用 (Use Ring Templates):** ひずみのある多環系に対して RDKit 内蔵のテンプレート形状を使用します。テンプレートを持つ環系はごく一部のため、多くの構造では変化しません。*(Prefer CoordGen 有効時は無視されます)*
+      * **結合の角度を整える (Straighten Bonds):** 大部分の結合が 30°/90° の角度になるよう、生成結果を回転させます。この項目はどちらの生成器でも有効です。
+      * **原子の重なりを回避 (Avoid Clashes):** 候補となる配置を追加でサンプリングし、原子や結合の重なりを減らします。主に柔軟な鎖状構造に効果があり、大きな分子では処理が遅くなることがあります。*(Prefer CoordGen 有効時は無視されます)*
+
   * **Scene タブ:**
       * 背景色
       * 3D 座標軸の表示/非表示
@@ -529,7 +539,7 @@ MoleditPyは、Pythonスクリプトによる機能の拡張をサポートし�
 
 ## 11\. バージョン情報・ライセンス
 
-  * **バージョン:** 4.8
+  * **バージョン:** 4.9
   * **作者:** Hiromichi Yokoyama
   * **ライセンス:** GPL-3.0 license
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

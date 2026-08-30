@@ -15,10 +15,10 @@ def _make_parent():
     return parent
 
 
-def test_init_creates_seven_tabs(app):
-    """SettingsDialog initialises with exactly seven tabs."""
+def test_init_creates_eight_tabs(app):
+    """SettingsDialog initialises with exactly eight tabs."""
     dialog = SettingsDialog(DEFAULT_SETTINGS, parent=None)
-    assert dialog.tab_widget.count() == 7
+    assert dialog.tab_widget.count() == 8
 
 
 def test_init_tab_labels(app):
@@ -28,6 +28,7 @@ def test_init_tab_labels(app):
         dialog.tab_widget.tabText(i) for i in range(dialog.tab_widget.count())
     ]
     assert "2D Settings" in tab_titles
+    assert "2D Cleanup" in tab_titles
     assert "3D Scene" in tab_titles
     assert "Ball & Stick" in tab_titles
     assert "Other" in tab_titles

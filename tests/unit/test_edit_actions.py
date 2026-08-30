@@ -1054,6 +1054,81 @@ def test_clean_up_2d_structure_no_positions(mock_parser_host):
     )
 
 
+@pytest.mark.parametrize("prefer_coordgen_setting", [True, False])
+def test_clean_up_2d_structure_passes_prefer_coordgen_setting(
+    mock_parser_host, prefer_coordgen_setting
+):
+    """The prefer_coordgen_2d setting is read from the scene and forwarded as a bool."""
+    editor = DummyEditActions(mock_parser_host)
+    a1 = editor.scene.create_atom("C", QPointF(0, 0))
+    a2 = editor.scene.create_atom("C", QPointF(10, 0))
+    editor.scene.create_bond(editor.scene.atom_items[a1], editor.scene.atom_items[a2])
+    mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+    editor.scene.bond_items = {}
+    editor.scene.get_setting.side_effect = (
+        lambda key, default=None: prefer_coordgen_setting
+        if key == "prefer_coordgen_2d"
+        else default
+    )
+
+    with (
+        patch("moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False),
+        patch(
+            "moleditpy.core.mol_geometry.optimize_2d_coords",
+            return_value={a1: (0.0, 0.0), a2: (1.5, 0.0)},
+        ) as mock_optimize,
+    ):
+        editor.clean_up_2d_structure()
+
+    mock_optimize.assert_called_once()
+    args, _ = mock_optimize.call_args
+    assert args[1] is prefer_coordgen_setting
+    editor.scene.get_setting.assert_any_call("prefer_coordgen_2d", False)
+
+
+def test_clean_up_2d_structure_passes_cleanup_option_settings(mock_parser_host):
+    """The four cleanup-option settings are read from the scene and forwarded as bools."""
+    editor = DummyEditActions(mock_parser_host)
+    a1 = editor.scene.create_atom("C", QPointF(0, 0))
+    a2 = editor.scene.create_atom("C", QPointF(10, 0))
+    editor.scene.create_bond(editor.scene.atom_items[a1], editor.scene.atom_items[a2])
+    mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+    editor.scene.bond_items = {}
+
+    settings = {
+        "prefer_coordgen_2d": True,
+        "cleanup_canonical_orientation_2d": True,
+        "cleanup_use_ring_templates_2d": False,
+        "cleanup_straighten_bonds_2d": True,
+        "cleanup_avoid_clashes_2d": False,
+    }
+    editor.scene.get_setting.side_effect = lambda key, default=None: settings.get(
+        key, default
+    )
+
+    with (
+        patch("moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False),
+        patch(
+            "moleditpy.core.mol_geometry.optimize_2d_coords",
+            return_value={a1: (0.0, 0.0), a2: (1.5, 0.0)},
+        ) as mock_optimize,
+    ):
+        editor.clean_up_2d_structure()
+
+    mock_optimize.assert_called_once()
+    args, _ = mock_optimize.call_args
+    assert args[1] is True  # prefer_coordgen
+    assert args[2] is True  # canonical_orientation
+    assert args[3] is False  # use_ring_templates
+    assert args[4] is True  # straighten_bonds
+    assert args[5] is False  # avoid_clashes
+    editor.scene.get_setting.assert_any_call("prefer_coordgen_2d", False)
+    editor.scene.get_setting.assert_any_call("cleanup_canonical_orientation_2d", True)
+    editor.scene.get_setting.assert_any_call("cleanup_use_ring_templates_2d", False)
+    editor.scene.get_setting.assert_any_call("cleanup_straighten_bonds_2d", False)
+    editor.scene.get_setting.assert_any_call("cleanup_avoid_clashes_2d", False)
+
+
 # ---------------------------------------------------------------------------
 # _apply_ui_h_counts / update_implicit_hydrogens
 # ---------------------------------------------------------------------------

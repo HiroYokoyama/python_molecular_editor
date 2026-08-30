@@ -27,20 +27,22 @@ def test_update_ui_sets_sliders(app):
     """update_ui() updates all bond and font slider values correctly."""
     tab = Settings2DTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
-    settings["bond_width_2d"] = 3.0
+    # Values are deliberately distinct from DEFAULT_SETTINGS so the
+    # assertions below prove update_ui() applied them.
+    settings["bond_width_2d"] = 4.5
     settings["bond_spacing_double_2d"] = 4.0
     settings["bond_spacing_triple_2d"] = 5.0
-    settings["bond_wedge_width_2d"] = 8.0
+    settings["bond_wedge_width_2d"] = 11.0
     settings["bond_dash_count_2d"] = 12
     settings["atom_font_size_2d"] = 24
     settings["template_fusing_distance_2d"] = 18.0
     settings["template_snapping_distance_2d"] = 20.0
     settings["bond_snapping_distance_2d"] = 16.0
     tab.update_ui(settings)
-    assert tab.bond_width_2d_slider.value() == 30
+    assert tab.bond_width_2d_slider.value() == 45
     assert tab.bond_spacing_double_2d_slider.value() == 40
     assert tab.bond_spacing_triple_2d_slider.value() == 50
-    assert tab.bond_wedge_width_2d_slider.value() == 80
+    assert tab.bond_wedge_width_2d_slider.value() == 110
     assert tab.bond_dash_count_2d_slider.value() == 12
     assert tab.atom_font_size_2d_slider.value() == 24
     assert tab.template_fusing_distance_2d_slider.value() == 18

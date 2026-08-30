@@ -27,6 +27,10 @@ jobs:
             python-version: "3.12"
           - os: ubuntu-latest
             python-version: "3.13"
+            # Exactly one matrix entry measures and uploads coverage, so the
+            # other nine are not slowed down and Codecov gets a single report
+            # per commit instead of ten partial ones.
+            coverage: true
           - os: ubuntu-latest
             python-version: "3.14"
           - os: windows-latest
@@ -57,16 +61,38 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pytest pytest-qt pytest-mock pytest-timeout
+        # Needed only by the coverage matrix entry, but installing it
+        # everywhere keeps the dependency list identical across the matrix.
+        pip install pytest-cov
         # Install local package + dependencies from pyproject.toml
         pip install -e moleditpy/
 
     - name: Run Tests
+      if: ${{ !matrix.coverage }}
       env:
         MOLEDITPY_HEADLESS: "1"
         QT_QPA_PLATFORM: "offscreen"
       run: |
         # No suite flags: run_all_tests.py runs all four suites (unit, integration, E2E, GUI)
         python tests/run_all_tests.py --no-cov --no-report
+
+    - name: Run Tests with Coverage
+      if: ${{ matrix.coverage }}
+      env:
+        MOLEDITPY_HEADLESS: "1"
+        QT_QPA_PLATFORM: "offscreen"
+      run: |
+        # Same four suites, but with coverage on. --no-report still skips the
+        # markdown/HTML report generation; the runner leaves a combined
+        # .coverage file, which Codecov needs as XML.
+        python tests/run_all_tests.py --no-report
+        python -m coverage xml -o coverage.xml
+
+    - name: Upload coverage reports to Codecov
+      if: ${{ matrix.coverage }}
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   lint:
     runs-on: ubuntu-latest

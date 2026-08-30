@@ -254,7 +254,7 @@ class BondItem(QGraphicsItem):
                 else "bond_spacing_double_2d"
             )
             bond_offset = scene.get_setting(key, 3.5)
-            wedge_width = scene.get_setting("bond_wedge_width_2d", 6.0)
+            wedge_width = scene.get_setting("bond_wedge_width_2d", 8.0)
 
         # Qt prunes clicks whose shape() escapes boundingRect().
         extra = (getattr(self, "order", 1) - 1) * bond_offset + 50 + wedge_width
@@ -270,7 +270,7 @@ class BondItem(QGraphicsItem):
             font_size = 20
             font_family = FONT_FAMILY
             if scene is not None:
-                font_size = scene.get_setting("atom_font_size_2d", 20)
+                font_size = scene.get_setting("atom_font_size_2d", 22)
                 font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
 
             font = QFont(font_family, font_size, FONT_WEIGHT_BOLD)
@@ -363,11 +363,11 @@ class BondItem(QGraphicsItem):
                     bond_color = QColor(color_hex)
 
                 # Width and Cap Style
-                bond_width = scene.get_setting("bond_width_2d", 2.0)
+                bond_width = scene.get_setting("bond_width_2d", 3.0)
                 cap_style_str = scene.get_setting("bond_cap_style_2d", "Round")
 
                 # Wedge/Dash settings
-                wedge_width_half = scene.get_setting("bond_wedge_width_2d", 6.0)
+                wedge_width_half = scene.get_setting("bond_wedge_width_2d", 8.0)
                 num_dashes = int(scene.get_setting("bond_dash_count_2d", 8))
 
                 # Cap Style logic
@@ -531,7 +531,7 @@ class BondItem(QGraphicsItem):
                         font_family = FONT_FAMILY
                         _sc: Any = self.scene()
                         if _sc is not None:
-                            font_size = _sc.get_setting("atom_font_size_2d", 20)
+                            font_size = _sc.get_setting("atom_font_size_2d", 22)
                             font_family = _sc.get_setting(
                                 "atom_font_family_2d", FONT_FAMILY
                             )

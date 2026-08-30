@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **90.00%**
+- **Overall Project Coverage**: **90.01%**
 
 ### Coverage Breakdown
 
@@ -8,7 +8,7 @@
 | :--- | :--- | :--- | :--- |
 | moleditpy\src\moleditpy\__init__.py                     |      6 |      2 |   66.7% |
 | moleditpy\src\moleditpy\main.py                         |    170 |     35 |   79.4% |
-| moleditpy\src\moleditpy\core\mol_geometry.py            |    292 |      4 |   98.6% |
+| moleditpy\src\moleditpy\core\mol_geometry.py            |    316 |      4 |   98.7% |
 | moleditpy\src\moleditpy\core\molecular_data.py          |    284 |      0 |  100.0% |
 | moleditpy\src\moleditpy\plugins\plugin_interface.py     |    256 |      6 |   97.7% |
 | moleditpy\src\moleditpy\plugins\plugin_manager.py       |    407 |     11 |   97.3% |
@@ -36,7 +36,7 @@
 | moleditpy\src\moleditpy\ui\dialog_logic.py              |    222 |     25 |   88.7% |
 | moleditpy\src\moleditpy\ui\dihedral_dialog.py           |    280 |     33 |   88.2% |
 | moleditpy\src\moleditpy\ui\edit_3d_logic.py             |    221 |     32 |   85.5% |
-| moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    825 |    127 |   84.6% |
+| moleditpy\src\moleditpy\ui\edit_actions_logic.py        |    831 |    127 |   84.7% |
 | moleditpy\src\moleditpy\ui\export_logic.py              |    520 |     83 |   84.0% |
 | moleditpy\src\moleditpy\ui\geometry_base_dialog.py      |     52 |      1 |   98.1% |
 | moleditpy\src\moleditpy\ui\io_logic.py                  |    752 |     76 |   89.9% |
@@ -50,17 +50,18 @@
 | moleditpy\src\moleditpy\ui\periodic_table_dialog.py     |     37 |      2 |   94.6% |
 | moleditpy\src\moleditpy\ui\planarize_dialog.py          |    112 |      9 |   92.0% |
 | moleditpy\src\moleditpy\ui\plugin_menu_manager.py       |    342 |     28 |   91.8% |
-| moleditpy\src\moleditpy\ui\preview_molecule.py          |    116 |     14 |   87.9% |
-| moleditpy\src\moleditpy\ui\settings_dialog.py           |    101 |      3 |   97.0% |
+| moleditpy\src\moleditpy\ui\preview_molecule.py          |    116 |     15 |   87.1% |
+| moleditpy\src\moleditpy\ui\settings_dialog.py           |    105 |      3 |   97.1% |
 | moleditpy\src\moleditpy\ui\string_importers.py          |    121 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\template_preview_item.py     |    240 |      4 |   98.3% |
-| moleditpy\src\moleditpy\ui\template_preview_view.py     |     46 |      4 |   91.3% |
+| moleditpy\src\moleditpy\ui\template_preview_view.py     |     46 |     10 |   78.3% |
 | moleditpy\src\moleditpy\ui\translation_dialog.py        |    284 |     25 |   91.2% |
 | moleditpy\src\moleditpy\ui\ui_manager.py                |    398 |     38 |   90.5% |
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    298 |     34 |   88.6% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1007 |    183 |   81.8% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |    101 |      5 |   95.0% |
-| moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py |    144 |      0 |  100.0% |
+| moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_cleanup_tab.py |     51 |      0 |  100.0% |
+| moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py |    145 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py |    156 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_other_tab.py |     89 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_tab_base.py |     57 |      0 |  100.0% |
@@ -70,11 +71,11 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **17278** | **1727** | **90.00%** |
+| **TOTAL** | **17364** | **1734** | **90.01%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2308 (1 skipped)
-- **Unit tests**: PASSED (2083 passed)
+- **Total tests passed**: 2335 (1 skipped)
+- **Unit tests**: PASSED (2110 passed)
 - **Integration tests**: PASSED (105 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (86 passed)

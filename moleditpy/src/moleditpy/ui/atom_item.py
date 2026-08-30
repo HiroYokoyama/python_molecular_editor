@@ -114,7 +114,7 @@ class AtomItem(QGraphicsItem):
 
         scene: Any = self.scene()
         if scene is not None:
-            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_size = scene.get_setting("atom_font_size_2d", 22)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
             font_italic = scene.get_setting("atom_font_italic_2d", False)
@@ -143,7 +143,7 @@ class AtomItem(QGraphicsItem):
         font_underline = False
         scene: Any = self.scene()
         if scene is not None:
-            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_size = scene.get_setting("atom_font_size_2d", 22)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
             font_italic = scene.get_setting("atom_font_italic_2d", False)
@@ -272,7 +272,7 @@ class AtomItem(QGraphicsItem):
         font_underline = False
         scene: Any = self.scene()
         if scene is not None:
-            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_size = scene.get_setting("atom_font_size_2d", 22)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
             font_italic = scene.get_setting("atom_font_italic_2d", False)

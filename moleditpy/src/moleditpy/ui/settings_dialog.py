@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .settings_tabs.settings_2d_tab import Settings2DTab
+from .settings_tabs.settings_2d_cleanup_tab import Settings2DCleanupTab
 from .settings_tabs.settings_3d_tabs import Settings3DSceneTab, SettingsModelTab
 from .settings_tabs.settings_other_tab import SettingsOtherTab
 
@@ -35,6 +36,7 @@ class SettingsDialog(QDialog):
     def __init__(self, current_settings: Any, parent: Any = None) -> None:
         super().__init__(parent)
         self.tab_2d: Any = None
+        self.tab_2d_cleanup: Any = None
         self.tab_bs: Any = None
         self.tab_cpk: Any = None
         self.tab_other: Any = None
@@ -57,6 +59,7 @@ class SettingsDialog(QDialog):
 
         # Instantiate Tabs
         self.tab_2d = Settings2DTab(self.default_settings, self)
+        self.tab_2d_cleanup = Settings2DCleanupTab(self.default_settings, self)
         self.tab_scene = Settings3DSceneTab(self.default_settings, self)
         self.tab_bs = SettingsModelTab(
             "ball_stick",
@@ -86,6 +89,7 @@ class SettingsDialog(QDialog):
 
         # Add Tabs to Widget
         self.tab_widget.addTab(self.tab_2d, "2D Settings")
+        self.tab_widget.addTab(self.tab_2d_cleanup, "2D Cleanup")
         self.tab_widget.addTab(self.tab_scene, "3D Scene")
         self.tab_widget.addTab(self.tab_bs, "Ball & Stick")
         self.tab_widget.addTab(self.tab_cpk, "CPK (Space-filling)")

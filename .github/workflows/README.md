@@ -14,11 +14,27 @@ Test matrix:
 | Windows | 3.13, 3.14 |
 | macOS | 3.13, 3.14 |
 
-The CI workflow installs the main package from `moleditpy/` and runs all test suites (Unit, Integration, and GUI tests) in headless mode:
+The CI workflow installs the main package from `moleditpy/` and runs all test suites (Unit, Integration, E2E, and GUI tests) in headless mode:
 
 ```bash
 python tests/run_all_tests.py --no-cov --no-report
 ```
+
+### Coverage
+
+The `ubuntu-latest` / Python 3.13 matrix entry is marked `coverage: true` and
+instead runs the same suites with coverage enabled, then uploads the result to
+Codecov:
+
+```bash
+python tests/run_all_tests.py --no-report
+python -m coverage xml -o coverage.xml
+```
+
+Only that one entry measures coverage, so the other nine are not slowed down and
+Codecov receives a single complete report per commit rather than ten partial
+ones. The upload needs a `CODECOV_TOKEN` repository secret; if it is missing the
+upload step fails softly and does not turn the job red.
 
 ## `test-release.yml` - Test Release
 
