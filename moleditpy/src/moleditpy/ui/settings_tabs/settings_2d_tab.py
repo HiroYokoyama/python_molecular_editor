@@ -170,6 +170,7 @@ class Settings2DTab(SettingsTabBase):
         self.atom_font_underline_2d_btn.setFont(underline_font)
 
         style_row = QHBoxLayout()
+        style_row.setContentsMargins(0, 0, 0, 0)
         style_row.setSpacing(4)
         style_row.addWidget(self.atom_font_bold_2d_btn)
         style_row.addWidget(self.atom_font_italic_2d_btn)

@@ -1154,7 +1154,26 @@ class EditActionsManager:
         try:
             from moleditpy.core.mol_geometry import optimize_2d_coords
 
-            new_positions = optimize_2d_coords(mol)
+            scene = self.host.init_manager.scene
+            prefer_coordgen = bool(scene.get_setting("prefer_coordgen_2d", False))
+            canonical_orientation = bool(
+                scene.get_setting("cleanup_canonical_orientation_2d", True)
+            )
+            use_ring_templates = bool(
+                scene.get_setting("cleanup_use_ring_templates_2d", False)
+            )
+            straighten_bonds = bool(
+                scene.get_setting("cleanup_straighten_bonds_2d", False)
+            )
+            avoid_clashes = bool(scene.get_setting("cleanup_avoid_clashes_2d", False))
+            new_positions = optimize_2d_coords(
+                mol,
+                prefer_coordgen,
+                canonical_orientation,
+                use_ring_templates,
+                straighten_bonds,
+                avoid_clashes,
+            )
 
             if not new_positions:
                 self.host.statusBar().showMessage(  # type: ignore[union-attr]

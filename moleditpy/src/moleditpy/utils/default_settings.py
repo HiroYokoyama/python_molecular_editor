@@ -84,4 +84,9 @@ DEFAULT_SETTINGS = {
     "template_fusing_distance_2d": 7.0,
     "template_snapping_distance_2d": 14.0,
     "bond_snapping_distance_2d": 14.0,
+    "prefer_coordgen_2d": False,
+    "cleanup_canonical_orientation_2d": True,
+    "cleanup_use_ring_templates_2d": False,
+    "cleanup_straighten_bonds_2d": False,
+    "cleanup_avoid_clashes_2d": False,
 }

@@ -284,6 +284,120 @@ def test_optimize_2d_coords():
         assert len(pos) == 2
 
 
+def _avg_bond_length(mol, positions):
+    import numpy as np
+
+    lengths = []
+    for bond in mol.GetBonds():
+        p1 = np.array(positions[bond.GetBeginAtomIdx()])
+        p2 = np.array(positions[bond.GetEndAtomIdx()])
+        lengths.append(np.linalg.norm(p1 - p2))
+    return sum(lengths) / len(lengths)
+
+
+def test_optimize_2d_coords_prefer_coordgen():
+    """CoordGen layout should also be generated for all atoms when requested."""
+    from rdkit import Chem
+    from moleditpy.core.mol_geometry import optimize_2d_coords
+
+    mol = Chem.MolFromSmiles("C1=CC=CC=C1")
+    for i, atom in enumerate(mol.GetAtoms()):
+        atom.SetIntProp("_original_atom_id", i)
+
+    new_pos = optimize_2d_coords(mol, prefer_coordgen=True)
+    assert len(new_pos) == 6
+    for pos in new_pos.values():
+        assert len(pos) == 2
+
+
+def test_optimize_2d_coords_bond_length_consistent_across_algorithms():
+    """Default and CoordGen layouts must normalize to the same average bond length.
+
+    RDKit's CoordGen algorithm uses a different internal bond-length
+    convention (~1.0) than the default generator (~1.5); without
+    normalization, switching the setting would visibly resize the molecule.
+    """
+    from rdkit import Chem
+    from moleditpy.core.mol_geometry import optimize_2d_coords, _TARGET_BOND_LENGTH
+
+    smiles = "c1ccccc1CCO"
+
+    mol_default = Chem.MolFromSmiles(smiles)
+    for i, atom in enumerate(mol_default.GetAtoms()):
+        atom.SetIntProp("_original_atom_id", i)
+    pos_default = optimize_2d_coords(mol_default, prefer_coordgen=False)
+
+    mol_coordgen = Chem.MolFromSmiles(smiles)
+    for i, atom in enumerate(mol_coordgen.GetAtoms()):
+        atom.SetIntProp("_original_atom_id", i)
+    pos_coordgen = optimize_2d_coords(mol_coordgen, prefer_coordgen=True)
+
+    avg_default = _avg_bond_length(mol_default, pos_default)
+    avg_coordgen = _avg_bond_length(mol_coordgen, pos_coordgen)
+
+    assert avg_default == pytest.approx(_TARGET_BOND_LENGTH, abs=1e-6)
+    assert avg_coordgen == pytest.approx(_TARGET_BOND_LENGTH, abs=1e-6)
+    assert avg_default == pytest.approx(avg_coordgen, abs=1e-6)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"canonical_orientation": True},
+        {"use_ring_templates": True},
+        {"straighten_bonds": True},
+        {"avoid_clashes": True},
+        {
+            "canonical_orientation": True,
+            "use_ring_templates": True,
+            "straighten_bonds": True,
+            "avoid_clashes": True,
+        },
+    ],
+)
+def test_optimize_2d_coords_cleanup_flags(kwargs):
+    """Each cleanup flag (alone or combined) runs without error and covers all atoms."""
+    from rdkit import Chem
+    from moleditpy.core.mol_geometry import optimize_2d_coords, _TARGET_BOND_LENGTH
+
+    mol = Chem.MolFromSmiles("c1ccc2ccccc2c1CCO")  # fused rings + chain
+    for i, atom in enumerate(mol.GetAtoms()):
+        atom.SetIntProp("_original_atom_id", i)
+
+    new_pos = optimize_2d_coords(mol, **kwargs)
+
+    assert len(new_pos) == mol.GetNumAtoms()
+    for pos in new_pos.values():
+        assert len(pos) == 2
+
+    avg = _avg_bond_length(mol, new_pos)
+    assert avg == pytest.approx(_TARGET_BOND_LENGTH, abs=1e-6)
+
+
+def test_optimize_2d_coords_does_not_leak_coordgen_preference():
+    """SetPreferCoordGen must be reset to False so later default calls are unaffected."""
+    from rdkit import Chem
+    from rdkit.Chem import rdDepictor
+    from moleditpy.core.mol_geometry import optimize_2d_coords
+
+    mol = Chem.MolFromSmiles("CCO")
+    for i, atom in enumerate(mol.GetAtoms()):
+        atom.SetIntProp("_original_atom_id", i)
+
+    optimize_2d_coords(mol, prefer_coordgen=True)
+
+    # Bypass our normalization and call rdDepictor directly: if the global
+    # CoordGen preference leaked, this would produce ~1.0-length bonds
+    # instead of the default generator's ~1.5.
+    mol2 = Chem.MolFromSmiles("CCO")
+    rdDepictor.Compute2DCoords(mol2)
+    conf = mol2.GetConformer()
+    positions = {i: (conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y)
+                 for i in range(mol2.GetNumAtoms())}
+    avg = _avg_bond_length(mol2, positions)
+    assert avg == pytest.approx(1.5, abs=1e-6)
+
+
 def test_calculate_best_fit_plane_projection():
     """Verify orthogonal projection onto a best-fit plane."""
     import numpy as np
