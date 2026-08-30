@@ -33,6 +33,8 @@ class Settings2DCleanupTab(SettingsTabBase):
         self.cleanup_use_ring_templates_2d_checkbox: Any = None
         self.cleanup_straighten_bonds_2d_checkbox: Any = None
         self.cleanup_avoid_clashes_2d_checkbox: Any = None
+        # (checkbox, base tooltip) pairs for options CoordGen silently ignores.
+        self._coordgen_ignored: list[tuple[Any, str]] = []
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -48,23 +50,26 @@ class Settings2DCleanupTab(SettingsTabBase):
             "Prefer CoordGen for Cleanup:", self.prefer_coordgen_2d_checkbox
         )
 
-        self.cleanup_canonical_orientation_2d_checkbox = QCheckBox()
-        self.cleanup_canonical_orientation_2d_checkbox.setToolTip(
+        canonical_tooltip = (
             "If checked, 'Clean Up 2D Structure' rotates the result into "
-            "RDKit's canonical orientation."
+            "RDKit's canonical orientation. Note that cleanup always "
+            "regenerates coordinates, so unchecking this keeps the "
+            "generator's raw orientation, not the pre-cleanup one."
         )
+        self.cleanup_canonical_orientation_2d_checkbox = QCheckBox()
+        self.cleanup_canonical_orientation_2d_checkbox.setToolTip(canonical_tooltip)
         form_layout.addRow(
             "Canonical Orientation:", self.cleanup_canonical_orientation_2d_checkbox
         )
 
+        ring_templates_tooltip = (
+            "If checked, 'Clean Up 2D Structure' uses RDKit's built-in "
+            "template shapes for strained polycyclic ring systems. Only a "
+            "small set of ring systems has a template, so most structures "
+            "are unaffected."
+        )
         self.cleanup_use_ring_templates_2d_checkbox = QCheckBox()
-        self._ring_templates_tooltip = (
-            "If checked, 'Clean Up 2D Structure' uses template shapes for "
-            "complex fused ring systems."
-        )
-        self.cleanup_use_ring_templates_2d_checkbox.setToolTip(
-            self._ring_templates_tooltip
-        )
+        self.cleanup_use_ring_templates_2d_checkbox.setToolTip(ring_templates_tooltip)
         form_layout.addRow(
             "Use Ring Templates:", self.cleanup_use_ring_templates_2d_checkbox
         )
@@ -78,33 +83,35 @@ class Settings2DCleanupTab(SettingsTabBase):
             "Straighten Bonds:", self.cleanup_straighten_bonds_2d_checkbox
         )
 
-        self.cleanup_avoid_clashes_2d_checkbox = QCheckBox()
-        self._avoid_clashes_tooltip = (
+        avoid_clashes_tooltip = (
             "If checked, 'Clean Up 2D Structure' samples extra layouts to "
-            "reduce atom/bond overlap. Can be slower on large molecules."
+            "reduce atom/bond overlap. Mainly affects flexible acyclic "
+            "chains, and can be slower on large molecules."
         )
-        self.cleanup_avoid_clashes_2d_checkbox.setToolTip(self._avoid_clashes_tooltip)
+        self.cleanup_avoid_clashes_2d_checkbox = QCheckBox()
+        self.cleanup_avoid_clashes_2d_checkbox.setToolTip(avoid_clashes_tooltip)
         form_layout.addRow(
             "Avoid Clashes:", self.cleanup_avoid_clashes_2d_checkbox
         )
 
-        # Ring templates and clash-avoidance sampling are both ignored by
-        # RDKit's CoordGen algorithm, so they don't apply when it's active.
+        # RDKit's CoordGen algorithm silently ignores canonOrient,
+        # useRingTemplates and the clash-avoidance sampling parameters, so
+        # these are grayed out while it is active. StraightenDepiction runs
+        # afterwards on the finished depiction, so it still applies.
+        self._coordgen_ignored = [
+            (self.cleanup_canonical_orientation_2d_checkbox, canonical_tooltip),
+            (self.cleanup_use_ring_templates_2d_checkbox, ring_templates_tooltip),
+            (self.cleanup_avoid_clashes_2d_checkbox, avoid_clashes_tooltip),
+        ]
         self.prefer_coordgen_2d_checkbox.toggled.connect(
             self._update_coordgen_dependent_options
         )
 
     def _update_coordgen_dependent_options(self, prefer_coordgen: bool) -> None:
-        self.cleanup_use_ring_templates_2d_checkbox.setEnabled(not prefer_coordgen)
-        self.cleanup_avoid_clashes_2d_checkbox.setEnabled(not prefer_coordgen)
-        not_applicable = " (not applicable when Prefer CoordGen is checked)"
-        self.cleanup_use_ring_templates_2d_checkbox.setToolTip(
-            self._ring_templates_tooltip
-            + (not_applicable if prefer_coordgen else "")
-        )
-        self.cleanup_avoid_clashes_2d_checkbox.setToolTip(
-            self._avoid_clashes_tooltip + (not_applicable if prefer_coordgen else "")
-        )
+        suffix = " (not applicable when Prefer CoordGen is checked)"
+        for checkbox, base_tooltip in self._coordgen_ignored:
+            checkbox.setEnabled(not prefer_coordgen)
+            checkbox.setToolTip(base_tooltip + (suffix if prefer_coordgen else ""))
 
     def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
         prefer_coordgen = settings_dict.get("prefer_coordgen_2d", False)

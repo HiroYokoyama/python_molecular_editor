@@ -374,6 +374,74 @@ def test_optimize_2d_coords_cleanup_flags(kwargs):
     assert avg == pytest.approx(_TARGET_BOND_LENGTH, abs=1e-6)
 
 
+def _coord_signature(positions):
+    """Order-independent, rotation-sensitive fingerprint of a 2D layout."""
+    return tuple(sorted((round(x, 3), round(y, 3)) for x, y in positions.values()))
+
+
+def _layout(smiles, **kwargs):
+    from rdkit import Chem
+    from moleditpy.core.mol_geometry import optimize_2d_coords
+
+    mol = Chem.MolFromSmiles(smiles)
+    for i, atom in enumerate(mol.GetAtoms()):
+        atom.SetIntProp("_original_atom_id", i)
+    return _coord_signature(optimize_2d_coords(mol, **kwargs))
+
+
+_ALL_FLAGS_OFF = {
+    "canonical_orientation": False,
+    "use_ring_templates": False,
+    "straighten_bonds": False,
+    "avoid_clashes": False,
+}
+
+
+@pytest.mark.parametrize(
+    "flag, smiles",
+    [
+        # Verified against RDKit 2025.09: each flag measurably changes the
+        # layout for these inputs. If an upgrade makes one a no-op, the
+        # corresponding settings checkbox has become meaningless.
+        ("straighten_bonds", "c1ccccc1"),
+        ("canonical_orientation", "c1ccc2ccccc2c1"),
+        ("use_ring_templates", "C12C3C4C1C5C4C3C25"),  # cubane
+        ("avoid_clashes", "CC(C)CC(C)(C)CCC(C)CC"),
+    ],
+)
+def test_cleanup_flag_actually_changes_layout(flag, smiles):
+    """Every exposed cleanup option must have an observable effect on some input."""
+    base = _layout(smiles, **_ALL_FLAGS_OFF)
+    toggled = _layout(smiles, **{**_ALL_FLAGS_OFF, flag: True})
+    assert toggled != base
+
+
+@pytest.mark.parametrize(
+    "flag", ["canonical_orientation", "use_ring_templates", "avoid_clashes"]
+)
+def test_coordgen_ignores_these_flags(flag):
+    """CoordGen silently ignores these options, which is why the UI grays them out.
+
+    Settings2DCleanupTab disables exactly these three checkboxes while
+    'Prefer CoordGen' is checked; this pins the RDKit behavior that
+    justifies it.
+    """
+    smiles = "c1ccc2ccccc2c1CCCCCC"
+    base = _layout(smiles, prefer_coordgen=True, **_ALL_FLAGS_OFF)
+    toggled = _layout(smiles, prefer_coordgen=True, **{**_ALL_FLAGS_OFF, flag: True})
+    assert toggled == base
+
+
+def test_coordgen_still_honors_straighten_bonds():
+    """StraightenDepiction runs post-depiction, so it applies under CoordGen too."""
+    smiles = "c1ccc2ccccc2c1CCCCCC"
+    base = _layout(smiles, prefer_coordgen=True, **_ALL_FLAGS_OFF)
+    toggled = _layout(
+        smiles, prefer_coordgen=True, **{**_ALL_FLAGS_OFF, "straighten_bonds": True}
+    )
+    assert toggled != base
+
+
 def test_optimize_2d_coords_does_not_leak_coordgen_preference():
     """SetPreferCoordGen must be reset to False so later default calls are unaffected."""
     from rdkit import Chem
