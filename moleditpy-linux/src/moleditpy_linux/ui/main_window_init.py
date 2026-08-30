@@ -225,7 +225,7 @@ class MainInitManager:
         font = None
         if scene is not None:
             family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-            size = scene.get_setting("atom_font_size_2d", 20)
+            size = scene.get_setting("atom_font_size_2d", 22)
             bold = scene.get_setting("atom_font_bold_2d", True)
             font = QFont(
                 family, size, QFont.Weight.Bold if bold else QFont.Weight.Normal

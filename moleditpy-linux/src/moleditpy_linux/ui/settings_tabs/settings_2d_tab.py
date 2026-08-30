@@ -170,6 +170,7 @@ class Settings2DTab(SettingsTabBase):
         self.atom_font_underline_2d_btn.setFont(underline_font)
 
         style_row = QHBoxLayout()
+        style_row.setContentsMargins(0, 0, 0, 0)
         style_row.setSpacing(4)
         style_row.addWidget(self.atom_font_bold_2d_btn)
         style_row.addWidget(self.atom_font_italic_2d_btn)
@@ -301,13 +302,13 @@ class Settings2DTab(SettingsTabBase):
         self._update_color_buttons()
 
         self.bond_width_2d_slider.setValue(
-            int(settings_dict.get("bond_width_2d", 2.0) * 10)
+            int(settings_dict.get("bond_width_2d", 3.0) * 10)
         )
         self.bond_spacing_double_2d_slider.setValue(
-            int(settings_dict.get("bond_spacing_double_2d", 3.5) * 10)
+            int(settings_dict.get("bond_spacing_double_2d", 5.0) * 10)
         )
         self.bond_spacing_triple_2d_slider.setValue(
-            int(settings_dict.get("bond_spacing_triple_2d", 3.5) * 10)
+            int(settings_dict.get("bond_spacing_triple_2d", 6.0) * 10)
         )
 
         cap_style = settings_dict.get("bond_cap_style_2d", "Round")
@@ -316,7 +317,7 @@ class Settings2DTab(SettingsTabBase):
             self.bond_cap_style_2d_combo.setCurrentIndex(idx)
 
         self.bond_wedge_width_2d_slider.setValue(
-            int(settings_dict.get("bond_wedge_width_2d", 6.0) * 10)
+            int(settings_dict.get("bond_wedge_width_2d", 8.0) * 10)
         )
         self.bond_dash_count_2d_slider.setValue(
             settings_dict.get("bond_dash_count_2d", 8)
@@ -326,7 +327,7 @@ class Settings2DTab(SettingsTabBase):
         self.atom_font_family_2d_combo.setCurrentFont(QFont(font_family))
 
         self.atom_font_size_2d_slider.setValue(
-            settings_dict.get("atom_font_size_2d", 20)
+            settings_dict.get("atom_font_size_2d", 22)
         )
         self.atom_font_bold_2d_btn.setChecked(
             settings_dict.get("atom_font_bold_2d", True)

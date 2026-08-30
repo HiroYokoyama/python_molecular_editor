@@ -95,18 +95,18 @@ class AtomItem(QGraphicsItem):
             | QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges
         )
         self.setZValue(1)
+        self.font: QFont = QFont(FONT_FAMILY, 22, FONT_WEIGHT_BOLD)
         self.update_style()
         self.setAcceptHoverEvents(True)
         self.hovered: bool = False
         self.has_problem: bool = False
         self.is_visible: bool = True
-        self.font: QFont = QFont(FONT_FAMILY, 20, FONT_WEIGHT_BOLD)
 
     def update_style(self) -> None:
         """Refresh font, color, and visibility based on current scene settings."""
         if sip_isdeleted_safe(self):
             return
-        font_size = 20
+        font_size = 22
         font_family = FONT_FAMILY
         font_bold = True
         font_italic = False
@@ -114,7 +114,7 @@ class AtomItem(QGraphicsItem):
 
         scene: Any = self.scene()
         if scene is not None:
-            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_size = scene.get_setting("atom_font_size_2d", 22)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
             font_italic = scene.get_setting("atom_font_italic_2d", False)
@@ -136,14 +136,14 @@ class AtomItem(QGraphicsItem):
 
     def visual_rect(self) -> QRectF:
         """Return the rectangle the atom draws into; highlights use this."""
-        font_size = 20
+        font_size = 22
         font_family = FONT_FAMILY
         font_bold = True
         font_italic = False
         font_underline = False
         scene: Any = self.scene()
         if scene is not None:
-            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_size = scene.get_setting("atom_font_size_2d", 22)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
             font_italic = scene.get_setting("atom_font_italic_2d", False)
@@ -265,14 +265,14 @@ class AtomItem(QGraphicsItem):
         if not self.is_visible:
             return path
 
-        font_size = 20
+        font_size = 22
         font_family = FONT_FAMILY
         font_bold = True
         font_italic = False
         font_underline = False
         scene: Any = self.scene()
         if scene is not None:
-            font_size = scene.get_setting("atom_font_size_2d", 20)
+            font_size = scene.get_setting("atom_font_size_2d", 22)
             font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
             font_bold = scene.get_setting("atom_font_bold_2d", True)
             font_italic = scene.get_setting("atom_font_italic_2d", False)
