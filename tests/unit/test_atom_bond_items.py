@@ -78,6 +78,10 @@ class TestAtomItem:
         assert atom_item.flags() & atom_item.GraphicsItemFlag.ItemIsMovable
         assert atom_item.flags() & atom_item.GraphicsItemFlag.ItemIsSelectable
 
+    def test_init_uses_current_default_font_size(self, atom_item):
+        """New items use the 4.9.0 default before a scene redraw."""
+        assert atom_item.font.pointSize() == 22
+
     def test_paint_mock(self, atom_item):
         """Test paint logic by mocking QPainter"""
         mock_painter = MagicMock()
