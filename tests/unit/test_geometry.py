@@ -501,8 +501,10 @@ def test_optimize_2d_coords_does_not_leak_coordgen_preference():
     mol2 = Chem.MolFromSmiles("CCO")
     rdDepictor.Compute2DCoords(mol2)
     conf = mol2.GetConformer()
-    positions = {i: (conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y)
-                 for i in range(mol2.GetNumAtoms())}
+    positions = {
+        i: (conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y)
+        for i in range(mol2.GetNumAtoms())
+    }
     avg = _avg_bond_length(mol2, positions)
     assert avg == pytest.approx(1.5, abs=1e-6)
 

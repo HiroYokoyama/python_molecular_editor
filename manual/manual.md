@@ -436,6 +436,16 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
         * Enable Atom Fusing: Toggles whether templates connect to existing atoms when placed nearby.
         * Fusing Distance (px): The distance within which a template atom will be fused with an existing atom.
 
+* **2D Cleanup Tab:**
+
+    Controls how `Clean Up 2D` (see 4.6) regenerates the 2D layout.
+
+    * **Prefer CoordGen for Cleanup:** Uses RDKit's CoordGen algorithm, which usually gives nicer ring layouts than the default generator. While this is enabled, the three options marked below are ignored by CoordGen and are greyed out.
+    * **Canonical Orientation:** Rotates the result into RDKit's canonical orientation. Note that cleanup always regenerates coordinates from scratch, so turning this off keeps the generator's raw orientation — it does **not** preserve the orientation the structure had before cleanup. *(Ignored when Prefer CoordGen is on.)*
+    * **Use Ring Templates:** Uses RDKit's built-in template shapes for strained polycyclic ring systems. Only a small set of ring systems has a template, so most structures are unaffected. *(Ignored when Prefer CoordGen is on.)*
+    * **Straighten Bonds:** Rotates the result so that most bonds sit at 30°/90° angles. This one applies with either generator.
+    * **Avoid Clashes:** Samples extra candidate layouts to reduce atom and bond overlap. Mainly affects flexible acyclic chains, and can be slower on large molecules. *(Ignored when Prefer CoordGen is on.)*
+
 * **Scene (3D) Tab:**
     * Background color
     * Show/Hide 3D axes
@@ -544,7 +554,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 4.8
+  * **Version:** 4.9
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

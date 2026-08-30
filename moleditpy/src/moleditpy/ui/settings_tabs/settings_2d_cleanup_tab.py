@@ -90,9 +90,7 @@ class Settings2DCleanupTab(SettingsTabBase):
         )
         self.cleanup_avoid_clashes_2d_checkbox = QCheckBox()
         self.cleanup_avoid_clashes_2d_checkbox.setToolTip(avoid_clashes_tooltip)
-        form_layout.addRow(
-            "Avoid Clashes:", self.cleanup_avoid_clashes_2d_checkbox
-        )
+        form_layout.addRow("Avoid Clashes:", self.cleanup_avoid_clashes_2d_checkbox)
 
         # RDKit's CoordGen algorithm silently ignores canonOrient,
         # useRingTemplates and the clash-avoidance sampling parameters, so

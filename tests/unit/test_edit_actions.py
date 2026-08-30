@@ -1071,12 +1071,13 @@ def test_clean_up_2d_structure_passes_prefer_coordgen_setting(
         else default
     )
 
-    with patch(
-        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
-    ), patch(
-        "moleditpy.core.mol_geometry.optimize_2d_coords",
-        return_value={a1: (0.0, 0.0), a2: (1.5, 0.0)},
-    ) as mock_optimize:
+    with (
+        patch("moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False),
+        patch(
+            "moleditpy.core.mol_geometry.optimize_2d_coords",
+            return_value={a1: (0.0, 0.0), a2: (1.5, 0.0)},
+        ) as mock_optimize,
+    ):
         editor.clean_up_2d_structure()
 
     mock_optimize.assert_called_once()
@@ -1101,16 +1102,17 @@ def test_clean_up_2d_structure_passes_cleanup_option_settings(mock_parser_host):
         "cleanup_straighten_bonds_2d": True,
         "cleanup_avoid_clashes_2d": False,
     }
-    editor.scene.get_setting.side_effect = (
-        lambda key, default=None: settings.get(key, default)
+    editor.scene.get_setting.side_effect = lambda key, default=None: settings.get(
+        key, default
     )
 
-    with patch(
-        "moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False
-    ), patch(
-        "moleditpy.core.mol_geometry.optimize_2d_coords",
-        return_value={a1: (0.0, 0.0), a2: (1.5, 0.0)},
-    ) as mock_optimize:
+    with (
+        patch("moleditpy.ui.edit_actions_logic.sip_isdeleted_safe", return_value=False),
+        patch(
+            "moleditpy.core.mol_geometry.optimize_2d_coords",
+            return_value={a1: (0.0, 0.0), a2: (1.5, 0.0)},
+        ) as mock_optimize,
+    ):
         editor.clean_up_2d_structure()
 
     mock_optimize.assert_called_once()
@@ -1121,9 +1123,7 @@ def test_clean_up_2d_structure_passes_cleanup_option_settings(mock_parser_host):
     assert args[4] is True  # straighten_bonds
     assert args[5] is False  # avoid_clashes
     editor.scene.get_setting.assert_any_call("prefer_coordgen_2d", False)
-    editor.scene.get_setting.assert_any_call(
-        "cleanup_canonical_orientation_2d", True
-    )
+    editor.scene.get_setting.assert_any_call("cleanup_canonical_orientation_2d", True)
     editor.scene.get_setting.assert_any_call("cleanup_use_ring_templates_2d", False)
     editor.scene.get_setting.assert_any_call("cleanup_straighten_bonds_2d", False)
     editor.scene.get_setting.assert_any_call("cleanup_avoid_clashes_2d", False)
