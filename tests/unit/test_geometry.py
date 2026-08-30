@@ -442,6 +442,47 @@ def test_coordgen_still_honors_straighten_bonds():
     assert toggled != base
 
 
+def test_optimize_2d_coords_single_atom_has_no_bonds_to_normalize():
+    """A bond-less molecule skips normalization and still returns its position."""
+    from rdkit import Chem
+    from moleditpy.core.mol_geometry import optimize_2d_coords
+
+    mol = Chem.MolFromSmiles("C")
+    for i, atom in enumerate(mol.GetAtoms()):
+        atom.SetIntProp("_original_atom_id", i)
+
+    positions = optimize_2d_coords(mol)
+
+    assert len(positions) == 1
+    assert len(positions[0]) == 2
+
+
+def test_normalize_bond_length_leaves_coincident_atoms_untouched():
+    """Degenerate zero-length layouts are left alone instead of dividing by ~0."""
+    from rdkit import Chem
+    from rdkit.Geometry import Point3D
+    from moleditpy.core.mol_geometry import _normalize_bond_length
+
+    rw_mol = Chem.RWMol()
+    for _ in range(2):
+        rw_mol.AddAtom(Chem.Atom("C"))
+    rw_mol.AddBond(0, 1, Chem.BondType.SINGLE)
+    mol = rw_mol.GetMol()
+    Chem.SanitizeMol(mol)
+
+    conformer = Chem.Conformer(mol.GetNumAtoms())
+    for i in range(mol.GetNumAtoms()):
+        conformer.SetAtomPosition(i, Point3D(1.0, 2.0, 0.0))
+    mol.AddConformer(conformer)
+
+    _normalize_bond_length(mol, 1.5)
+
+    conf = mol.GetConformer()
+    for i in range(mol.GetNumAtoms()):
+        assert conf.GetAtomPosition(i).x == pytest.approx(1.0)
+        assert conf.GetAtomPosition(i).y == pytest.approx(2.0)
+
+
 def test_optimize_2d_coords_does_not_leak_coordgen_preference():
     """SetPreferCoordGen must be reset to False so later default calls are unaffected."""
     from rdkit import Chem

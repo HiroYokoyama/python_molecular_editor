@@ -4115,6 +4115,18 @@ _StraightenDepiction runs post-depiction, so it applies under CoordGen too._
 
 - assert toggled != base
 
+### test_optimize_2d_coords_single_atom_has_no_bonds_to_normalize
+_A bond-less molecule skips normalization and still returns its position._
+
+- assert len(positions) == 1
+- assert len(positions[0]) == 2
+
+### test_normalize_bond_length_leaves_coincident_atoms_untouched
+_Degenerate zero-length layouts are left alone instead of dividing by ~0._
+
+- assert conf.GetAtomPosition(i).x == pytest.approx(1.0)
+- assert conf.GetAtomPosition(i).y == pytest.approx(2.0)
+
 ### test_optimize_2d_coords_does_not_leak_coordgen_preference
 _SetPreferCoordGen must be reset to False so later default calls are unaffected._
 
