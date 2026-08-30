@@ -27,14 +27,15 @@ jobs:
             python-version: "3.12"
           - os: ubuntu-latest
             python-version: "3.13"
-            # Exactly one matrix entry measures and uploads coverage, so the
-            # other nine are not slowed down and Codecov gets a single report
-            # per commit instead of ten partial ones.
-            coverage: true
           - os: ubuntu-latest
             python-version: "3.14"
           - os: windows-latest
             python-version: "3.13"
+            # Exactly one matrix entry measures and uploads coverage, so the
+            # other nine are not slowed down and Codecov gets a single report
+            # per commit instead of ten partial ones. Windows runs all suites
+            # against the same moleditpy package, matching local coverage.
+            coverage: true
           - os: windows-latest
             python-version: "3.14"
           - os: macos-latest
