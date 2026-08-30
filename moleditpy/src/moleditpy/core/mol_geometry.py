@@ -636,7 +636,7 @@ def optimize_2d_coords(
             mol,
             canonOrient=canonical_orientation,
             useRingTemplates=use_ring_templates,
-            **sample_kwargs,
+            **sample_kwargs,  # type: ignore[arg-type]  # RDKit's generated overload differs by platform.
         )
         if straighten_bonds:
             rdDepictor.StraightenDepiction(mol)
