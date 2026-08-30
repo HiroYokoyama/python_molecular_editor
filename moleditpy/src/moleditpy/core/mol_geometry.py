@@ -594,6 +594,25 @@ def _identify_problems_rdkit(
 _TARGET_BOND_LENGTH = 1.5  # matches RDKit's default (non-CoordGen) bond length
 
 
+def _normalize_bond_length(mol: Chem.Mol, target_length: float) -> None:
+    """Rescale a molecule's 2D conformer so its average bond length matches target_length."""
+    if mol.GetNumBonds() == 0:
+        return
+    conf = mol.GetConformer()
+    total_len = 0.0
+    for bond in mol.GetBonds():
+        p1 = conf.GetAtomPosition(bond.GetBeginAtomIdx())
+        p2 = conf.GetAtomPosition(bond.GetEndAtomIdx())
+        total_len += ((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2) ** 0.5
+    avg_len = total_len / mol.GetNumBonds()
+    if avg_len <= 1e-6:
+        return
+    factor = target_length / avg_len
+    for i in range(mol.GetNumAtoms()):
+        pos = conf.GetAtomPosition(i)
+        conf.SetAtomPosition(i, (pos.x * factor, pos.y * factor, pos.z))
+
+
 def optimize_2d_coords(
     mol: Chem.Mol,
     prefer_coordgen: bool = False,
@@ -623,23 +642,11 @@ def optimize_2d_coords(
             rdDepictor.StraightenDepiction(mol)
     finally:
         rdDepictor.SetPreferCoordGen(False)
-    conf = mol.GetConformer()
-
     # CoordGen and the default generator use different internal bond-length
     # conventions (~1.0 vs ~1.5), so normalize here to keep the on-screen
     # scale consistent regardless of which algorithm produced the layout.
-    if mol.GetNumBonds() > 0:
-        total_len = 0.0
-        for bond in mol.GetBonds():
-            p1 = conf.GetAtomPosition(bond.GetBeginAtomIdx())
-            p2 = conf.GetAtomPosition(bond.GetEndAtomIdx())
-            total_len += ((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2) ** 0.5
-        avg_len = total_len / mol.GetNumBonds()
-        if avg_len > 1e-6:
-            factor = _TARGET_BOND_LENGTH / avg_len
-            for i in range(mol.GetNumAtoms()):
-                pos = conf.GetAtomPosition(i)
-                conf.SetAtomPosition(i, (pos.x * factor, pos.y * factor, pos.z))
+    _normalize_bond_length(mol, _TARGET_BOND_LENGTH)
+    conf = mol.GetConformer()
 
     new_positions = {}
     for rdkit_atom in mol.GetAtoms():
