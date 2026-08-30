@@ -3625,6 +3625,28 @@ _When optimize_2d_coords yields nothing, the failure message is shown._
 
 - assert any(('Optimization failed to generate coordinates.' in t for t in _status_texts(mock_parser_host)))
 
+### test_clean_up_2d_structure_passes_prefer_coordgen_setting
+_The prefer_coordgen_2d setting is read from the scene and forwarded as a bool._
+
+- mock_optimize.assert_called_once()
+- assert args[1] is prefer_coordgen_setting
+- editor.scene.get_setting.assert_any_call('prefer_coordgen_2d', False)
+
+### test_clean_up_2d_structure_passes_cleanup_option_settings
+_The four cleanup-option settings are read from the scene and forwarded as bools._
+
+- mock_optimize.assert_called_once()
+- assert args[1] is True
+- assert args[2] is True
+- assert args[3] is False
+- assert args[4] is True
+- assert args[5] is False
+- editor.scene.get_setting.assert_any_call('prefer_coordgen_2d', False)
+- editor.scene.get_setting.assert_any_call('cleanup_canonical_orientation_2d', True)
+- editor.scene.get_setting.assert_any_call('cleanup_use_ring_templates_2d', False)
+- editor.scene.get_setting.assert_any_call('cleanup_straighten_bonds_2d', False)
+- editor.scene.get_setting.assert_any_call('cleanup_avoid_clashes_2d', False)
+
 ### test_apply_ui_h_counts_updates_items
 _Matching token: implicit-H count and problem flag are written and item.update() runs._
 
@@ -4057,6 +4079,46 @@ _Verify 2D coordinate optimization generating coordinates for a simple molecule.
 
 - assert len(new_pos) == 6
 - assert len(pos) == 2
+
+### test_optimize_2d_coords_prefer_coordgen
+_CoordGen layout should also be generated for all atoms when requested._
+
+- assert len(new_pos) == 6
+- assert len(pos) == 2
+
+### test_optimize_2d_coords_bond_length_consistent_across_algorithms
+_Default and CoordGen layouts must normalize to the same average bond length._
+
+- assert avg_default == pytest.approx(_TARGET_BOND_LENGTH, abs=1e-06)
+- assert avg_coordgen == pytest.approx(_TARGET_BOND_LENGTH, abs=1e-06)
+- assert avg_default == pytest.approx(avg_coordgen, abs=1e-06)
+
+### test_optimize_2d_coords_cleanup_flags
+_Each cleanup flag (alone or combined) runs without error and covers all atoms._
+
+- assert len(new_pos) == mol.GetNumAtoms()
+- assert avg == pytest.approx(_TARGET_BOND_LENGTH, abs=1e-06)
+- assert len(pos) == 2
+
+### test_cleanup_flag_actually_changes_layout
+_Every exposed cleanup option must have an observable effect on some input._
+
+- assert toggled != base
+
+### test_coordgen_ignores_these_flags
+_CoordGen silently ignores these options, which is why the UI grays them out._
+
+- assert toggled == base
+
+### test_coordgen_still_honors_straighten_bonds
+_StraightenDepiction runs post-depiction, so it applies under CoordGen too._
+
+- assert toggled != base
+
+### test_optimize_2d_coords_does_not_leak_coordgen_preference
+_SetPreferCoordGen must be reset to False so later default calls are unaffected._
+
+- assert avg == pytest.approx(1.5, abs=1e-06)
 
 ### test_calculate_best_fit_plane_projection
 _Verify orthogonal projection onto a best-fit plane._
@@ -8709,6 +8771,47 @@ _Verify that mouse interactions respect the configured bond_snapping_distance_2d
 
 - mock_find_near.assert_called_with(QPointF(10, 10), tol=25.0)
 
+## tests/unit/test_settings_2d_cleanup_tab.py
+
+### test_init_uses_default_settings
+_update_ui(DEFAULT_SETTINGS) reflects DEFAULT_SETTINGS in each checkbox._
+
+- assert checkbox_by_key[key].isChecked() == DEFAULT_SETTINGS[key]
+
+### test_get_settings_returns_all_keys
+_get_settings() returns exactly the five cleanup-option keys._
+
+- assert set(result.keys()) == set(CHECKBOX_KEYS)
+
+### test_checkboxes_round_trip
+_update_ui()/get_settings() correctly reflect all five checkboxes._
+
+- assert checkbox_by_key[key].isChecked() == DEFAULT_SETTINGS[key]
+- assert checkbox_by_key[key].isChecked() == custom[key]
+- assert result[key] == custom[key]
+- assert checkbox_by_key[key].isChecked() == DEFAULT_SETTINGS[key]
+
+### test_prefer_coordgen_disables_inapplicable_options
+_Options CoordGen ignores are disabled while CoordGen is preferred._
+
+- assert tab.cleanup_straighten_bonds_2d_checkbox.isEnabled() is True
+- assert tab.cleanup_straighten_bonds_2d_checkbox.isEnabled() is True
+- assert checkbox.isEnabled() is False
+- assert checkbox.isEnabled() is True
+
+### test_prefer_coordgen_annotates_inapplicable_tooltips
+_Disabled options explain why they don't apply, and revert when re-enabled._
+
+- assert suffix in checkbox.toolTip()
+- assert suffix not in checkbox.toolTip()
+- assert checkbox.toolTip()
+
+### test_update_ui_sets_dependent_option_enabled_state
+_update_ui() applies the disabled state even without a checkbox toggle._
+
+- assert checkbox.isEnabled() is False
+- assert checkbox.isEnabled() is True
+
 ## tests/unit/test_settings_2d_tab.py
 
 ### test_init_uses_default_colors
@@ -8726,10 +8829,10 @@ _update_ui() reflects background and bond color changes in internal state._
 ### test_update_ui_sets_sliders
 _update_ui() updates all bond and font slider values correctly._
 
-- assert tab.bond_width_2d_slider.value() == 30
+- assert tab.bond_width_2d_slider.value() == 45
 - assert tab.bond_spacing_double_2d_slider.value() == 40
 - assert tab.bond_spacing_triple_2d_slider.value() == 50
-- assert tab.bond_wedge_width_2d_slider.value() == 80
+- assert tab.bond_wedge_width_2d_slider.value() == 110
 - assert tab.bond_dash_count_2d_slider.value() == 12
 - assert tab.atom_font_size_2d_slider.value() == 24
 - assert tab.template_fusing_distance_2d_slider.value() == 18
@@ -8971,15 +9074,16 @@ __pick_bond_color updates current_bond_color when a valid color is chosen._
 
 ## tests/unit/test_settings_dialog.py
 
-### test_init_creates_seven_tabs
-_SettingsDialog initialises with exactly seven tabs._
+### test_init_creates_eight_tabs
+_SettingsDialog initialises with exactly eight tabs._
 
-- assert dialog.tab_widget.count() == 7
+- assert dialog.tab_widget.count() == 8
 
 ### test_init_tab_labels
 _Tab titles include the expected section names._
 
 - assert '2D Settings' in tab_titles
+- assert '2D Cleanup' in tab_titles
 - assert '3D Scene' in tab_titles
 - assert 'Ball & Stick' in tab_titles
 - assert 'Other' in tab_titles
