@@ -22,7 +22,7 @@ python tests/run_all_tests.py --no-cov --no-report
 
 ### Coverage
 
-The `ubuntu-latest` / Python 3.13 matrix entry is marked `coverage: true` and
+The `windows-latest` / Python 3.13 matrix entry is marked `coverage: true` and
 instead runs the same suites with coverage enabled, then uploads the result to
 Codecov:
 
