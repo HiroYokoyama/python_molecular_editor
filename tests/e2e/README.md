@@ -91,3 +91,4 @@ Ethane (2 C, 1 bond) is the minimal molecule that exercises the full
 | `test_undo_redo_workflow.py` | draw→undo→redo cycles, bond-data restoration, undo history depth cap |
 | `test_plugin_workflow.py` | real PluginManager install/discover (.py and single-file ZIP), plugin state persistence through project save/load |
 | `test_ethane_gui.py` | real `MainWindow` launched headless (VTK/PyVista mocked): draws ethane in the 2D scene, clicks Convert 2D→3D, asserts the resulting 3D mol via real RDKit embedding + MMFF |
+| `test_corrupt_files.py` | Corrupted/malformed file handling (empty, binary garbage, malformed MOL/XYZ/.pmeraw) ensuring errors are handled cleanly without unhandled crashes |

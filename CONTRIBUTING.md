@@ -11,7 +11,7 @@ Since MoleditPy is designed to be **fail-safe** (it avoids crashing via extensiv
 When opening an Issue, please include:
 1.  **Steps to Reproduce:** A detailed checklist of actions taken.
 2.  **Expected Behavior vs. Actual Behavior.**
-3.  **Logs / Traceback:** This is critical. Please attach the contents of the console output or the `app_errors.log` file. Even if the app did not crash, the error details are likely recorded there.
+3.  **Logs / Traceback:** This is critical. Before sharing, remove usernames, local paths, project data, plugin details, and secrets. If the logs cannot be safely sanitized, ask a maintainer for a private submission option. Please attach the console/terminal output, copy the traceback from the error dialog's "Show Details" button, or attach `~/.moleditpy/moleditpy.log` (if "Save log to file" is enabled in Settings ▸ Other). Even if the app did not crash, the error details are recorded there.
 4.  **Environment:** OS, Python version, and MoleditPy version, installed plugins.
 
 ## 2. Development Setup

@@ -37,6 +37,9 @@ python -m pytest tests/integration -v
 | **`test_plugin_menu_rebuild.py`** | **Plugin Menu Rebuild** | Verifies `PluginMenuManager.rebuild_plugin_menus` fully rebuilds all six integration points (menus, toolbar, export, file-openers, analysis, 3D styles) and that `MainInitManager` delegates to it. |
 | **`test_plugin_opt_method_rebuild.py`** | **Plugin Optimization Method Rebuild** | Regression test: plugin-registered optimization methods must survive a plugin-menu rebuild instead of vanishing from the 3D Optimization Settings menu after install/uninstall/reload. |
 | **`test_trigger_conversion_plugin_wrap.py`** | **Conversion Plugin-Wrap Safety** | Verifies `trigger_conversion` works when a plugin wraps it without forwarding `**kwargs`, and that `_pending_conversion_mode` is passed without kwargs and consumed exactly once. |
+| **`test_about_dialog_integration.py`** | **About Dialog 3D Integration** | Integration test for the About dialog hidden shortcut.<br>• **3D Generation**: Verifies that right-clicking the About dialog image loads the sample molecule and triggers conversion to a valid 3D structure in `View3DManager`. |
+| **`test_fused_ring_valence.py`** | **Fused Ring Valence & Chemistry** | Integration test for chemical validity when fusing ring templates.<br>• **Valence Consistency**: Confirms fused ring systems (e.g. Naphthalene, Anthracene) maintain valid Kekulé bonding and valency without invalid hypervalent atoms. |
+| **`test_template_preview_in_editor.py`** | **Template Ghost Preview in Editor** | Integration tests for live template preview rendering in the real 2D scene.<br>• **Visual Rendering**: Validates ghost template preview positioning, bond orders, heteroatoms, and rotation angle scoring on the live canvas. |
 
 ## Requirements
 
