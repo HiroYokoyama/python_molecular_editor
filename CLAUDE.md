@@ -169,3 +169,10 @@ The same user documentation exists twice, and a user-visible change has to be wr
 They are not copies of each other — `manual/` is the long-form numbered manual, the wiki is a condensed rewrite with its own settings tables and cross-links — so sync the *facts*, not the markup, and keep the wording of a given fact as close as the two formats allow. Everything is bilingual: never update an English file without its `-JP` counterpart.
 
 Version stamps: `manual/manual.md` and `manual/manual-JP.md` carry the documented app version in section 11 — bump it when the app's minor version changes. Wiki pages deliberately carry no version.
+
+### Changelog Maintenance
+
+All notable changes must be recorded in `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) standards under `## [Unreleased]` as they are developed:
+- Categorize changes under `### Added`, `### Changed`, `### Deprecated`, `### Removed`, `### Fixed`, or `### Security` (or `### Documentation` / `### Tests & CI`).
+- **Before bumping versions** (in `moleditpy/pyproject.toml`, `manual/`, etc.), promote the `## [Unreleased]` entries into a new release heading `## [X.Y.Z] - YYYY-MM-DD` and retain an empty `## [Unreleased]` section at the top.
+
