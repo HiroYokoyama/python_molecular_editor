@@ -974,6 +974,7 @@ class TestLoadMolFileFor3DViewingEncoding:
 
     @staticmethod
     def _water_mol_block():
+        """Build a MOL block for a water molecule with embedded 3D coordinates."""
         from rdkit import Chem
         from rdkit.Chem import AllChem
 
@@ -982,6 +983,7 @@ class TestLoadMolFileFor3DViewingEncoding:
         return Chem.MolToMolBlock(mol)
 
     def test_shift_jis_mol_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        """Shift-JIS (cp932) encoded MOL file with Japanese title loads properly in 3D viewer."""
         lines = self._water_mol_block().splitlines()
         lines[0] = "水分子"
         mol_text_jp = "\n".join(lines) + "\n"
@@ -1000,6 +1002,7 @@ class TestLoadMolFileFor3DViewingEncoding:
         assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
 
     def test_shift_jis_sdf_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        """Shift-JIS (cp932) encoded SDF file with Japanese title loads properly in 3D viewer."""
         lines = self._water_mol_block().splitlines()
         lines[0] = "水分子"
         sdf_text_jp = "\n".join(lines) + "\n$$$$\n"
