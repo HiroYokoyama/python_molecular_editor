@@ -110,6 +110,26 @@ class IOManager:
         return "\n".join(lines)
 
     @staticmethod
+    def _first_sdf_record(sdf_text: str) -> str:
+        """Return the MOL block of the first record in SDF text.
+
+        Chem.SDMolSupplier(file_path) reads the file itself and cannot be
+        given pre-decoded text, so it never sees the encoding fallbacks in
+        _read_text_lines_flexible and mishandles CP932/Shift-JIS SDF files.
+        Extracting the first record's MOL block (everything before the first
+        "$$$$" separator) lets the already-decoded text go through
+        MolFromMolBlock instead, matching the .mol import path. Trailing SDF
+        property tags after "M  END" are harmless — MolFromMolBlock stops
+        reading once it hits the end of the connection table.
+        """
+        record_lines = []
+        for line in sdf_text.splitlines():
+            if line.strip() == "$$$$":
+                break
+            record_lines.append(line)
+        return "\n".join(record_lines)
+
+    @staticmethod
     def _read_text_lines_flexible(file_path: str) -> list[str]:
         """Read a text file's lines, tolerating non-UTF-8 encodings.
 
@@ -807,8 +827,9 @@ class IOManager:
                     fixed_block, sanitize=True, removeHs=False
                 )
             else:
-                suppl = Chem.SDMolSupplier(file_path, removeHs=False)
-                mol = next(suppl, None)
+                raw = "".join(self._read_text_lines_flexible(file_path))
+                fixed_block = self.fix_mol_block(self._first_sdf_record(raw))
+                mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
 
             if mol is None:
                 raise ValueError("Failed to read molecule from file.")
@@ -1011,8 +1032,9 @@ class IOManager:
                 return
         try:
             if file_path.lower().endswith(".sdf"):
-                suppl = Chem.SDMolSupplier(file_path, removeHs=False)
-                mol = next(suppl, None)
+                raw = "".join(self._read_text_lines_flexible(file_path))
+                fixed_block = self.fix_mol_block(self._first_sdf_record(raw))
+                mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
             else:
                 raw = "".join(self._read_text_lines_flexible(file_path))
                 fixed_block = self.fix_mol_block(raw)

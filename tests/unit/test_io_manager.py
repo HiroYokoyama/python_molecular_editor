@@ -936,3 +936,80 @@ class TestLoadMolFileProperties:
 
         data = mock_parser_host.state_manager.data
         assert len(data.atoms) == 2
+
+    def test_shift_jis_sdf_title_line_does_not_block_import(
+        self, mock_parser_host, tmp_path
+    ):
+        """SDMolSupplier reads the file itself and cannot see the flexible
+        decoding used for .mol files, so .sdf import routes the first record
+        through MolFromMolBlock instead; a Shift-JIS title line must not
+        block that."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        c = source.add_atom("C", (0.0, 0.0))
+        o = source.add_atom("O", (50.0, 0.0))
+        source.add_bond(c, o, order=1)
+        lines = source.to_mol_block().splitlines()
+        lines[0] = "メタノール分子"
+        sdf_text_jp = "\n".join(lines) + "\n$$$$\n"
+
+        path = tmp_path / "in.sdf"
+        path.write_bytes(sdf_text_jp.encode("cp932"))
+
+        io = IOManager(mock_parser_host)
+        mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file(file_path=str(path))
+
+        data = mock_parser_host.state_manager.data
+        assert len(data.atoms) == 2
+
+
+class TestLoadMolFileFor3DViewingEncoding:
+    """load_mol_file_for_3d_viewing must tolerate non-UTF-8 MOL/SDF files."""
+
+    @staticmethod
+    def _water_mol_block():
+        from rdkit import Chem
+        from rdkit.Chem import AllChem
+
+        mol = Chem.AddHs(Chem.MolFromSmiles("O"))
+        AllChem.EmbedMolecule(mol, randomSeed=42)
+        return Chem.MolToMolBlock(mol)
+
+    def test_shift_jis_mol_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        lines = self._water_mol_block().splitlines()
+        lines[0] = "水分子"
+        mol_text_jp = "\n".join(lines) + "\n"
+
+        path = tmp_path / "water.mol"
+        path.write_bytes(mol_text_jp.encode("cp932"))
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
+        assert host.view_3d_manager.current_mol is not None
+        assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+    def test_shift_jis_sdf_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        lines = self._water_mol_block().splitlines()
+        lines[0] = "水分子"
+        sdf_text_jp = "\n".join(lines) + "\n$$$$\n"
+
+        path = tmp_path / "water.sdf"
+        path.write_bytes(sdf_text_jp.encode("cp932"))
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
+        assert host.view_3d_manager.current_mol is not None
+        assert host.view_3d_manager.current_mol.GetNumAtoms() == 3

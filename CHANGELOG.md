@@ -11,7 +11,7 @@ All notable changes to this project are recorded here. The format follows
 ## [4.9.1] - 2026-09-04
 
 ### Fixed
-* **Non-UTF-8 XYZ/MOL Import**: XYZ and MOL file imports now fall back through common non-UTF-8 encodings (UTF-8 BOM, Shift-JIS/CP932, EUC-JP) instead of failing outright with `UnicodeDecodeError` on files containing Japanese (or other non-UTF-8) comment/title text ([#133](https://github.com/HiroYokoyama/python_molecular_editor/pull/133)).
+* **Non-UTF-8 XYZ/MOL/SDF Import**: XYZ, MOL, and SDF file imports now fall back through common non-UTF-8 encodings (UTF-8 BOM, Shift-JIS/CP932, EUC-JP) instead of failing outright with `UnicodeDecodeError`, or silently mangling text, on files containing Japanese (or other non-UTF-8) comment/title text ([#133](https://github.com/HiroYokoyama/python_molecular_editor/pull/133)).
 
 ### Changed
 * **Lint Toolchain & Type Annotations**: Added a per-module mypy override for `moleditpy.ui.custom_qt_interactor` to allow untyped `pyvistaqt` interactor subclassing without local errors ([#130](https://github.com/HiroYokoyama/python_molecular_editor/pull/130)).
