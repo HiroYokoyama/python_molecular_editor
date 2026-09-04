@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QFileDialog,
     QMessageBox,
+    QWidget,
 )
 
 from rdkit import Chem
@@ -108,6 +109,63 @@ class IOManager:
             return mol_block
         lines[3] = self.fix_mol_counts_line(lines[3])
         return "\n".join(lines)
+
+    @staticmethod
+    def _first_sdf_record(sdf_text: str) -> str:
+        """Return the MOL block of the first record in SDF text.
+
+        Chem.SDMolSupplier(file_path) reads the file itself and cannot be
+        given pre-decoded text, so it never sees the encoding fallbacks in
+        _read_text_lines_flexible and mishandles CP932/Shift-JIS SDF files.
+        Extracting the first record's MOL block (everything before the first
+        "$$$$" separator) lets the already-decoded text go through
+        MolFromMolBlock instead, matching the .mol import path. Trailing SDF
+        property tags after "M  END" are harmless — MolFromMolBlock stops
+        reading once it hits the end of the connection table.
+        """
+        record_lines = []
+        for line in sdf_text.splitlines():
+            if line.strip() == "$$$$":
+                break
+            record_lines.append(line)
+        return "\n".join(record_lines)
+
+    def _load_mol_block_text(self, file_path: str) -> str:
+        """Read a .mol/.sdf file flexibly-encoded and return a MolFromMolBlock-ready block.
+
+        Shared by load_mol_file and load_mol_file_for_3d_viewing so the
+        flexible-encoding read, .sdf first-record extraction, and V2000
+        counts-line fix live in one place.
+        """
+        raw = "".join(self._read_text_lines_flexible(file_path))
+        if file_path.lower().endswith(".sdf"):
+            raw = self._first_sdf_record(raw)
+        return self.fix_mol_block(raw)
+
+    @staticmethod
+    def _read_text_lines_flexible(file_path: str) -> list[str]:
+        """Read a text file's lines, tolerating non-UTF-8 encodings.
+
+        XYZ comment lines are free-form and files authored on Japanese
+        (or other non-UTF-8) locales are commonly saved as Shift-JIS/CP932
+        rather than UTF-8, which raises UnicodeDecodeError under a strict
+        utf-8 open(). Fall back through the encodings Windows/macOS/Linux
+        editors actually produce before giving up and replacing the
+        undecodable bytes, so a mojibake comment never blocks the atoms
+        themselves from loading.
+        """
+        # euc_jp must be tried before cp932/shift_jis: cp932 silently accepts
+        # some genuinely EUC-JP byte sequences and decodes them to the wrong
+        # (mojibake) characters instead of raising, so trying cp932 first
+        # would never let euc_jp text reach its correct decoding.
+        for encoding in ("utf-8-sig", "euc_jp", "cp932", "shift_jis"):
+            try:
+                with open(file_path, "r", encoding=encoding) as f:
+                    return f.readlines()
+            except UnicodeDecodeError:
+                continue
+        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            return f.readlines()
 
     @staticmethod
     def _is_numeric_token(token: str) -> bool:
@@ -326,7 +384,8 @@ class IOManager:
         if status_bar is not None:
             status_bar.showMessage(message)
         if not os.environ.get("MOLEDITPY_HEADLESS"):
-            QMessageBox.warning(self.host, title, message)
+            parent = self.host if isinstance(self.host, QWidget) else None
+            QMessageBox.warning(parent, title, message)
 
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
         """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
@@ -334,8 +393,7 @@ class IOManager:
             return None
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                return self._mol_from_xyz_lines(f.readlines())
+            return self._mol_from_xyz_lines(self._read_text_lines_flexible(file_path))
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
             self.host.statusBar().showMessage(f"Error parsing XYZ file: {e}")
             return None
@@ -777,19 +835,13 @@ class IOManager:
             return
 
         try:
-            if file_path.lower().endswith(".mol"):
-                with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
-                    raw = fh.read()
-                fixed_block = self.fix_mol_block(raw)
-                # Both readers can come back empty on a malformed file; the
-                # stub for MolFromMolBlock does not say so, hence the explicit
-                # declaration. The None check below covers both branches.
-                mol: Optional[Chem.Mol] = Chem.MolFromMolBlock(
-                    fixed_block, sanitize=True, removeHs=False
-                )
-            else:
-                suppl = Chem.SDMolSupplier(file_path, removeHs=False)
-                mol = next(suppl, None)
+            fixed_block = self._load_mol_block_text(file_path)
+            # MolFromMolBlock can come back empty on a malformed file; the
+            # stub does not say so, hence the explicit declaration. The None
+            # check below covers that.
+            mol: Optional[Chem.Mol] = Chem.MolFromMolBlock(
+                fixed_block, sanitize=True, removeHs=False
+            )
 
             if mol is None:
                 raise ValueError("Failed to read molecule from file.")
@@ -991,14 +1043,8 @@ class IOManager:
             if not file_path:
                 return
         try:
-            if file_path.lower().endswith(".sdf"):
-                suppl = Chem.SDMolSupplier(file_path, removeHs=False)
-                mol = next(suppl, None)
-            else:
-                with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
-                    raw = fh.read()
-                fixed_block = self.fix_mol_block(raw)
-                mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
+            fixed_block = self._load_mol_block_text(file_path)
+            mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
 
             if mol is None:
                 raise ValueError("Failed to load molecule.")
