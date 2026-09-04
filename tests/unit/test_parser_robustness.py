@@ -166,3 +166,60 @@ def test_load_xyz_robustness(invalid_xyz, tmp_path):
     win.statusBar().showMessage.assert_called()
     args, _ = win.statusBar().showMessage.call_args
     assert "Error parsing XYZ file" in args[0]
+
+
+class TestReadTextLinesFlexible:
+    """_read_text_lines_flexible must decode non-UTF-8 encoded text files."""
+
+    def test_plain_utf8_roundtrips(self, tmp_path):
+        path = tmp_path / "utf8.txt"
+        path.write_text("2\nベンゼン由来のコメント\n", encoding="utf-8")
+
+        lines = IOManager._read_text_lines_flexible(str(path))
+
+        assert lines[0] == "2\n"
+        assert "ベンゼン" in lines[1]
+
+    def test_utf8_bom_is_stripped(self, tmp_path):
+        path = tmp_path / "bom.txt"
+        path.write_text("2\n分子\n", encoding="utf-8-sig")
+
+        lines = IOManager._read_text_lines_flexible(str(path))
+
+        assert lines[0] == "2\n"  # No leading BOM character
+        assert "分子" in lines[1]
+
+    def test_shift_jis_falls_back_and_decodes(self, tmp_path):
+        path = tmp_path / "sjis.txt"
+        path.write_bytes("2\nメタン分子\n".encode("cp932"))
+
+        lines = IOManager._read_text_lines_flexible(str(path))
+
+        assert lines[0] == "2\n"
+        assert "メタン分子" in lines[1]
+
+    def test_undecodable_bytes_fall_back_to_replace(self, tmp_path):
+        path = tmp_path / "garbage.txt"
+        # Byte sequence invalid under every attempted encoding.
+        path.write_bytes(b"2\n\xff\xfe\x00garbage\n")
+
+        lines = IOManager._read_text_lines_flexible(str(path))
+
+        assert lines[0] == "2\n"
+        assert "garbage" in lines[1]
+
+
+def test_load_xyz_file_with_shift_jis_comment(tmp_path):
+    """A Shift-JIS encoded XYZ file (common on Japanese Windows) must still load."""
+    win = MockMainWindow()
+    xyz_file = tmp_path / "japanese.xyz"
+    xyz_content = (
+        "3\n水分子のコメント\nO 0.0 0.0 0.0\nH 0.0 0.0 0.96\nH 0.0 0.93 -0.24\n"
+    )
+    xyz_file.write_bytes(xyz_content.encode("cp932"))
+
+    mol = win.load_xyz_file(str(xyz_file))
+
+    assert mol is not None
+    assert mol.GetNumAtoms() == 3
+    win.statusBar().showMessage.assert_not_called()

@@ -281,7 +281,10 @@ class TestLoadXYZFor3DViewing:
         io = IOManager(host)
         io.load_xyz_file = MagicMock(return_value=None)
 
-        with patch("moleditpy.ui.io_logic.QTimer"):
+        with (
+            patch("moleditpy.ui.io_logic.QTimer"),
+            patch("moleditpy.ui.io_logic.QMessageBox"),
+        ):
             io.load_xyz_for_3d_viewing(file_path=str(xyz))
 
         host.statusBar_mock.showMessage.assert_called()
@@ -906,3 +909,194 @@ class TestLoadMolFileProperties:
         assert len(charged) == 1
         assert charged[0]["symbol"] == "N"
         assert charged[0]["charge"] == 1
+
+    def test_shift_jis_title_line_does_not_block_import(
+        self, mock_parser_host, tmp_path
+    ):
+        """A MOL file authored on a Japanese locale (Shift-JIS title line) must
+        still import instead of raising UnicodeDecodeError on a strict utf-8 open."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        c = source.add_atom("C", (0.0, 0.0))
+        o = source.add_atom("O", (50.0, 0.0))
+        source.add_bond(c, o, order=1)
+        mol_text = source.to_mol_block()
+
+        # Replace the MOL title line (line 1) with Japanese text and write the
+        # whole file as Shift-JIS (cp932), the common Windows-JP encoding.
+        lines = mol_text.splitlines()
+        lines[0] = "エタノール分子"
+        mol_text_jp = "\n".join(lines) + "\n"
+
+        path = tmp_path / "in.mol"
+        path.write_bytes(mol_text_jp.encode("cp932"))
+
+        io = IOManager(mock_parser_host)
+        mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file(file_path=str(path))
+
+        data = mock_parser_host.state_manager.data
+        assert len(data.atoms) == 2
+
+    def test_shift_jis_sdf_title_line_does_not_block_import(
+        self, mock_parser_host, tmp_path
+    ):
+        """SDMolSupplier reads the file itself and cannot see the flexible
+        decoding used for .mol files, so .sdf import routes the first record
+        through MolFromMolBlock instead; a Shift-JIS title line must not
+        block that."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        c = source.add_atom("C", (0.0, 0.0))
+        o = source.add_atom("O", (50.0, 0.0))
+        source.add_bond(c, o, order=1)
+        lines = source.to_mol_block().splitlines()
+        lines[0] = "メタノール分子"
+        sdf_text_jp = "\n".join(lines) + "\n$$$$\n"
+
+        path = tmp_path / "in.sdf"
+        path.write_bytes(sdf_text_jp.encode("cp932"))
+
+        io = IOManager(mock_parser_host)
+        mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file(file_path=str(path))
+
+        data = mock_parser_host.state_manager.data
+        assert len(data.atoms) == 2
+
+
+class TestLoadMolFileFor3DViewingEncoding:
+    """load_mol_file_for_3d_viewing must tolerate non-UTF-8 MOL/SDF files."""
+
+    @staticmethod
+    def _water_mol_block():
+        """Build a MOL block for a water molecule with embedded 3D coordinates."""
+        from rdkit import Chem
+        from rdkit.Chem import AllChem
+
+        mol = Chem.AddHs(Chem.MolFromSmiles("O"))
+        AllChem.EmbedMolecule(mol, randomSeed=42)
+        return Chem.MolToMolBlock(mol)
+
+    def test_shift_jis_mol_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        """Shift-JIS (cp932) encoded MOL file with Japanese title loads properly in 3D viewer."""
+        lines = self._water_mol_block().splitlines()
+        lines[0] = "水分子"
+        mol_text_jp = "\n".join(lines) + "\n"
+
+        path = tmp_path / "water.mol"
+        path.write_bytes(mol_text_jp.encode("cp932"))
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
+        assert host.view_3d_manager.current_mol is not None
+        assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+    def test_shift_jis_sdf_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        """Shift-JIS (cp932) encoded SDF file with Japanese title loads properly in 3D viewer."""
+        lines = self._water_mol_block().splitlines()
+        lines[0] = "水分子"
+        sdf_text_jp = "\n".join(lines) + "\n$$$$\n"
+
+        path = tmp_path / "water.sdf"
+        path.write_bytes(sdf_text_jp.encode("cp932"))
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
+        assert host.view_3d_manager.current_mol is not None
+        assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+    def test_euc_jp_mol_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        """EUC-JP encoded MOL file (e.g. 'あああ') loads properly in 3D viewer."""
+        lines = self._water_mol_block().splitlines()
+        lines[0] = "あああ"
+        mol_text_jp = "\n".join(lines) + "\n"
+
+        path = tmp_path / "water_euc.mol"
+        path.write_bytes(mol_text_jp.encode("euc_jp"))
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
+        assert host.view_3d_manager.current_mol is not None
+        assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+    def test_euc_jp_sdf_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        """EUC-JP encoded SDF file loads properly in 3D viewer."""
+        lines = self._water_mol_block().splitlines()
+        lines[0] = "あああ"
+        sdf_text_jp = "\n".join(lines) + "\n$$$$\n"
+
+        path = tmp_path / "water_euc.sdf"
+        path.write_bytes(sdf_text_jp.encode("euc_jp"))
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
+        assert host.view_3d_manager.current_mol is not None
+        assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+
+class TestFlexibleEncodingAndBlockLoader:
+    """Regression tests for flexible encoding order and _load_mol_block_text."""
+
+    def test_euc_jp_preferred_over_cp932(self, tmp_path):
+        """EUC-JP bytes (such as 'あ') would decode to mojibake under CP932 without erroring.
+        Flexible read must attempt euc_jp before cp932 to preserve original text."""
+        test_file = tmp_path / "japanese_euc.txt"
+        euc_bytes = "あああ\n".encode("euc_jp")
+        test_file.write_bytes(euc_bytes)
+
+        lines = IOManager._read_text_lines_flexible(str(test_file))
+        assert lines == ["あああ\n"]
+
+    def test_load_mol_block_text_mol_and_sdf(self, tmp_path):
+        """_load_mol_block_text reads and fixes V2000 counts line for both .mol and .sdf."""
+        host = DummyHost()
+        io = IOManager(host)
+
+        mol_content = (
+            "Test\n"
+            "  MoleditPy\n"
+            "\n"
+            "  1  0  0  0  0  0  0  0  0  0999 V2000\n"
+            "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+            "M  END\n"
+        )
+        mol_path = tmp_path / "test.mol"
+        mol_path.write_text(mol_content, encoding="utf-8")
+
+        sdf_content = mol_content + "$$$$\n" + "SecondRecord\n$$$$\n"
+        sdf_path = tmp_path / "test.sdf"
+        sdf_path.write_text(sdf_content, encoding="utf-8")
+
+        res_mol = io._load_mol_block_text(str(mol_path))
+        assert "M  END" in res_mol
+        assert "999 V2000" in res_mol
+
+        res_sdf = io._load_mol_block_text(str(sdf_path))
+        assert "M  END" in res_sdf
+        assert "999 V2000" in res_sdf
+        assert "SecondRecord" not in res_sdf

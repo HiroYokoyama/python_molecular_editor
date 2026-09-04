@@ -408,6 +408,11 @@ _Verify AtomItem initialization with ID, symbol and position._
 - assert atom_item.flags() & atom_item.GraphicsItemFlag.ItemIsMovable
 - assert atom_item.flags() & atom_item.GraphicsItemFlag.ItemIsSelectable
 
+### TestAtomItem.test_init_uses_current_default_font_size
+_New items use the 4.9.0 default before a scene redraw._
+
+- assert atom_item.font.pointSize() == 22
+
 ### TestAtomItem.test_paint_mock
 _Test paint logic by mocking QPainter_
 
@@ -5071,6 +5076,58 @@ _The companion property must keep working._
 - assert charged[0]['symbol'] == 'N'
 - assert charged[0]['charge'] == 1
 
+### TestLoadMolFileProperties.test_shift_jis_title_line_does_not_block_import
+_A MOL file authored on a Japanese locale (Shift-JIS title line) must_
+
+- assert len(data.atoms) == 2
+
+### TestLoadMolFileProperties.test_shift_jis_sdf_title_line_does_not_block_import
+_SDMolSupplier reads the file itself and cannot see the flexible_
+
+- assert len(data.atoms) == 2
+
+### TestLoadMolFileFor3DViewingEncoding.test_shift_jis_mol_file_loads_in_3d_viewer
+_No description provided._
+
+- assert all(('error' not in m.lower() and 'failed' not in m.lower() for m in msgs))
+- assert host.view_3d_manager.current_mol is not None
+- assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+### TestLoadMolFileFor3DViewingEncoding.test_shift_jis_sdf_file_loads_in_3d_viewer
+_No description provided._
+
+- assert all(('error' not in m.lower() and 'failed' not in m.lower() for m in msgs))
+- assert host.view_3d_manager.current_mol is not None
+- assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+### TestLoadMolFileFor3DViewingEncoding.test_euc_jp_mol_file_loads_in_3d_viewer
+_EUC-JP encoded MOL file (e.g. 'あああ') loads properly in 3D viewer._
+
+- assert all(('error' not in m.lower() and 'failed' not in m.lower() for m in msgs))
+- assert host.view_3d_manager.current_mol is not None
+- assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+### TestLoadMolFileFor3DViewingEncoding.test_euc_jp_sdf_file_loads_in_3d_viewer
+_EUC-JP encoded SDF file loads properly in 3D viewer._
+
+- assert all(('error' not in m.lower() and 'failed' not in m.lower() for m in msgs))
+- assert host.view_3d_manager.current_mol is not None
+- assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+### TestFlexibleEncodingAndBlockLoader.test_euc_jp_preferred_over_cp932
+_EUC-JP bytes (such as 'あ') would decode to mojibake under CP932 without erroring._
+
+- assert lines == ['あああ\n']
+
+### TestFlexibleEncodingAndBlockLoader.test_load_mol_block_text_mol_and_sdf
+__load_mol_block_text reads and fixes V2000 counts line for both .mol and .sdf._
+
+- assert 'M  END' in res_mol
+- assert '999 V2000' in res_mol
+- assert 'M  END' in res_sdf
+- assert '999 V2000' in res_sdf
+- assert 'SecondRecord' not in res_sdf
+
 ## tests/unit/test_items_visual.py
 
 ### test_atom_item_visual_states
@@ -6721,6 +6778,37 @@ _Test that XYZ parser handles malformed files via statusBar._
 
 - win.statusBar().showMessage.assert_called()
 - assert 'Error parsing XYZ file' in args[0]
+
+### TestReadTextLinesFlexible.test_plain_utf8_roundtrips
+_No description provided._
+
+- assert lines[0] == '2\n'
+- assert 'ベンゼン' in lines[1]
+
+### TestReadTextLinesFlexible.test_utf8_bom_is_stripped
+_No description provided._
+
+- assert lines[0] == '2\n'
+- assert '分子' in lines[1]
+
+### TestReadTextLinesFlexible.test_shift_jis_falls_back_and_decodes
+_No description provided._
+
+- assert lines[0] == '2\n'
+- assert 'メタン分子' in lines[1]
+
+### TestReadTextLinesFlexible.test_undecodable_bytes_fall_back_to_replace
+_No description provided._
+
+- assert lines[0] == '2\n'
+- assert 'garbage' in lines[1]
+
+### test_load_xyz_file_with_shift_jis_comment
+_A Shift-JIS encoded XYZ file (common on Japanese Windows) must still load._
+
+- assert mol is not None
+- assert mol.GetNumAtoms() == 3
+- win.statusBar().showMessage.assert_not_called()
 
 ## tests/unit/test_parsers.py
 
