@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QFileDialog,
     QMessageBox,
+    QWidget,
 )
 
 from rdkit import Chem
@@ -129,6 +130,18 @@ class IOManager:
             record_lines.append(line)
         return "\n".join(record_lines)
 
+    def _load_mol_block_text(self, file_path: str) -> str:
+        """Read a .mol/.sdf file flexibly-encoded and return a MolFromMolBlock-ready block.
+
+        Shared by load_mol_file and load_mol_file_for_3d_viewing so the
+        flexible-encoding read, .sdf first-record extraction, and V2000
+        counts-line fix live in one place.
+        """
+        raw = "".join(self._read_text_lines_flexible(file_path))
+        if file_path.lower().endswith(".sdf"):
+            raw = self._first_sdf_record(raw)
+        return self.fix_mol_block(raw)
+
     @staticmethod
     def _read_text_lines_flexible(file_path: str) -> list[str]:
         """Read a text file's lines, tolerating non-UTF-8 encodings.
@@ -141,7 +154,11 @@ class IOManager:
         undecodable bytes, so a mojibake comment never blocks the atoms
         themselves from loading.
         """
-        for encoding in ("utf-8-sig", "cp932", "shift_jis", "euc_jp"):
+        # euc_jp must be tried before cp932/shift_jis: cp932 silently accepts
+        # some genuinely EUC-JP byte sequences and decodes them to the wrong
+        # (mojibake) characters instead of raising, so trying cp932 first
+        # would never let euc_jp text reach its correct decoding.
+        for encoding in ("utf-8-sig", "euc_jp", "cp932", "shift_jis"):
             try:
                 with open(file_path, "r", encoding=encoding) as f:
                     return f.readlines()
@@ -367,7 +384,8 @@ class IOManager:
         if status_bar is not None:
             status_bar.showMessage(message)
         if not os.environ.get("MOLEDITPY_HEADLESS"):
-            QMessageBox.warning(self.host, title, message)
+            parent = self.host if isinstance(self.host, QWidget) else None
+            QMessageBox.warning(parent, title, message)
 
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
         """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
@@ -817,19 +835,13 @@ class IOManager:
             return
 
         try:
-            if file_path.lower().endswith(".mol"):
-                raw = "".join(self._read_text_lines_flexible(file_path))
-                fixed_block = self.fix_mol_block(raw)
-                # Both readers can come back empty on a malformed file; the
-                # stub for MolFromMolBlock does not say so, hence the explicit
-                # declaration. The None check below covers both branches.
-                mol: Optional[Chem.Mol] = Chem.MolFromMolBlock(
-                    fixed_block, sanitize=True, removeHs=False
-                )
-            else:
-                raw = "".join(self._read_text_lines_flexible(file_path))
-                fixed_block = self.fix_mol_block(self._first_sdf_record(raw))
-                mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
+            fixed_block = self._load_mol_block_text(file_path)
+            # MolFromMolBlock can come back empty on a malformed file; the
+            # stub does not say so, hence the explicit declaration. The None
+            # check below covers that.
+            mol: Optional[Chem.Mol] = Chem.MolFromMolBlock(
+                fixed_block, sanitize=True, removeHs=False
+            )
 
             if mol is None:
                 raise ValueError("Failed to read molecule from file.")
@@ -1031,14 +1043,8 @@ class IOManager:
             if not file_path:
                 return
         try:
-            if file_path.lower().endswith(".sdf"):
-                raw = "".join(self._read_text_lines_flexible(file_path))
-                fixed_block = self.fix_mol_block(self._first_sdf_record(raw))
-                mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
-            else:
-                raw = "".join(self._read_text_lines_flexible(file_path))
-                fixed_block = self.fix_mol_block(raw)
-                mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
+            fixed_block = self._load_mol_block_text(file_path)
+            mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
 
             if mol is None:
                 raise ValueError("Failed to load molecule.")

@@ -5100,6 +5100,34 @@ _No description provided._
 - assert host.view_3d_manager.current_mol is not None
 - assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
 
+### TestLoadMolFileFor3DViewingEncoding.test_euc_jp_mol_file_loads_in_3d_viewer
+_EUC-JP encoded MOL file (e.g. 'あああ') loads properly in 3D viewer._
+
+- assert all(('error' not in m.lower() and 'failed' not in m.lower() for m in msgs))
+- assert host.view_3d_manager.current_mol is not None
+- assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+### TestLoadMolFileFor3DViewingEncoding.test_euc_jp_sdf_file_loads_in_3d_viewer
+_EUC-JP encoded SDF file loads properly in 3D viewer._
+
+- assert all(('error' not in m.lower() and 'failed' not in m.lower() for m in msgs))
+- assert host.view_3d_manager.current_mol is not None
+- assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+### TestFlexibleEncodingAndBlockLoader.test_euc_jp_preferred_over_cp932
+_EUC-JP bytes (such as 'あ') would decode to mojibake under CP932 without erroring._
+
+- assert lines == ['あああ\n']
+
+### TestFlexibleEncodingAndBlockLoader.test_load_mol_block_text_mol_and_sdf
+__load_mol_block_text reads and fixes V2000 counts line for both .mol and .sdf._
+
+- assert 'M  END' in res_mol
+- assert '999 V2000' in res_mol
+- assert 'M  END' in res_sdf
+- assert '999 V2000' in res_sdf
+- assert 'SecondRecord' not in res_sdf
+
 ## tests/unit/test_items_visual.py
 
 ### test_atom_item_visual_states
