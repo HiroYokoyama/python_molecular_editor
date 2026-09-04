@@ -906,3 +906,33 @@ class TestLoadMolFileProperties:
         assert len(charged) == 1
         assert charged[0]["symbol"] == "N"
         assert charged[0]["charge"] == 1
+
+    def test_shift_jis_title_line_does_not_block_import(
+        self, mock_parser_host, tmp_path
+    ):
+        """A MOL file authored on a Japanese locale (Shift-JIS title line) must
+        still import instead of raising UnicodeDecodeError on a strict utf-8 open."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        c = source.add_atom("C", (0.0, 0.0))
+        o = source.add_atom("O", (50.0, 0.0))
+        source.add_bond(c, o, order=1)
+        mol_text = source.to_mol_block()
+
+        # Replace the MOL title line (line 1) with Japanese text and write the
+        # whole file as Shift-JIS (cp932), the common Windows-JP encoding.
+        lines = mol_text.splitlines()
+        lines[0] = "エタノール分子"
+        mol_text_jp = "\n".join(lines) + "\n"
+
+        path = tmp_path / "in.mol"
+        path.write_bytes(mol_text_jp.encode("cp932"))
+
+        io = IOManager(mock_parser_host)
+        mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file(file_path=str(path))
+
+        data = mock_parser_host.state_manager.data
+        assert len(data.atoms) == 2

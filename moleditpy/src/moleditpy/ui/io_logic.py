@@ -110,6 +110,27 @@ class IOManager:
         return "\n".join(lines)
 
     @staticmethod
+    def _read_text_lines_flexible(file_path: str) -> list[str]:
+        """Read a text file's lines, tolerating non-UTF-8 encodings.
+
+        XYZ comment lines are free-form and files authored on Japanese
+        (or other non-UTF-8) locales are commonly saved as Shift-JIS/CP932
+        rather than UTF-8, which raises UnicodeDecodeError under a strict
+        utf-8 open(). Fall back through the encodings Windows/macOS/Linux
+        editors actually produce before giving up and replacing the
+        undecodable bytes, so a mojibake comment never blocks the atoms
+        themselves from loading.
+        """
+        for encoding in ("utf-8-sig", "cp932", "shift_jis", "euc_jp"):
+            try:
+                with open(file_path, "r", encoding=encoding) as f:
+                    return f.readlines()
+            except UnicodeDecodeError:
+                continue
+        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            return f.readlines()
+
+    @staticmethod
     def _is_numeric_token(token: str) -> bool:
         """True if *token* parses as a float."""
         try:
@@ -334,8 +355,7 @@ class IOManager:
             return None
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                return self._mol_from_xyz_lines(f.readlines())
+            return self._mol_from_xyz_lines(self._read_text_lines_flexible(file_path))
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
             self.host.statusBar().showMessage(f"Error parsing XYZ file: {e}")
             return None
@@ -778,8 +798,7 @@ class IOManager:
 
         try:
             if file_path.lower().endswith(".mol"):
-                with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
-                    raw = fh.read()
+                raw = "".join(self._read_text_lines_flexible(file_path))
                 fixed_block = self.fix_mol_block(raw)
                 # Both readers can come back empty on a malformed file; the
                 # stub for MolFromMolBlock does not say so, hence the explicit
@@ -995,8 +1014,7 @@ class IOManager:
                 suppl = Chem.SDMolSupplier(file_path, removeHs=False)
                 mol = next(suppl, None)
             else:
-                with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
-                    raw = fh.read()
+                raw = "".join(self._read_text_lines_flexible(file_path))
                 fixed_block = self.fix_mol_block(raw)
                 mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
 
