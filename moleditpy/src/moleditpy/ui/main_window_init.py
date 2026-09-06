@@ -1270,6 +1270,7 @@ class MainInitManager:
 
         file_menu.addSeparator()
         quit_action = QAction("Quit", self.host)
+        quit_action.setMenuRole(QAction.MenuRole.NoRole)
         quit_action.setShortcut("Ctrl+Q")
         quit_action.triggered.connect(self.host.close)
         file_menu.addAction(quit_action)
@@ -1670,6 +1671,7 @@ class MainInitManager:
         """Initialize the Settings menu."""
         settings_menu = menu_bar.addMenu("&Settings")
         view_settings_action = QAction("Settings...", self.host)
+        view_settings_action.setMenuRole(QAction.MenuRole.NoRole)
         view_settings_action.triggered.connect(
             self.host.dialog_manager.open_settings_dialog
         )
@@ -1811,6 +1813,7 @@ class MainInitManager:
         """Initialize the Help menu."""
         help_menu = menu_bar.addMenu("&Help")
         about_action = QAction("About", self.host)
+        about_action.setMenuRole(QAction.MenuRole.NoRole)
         about_action.triggered.connect(self.host.dialog_manager.show_about_dialog)
         help_menu.addAction(about_action)
 
