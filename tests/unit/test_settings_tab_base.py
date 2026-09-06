@@ -63,13 +63,29 @@ def test_create_slider_int_spin_updates(app):
 
 
 def test_wrap_layout_returns_layout_with_children(app):
-    """_wrap_layout returns an HBoxLayout containing the provided widgets."""
+    """_wrap_layout returns an HBoxLayout containing the provided widgets with stretch applied."""
     tab = ConcreteTab(DEFAULT_SETTINGS)
     slider, label = tab._create_slider(0, 100, 1.0)
     layout = tab._wrap_layout(slider, label)
     assert isinstance(layout, QHBoxLayout)
-    assert layout.indexOf(slider) != -1
-    assert layout.indexOf(label) != -1
+
+    slider_idx = layout.indexOf(slider)
+    label_idx = layout.indexOf(label)
+    assert slider_idx != -1
+    assert label_idx != -1
+
+    # Assert stretch factor
+    assert layout.stretch(slider_idx) == 1
+    assert layout.stretch(label_idx) == 0
+
+
+def test_create_slider_expanding_policy(app):
+    """_create_slider sets the slider to an expanding horizontal policy to ensure full width on macOS."""
+    from PyQt6.QtWidgets import QSizePolicy
+
+    tab = ConcreteTab(DEFAULT_SETTINGS)
+    slider, spin = tab._create_slider(10, 200, 10.0)
+    assert slider.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Expanding
 
 
 def test_reset_to_defaults_calls_update_ui(app):
