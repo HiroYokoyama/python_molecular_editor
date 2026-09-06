@@ -87,7 +87,9 @@ class SettingsOtherTab(SettingsTabBase):
         )
 
         self.aromatic_torus_thickness_slider = QSlider(Qt.Orientation.Horizontal)
-        self.aromatic_torus_thickness_slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.aromatic_torus_thickness_slider.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
         self.aromatic_torus_thickness_slider.setRange(10, 300)
         self.aromatic_torus_thickness_label = QDoubleSpinBox()
         self.aromatic_torus_thickness_label.setRange(0.1, 3.0)
