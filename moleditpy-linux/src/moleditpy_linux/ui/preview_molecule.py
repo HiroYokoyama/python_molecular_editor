@@ -31,6 +31,7 @@ class PreviewScene(QGraphicsScene):
     """
 
     def __init__(self, host: Any = None) -> None:
+        """Initialize preview canvas scene for molecular structures."""
         super().__init__()
         self.host: Any = host
 
@@ -61,6 +62,7 @@ def ensure_preview_settings(scene: Any, host: Any = None) -> None:
         return
 
     def get_setting(key: str, default: Any = None) -> Any:
+        """Retrieve visual rendering setting with default fallback."""
         if host is None or not hasattr(host, "get_setting"):
             return default
         try:

@@ -51,6 +51,7 @@ class DihedralDialog(GeometryBaseDialog):
         preselected_atoms: Optional[Sequence[int]] = None,
         parent: Optional[QWidget] = None,
     ) -> None:
+        """Initialize dihedral angle adjustment dialog."""
         super().__init__(mol, main_window, parent)
         self._baseline_positions: Any = None
         self._snapshot_positions = None

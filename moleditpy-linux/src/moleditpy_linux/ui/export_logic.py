@@ -35,6 +35,7 @@ class ExportManager:
     """Independent manager for export logic, ported from MainWindowExport mixin."""
 
     def __init__(self, host: Any) -> None:
+        """Initialize ExportManager for file and scene exports."""
         self.host = host
 
     def _get_default_basename(self) -> str:

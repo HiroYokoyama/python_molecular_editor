@@ -15,7 +15,7 @@ from typing import Any, Optional
 
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QFormLayout,
+    QLabel,
     QWidget,
 )
 from .settings_tab_base import SettingsTabBase
@@ -27,6 +27,7 @@ class Settings2DCleanupTab(SettingsTabBase):
     def __init__(
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:
+        """Initialize the 2D cleanup settings tab."""
         super().__init__(default_settings, parent)
         self.prefer_coordgen_2d_checkbox: Any = None
         self.cleanup_canonical_orientation_2d_checkbox: Any = None
@@ -38,7 +39,10 @@ class Settings2DCleanupTab(SettingsTabBase):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
-        form_layout = QFormLayout(self)
+        """Construct form layout and controls for 2D cleanup options."""
+        form_layout = self._create_form_layout()
+
+        form_layout.addRow(QLabel("<b>2D Cleanup Settings</b>"))
 
         self.prefer_coordgen_2d_checkbox = QCheckBox()
         self.prefer_coordgen_2d_checkbox.setToolTip(
@@ -106,12 +110,14 @@ class Settings2DCleanupTab(SettingsTabBase):
         )
 
     def _update_coordgen_dependent_options(self, prefer_coordgen: bool) -> None:
+        """Enable or disable options that are unsupported by CoordGen."""
         suffix = " (not applicable when Prefer CoordGen is checked)"
         for checkbox, base_tooltip in self._coordgen_ignored:
             checkbox.setEnabled(not prefer_coordgen)
             checkbox.setToolTip(base_tooltip + (suffix if prefer_coordgen else ""))
 
     def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
+        """Update controls based on the provided settings mapping."""
         prefer_coordgen = settings_dict.get("prefer_coordgen_2d", False)
         self.prefer_coordgen_2d_checkbox.setChecked(prefer_coordgen)
         self._update_coordgen_dependent_options(prefer_coordgen)
@@ -129,6 +135,7 @@ class Settings2DCleanupTab(SettingsTabBase):
         )
 
     def get_settings(self) -> dict[str, Any]:
+        """Collect current 2D cleanup preferences as a dictionary."""
         return {
             "prefer_coordgen_2d": self.prefer_coordgen_2d_checkbox.isChecked(),
             "cleanup_canonical_orientation_2d": (

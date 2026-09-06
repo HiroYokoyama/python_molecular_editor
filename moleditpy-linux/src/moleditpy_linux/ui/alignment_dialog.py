@@ -49,6 +49,7 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         preselected_atoms: Optional[Sequence[int]] = None,
         parent: Optional[QWidget] = None,
     ) -> None:
+        """Initialize alignment dialog with reference axis settings."""
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol

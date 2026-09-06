@@ -78,6 +78,7 @@ class AtomItem(QGraphicsItem):
     def __init__(
         self, atom_id: int, symbol: str, pos: QPointF, charge: int = 0, radical: int = 0
     ) -> None:
+        """Initialize 2D atom graphics item."""
         super().__init__()
         self.atom_id: int = atom_id
         self.symbol: str = symbol

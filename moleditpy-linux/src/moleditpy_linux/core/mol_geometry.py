@@ -723,6 +723,7 @@ def resolve_2d_overlaps(
     parent = {aid: aid for aid in atom_ids}
 
     def find_set(aid: int) -> int:
+        """Find representative root for an element in disjoint-set."""
         # Iterative path compression avoids recursion limits
         root = aid
         while parent[root] != root:
@@ -732,6 +733,7 @@ def resolve_2d_overlaps(
         return root
 
     def unite_sets(aid1: int, aid2: int) -> None:
+        """Unite two sets in disjoint-set forest."""
         root1 = find_set(aid1)
         root2 = find_set(aid2)
         if root1 != root2:

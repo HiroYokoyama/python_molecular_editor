@@ -33,6 +33,7 @@ class MirrorDialog(QDialog):
     def __init__(
         self, mol: Any, main_window: Any, parent: Optional[Any] = None
     ) -> None:
+        """Initialize structure mirror reflection dialog."""
         super().__init__(parent)
         self.mol = mol
         self.main_window = main_window

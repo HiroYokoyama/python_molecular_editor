@@ -39,6 +39,7 @@ class UIManager(QObject):
     """Manages 2D editing mode, toolbar state, and host window event filtering."""
 
     def __init__(self, host: Any) -> None:
+        """Initialize UIManager coordinating UI state and viewport events."""
         super().__init__()
         self.is_2d_editable = False
         self.host = host
@@ -318,6 +319,7 @@ class UIManager(QObject):
         self.host.init_manager.view_2d.setFocus()
 
     def _setup_3d_picker(self) -> None:
+        """Configure atom picking callback on 3D PyVista viewport."""
         self.host.set_plotter_picker(vtk.vtkCellPicker())
         self.host.view_3d_manager.plotter.picker.SetTolerance(0.025)
 

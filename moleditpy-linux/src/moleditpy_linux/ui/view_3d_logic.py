@@ -40,6 +40,7 @@ class View3DManager:
     """Independent manager for 3D rendering logic, ported from MainWindowView3d mixin."""
 
     def __init__(self, host: MainWindow) -> None:
+        """Initialize View3DManager responsible for 3D molecular rendering."""
         self._plugin_bond_color_overrides: Dict[int, Any] = {}
         self._plugin_color_overrides: Dict[int, Any] = {}
         self.host = host
@@ -79,6 +80,7 @@ class View3DManager:
 
     @plotter.setter
     def plotter(self, val: Optional[CustomQtInteractor]) -> None:
+        """Set the active PyVista Qt interactor plotter instance."""
         self._plotter_val = val  # type: ignore[assignment]
 
     def cleanup(self) -> None:
@@ -172,6 +174,7 @@ class View3DManager:
     def _draw_standard_3d_style_body(
         self, mol: Chem.Mol, style_override: Optional[str] = None
     ) -> None:
+        """Render atoms, bonds, and scene annotations in current 3D style."""
         current_style = style_override if style_override else self.current_3d_style
 
         # Clear measurement selection (molecule changed)
@@ -317,6 +320,7 @@ class View3DManager:
         is_lighting_enabled: bool,
         mesh_props: Dict[str, Any],
     ) -> None:
+        """Render atom spheres with element colors and radii."""
         # Set atom radii based on style
         if current_style == "cpk":
             atom_scale = self.host.init_manager.settings.get("cpk_atom_scale", 1.0)
@@ -324,6 +328,7 @@ class View3DManager:
 
             # Safe VDW lookup to handle custom elements like 'Bq'
             def get_safe_rvdw(s: str) -> float:
+                """Return safe van der Waals radius for element symbol with fallback."""
                 try:
                     r = pt.GetRvdw(pt.GetAtomicNumber(s))
                     return r if r > 0.1 else 1.5
@@ -556,6 +561,7 @@ class View3DManager:
         current_style: str,
         mesh_props: Dict[str, Any],
     ) -> None:
+        """Render bond cylinders between connected atoms."""
         # Draw bonds (ball_and_stick, wireframe, stick)
         if current_style in ["ball_and_stick", "wireframe", "stick"]:
             # Set bond radius and resolution based on style
@@ -648,6 +654,7 @@ class View3DManager:
 
                 # Helper to add segments
                 def add_segment(p1: Any, p2: Any, radius: Any, color_rgb: Any) -> None:
+                    """Add colored cylinder segment to bond mesh."""
                     nonlocal current_point_idx
                     all_points.append(p1)
                     all_points.append(p2)
@@ -875,6 +882,7 @@ class View3DManager:
     def _add_3d_aromatic_rings(
         self, mol_to_draw: Any, current_style: str, mesh_props: Dict[str, Any]
     ) -> None:
+        """Render aromatic ring circle toroids in 3D viewport."""
         # Aromatic ring circles display
         display_aromatic = self.host.init_manager.settings.get(
             "display_aromatic_circles_3d", False
@@ -1041,6 +1049,7 @@ class View3DManager:
                 logging.warning(f"Error rendering aromatic circles: {e}")
 
     def _add_3d_labels(self, mol: Any, mol_to_draw: Any) -> None:
+        """Render chiral and E/Z stereochemistry labels in the 3D scene."""
         if getattr(self, "show_chiral_labels", False):
             try:
                 # Calculate chiral centers from 3D coordinates

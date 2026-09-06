@@ -26,6 +26,7 @@ class PeriodicTableDialog(QDialog):
     element_selected = pyqtSignal(str)
 
     def __init__(self, parent: Optional[Any] = None) -> None:
+        """Initialize periodic table element picker dialog."""
         super().__init__(parent)
         self.setWindowTitle("Select an Element")
         layout = QGridLayout(self)

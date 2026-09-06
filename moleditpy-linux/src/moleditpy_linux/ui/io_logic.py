@@ -55,6 +55,7 @@ class IOManager:
     """Independent manager for IO actions (Load/Save), ported from Mixins."""
 
     def __init__(self, host: Any = None) -> None:
+        """Initialize IOManager handling molecular file loading and saving."""
         if host is not None:
             self.host = host
 
@@ -296,6 +297,7 @@ class IOManager:
         skip_checks = bool(settings.get("skip_chemistry_checks", False))
 
         def _set_prop(m: Chem.Mol, key: str, val: Any) -> None:
+            """Assign property to RDKit molecule or atom."""
             try:
                 if isinstance(val, int):
                     m.SetIntProp(key, val)
@@ -306,6 +308,7 @@ class IOManager:
                 logging.debug("Suppressed non-critical error", exc_info=True)
 
         def _process(charge_val: int, use_rd_determine: bool = True) -> Any:
+            """Process and parse molecular input data."""
             if use_rd_determine:
                 from rdkit.Chem import rdDetermineBonds
 
@@ -466,6 +469,7 @@ class IOManager:
         result = {"accepted": False, "skip": False}
 
         def _accept_if_valid() -> None:
+            """Validate charge input and accept the dialog if valid."""
             # Invalid input: show inline error and keep the dialog open
             try:
                 int(float(line_edit.text().strip() or "0"))

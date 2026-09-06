@@ -48,6 +48,7 @@ class BondLengthDialog(GeometryBaseDialog):
         preselected_atoms: Optional[Sequence[int]] = None,
         parent: Optional[QWidget] = None,
     ) -> None:
+        """Initialize bond length adjustment dialog."""
         super().__init__(mol, main_window, parent)
         self._baseline_positions: Any = None
         self._snapshot_positions = None
@@ -325,6 +326,7 @@ class BondLengthDialog(GeometryBaseDialog):
         self._push_undo()
 
     def _is_selection_complete(self) -> bool:
+        """Check whether required two atoms have been picked."""
         return self.atom1_idx is not None and self.atom2_idx is not None
 
     def apply_geometry_update(self, new_distance: float) -> None:  # pylint: disable=arguments-renamed

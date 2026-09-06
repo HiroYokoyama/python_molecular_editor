@@ -47,6 +47,7 @@ class PluginMenuManager:
     _PIN_HEADER = "header"
 
     def __init__(self, init_manager: MainInitManager) -> None:
+        """Initialize PluginMenuManager for dynamic menu construction."""
         self._im = init_manager
         # Built once and re-added on every reset; see _reset_plugin_menu.
         self._manage_action: Optional[QAction] = None
@@ -57,6 +58,7 @@ class PluginMenuManager:
         """Wrap a plugin callback so exceptions don't propagate into Qt's signal machinery."""
 
         def _safe(*args: Any, **kwargs: Any) -> None:
+            """Execute plugin callback safely catching unhandled exceptions."""
             try:
                 callback()
             except Exception:
@@ -180,6 +182,7 @@ class PluginMenuManager:
             self._reset_plugin_menu(plugin_menu)
 
         def _rebuild_legacy_actions() -> None:
+            """Reconstruct legacy plugin actions into application menus."""
             if plugin_menu is not None:
                 self._add_legacy_plugin_actions(
                     plugin_menu, self._im.host.plugin_manager.plugins
@@ -641,7 +644,10 @@ class PluginMenuManager:
             )
 
             def make_cb(m: Any, f: Any, n: Any) -> Any:
+                """Create callback wrapper for plugin action."""
+
                 def _cb() -> None:
+                    """Execute plugin action callback."""
                     fpath, _ = QFileDialog.getOpenFileName(
                         self._im.host, f"Import {n} Files", "", f
                     )

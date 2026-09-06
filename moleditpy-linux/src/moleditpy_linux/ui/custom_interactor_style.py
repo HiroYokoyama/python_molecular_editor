@@ -72,6 +72,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
     """VTK interactor style extending trackball-camera with 3D atom drag and measurement."""
 
     def __init__(self, main_window: Any = None, **kwargs: Any) -> None:
+        """Initialize custom PyVista interactor style with mouse handlers."""
         super().__init__(**kwargs)
         self.main_window = main_window
         # Custom state flags
@@ -416,6 +417,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     if type(move_group_dialog).__name__ == "MoveSelectedAtomsDialog":
                         # For MoveSelectedAtomsDialog, we toggle ONLY the clicked atom, no BFS!
                         def _deferred_toggle() -> None:
+                            """Toggle atom selection state in deferred callback."""
                             try:
                                 move_group_dialog.on_atom_picked(clicked_atom_idx)
                             except (AttributeError, RuntimeError):
@@ -477,6 +479,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     move_group_dialog.selected_atoms.add(clicked_atom_idx)
 
                     def _deferred_move_group_update() -> None:
+                        """Update selected group translation in deferred callback."""
                         try:
                             move_group_dialog.show_atom_labels()
                             move_group_dialog.update_display()
@@ -527,6 +530,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         if True:
 
                             def _deferred_measure() -> None:
+                                """Measure distance between picked atoms in deferred callback."""
                                 try:
                                     mw.edit_3d_manager.handle_measurement_atom_selection(
                                         closest_atom_idx
@@ -846,6 +850,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             _rt_mol = mw.view_3d_manager.current_mol
 
             def _deferred_rt_atom() -> None:
+                """Execute deferred real-time atom drag update."""
                 try:
                     mw.view_3d_manager.draw_molecule_3d(_rt_mol)
                 except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -906,6 +911,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             _rt_dlg = move_group_dialog
 
             def _deferred_rt_grp() -> None:
+                """Execute deferred real-time group translation update."""
                 try:
                     mw.view_3d_manager.draw_molecule_3d(_rt_mol)
                     _rt_dlg.show_atom_labels()
@@ -1054,6 +1060,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             _rt_dlg = move_group_dialog
 
             def _deferred_rt_rot() -> None:
+                """Execute deferred real-time group rotation update."""
                 try:
                     mw.view_3d_manager.draw_molecule_3d(_rt_mol)
                     _rt_dlg.show_atom_labels()
@@ -1161,6 +1168,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     _grp_dlg = move_group_dialog
 
                     def _deferred_group_redraw() -> None:
+                        """Redraw moving group geometry in deferred callback."""
                         mw.view_3d_manager.draw_molecule_3d(_grp_mol)
                         mw.view_3d_manager.update_chiral_labels()
                         _grp_dlg.show_atom_labels()
@@ -1186,6 +1194,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
             if not self._mouse_moved_during_drag and self._mouse_press_pos is not None:
                 # Background click: deselect
                 def _deferred_clear_move_group() -> None:
+                    """Clear active move group selection in deferred callback."""
                     try:
                         move_group_dialog.group_atoms.clear()
                         move_group_dialog.selected_atoms.clear()
@@ -1205,6 +1214,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
         ):
             # Background click -> clear selection
             def _deferred_clear_measurement() -> None:
+                """Clear active measurement lines in deferred callback."""
                 try:
                     mw.edit_3d_manager.clear_measurement_selection()
                 except (AttributeError, RuntimeError):
@@ -1314,6 +1324,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     _atom_mol = mw.view_3d_manager.current_mol
 
                     def _deferred_atom_redraw() -> None:
+                        """Redraw moved atom geometry in deferred callback."""
                         try:
                             mw.view_3d_manager.draw_molecule_3d(_atom_mol)
                         except (AttributeError, RuntimeError, ValueError, TypeError):
@@ -1340,6 +1351,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                 ]
 
                 def _deferred_updates() -> None:
+                    """Process pending deferred viewport updates."""
                     for fn in _update_calls:
                         try:
                             fn()

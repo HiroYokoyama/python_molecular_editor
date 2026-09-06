@@ -808,6 +808,7 @@ class CalculationWorker(QObject):
     start_work = pyqtSignal(str, object)
 
     def __init__(self, parent: Optional[QObject] = None) -> None:
+        """Initialize background calculation worker thread."""
         super().__init__(parent)
         self.halt_ids: Optional[Set[Any]] = None
         self.halt_all: bool = False
@@ -822,6 +823,7 @@ class CalculationWorker(QObject):
         w_id = options.get("worker_id")
 
         def _check_halted() -> bool:
+            """Check if current calculation worker has been requested to halt."""
             h_ids = getattr(self, "halt_ids", None)
             if self.halt_all:
                 return True  # type: ignore[return-value]
@@ -836,18 +838,21 @@ class CalculationWorker(QObject):
             # pylint: enable=unsupported-membership-test
 
         def _safe_status(msg: str) -> None:
+            """Emit calculation status update checking halt state."""
             if _check_halted():
                 raise WorkerHaltError("Halted")
             with suppress_log(AttributeError, RuntimeError):
                 self.status_update.emit(msg)
 
         def _safe_finished(payload: Any) -> None:
+            """Emit calculation finished signal checking halt state."""
             if _check_halted():
                 raise WorkerHaltError("Halted")
             with suppress_log(AttributeError, RuntimeError, TypeError):
                 self.finished.emit(payload)
 
         def _safe_error(msg: str) -> None:
+            """Emit calculation error signal handling graceful halt state."""
             # If we're already halting, don't raise another error
             if msg == "Halted":
                 with suppress_log(AttributeError, RuntimeError, TypeError):

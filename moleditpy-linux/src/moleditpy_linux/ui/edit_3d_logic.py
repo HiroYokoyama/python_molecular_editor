@@ -39,6 +39,7 @@ class Edit3DManager:
     """Independent manager for 3D editing logic, ported from MainWindowEdit3d mixin."""
 
     def __init__(self, host: Any) -> None:
+        """Initialize 3D geometric transformation and editing manager."""
         self.host = host
         # State variables previously held by mixin
         self.measurement_mode = False

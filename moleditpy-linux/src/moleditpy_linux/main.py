@@ -77,6 +77,7 @@ class _ErrorDialogHandler(logging.Handler):
     _DEDUP_WINDOW_S = 10.0
 
     def __init__(self, log_path: Optional[str] = None) -> None:
+        """Initialize GUI error dialog logging handler with dedup tracking."""
         super().__init__(level=logging.ERROR)
         # signature -> monotonic timestamp of its last shown dialog.
         self._last_shown: Dict[str, float] = {}
@@ -85,6 +86,7 @@ class _ErrorDialogHandler(logging.Handler):
         self._log_path = log_path
 
     def emit(self, record: logging.LogRecord) -> None:
+        """Emit error dialog for unhandled error log record with deduplication."""
         try:
             if getattr(record, "no_dialog", False):
                 return

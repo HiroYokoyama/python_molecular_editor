@@ -75,6 +75,7 @@ class Rotate2DDialog(QDialog):
     def __init__(
         self, parent: Optional[QWidget] = None, initial_angle: float = 0
     ) -> None:
+        """Initialize 2D structure rotation dialog."""
         super().__init__(parent)
         self.setWindowTitle("Rotate 2D")
         self.setFixedWidth(300)
@@ -122,6 +123,7 @@ class EditActionsManager:
     """Independent manager for molecular editing actions, ported from MainWindowEditActions mixin."""
 
     def __init__(self, host: MainWindow) -> None:
+        """Initialize EditActionsManager for clipboard and editing tools."""
         self.dragged_atom_info = None
         self.host = host
         # State variables previously held by mixin
@@ -665,6 +667,7 @@ class EditActionsManager:
 
                 # Helper: determine bond_stereo for hydrogen
                 def _choose_stereo(i: int) -> int:
+                    """Determine stereo wedge or dash representation for bond."""
                     # 0: plain, 1: wedge, 2: dash, 3: plain, 4+: all plain
                     if i == 0:
                         return 0
@@ -1122,6 +1125,7 @@ class EditActionsManager:
             problem_map = self._detect_chemistry_problems(mol)
 
             def _ui_closure() -> None:
+                """Execute UI update closure callback."""
                 self._apply_ui_h_counts(h_count_map, problem_map, my_token)
 
             try:
@@ -1265,6 +1269,7 @@ class EditActionsManager:
         from moleditpy_linux.core.mol_geometry import resolve_2d_overlaps
 
         def has_bond_check(id1: int, id2: int) -> bool:
+            """Check if bond already exists between atom pair."""
             item1 = self.host.init_manager.scene.atom_items.get(id1)
             item2 = self.host.init_manager.scene.atom_items.get(id2)
             return (

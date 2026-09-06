@@ -45,6 +45,7 @@ class MoleculeScene(
     """Central QGraphicsScene that owns all 2D atom and bond items."""
 
     def __init__(self, data: MolecularData, window: MainWindow) -> None:
+        """Initialize 2D molecule drawing canvas scene."""
         super().__init__()
         self.data, self.window = data, window
         self.atom_items: Dict[int, AtomItem] = {}

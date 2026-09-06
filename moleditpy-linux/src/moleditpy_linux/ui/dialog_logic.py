@@ -52,6 +52,7 @@ class DialogManager:
     """
 
     def __init__(self, host: Any) -> None:
+        """Initialize DialogManager coordinating application dialogs."""
         self.host = host
 
     def _get_preselected_atoms_3d(self) -> List[int]:

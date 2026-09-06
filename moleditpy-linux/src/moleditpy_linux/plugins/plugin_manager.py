@@ -76,6 +76,7 @@ class PluginManager:
             return "N/A"
 
     def __init__(self, main_window: Any = None) -> None:
+        """Initialize PluginManager with plugin search directories."""
         self.plugin_dir: str = os.path.join(
             os.path.expanduser("~"), ".moleditpy", "plugins"
         )

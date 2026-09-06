@@ -21,6 +21,7 @@ class PluginContext:
     """
 
     def __init__(self, manager: Any, plugin_name: str) -> None:
+        """Initialize plugin execution context with host reference."""
         self._manager = manager
         self._plugin_name = plugin_name
 
@@ -206,6 +207,7 @@ class PluginContext:
 
     @current_mol.setter
     def current_mol(self, mol: Any) -> None:
+        """Set active RDKit molecule and redraw 3D view."""
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
             mw.view_3d_manager.current_mol = mol
@@ -218,6 +220,7 @@ class PluginContext:
 
     @current_molecule.setter
     def current_molecule(self, mol: Any) -> None:
+        """Set active molecule via current_mol setter."""
         self.current_mol = mol
 
     @property
@@ -607,6 +610,7 @@ class Plugin3DController:
     """Helper to manipulate the 3D scene."""
 
     def __init__(self, main_window: Any) -> None:
+        """Initialize Plugin3DController with main window reference."""
         self._mw = main_window
 
     def _get_v3d(self) -> Optional[Any]:
