@@ -120,7 +120,7 @@ class BondItem(QGraphicsItem):
         """Shorten inner ring double bonds based on the ring angle at both atoms."""
 
         def angle_between(v1: QPointF, v2: QPointF) -> Optional[float]:
-            """Calculate directed angle between two 2D points in radians."""
+            """Calculate smaller unsigned angle between two 2D vectors in radians."""
             len1 = math.hypot(v1.x(), v1.y())
             len2 = math.hypot(v2.x(), v2.y())
             if len1 <= 1e-6 or len2 <= 1e-6:

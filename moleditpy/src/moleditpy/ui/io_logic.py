@@ -469,7 +469,7 @@ class IOManager:
         result = {"accepted": False, "skip": False}
 
         def _accept_if_valid() -> None:
-            """Validate and accept parsed molecular structure."""
+            """Validate charge input and accept the dialog if valid."""
             # Invalid input: show inline error and keep the dialog open
             try:
                 int(float(line_edit.text().strip() or "0"))

@@ -236,11 +236,11 @@ class TemplateMixin:
         loads = {i: self._bond_load(atom) for i, atom in enumerate(vertex_atoms)}
 
         def vertex(index: int) -> Optional[AtomItem]:
-            """Compute polygon vertex position from center and angle."""
+            """Return the corresponding AtomItem from vertex_atoms if within range."""
             return vertex_atoms[index] if index < len(vertex_atoms) else None
 
         def fits(index: int, extra: float) -> bool:
-            """Check if proposed template placement fits within canvas bounds."""
+            """Check if adding extra bond order to vertex atom complies with valence limits."""
             atom = vertex(index)
             if atom is None or extra <= 0:
                 return True

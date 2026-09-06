@@ -207,7 +207,7 @@ class PluginContext:
 
     @current_mol.setter
     def current_mol(self, mol: Any) -> None:
-        """Get active RDKit molecule from 3D view manager."""
+        """Set active RDKit molecule and redraw 3D view."""
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
             mw.view_3d_manager.current_mol = mol
@@ -220,7 +220,7 @@ class PluginContext:
 
     @current_molecule.setter
     def current_molecule(self, mol: Any) -> None:
-        """Alias for current_mol property."""
+        """Set active molecule via current_mol setter."""
         self.current_mol = mol
 
     @property

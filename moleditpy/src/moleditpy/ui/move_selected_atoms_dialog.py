@@ -74,7 +74,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
 
     @group_atoms.setter
     def group_atoms(self, value: set[int]) -> None:
-        """Return list of atom indices currently in selected group."""
+        """Set the selected atom group."""
         self.selected_atoms = value
 
     @property

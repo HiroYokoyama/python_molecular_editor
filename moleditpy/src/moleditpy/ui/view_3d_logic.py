@@ -80,7 +80,7 @@ class View3DManager:
 
     @plotter.setter
     def plotter(self, val: Optional[CustomQtInteractor]) -> None:
-        """Return active PyVista Qt interactor plotter instance."""
+        """Set the active PyVista Qt interactor plotter instance."""
         self._plotter_val = val  # type: ignore[assignment]
 
     def cleanup(self) -> None:
@@ -1049,7 +1049,7 @@ class View3DManager:
                 logging.warning(f"Error rendering aromatic circles: {e}")
 
     def _add_3d_labels(self, mol: Any, mol_to_draw: Any) -> None:
-        """Render element symbol text labels in 3D scene."""
+        """Render chiral and E/Z stereochemistry labels in the 3D scene."""
         if getattr(self, "show_chiral_labels", False):
             try:
                 # Calculate chiral centers from 3D coordinates
