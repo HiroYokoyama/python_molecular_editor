@@ -47,6 +47,7 @@ class Settings3DSceneTab(SettingsTabBase):
         form_layout.addRow(QLabel("<b>3D Scene Settings</b>"))
 
         self.bg_button = QPushButton()
+        self.bg_button.setFixedSize(60, 24)
         self.bg_button.setToolTip("Click to select a color")
         self.bg_button.clicked.connect(self._select_color)
         form_layout.addRow("Background Color:", self.bg_button)
@@ -271,7 +272,7 @@ class SettingsModelTab(SettingsTabBase):
         if self.prefix == "ball_stick":
             form_layout.addRow(self._create_separator())
             self.bond_color_button = QPushButton()
-            self.bond_color_button.setFixedSize(36, 24)
+            self.bond_color_button.setFixedSize(60, 24)
             self.bond_color_button.clicked.connect(self._pick_bond_color)
             form_layout.addRow("Bond Color:", self.bond_color_button)
 

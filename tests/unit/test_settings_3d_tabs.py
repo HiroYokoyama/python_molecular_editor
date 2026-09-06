@@ -12,9 +12,11 @@ from moleditpy.utils.default_settings import DEFAULT_SETTINGS
 
 
 def test_scene_tab_init(app):
-    """Settings3DSceneTab initialises with the default background color."""
+    """Settings3DSceneTab initialises with the default background color and standard 60x24 button size."""
     tab = Settings3DSceneTab(DEFAULT_SETTINGS)
     assert tab.current_bg_color == DEFAULT_SETTINGS["background_color"]
+    assert tab.bg_button.width() == 60
+    assert tab.bg_button.height() == 24
 
 
 def test_scene_tab_update_ui(app):
@@ -298,3 +300,10 @@ def test_scene_tab_has_title_label(app):
     assert first_item is not None
     assert isinstance(first_item.widget(), QLabel)
     assert "3D Scene" in first_item.widget().text()
+
+
+def test_model_tab_ball_stick_color_button_size(app):
+    """ball_stick bond_color_button has the standard 60x24 size matching 2D settings."""
+    tab = SettingsModelTab("ball_stick", "info", DEFAULT_SETTINGS)
+    assert tab.bond_color_button.width() == 60
+    assert tab.bond_color_button.height() == 24
