@@ -37,6 +37,7 @@ class ColorSettingsDialog(QDialog):
     """
 
     def __init__(self, current_settings: Any, parent: Optional[QWidget] = None) -> None:
+        """Initialize CPK element color customization dialog."""
         super().__init__(parent)
         self.setWindowTitle("CPK Colors")
         self.parent_window: Any = parent

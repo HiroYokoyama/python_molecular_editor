@@ -45,6 +45,7 @@ class UserTemplateDialog(QDialog):
     """Dialog for managing user-defined molecular templates."""
 
     def __init__(self, main_window: Any, parent: Any = None) -> None:
+        """Initialize custom user template selection dialog."""
         super().__init__(parent)
         self.delete_button: Any = None
         self.save_current_button: Any = None

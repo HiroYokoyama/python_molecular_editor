@@ -86,6 +86,7 @@ class Dialog3DPickingMixin(_MixinBase):
                             self.main_window.picking_consumed = True
 
                         def _deferred_pick() -> None:
+                            """Process deferred atom pick event in 3D viewport."""
                             try:
                                 self.on_atom_picked(int(closest_atom_idx))
                             except (AttributeError, RuntimeError):
@@ -140,6 +141,7 @@ class Dialog3DPickingMixin(_MixinBase):
                     if hasattr(self, "clear_selection"):
 
                         def _deferred_clear() -> None:
+                            """Clear deferred picking state in 3D viewport."""
                             try:
                                 self.clear_selection()
                             except (AttributeError, RuntimeError):

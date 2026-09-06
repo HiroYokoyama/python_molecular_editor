@@ -126,6 +126,7 @@ class MolecularData:
     next_atom_id: int
 
     def __init__(self) -> None:
+        """Initialize MolecularData structure with atoms, bonds, and coordinates."""
         self.atoms = {}
         self.bonds = {}
         self.next_atom_id = 0
@@ -342,6 +343,7 @@ class MolecularData:
 
         # Helper: Pick neighbors prioritizing heavy atoms
         def pick_preferred_neighbor(atom: Chem.Atom, exclude_idx: int) -> Optional[int]:
+            """Select preferred neighbor atom for geometry alignment or reference."""
             for nbr in atom.GetNeighbors():
                 if nbr.GetIdx() == exclude_idx:
                     continue

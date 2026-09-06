@@ -34,6 +34,7 @@ class GeometryBaseDialog(BasePickingDialog):
         main_window: "MainWindow",
         parent: Optional[QWidget] = None,
     ) -> None:
+        """Initialize base geometry manipulation dialog."""
         super().__init__(mol, main_window, parent)
         self._slider_dragging = False
         self._snapshot_positions = None

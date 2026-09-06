@@ -57,6 +57,7 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         main_window: "MainWindow",
         parent: Optional[QWidget] = None,
     ) -> None:
+        """Initialize base atom picking dialog."""
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol

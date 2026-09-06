@@ -51,6 +51,7 @@ class AngleDialog(GeometryBaseDialog):
         preselected_atoms: Optional[Sequence[int]] = None,
         parent: Optional[QWidget] = None,
     ) -> None:
+        """Initialize bond angle adjustment dialog."""
         super().__init__(mol, main_window, parent)
         self._baseline_positions: Any = None
         self._snapshot_positions = None
@@ -384,6 +385,7 @@ class AngleDialog(GeometryBaseDialog):
         self._push_undo()
 
     def _is_selection_complete(self) -> bool:
+        """Check whether required three atoms have been picked."""
         return (
             self.atom1_idx is not None
             and self.atom2_idx is not None

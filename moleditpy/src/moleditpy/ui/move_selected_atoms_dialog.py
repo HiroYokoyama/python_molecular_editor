@@ -41,6 +41,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         preselected_atoms: Any = None,
         parent: Any = None,
     ) -> None:
+        """Initialize move selected atoms dialog."""
         super().__init__(mol, main_window, parent)
         self.selected_atoms: set[int] = set()
 
@@ -73,6 +74,7 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
 
     @group_atoms.setter
     def group_atoms(self, value: set[int]) -> None:
+        """Return list of atom indices currently in selected group."""
         self.selected_atoms = value
 
     @property

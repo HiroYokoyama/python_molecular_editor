@@ -48,6 +48,7 @@ class ComputeManager:
     """Independent manager for molecular computations, ported from MainWindowCompute mixin."""
 
     def __init__(self, host: MainWindow) -> None:
+        """Initialize ComputeManager with reference to host window."""
         self._calculating_text_actor: Any = None
         self.original_atom_properties: Dict[int, int] = {}
         self.host = host
@@ -180,6 +181,7 @@ class ComputeManager:
         menu.exec(self.host.init_manager.convert_button.mapToGlobal(pos))  # type: ignore[union-attr]
 
     def _trigger_conversion_with_temp_mode(self, mode_key: str) -> None:
+        """Trigger 2D to 3D conversion with temporary mode override."""
         # Store mode as instance attribute so it reaches trigger_conversion
         # without passing a kwarg — plugins may wrap trigger_conversion without
         # forwarding **kwargs, which would cause a TypeError.
@@ -203,6 +205,7 @@ class ComputeManager:
         menu.exec(self.host.init_manager.optimize_3d_button.mapToGlobal(pos))  # type: ignore[union-attr]
 
     def _trigger_optimize_with_temp_method(self, method_key: str) -> None:
+        """Trigger 3D optimization with temporary method override."""
         QTimer.singleShot(0, lambda: self.optimize_3d_structure(method_key))
 
     def trigger_conversion(
@@ -429,6 +432,7 @@ class ComputeManager:
         self.host.update_status_message(f"Process completed ({label}).")
 
     def _prepare_rdkit_mol_for_conversion(self) -> Optional[Chem.Mol]:
+        """Prepare and sanitize RDKit molecule for 3D conversion."""
         mol = self.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
         if not mol or mol.GetNumAtoms() == 0:
             self.check_chemistry_problems_fallback()
@@ -457,6 +461,7 @@ class ComputeManager:
     def _handle_chemistry_problems(
         self, mol: Chem.Mol, problems: Sequence[Any]
     ) -> None:
+        """Handle chemical sanitization issues before conversion."""
         self.host.init_manager.scene.clear_all_problem_flags()
         msg = f"Error: {len(problems)} chemistry problem(s) found (e.g., hypervalency). Fix the 2D layout before converting."
         self.host.statusBar().showMessage(msg)  # type: ignore[union-attr]
@@ -498,6 +503,7 @@ class ComputeManager:
             return None
 
     def _setup_mol_block_for_worker(self, mol: Chem.Mol) -> str:
+        """Construct molecule block data for background worker."""
         ez_block = self._ez_consistent_mol_block()
         if ez_block:
             return ez_block
@@ -511,6 +517,7 @@ class ComputeManager:
     def _start_calculation_worker(
         self, mol_block: str, options: Dict[str, Any], run_id: int
     ) -> None:
+        """Start background thread calculation worker."""
         thread = QThread()
         worker = CalculationWorker()
         worker.halt_ids = self.halt_ids
@@ -518,6 +525,7 @@ class ComputeManager:
         worker.status_update.connect(self.host.ui_manager.update_status_bar)
 
         def _cleanup() -> None:
+            """Clean up calculation worker thread references."""
             thread.quit()
             thread.finished.connect(thread.deleteLater)
             worker.deleteLater()
@@ -525,12 +533,14 @@ class ComputeManager:
                 self._active_calc_threads.remove(thread)
 
         def _on_finished(result: Any) -> None:
+            """Handle successful background calculation completion."""
             try:
                 self.on_calculation_finished(result)
             finally:
                 _cleanup()
 
         def _on_error(msg: Any) -> None:
+            """Handle background calculation failure."""
             try:
                 self.on_calculation_error(msg)
             finally:

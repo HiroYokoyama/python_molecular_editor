@@ -45,6 +45,7 @@ class AlignPlaneDialog(BasePickingDialog):
         preselected_atoms: Optional[Sequence[int]] = None,
         parent: Optional[QWidget] = None,
     ) -> None:
+        """Initialize align plane dialog with target geometry settings."""
         super().__init__(mol, main_window, parent)
         self.plane = plane
         self._selected_atoms = SelectionList()

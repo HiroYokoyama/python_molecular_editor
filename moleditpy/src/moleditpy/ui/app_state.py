@@ -74,6 +74,7 @@ class StateManager:
     """Manages serialized undo/redo state and document save state for MainWindow."""
 
     def __init__(self, host: MainWindow) -> None:
+        """Initialize StateManager with reference to host window."""
         self.host = host
         self.data: MolecularData  # Dynamically assigned in main_window_init.py
         self.has_unsaved_changes = False
@@ -139,6 +140,7 @@ class StateManager:
         file_version_str = loaded_data.get("version", "0.0.0")
 
         def parse_v(v_str: str) -> Tuple[int, ...]:
+            """Parse version string into tuple of integers."""
             if not v_str or not isinstance(v_str, str):
                 return (0, 0, 0)
             try:

@@ -40,6 +40,7 @@ class PlanarizeDialog(BasePickingDialog):
         preselected_atoms: Optional[Sequence[int]] = None,
         parent: Optional[QWidget] = None,
     ) -> None:
+        """Initialize geometry planarization dialog."""
         super().__init__(mol, main_window, parent)
         self.apply_button: Any = None
         self.clear_button: Any = None

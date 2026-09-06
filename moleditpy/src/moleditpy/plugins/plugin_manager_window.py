@@ -37,6 +37,7 @@ class PluginManagerWindow(QDialog):
     """Dialog for browsing, installing, and removing plugins."""
 
     def __init__(self, plugin_manager: Any, parent: Optional[QWidget] = None) -> None:
+        """Initialize plugin management dialog window."""
         super().__init__(parent)
         self.btn_remove: Any = None
         self.table: Any = None

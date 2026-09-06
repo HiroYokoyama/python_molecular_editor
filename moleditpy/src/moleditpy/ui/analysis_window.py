@@ -41,6 +41,7 @@ class AnalysisWindow(QDialog):
         parent: Optional[QWidget] = None,
         is_xyz_derived: bool = False,
     ) -> None:
+        """Initialize analysis window for molecular properties."""
         super().__init__(parent)
         self.mol = mol
         self.is_xyz_derived = is_xyz_derived  # Flag indicating if derived from XYZ

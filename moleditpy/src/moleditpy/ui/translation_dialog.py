@@ -42,6 +42,7 @@ class TranslationDialog(BasePickingDialog):
         preselected_atoms: Any = None,
         parent: Any = None,
     ) -> None:
+        """Initialize 3D translation dialog."""
         super().__init__(mol, main_window, parent)
         self.selected_atoms = set()
 
@@ -160,6 +161,7 @@ class TranslationDialog(BasePickingDialog):
         return widget
 
     def _build_delta_tab(self) -> QWidget:
+        """Construct UI controls for relative delta translation tab."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
@@ -221,6 +223,7 @@ class TranslationDialog(BasePickingDialog):
     # ------------------------------------------------------------------
 
     def on_atom_picked(self, atom_idx: int) -> None:
+        """Handle picked atom for translation reference coordinates."""
         if self.tabs.currentIndex() == _TAB_ABSOLUTE:
             self._abs_on_atom_picked(atom_idx)
         else:
@@ -237,6 +240,7 @@ class TranslationDialog(BasePickingDialog):
         self.show_atom_labels()
 
     def _delta_on_atom_picked(self, atom_idx: int) -> None:
+        """Update delta tab fields when reference atom is picked."""
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
@@ -286,6 +290,7 @@ class TranslationDialog(BasePickingDialog):
             logging.warning("Failed to select all atoms: %s", exc, exc_info=True)
 
     def _set_origin(self) -> None:
+        """Set origin point coordinates for translation transformation."""
         self.abs_x_input.setText("0.0000")
         self.abs_y_input.setText("0.0000")
         self.abs_z_input.setText("0.0000")

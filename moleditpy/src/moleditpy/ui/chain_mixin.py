@@ -38,6 +38,7 @@ class ChainMixin:
     template_preview: Any
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize aliphatic chain drawing tool mixin."""
         self.chain_anchor: Optional[QPointF] = None
         self.chain_start_atom: Optional[AtomItem] = None
         self.chain_end_atom: Optional[AtomItem] = None

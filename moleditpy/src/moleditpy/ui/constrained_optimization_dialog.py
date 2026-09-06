@@ -40,6 +40,7 @@ class ConstrainedOptimizationThread(QThread):
     error_occurred = pyqtSignal(str)
 
     def __init__(self, ff: Any, max_iters: int = 20000, parent: Any = None) -> None:
+        """Initialize constrained optimization worker thread."""
         super().__init__(parent)
         self.ff = ff
         self.max_iters = max_iters
@@ -57,6 +58,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     """Dialog for constrained optimization."""
 
     def __init__(self, mol: Any, main_window: Any, parent: Any = None) -> None:
+        """Initialize constrained force field optimization dialog."""
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
@@ -251,6 +253,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         layout.addLayout(main_buttons)
 
     def on_atom_picked(self, atom_idx: int) -> None:
+        """Handle atom selection event from 3D viewport."""
         if atom_idx in self.selected_atoms:
             self.selected_atoms.remove(atom_idx)
         else:
@@ -603,6 +606,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             self.optimize_button.setEnabled(True)
 
     def _on_optimization_error(self, err_msg: str) -> None:
+        """Handle optimization thread failure callback."""
         if self._closed:
             logging.warning(
                 "Constrained optimization failed after dialog close: %s", err_msg
@@ -615,6 +619,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         QMessageBox.critical(self, "Error", f"Optimization error: {err_msg}")
 
     def _on_optimization_finished(self, ff_name: str, conf: Any) -> None:
+        """Handle optimization thread completion callback."""
         if self._closed:
             logging.info("Discarding constrained optimization result after close.")
             return

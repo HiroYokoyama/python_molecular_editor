@@ -23,6 +23,7 @@ class ZoomableView(QGraphicsView):
     """QGraphicsView with zoom functionality via mouse wheel and panning via middle button or Shift+left drag"""
 
     def __init__(self, scene: QGraphicsScene, parent: Optional[QWidget] = None) -> None:
+        """Initialize interactive zoomable and pannable QGraphicsView."""
         super().__init__(scene, parent)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)

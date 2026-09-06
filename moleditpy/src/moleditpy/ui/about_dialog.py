@@ -33,6 +33,7 @@ class AboutDialog(QDialog):
     """Dialog showing application version, icon, and project links."""
 
     def __init__(self, main_window: Any, parent: Optional[QWidget] = None) -> None:
+        """Initialize About dialog with version and author info."""
         super().__init__(parent)
         self.image_label: Any = None
         self.main_window = main_window

@@ -48,6 +48,7 @@ class TemplateMixin:
     views: Any
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize template placement mixin."""
         self.template_context: Dict[str, Any] = {}
         self.template_preview: Any = None
         self.template_preview_points: List[Any] = []
@@ -235,9 +236,11 @@ class TemplateMixin:
         loads = {i: self._bond_load(atom) for i, atom in enumerate(vertex_atoms)}
 
         def vertex(index: int) -> Optional[AtomItem]:
+            """Compute polygon vertex position from center and angle."""
             return vertex_atoms[index] if index < len(vertex_atoms) else None
 
         def fits(index: int, extra: float) -> bool:
+            """Check if proposed template placement fits within canvas bounds."""
             atom = vertex(index)
             if atom is None or extra <= 0:
                 return True
@@ -316,6 +319,7 @@ class TemplateMixin:
         atom_items: List[Optional[AtomItem]] = [None] * num_points
 
         def coords(p: Any) -> Any:
+            """Extract coordinates from atom item or position."""
             if hasattr(p, "x") and hasattr(p, "y"):
                 return (p.x(), p.y())
             try:
@@ -324,6 +328,7 @@ class TemplateMixin:
                 raise ValueError("point has no x/y") from exc
 
         def dist_pts(a: Any, b: Any) -> Any:
+            """Compute Euclidean distance between two 2D points."""
             ax, ay = coords(a)
             bx, by = coords(b)
             return math.hypot(ax - bx, ay - by)
@@ -635,6 +640,7 @@ class TemplateMixin:
         cursor_pos: Optional[QPointF] = None,
         use_existing_length: bool = False,
     ) -> List[QPointF]:
+        """Compute regular polygon vertices extending from a reference bond edge."""
         if n < 3:
             return []
         v_edge = p1 - p0
@@ -911,6 +917,7 @@ class KeyboardMixin:
     removeItem: Any
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize keyboard shortcut handling mixin."""
         self.initial_positions_in_event: Dict[Any, QPointF] = {}
         self.placement_direction_clockwise = True
         self.start_atom = None
@@ -1559,6 +1566,7 @@ class SceneQueryMixin:
     removeItem: Any
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize scene spatial query mixin."""
         self._deleted_items: List[Any] = []
         self._ih_update_counter = 0
         self.data_changed_in_event = False
@@ -1710,6 +1718,7 @@ class SceneQueryMixin:
 
             # Helper to safely remove and hide items
             def safe_remove_and_hide(item_set: Any) -> None:
+                """Safely remove item from scene and hide it."""
                 for item in list(item_set):
                     if sip_isdeleted_safe(item):
                         continue

@@ -22,6 +22,7 @@ MOVE_DIALOG_TYPES = ("MoveGroupDialog", "MoveSelectedAtomsDialog")
 
 
 def _get_version() -> str:
+    """Retrieve package version from metadata or fallback to pyproject.toml."""
     try:
         from importlib.metadata import version, PackageNotFoundError
 
