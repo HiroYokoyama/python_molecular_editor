@@ -34,6 +34,7 @@ class SettingsDialog(QDialog):
     """Multi-tab settings dialog for all application preferences."""
 
     def __init__(self, current_settings: Any, parent: Any = None) -> None:
+        """Initialize settings dialog and subtabs with current preferences."""
         super().__init__(parent)
         self.tab_2d: Any = None
         self.tab_2d_cleanup: Any = None
@@ -54,6 +55,7 @@ class SettingsDialog(QDialog):
         self._setup_ui(current_settings)
 
     def _setup_ui(self, current_settings: Any) -> None:
+        """Construct dialog layout, tabs, and action buttons."""
         layout = QVBoxLayout(self)
         self.tab_widget = QTabWidget()
         layout.addWidget(self.tab_widget)

@@ -31,6 +31,7 @@ class Settings3DSceneTab(SettingsTabBase):
     def __init__(
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:
+        """Initialize 3D scene settings tab."""
         super().__init__(default_settings, parent)
         self.axes_checkbox: Any = None
         self.bg_button: Any = None
@@ -42,6 +43,7 @@ class Settings3DSceneTab(SettingsTabBase):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
+        """Construct controls and form layout for 3D scene settings."""
         form_layout = self._create_form_layout()
 
         form_layout.addRow(QLabel("<b>3D Scene Settings</b>"))
@@ -111,17 +113,20 @@ class Settings3DSceneTab(SettingsTabBase):
         )
 
     def _select_color(self) -> None:
+        """Open color dialog to pick 3D viewport background color."""
         color = QColorDialog.getColor(QColor(self.current_bg_color), self)
         if color.isValid():
             self.current_bg_color = color.name()
             self._update_color_button()
 
     def _update_color_button(self) -> None:
+        """Update background color preview swatch on button."""
         self.bg_button.setStyleSheet(
             f"background-color: {self.current_bg_color}; border: 1px solid #888;"
         )
 
     def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
+        """Update 3D scene controls from the settings dictionary."""
         self.current_bg_color = settings_dict.get(
             "background_color", self.default_settings["background_color"]
         )
@@ -153,6 +158,7 @@ class Settings3DSceneTab(SettingsTabBase):
         )
 
     def get_settings(self) -> dict[str, Any]:
+        """Collect current 3D scene options as a dictionary."""
         return {
             "background_color": self.current_bg_color,
             "show_3d_axes": self.axes_checkbox.isChecked(),
@@ -177,6 +183,7 @@ class SettingsModelTab(SettingsTabBase):
         default_settings: Mapping[str, Any],
         parent: Optional[QWidget] = None,
     ) -> None:
+        """Initialize settings tab for the specified 3D molecular representation model."""
         self.prefix = model_prefix
         self.info_text = info_text
         super().__init__(default_settings, parent)
@@ -186,6 +193,7 @@ class SettingsModelTab(SettingsTabBase):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
+        """Construct controls and form layout for model-specific parameters."""
         form_layout = self._create_form_layout()
 
         info_label = QLabel(self.info_text)
@@ -280,6 +288,7 @@ class SettingsModelTab(SettingsTabBase):
             form_layout.addRow(self.use_cpk_checkbox)
 
     def _pick_bond_color(self) -> None:
+        """Open color dialog to pick model bond color."""
         cur = getattr(self, "current_bond_color", "#7F7F7F")
         color = QColorDialog.getColor(QColor(cur), self)
         if color.isValid():
@@ -289,6 +298,7 @@ class SettingsModelTab(SettingsTabBase):
             )
 
     def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
+        """Update model tab controls with values from settings dictionary."""
         p = self.prefix
         if p in ["ball_stick", "cpk"]:
             val = settings_dict.get(f"{p}_atom_scale", 1.0)
@@ -324,6 +334,7 @@ class SettingsModelTab(SettingsTabBase):
             )
 
     def get_settings(self) -> dict[str, Any]:
+        """Collect current model tab settings into a dictionary."""
         s: dict[str, Any] = {}
         p = self.prefix
         if p in ["ball_stick", "cpk"]:

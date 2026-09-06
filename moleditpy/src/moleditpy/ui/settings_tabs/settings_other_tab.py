@@ -33,6 +33,7 @@ class SettingsOtherTab(SettingsTabBase):
     def __init__(
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:
+        """Initialize miscellaneous settings tab."""
         super().__init__(default_settings, parent)
         self.always_ask_charge_checkbox: Any = None
         self.aromatic_circle_checkbox: Any = None
@@ -45,6 +46,7 @@ class SettingsOtherTab(SettingsTabBase):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
+        """Construct controls and layout for general and logging preferences."""
         form_layout = self._create_form_layout()
 
         self.skip_chem_checks_checkbox = QCheckBox()
@@ -96,11 +98,13 @@ class SettingsOtherTab(SettingsTabBase):
         self.aromatic_torus_thickness_label.setDecimals(1)
 
         def sync_spin(val: int) -> None:
+            """Synchronize floating spinbox value with slider position."""
             self.aromatic_torus_thickness_label.blockSignals(True)
             self.aromatic_torus_thickness_label.setValue(val / 100.0)
             self.aromatic_torus_thickness_label.blockSignals(False)
 
         def sync_slider(val: float) -> None:
+            """Synchronize slider position with floating spinbox value."""
             self.aromatic_torus_thickness_slider.blockSignals(True)
             self.aromatic_torus_thickness_slider.setValue(int(round(val * 100)))
             self.aromatic_torus_thickness_slider.blockSignals(False)
@@ -137,12 +141,15 @@ class SettingsOtherTab(SettingsTabBase):
         form_layout.addRow(restart_warning)
 
     def _on_kekule_toggled(self, checked: bool) -> None:
+        """Handle mutual exclusivity when Kekulé bonds checkbox is toggled."""
         self.aromatic_circle_checkbox.setEnabled(not checked)
 
     def _on_aromatic_toggled(self, checked: bool) -> None:
+        """Handle mutual exclusivity when aromatic circle checkbox is toggled."""
         self.kekule_3d_checkbox.setEnabled(not checked)
 
     def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
+        """Update controls from given settings mapping."""
         self.skip_chem_checks_checkbox.setChecked(
             settings_dict.get("skip_chemistry_checks", False)
         )
@@ -169,6 +176,7 @@ class SettingsOtherTab(SettingsTabBase):
         )
 
     def get_settings(self) -> dict[str, Any]:
+        """Collect current other settings into a dictionary."""
         return {
             "skip_chemistry_checks": self.skip_chem_checks_checkbox.isChecked(),
             "always_ask_charge": self.always_ask_charge_checkbox.isChecked(),

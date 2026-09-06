@@ -14,6 +14,7 @@ CHECKBOX_KEYS = (
 
 
 def _checkbox_by_key(tab):
+    """Return mapping of setting key to corresponding checkbox widget."""
     return {
         "prefer_coordgen_2d": tab.prefer_coordgen_2d_checkbox,
         "cleanup_canonical_orientation_2d": tab.cleanup_canonical_orientation_2d_checkbox,

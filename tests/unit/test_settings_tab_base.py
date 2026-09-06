@@ -10,9 +10,11 @@ class ConcreteTab(SettingsTabBase):
     """Minimal concrete subclass for testing the base class."""
 
     def update_ui(self, settings_dict):
+        """Mock implementation of update_ui for test tab."""
         pass
 
     def get_settings(self):
+        """Mock implementation of get_settings for test tab."""
         return {}
 
 

@@ -82,6 +82,7 @@ class MainInitManager:
     def __init__(
         self, host: Any, initial_file: Optional[str] = None, safe_mode: bool = False
     ) -> None:
+        """Initialize the main initialization manager, setting up state and references."""
         self.host = host
         # Explicit declarations for Mypy
         self._os_dark_pref: Any = _UNQUERIED
@@ -1652,6 +1653,7 @@ class MainInitManager:
         manage_plugins_action = QAction("Plugin Manager...", self.host)
 
         def show_plugin_manager() -> None:
+            """Open the plugin manager dialog and refresh the plugin menu."""
             if not self.host.plugin_manager:
                 QMessageBox.information(
                     self.host, "Safe Mode", "Plugins are disabled (safe mode)."
@@ -1688,6 +1690,7 @@ class MainInitManager:
         conv_group.setExclusive(True)
 
         def _set_conv_mode(mode: Any) -> None:
+            """Update 3D conversion mode preference and show status notification."""
             try:
                 self.settings["3d_conversion_mode"] = mode
                 self.settings_dirty = True

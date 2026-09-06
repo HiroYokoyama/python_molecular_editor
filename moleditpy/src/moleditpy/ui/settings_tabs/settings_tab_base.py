@@ -32,11 +32,15 @@ class SettingsTabBase(QWidget):
     def __init__(
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:
+        """Initialize base settings tab with default configuration."""
         super().__init__(parent)
         self.default_settings = default_settings
 
     def _create_form_layout(self) -> QFormLayout:
-        """Create a QFormLayout configured with AllNonFixedFieldsGrow for cross-platform consistency."""
+        """Create a QFormLayout configured with AllNonFixedFieldsGrow.
+
+        Ensures consistent cross-platform field expansion on macOS and Windows.
+        """
         form_layout = QFormLayout(self)
         form_layout.setFieldGrowthPolicy(
             QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
@@ -76,11 +80,13 @@ class SettingsTabBase(QWidget):
             spin.setValue(slider.value())
 
             def sync_spin(val: int) -> None:
+                """Synchronize integer spinbox value from slider."""
                 spin.blockSignals(True)
                 spin.setValue(val)
                 spin.blockSignals(False)
 
             def sync_slider(val: int) -> None:
+                """Synchronize slider position from integer spinbox value."""
                 slider.blockSignals(True)
                 slider.setValue(val)
                 slider.blockSignals(False)
@@ -95,11 +101,13 @@ class SettingsTabBase(QWidget):
             dspin.setValue(slider.value() / scale)
 
             def sync_dspin(val: int) -> None:
+                """Synchronize floating spinbox value from slider position."""
                 dspin.blockSignals(True)
                 dspin.setValue(val / scale)
                 dspin.blockSignals(False)
 
             def sync_slider_f(val: float) -> None:
+                """Synchronize slider position from floating spinbox value."""
                 slider.blockSignals(True)
                 slider.setValue(int(round(val * scale)))
                 slider.blockSignals(False)
