@@ -22,10 +22,10 @@ Every change was reviewed by the author before being committed. Design decisions
 
 | Tool | Versions |
 |---|---|
-| Anthropic Claude Code | 2.1 |
+| Anthropic Claude Code | 2.1.89–2.1.231 |
 | GitHub Copilot (via Visual Studio Code) | 1.107–1.110 |
-| Google Antigravity | 1.13–1.21, 2.0 |
-| OpenAI Codex | 26 |
+| Google Antigravity | 1.13–1.21, 2.0–2.12 |
+| OpenAI Codex | 0.118–0.151 |
 
 ---
 
@@ -33,9 +33,9 @@ Every change was reviewed by the author before being committed. Design decisions
 
 | Vendor | Models |
 |---|---|
-| Anthropic | Claude Sonnet 4.5, Claude Sonnet 4.6, Claude Sonnet 5, Claude Opus 4.5, Claude Opus 4.6, Claude Opus 5, Claude Fable 5 |
-| Google | Gemini 3 Pro, Gemini 3 Flash, Gemini 3.1 Pro, Gemini 3.1 Flash, Gemini 3.5 Flash, Gemini 3.7 Flash |
-| OpenAI | GPT-4o, GPT-4.1, GPT-5, GPT-5.1-Codex-Mini, GPT-5.3-Codex, GPT-5.4-Mini, GPT-5.5, GPT-5.6 Luna, GPT-5.6 Sol |
+| Anthropic | Claude Sonnet 4.5, Claude Sonnet 4.6, Claude Sonnet 5, Claude Opus 4.5, Claude Opus 4.6, Claude Opus 4.8, Claude Opus 5, Claude Haiku 4.5, Claude Fable 5 |
+| Google | Gemini 3 Pro, Gemini 3 Flash, Gemini 3.1 Pro, Gemini 3.1 Flash, Gemini 3.5 Flash, Gemini 3.7 Flash, Gemini 3.8 Flash |
+| OpenAI | GPT-4o, GPT-4.1, GPT-5, GPT-5.1-Codex-Mini, GPT-5.2-Codex, GPT-5.3-Codex, GPT-5.4, GPT-5.4-Mini, GPT-5.5, GPT-5.6 Luna, GPT-5.6 Sol |
 
 ---
 
@@ -43,4 +43,4 @@ Every change was reviewed by the author before being committed. Design decisions
 
 Add new tools and models here as they are used.
 
-_Last updated: 2026-09-02._
+_Last updated: 2026-09-06._
