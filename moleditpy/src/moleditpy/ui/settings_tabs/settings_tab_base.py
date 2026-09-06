@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QSpinBox,
     QDoubleSpinBox,
+    QSizePolicy,
 )
 
 
@@ -57,6 +58,7 @@ class SettingsTabBase(QWidget):
     ) -> tuple[QSlider, Union[QSpinBox, QDoubleSpinBox]]:
         """Create a slider with a linked spinbox showing and setting the value."""
         slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         slider.setRange(min_val, max_val)
 
         if is_int:
@@ -103,6 +105,6 @@ class SettingsTabBase(QWidget):
         """Wrap a slider and its label in a horizontal layout."""
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(slider)
+        layout.addWidget(slider, 1)
         layout.addWidget(label)
         return layout

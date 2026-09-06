@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QSlider,
     QWidget,
     QDoubleSpinBox,
+    QSizePolicy,
 )
 from .settings_tab_base import SettingsTabBase
 
@@ -86,6 +87,7 @@ class SettingsOtherTab(SettingsTabBase):
         )
 
         self.aromatic_torus_thickness_slider = QSlider(Qt.Orientation.Horizontal)
+        self.aromatic_torus_thickness_slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.aromatic_torus_thickness_slider.setRange(10, 300)
         self.aromatic_torus_thickness_label = QDoubleSpinBox()
         self.aromatic_torus_thickness_label.setRange(0.1, 3.0)
@@ -106,7 +108,7 @@ class SettingsOtherTab(SettingsTabBase):
         self.aromatic_torus_thickness_label.valueChanged.connect(sync_slider)
 
         atl = QHBoxLayout()
-        atl.addWidget(self.aromatic_torus_thickness_slider)
+        atl.addWidget(self.aromatic_torus_thickness_slider, 1)
         atl.addWidget(self.aromatic_torus_thickness_label)
         form_layout.addRow("Aromatic torus thickness (× bond radius):", atl)
 
