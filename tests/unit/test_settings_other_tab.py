@@ -14,6 +14,34 @@ def test_init_creates_all_controls(app):
     assert hasattr(tab, "aromatic_torus_thickness_slider")
 
 
+def test_aromatic_torus_thickness_slider_expanding_policy(app):
+    """The aromatic torus thickness slider is set to an expanding horizontal policy to ensure full width on macOS."""
+    from PyQt6.QtWidgets import QSizePolicy
+
+    tab = SettingsOtherTab(DEFAULT_SETTINGS)
+    assert (
+        tab.aromatic_torus_thickness_slider.sizePolicy().horizontalPolicy()
+        == QSizePolicy.Policy.Expanding
+    )
+
+
+def test_aromatic_torus_thickness_slider_stretch(app):
+    """The aromatic torus thickness slider uses a stretch factor of 1 in its layout."""
+    tab = SettingsOtherTab(DEFAULT_SETTINGS)
+    layout = tab.aromatic_torus_thickness_slider.parentWidget().layout()
+    # Find the QHBoxLayout that contains the slider
+    atl = None
+    for i in range(layout.count()):
+        item = layout.itemAt(i)
+        if item.layout():
+            sublayout = item.layout()
+            if sublayout.indexOf(tab.aromatic_torus_thickness_slider) != -1:
+                atl = sublayout
+                break
+    assert atl is not None
+    assert atl.stretch(atl.indexOf(tab.aromatic_torus_thickness_slider)) == 1
+
+
 def test_update_ui_sets_checkboxes(app):
     """update_ui sets checkbox states from provided settings dict."""
     tab = SettingsOtherTab(DEFAULT_SETTINGS)

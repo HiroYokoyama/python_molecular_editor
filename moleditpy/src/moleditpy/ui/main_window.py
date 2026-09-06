@@ -48,6 +48,7 @@ class MainWindow(QMainWindow):
     def __init__(
         self, initial_file: Optional[str] = None, safe_mode: bool = False
     ) -> None:
+        """Initialize MoleditPy main window and constituent managers."""
         QMainWindow.__init__(self)
 
         # Initialize properties

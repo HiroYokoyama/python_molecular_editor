@@ -32,6 +32,7 @@ class CustomQtInteractor(QtInteractor):
         main_window: Optional[Any] = None,
         **kwargs: Any,
     ) -> None:
+        """Initialize embedded PyVista Qt interactor widget."""
         super().__init__(parent, **kwargs)
         self.main_window = main_window
 

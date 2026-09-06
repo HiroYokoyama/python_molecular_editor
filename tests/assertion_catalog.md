@@ -5087,14 +5087,14 @@ _SDMolSupplier reads the file itself and cannot see the flexible_
 - assert len(data.atoms) == 2
 
 ### TestLoadMolFileFor3DViewingEncoding.test_shift_jis_mol_file_loads_in_3d_viewer
-_No description provided._
+_Shift-JIS (cp932) encoded MOL file with Japanese title loads properly in 3D viewer._
 
 - assert all(('error' not in m.lower() and 'failed' not in m.lower() for m in msgs))
 - assert host.view_3d_manager.current_mol is not None
 - assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
 
 ### TestLoadMolFileFor3DViewingEncoding.test_shift_jis_sdf_file_loads_in_3d_viewer
-_No description provided._
+_Shift-JIS (cp932) encoded SDF file with Japanese title loads properly in 3D viewer._
 
 - assert all(('error' not in m.lower() and 'failed' not in m.lower() for m in msgs))
 - assert host.view_3d_manager.current_mol is not None
@@ -8912,6 +8912,13 @@ _update_ui() applies the disabled state even without a checkbox toggle._
 - assert checkbox.isEnabled() is False
 - assert checkbox.isEnabled() is True
 
+### test_cleanup_tab_has_title_label
+_Settings2DCleanupTab has a title label at the top._
+
+- assert first_item is not None
+- assert isinstance(first_item.widget(), QLabel)
+- assert '2D Cleanup' in first_item.widget().text()
+
 ## tests/unit/test_settings_2d_tab.py
 
 ### test_init_uses_default_colors
@@ -9028,9 +9035,11 @@ _Template fusing checkbox enables/disables the distance slider and label._
 ## tests/unit/test_settings_3d_tabs.py
 
 ### test_scene_tab_init
-_Settings3DSceneTab initialises with the default background color._
+_Settings3DSceneTab initialises with the default background color and standard 60x24 button size._
 
 - assert tab.current_bg_color == DEFAULT_SETTINGS['background_color']
+- assert tab.bg_button.width() == 60
+- assert tab.bg_button.height() == 24
 
 ### test_scene_tab_update_ui
 _update_ui applies all provided settings to the scene tab widgets._
@@ -9172,6 +9181,19 @@ __pick_bond_color updates current_bond_color when a valid color is chosen._
 
 - assert tab.current_bond_color == '#ff00ff'
 
+### test_scene_tab_has_title_label
+_Settings3DSceneTab has a title label at the top._
+
+- assert first_item is not None
+- assert isinstance(first_item.widget(), QLabel)
+- assert '3D Scene' in first_item.widget().text()
+
+### test_model_tab_ball_stick_color_button_size
+_ball_stick bond_color_button has the standard 60x24 size matching 2D settings._
+
+- assert tab.bond_color_button.width() == 60
+- assert tab.bond_color_button.height() == 24
+
 ## tests/unit/test_settings_dialog.py
 
 ### test_init_creates_eight_tabs
@@ -9286,6 +9308,17 @@ _SettingsOtherTab creates all expected control widgets on init._
 - assert hasattr(tab, 'kekule_3d_checkbox')
 - assert hasattr(tab, 'aromatic_circle_checkbox')
 - assert hasattr(tab, 'aromatic_torus_thickness_slider')
+
+### test_aromatic_torus_thickness_slider_expanding_policy
+_The aromatic torus thickness slider is set to an expanding horizontal policy to ensure full width on macOS._
+
+- assert tab.aromatic_torus_thickness_slider.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Expanding
+
+### test_aromatic_torus_thickness_slider_stretch
+_The aromatic torus thickness slider uses a stretch factor of 1 in its layout._
+
+- assert atl is not None
+- assert atl.stretch(atl.indexOf(tab.aromatic_torus_thickness_slider)) == 1
 
 ### test_update_ui_sets_checkboxes
 _update_ui sets checkbox states from provided settings dict._
@@ -9408,11 +9441,24 @@ _Slider and integer spinbox stay in sync bidirectionally._
 - assert slider.value() == 15
 
 ### test_wrap_layout_returns_layout_with_children
-__wrap_layout returns an HBoxLayout containing the provided widgets._
+__wrap_layout returns an HBoxLayout containing the provided widgets with stretch applied._
 
 - assert isinstance(layout, QHBoxLayout)
-- assert layout.indexOf(slider) != -1
-- assert layout.indexOf(label) != -1
+- assert slider_idx != -1
+- assert label_idx != -1
+- assert layout.stretch(slider_idx) == 1
+- assert layout.stretch(label_idx) == 0
+
+### test_create_slider_expanding_policy
+__create_slider sets the slider to an expanding horizontal policy to ensure full width on macOS._
+
+- assert slider.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Expanding
+
+### test_create_form_layout
+__create_form_layout returns a QFormLayout configured with AllNonFixedFieldsGrow._
+
+- assert isinstance(form_layout, QFormLayout)
+- assert form_layout.fieldGrowthPolicy() == QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
 
 ### test_reset_to_defaults_calls_update_ui
 _reset_to_defaults calls update_ui with the stored default_settings._

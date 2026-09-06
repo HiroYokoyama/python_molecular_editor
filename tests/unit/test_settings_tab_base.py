@@ -10,9 +10,11 @@ class ConcreteTab(SettingsTabBase):
     """Minimal concrete subclass for testing the base class."""
 
     def update_ui(self, settings_dict):
+        """Mock implementation of update_ui for test tab."""
         pass
 
     def get_settings(self):
+        """Mock implementation of get_settings for test tab."""
         return {}
 
 
@@ -63,13 +65,42 @@ def test_create_slider_int_spin_updates(app):
 
 
 def test_wrap_layout_returns_layout_with_children(app):
-    """_wrap_layout returns an HBoxLayout containing the provided widgets."""
+    """_wrap_layout returns an HBoxLayout containing the provided widgets with stretch applied."""
     tab = ConcreteTab(DEFAULT_SETTINGS)
     slider, label = tab._create_slider(0, 100, 1.0)
     layout = tab._wrap_layout(slider, label)
     assert isinstance(layout, QHBoxLayout)
-    assert layout.indexOf(slider) != -1
-    assert layout.indexOf(label) != -1
+
+    slider_idx = layout.indexOf(slider)
+    label_idx = layout.indexOf(label)
+    assert slider_idx != -1
+    assert label_idx != -1
+
+    # Assert stretch factor
+    assert layout.stretch(slider_idx) == 1
+    assert layout.stretch(label_idx) == 0
+
+
+def test_create_slider_expanding_policy(app):
+    """_create_slider sets the slider to an expanding horizontal policy to ensure full width on macOS."""
+    from PyQt6.QtWidgets import QSizePolicy
+
+    tab = ConcreteTab(DEFAULT_SETTINGS)
+    slider, spin = tab._create_slider(10, 200, 10.0)
+    assert slider.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Expanding
+
+
+def test_create_form_layout(app):
+    """_create_form_layout returns a QFormLayout configured with AllNonFixedFieldsGrow."""
+    from PyQt6.QtWidgets import QFormLayout
+
+    tab = ConcreteTab(DEFAULT_SETTINGS)
+    form_layout = tab._create_form_layout()
+    assert isinstance(form_layout, QFormLayout)
+    assert (
+        form_layout.fieldGrowthPolicy()
+        == QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+    )
 
 
 def test_reset_to_defaults_calls_update_ui(app):

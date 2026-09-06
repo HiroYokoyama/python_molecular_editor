@@ -28,6 +28,7 @@ class StringImporterManager:
     """Mixin for string-based molecular input (SMILES, InChI)."""
 
     def __init__(self, host: Any) -> None:
+        """Initialize StringImporterManager for SMILES and InChI text inputs."""
         self.host = host
 
     def import_smiles_dialog(self) -> None:
@@ -57,9 +58,11 @@ class StringImporterManager:
         if existing:
 
             def _x(v: Any) -> float:
+                """Extract x-coordinate from point."""
                 return float(v["pos"].x() if hasattr(v["pos"], "x") else v["pos"][0])
 
             def _y(v: Any) -> float:
+                """Extract y-coordinate from point."""
                 return float(v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1])
 
             max_x = max(_x(v) for v in existing.values())

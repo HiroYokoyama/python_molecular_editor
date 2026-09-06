@@ -14,6 +14,7 @@ CHECKBOX_KEYS = (
 
 
 def _checkbox_by_key(tab):
+    """Return mapping of setting key to corresponding checkbox widget."""
     return {
         "prefer_coordgen_2d": tab.prefer_coordgen_2d_checkbox,
         "cleanup_canonical_orientation_2d": tab.cleanup_canonical_orientation_2d_checkbox,
@@ -123,3 +124,15 @@ def test_update_ui_sets_dependent_option_enabled_state(app):
     tab.update_ui(settings)
     for checkbox in _coordgen_ignored_checkboxes(tab):
         assert checkbox.isEnabled() is True
+
+
+def test_cleanup_tab_has_title_label(app):
+    """Settings2DCleanupTab has a title label at the top."""
+    from PyQt6.QtWidgets import QLabel, QFormLayout
+
+    tab = Settings2DCleanupTab(DEFAULT_SETTINGS)
+    layout = tab.layout()
+    first_item = layout.itemAt(0, QFormLayout.ItemRole.SpanningRole)
+    assert first_item is not None
+    assert isinstance(first_item.widget(), QLabel)
+    assert "2D Cleanup" in first_item.widget().text()

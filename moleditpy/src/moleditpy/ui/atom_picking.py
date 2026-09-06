@@ -21,6 +21,7 @@ from ..utils.constants import VDW_DISPLAY_RADII, pt
 
 
 def _world_to_display(renderer: Any, pos: Any) -> Optional[tuple[float, float, float]]:
+    """Project 3D world coordinates to 2D display viewport pixels."""
     try:
         renderer.SetWorldPoint(float(pos[0]), float(pos[1]), float(pos[2]), 1.0)
         renderer.WorldToDisplay()
@@ -31,6 +32,7 @@ def _world_to_display(renderer: Any, pos: Any) -> Optional[tuple[float, float, f
 
 
 def _atom_world_radius(view_3d_manager: Any, mol: Any, atom_idx: int) -> float:
+    """Calculate effective atom sphere radius in 3D world units."""
     try:
         atom = mol.GetAtomWithIdx(int(atom_idx))
         symbol = atom.GetSymbol()
@@ -68,6 +70,7 @@ def _atom_world_radius(view_3d_manager: Any, mol: Any, atom_idx: int) -> float:
 def _projected_radius_px(
     renderer: Any, center: Any, world_radius: float
 ) -> Optional[float]:
+    """Calculate projected atom radius on screen in display pixels."""
     center_display = _world_to_display(renderer, center)
     if center_display is None:
         return None

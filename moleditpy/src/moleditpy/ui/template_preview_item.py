@@ -44,6 +44,7 @@ class TemplatePreviewItem(QGraphicsItem):
     """Ghost overlay item that previews ring or user-template placement."""
 
     def __init__(self) -> None:
+        """Initialize template ghost preview graphics item."""
         super().__init__()
         self.setZValue(2)
         self.chain_points: List[QPointF] = []

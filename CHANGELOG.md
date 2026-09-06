@@ -8,6 +8,17 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [4.9.2] - 2026-09-06
+
+### Changed
+* **UI Refinements**: Unified the 3D Scene and Ball & Stick color setting buttons to `60x24` to match the 2D Settings tab, added missing "2D Cleanup Settings" and "3D Scene Settings" title labels, and increased the initial height of the settings dialog.
+
+### Fixed
+* **macOS Menu Issues**: Disabled Qt's native macOS heuristic for "Settings...", "About", and "Quit" actions so they remain within the application's expected dropdown menus instead of being hijacked by the Apple menu.
+* **macOS Layout Discrepancies**: Standardized `QFormLayout.FieldGrowthPolicy` globally to `AllNonFixedFieldsGrow` across all settings tabs, ensuring sliders and form fields correctly expand to the full dialog width on macOS.
+
+---
+
 ## [4.9.1] - 2026-09-04
 
 ### Fixed

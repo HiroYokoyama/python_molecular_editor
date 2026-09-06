@@ -19,7 +19,6 @@ from PyQt6.QtWidgets import (
     QColorDialog,
     QComboBox,
     QFontComboBox,
-    QFormLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -34,6 +33,7 @@ class Settings2DTab(SettingsTabBase):
     def __init__(
         self, default_settings: Mapping[str, Any], parent: Optional[QWidget] = None
     ) -> None:
+        """Initialize the 2D view and styling settings tab."""
         super().__init__(default_settings, parent)
         self.atom_font_family_2d_combo: Any = None
         self.atom_font_bold_2d_btn: Any = None
@@ -49,7 +49,8 @@ class Settings2DTab(SettingsTabBase):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
-        form_layout = QFormLayout(self)
+        """Construct form layout and controls for 2D appearance options."""
+        form_layout = self._create_form_layout()
 
         # --- View Appearance ---
         form_layout.addRow(QLabel("<b>View Appearance</b>"))
@@ -269,6 +270,7 @@ class Settings2DTab(SettingsTabBase):
         )
 
     def _pick_bg_color_2d(self) -> None:
+        """Open color dialog to pick 2D canvas background color."""
         color = QColorDialog.getColor(
             QColor(self.current_bg_color_2d), self, "Select 2D Background Color"
         )
@@ -277,6 +279,7 @@ class Settings2DTab(SettingsTabBase):
             self._update_color_buttons()
 
     def _pick_bond_color_2d(self) -> None:
+        """Open color dialog to pick default 2D bond color."""
         color = QColorDialog.getColor(
             QColor(self.current_bond_color_2d), self, "Select 2D Bond Color"
         )
@@ -285,6 +288,7 @@ class Settings2DTab(SettingsTabBase):
             self._update_color_buttons()
 
     def _update_color_buttons(self) -> None:
+        """Update preview swatch styles on the color picker buttons."""
         self.bg_color_2d_button.setStyleSheet(
             f"background-color: {self.current_bg_color_2d}; border: 1px solid #888;"
         )
@@ -293,6 +297,7 @@ class Settings2DTab(SettingsTabBase):
         )
 
     def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
+        """Update 2D settings controls from the provided dictionary."""
         self.current_bg_color_2d = settings_dict.get(
             "background_color_2d", self.default_settings["background_color_2d"]
         )
@@ -359,6 +364,7 @@ class Settings2DTab(SettingsTabBase):
         )
 
     def get_settings(self) -> dict[str, Any]:
+        """Collect current 2D view settings as a dictionary."""
         return {
             "background_color_2d": self.current_bg_color_2d,
             "bond_color_2d": self.current_bond_color_2d,

@@ -24,6 +24,7 @@ class TemplatePreviewView(QGraphicsView):
     """Custom view class for template previews."""
 
     def __init__(self, scene: QGraphicsScene) -> None:
+        """Initialize template thumbnail preview widget."""
         super().__init__(scene)
         self.original_scene_rect = None
         self.template_data = None  # Store template data for dynamic redrawing

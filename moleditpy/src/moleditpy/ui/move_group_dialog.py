@@ -41,6 +41,7 @@ class MoveGroupDialog(BasePickingDialog):
         preselected_atoms: Any = None,
         parent: Any = None,
     ) -> None:
+        """Initialize move group transformation dialog."""
         super().__init__(mol, main_window, parent)
         self.clear_button: Any = None
         self.selection_label: Any = None
