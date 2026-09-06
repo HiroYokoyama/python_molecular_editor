@@ -286,3 +286,15 @@ def test_model_tab_ball_stick_pick_bond_color(mock_get_color, app):
     mock_get_color.return_value = mock_color
     tab._pick_bond_color()
     assert tab.current_bond_color == "#ff00ff"
+
+
+def test_scene_tab_has_title_label(app):
+    """Settings3DSceneTab has a title label at the top."""
+    from PyQt6.QtWidgets import QLabel, QFormLayout
+
+    tab = Settings3DSceneTab(DEFAULT_SETTINGS)
+    layout = tab.layout()
+    first_item = layout.itemAt(0, QFormLayout.ItemRole.SpanningRole)
+    assert first_item is not None
+    assert isinstance(first_item.widget(), QLabel)
+    assert "3D Scene" in first_item.widget().text()

@@ -18,7 +18,6 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QColorDialog,
     QComboBox,
-    QFormLayout,
     QLabel,
     QPushButton,
     QWidget,
@@ -43,7 +42,9 @@ class Settings3DSceneTab(SettingsTabBase):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
-        form_layout = QFormLayout(self)
+        form_layout = self._create_form_layout()
+
+        form_layout.addRow(QLabel("<b>3D Scene Settings</b>"))
 
         self.bg_button = QPushButton()
         self.bg_button.setToolTip("Click to select a color")
@@ -184,7 +185,7 @@ class SettingsModelTab(SettingsTabBase):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
-        form_layout = QFormLayout(self)
+        form_layout = self._create_form_layout()
 
         info_label = QLabel(self.info_text)
         info_label.setWordWrap(True)

@@ -15,13 +15,14 @@ from typing import Any, Optional, Union
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QDoubleSpinBox,
+    QFormLayout,
     QFrame,
     QHBoxLayout,
-    QSlider,
-    QWidget,
-    QSpinBox,
-    QDoubleSpinBox,
     QSizePolicy,
+    QSlider,
+    QSpinBox,
+    QWidget,
 )
 
 
@@ -33,6 +34,14 @@ class SettingsTabBase(QWidget):
     ) -> None:
         super().__init__(parent)
         self.default_settings = default_settings
+
+    def _create_form_layout(self) -> QFormLayout:
+        """Create a QFormLayout configured with AllNonFixedFieldsGrow for cross-platform consistency."""
+        form_layout = QFormLayout(self)
+        form_layout.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+        )
+        return form_layout
 
     def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
         """Update UI based on settings dictionary. Must be implemented by subclass."""

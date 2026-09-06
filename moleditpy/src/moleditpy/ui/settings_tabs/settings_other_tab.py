@@ -16,14 +16,13 @@ from typing import Any, Optional
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QFormLayout,
+    QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QSizePolicy,
     QSlider,
     QWidget,
-    QDoubleSpinBox,
-    QSizePolicy,
 )
 from .settings_tab_base import SettingsTabBase
 
@@ -46,7 +45,7 @@ class SettingsOtherTab(SettingsTabBase):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
-        form_layout = QFormLayout(self)
+        form_layout = self._create_form_layout()
 
         self.skip_chem_checks_checkbox = QCheckBox()
         self.skip_chem_checks_checkbox.setToolTip(

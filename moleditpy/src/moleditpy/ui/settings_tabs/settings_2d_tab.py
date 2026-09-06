@@ -19,7 +19,6 @@ from PyQt6.QtWidgets import (
     QColorDialog,
     QComboBox,
     QFontComboBox,
-    QFormLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -49,7 +48,7 @@ class Settings2DTab(SettingsTabBase):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
-        form_layout = QFormLayout(self)
+        form_layout = self._create_form_layout()
 
         # --- View Appearance ---
         form_layout.addRow(QLabel("<b>View Appearance</b>"))

@@ -88,6 +88,19 @@ def test_create_slider_expanding_policy(app):
     assert slider.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Expanding
 
 
+def test_create_form_layout(app):
+    """_create_form_layout returns a QFormLayout configured with AllNonFixedFieldsGrow."""
+    from PyQt6.QtWidgets import QFormLayout
+
+    tab = ConcreteTab(DEFAULT_SETTINGS)
+    form_layout = tab._create_form_layout()
+    assert isinstance(form_layout, QFormLayout)
+    assert (
+        form_layout.fieldGrowthPolicy()
+        == QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+    )
+
+
 def test_reset_to_defaults_calls_update_ui(app):
     """reset_to_defaults calls update_ui with the stored default_settings."""
     tab = ConcreteTab(DEFAULT_SETTINGS)

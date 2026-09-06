@@ -15,7 +15,7 @@ from typing import Any, Optional
 
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QFormLayout,
+    QLabel,
     QWidget,
 )
 from .settings_tab_base import SettingsTabBase
@@ -38,7 +38,9 @@ class Settings2DCleanupTab(SettingsTabBase):
         self._setup_ui()
 
     def _setup_ui(self) -> None:
-        form_layout = QFormLayout(self)
+        form_layout = self._create_form_layout()
+
+        form_layout.addRow(QLabel("<b>2D Cleanup Settings</b>"))
 
         self.prefer_coordgen_2d_checkbox = QCheckBox()
         self.prefer_coordgen_2d_checkbox.setToolTip(
