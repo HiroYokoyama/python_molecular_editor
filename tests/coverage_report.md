@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **90.08%**
+- **Overall Project Coverage**: **90.06%**
 
 ### Coverage Breakdown
 
@@ -23,7 +23,7 @@
 | moleditpy\src\moleditpy\ui\atom_item.py                 |    327 |     30 |   90.8% |
 | moleditpy\src\moleditpy\ui\atom_picking.py              |    167 |     13 |   92.2% |
 | moleditpy\src\moleditpy\ui\base_picking_dialog.py       |     81 |      4 |   95.1% |
-| moleditpy\src\moleditpy\ui\bond_item.py                 |    370 |     49 |   86.8% |
+| moleditpy\src\moleditpy\ui\bond_item.py                 |    370 |     54 |   85.4% |
 | moleditpy\src\moleditpy\ui\bond_length_dialog.py        |    260 |     18 |   93.1% |
 | moleditpy\src\moleditpy\ui\calculation_worker.py        |    625 |     93 |   85.1% |
 | moleditpy\src\moleditpy\ui\chain_mixin.py               |     97 |      2 |   97.9% |
@@ -41,7 +41,7 @@
 | moleditpy\src\moleditpy\ui\geometry_base_dialog.py      |     52 |      1 |   98.1% |
 | moleditpy\src\moleditpy\ui\io_logic.py                  |    765 |     76 |   90.1% |
 | moleditpy\src\moleditpy\ui\main_window.py               |    195 |     13 |   93.3% |
-| moleditpy\src\moleditpy\ui\main_window_init.py          |   1103 |     86 |   92.2% |
+| moleditpy\src\moleditpy\ui\main_window_init.py          |   1106 |     86 |   92.2% |
 | moleditpy\src\moleditpy\ui\mirror_dialog.py             |     72 |      7 |   90.3% |
 | moleditpy\src\moleditpy\ui\molecular_scene_handler.py   |   1085 |    124 |   88.6% |
 | moleditpy\src\moleditpy\ui\molecule_scene.py            |    637 |     82 |   87.1% |
@@ -51,7 +51,7 @@
 | moleditpy\src\moleditpy\ui\planarize_dialog.py          |    112 |      9 |   92.0% |
 | moleditpy\src\moleditpy\ui\plugin_menu_manager.py       |    342 |     28 |   91.8% |
 | moleditpy\src\moleditpy\ui\preview_molecule.py          |    116 |     14 |   87.9% |
-| moleditpy\src\moleditpy\ui\settings_dialog.py           |    105 |      3 |   97.1% |
+| moleditpy\src\moleditpy\ui\settings_dialog.py           |    106 |      3 |   97.2% |
 | moleditpy\src\moleditpy\ui\string_importers.py          |    121 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\template_preview_item.py     |    240 |      4 |   98.3% |
 | moleditpy\src\moleditpy\ui\template_preview_view.py     |     46 |      4 |   91.3% |
@@ -60,22 +60,22 @@
 | moleditpy\src\moleditpy\ui\user_template_dialog.py      |    298 |     34 |   88.6% |
 | moleditpy\src\moleditpy\ui\view_3d_logic.py             |   1007 |    183 |   81.8% |
 | moleditpy\src\moleditpy\ui\zoomable_view.py             |    101 |      5 |   95.0% |
-| moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_cleanup_tab.py |     51 |      0 |  100.0% |
+| moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_cleanup_tab.py |     52 |      0 |  100.0% |
 | moleditpy\src\moleditpy\ui\settings_tabs\settings_2d_tab.py |    145 |      0 |  100.0% |
-| moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py |    156 |      0 |  100.0% |
-| moleditpy\src\moleditpy\ui\settings_tabs\settings_other_tab.py |     89 |      0 |  100.0% |
-| moleditpy\src\moleditpy\ui\settings_tabs\settings_tab_base.py |     57 |      0 |  100.0% |
+| moleditpy\src\moleditpy\ui\settings_tabs\settings_3d_tabs.py |    158 |      0 |  100.0% |
+| moleditpy\src\moleditpy\ui\settings_tabs\settings_other_tab.py |     90 |      0 |  100.0% |
+| moleditpy\src\moleditpy\ui\settings_tabs\settings_tab_base.py |     62 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\constants.py              |     60 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\default_settings.py       |      1 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\hit_radius.py             |     10 |      1 |   90.0% |
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **17377** | **1724** | **90.08%** |
+| **TOTAL** | **17390** | **1729** | **90.06%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2349 (1 skipped)
-- **Unit tests**: PASSED (2124 passed)
+- **Total tests passed**: 2356 (1 skipped)
+- **Unit tests**: PASSED (2131 passed)
 - **Integration tests**: PASSED (105 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (86 passed)
