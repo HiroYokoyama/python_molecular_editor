@@ -102,7 +102,7 @@ HOVER_PEN_WIDTH = 8
 CPK_COLORS = {
     "H": QColor("#FFFFFF"),
     "C": QColor("#222222"),
-    "N": QColor("#3377FF"),
+    "N": QColor("#3577F7"),  # MoleditPy Blue — see docs/BRAND_COLOR.md
     "O": QColor("#FF3333"),
     "F": QColor("#99E6E6"),
     "Cl": QColor("#33FF33"),
