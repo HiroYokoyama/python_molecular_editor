@@ -23,11 +23,6 @@ than an arbitrary UI blue.
   independently-picked blue (`#1981dc`) and now use this exact hex. The
   *application* icon (`icon.png` / `icon.ico`, no bar) is unchanged — only
   the file-association icon carries the bar.
-- **moleditpy_job_manager** — the blue rack unit in its favicon
-  (`FAVICON_SVG` in `job_manager/web_monitor.py`) uses this value, so the
-  plugin's icon reads as part of the MoleditPy family rather than a
-  generic blue. The plugin's UI accent color (`CY_ACCENT` in `theme.py`) is
-  a separate, deliberately-chosen blue and is not tied to this value.
 
 ### Adding it elsewhere
 
