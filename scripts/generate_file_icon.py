@@ -105,7 +105,7 @@ MOLECULE_SCALE = 0.8
 #: the top and bottom of the molecule's box: 0.5 centers it; higher pushes it
 #: down (more slack kept above it, less below), which reads better than dead
 #: center since the fold notch already crowds the top-right corner.
-VERTICAL_BIAS = 0.85
+VERTICAL_BIAS = 0.95
 
 #: "MoleditPy File" text size, in points (matplotlib fontsize).
 BAR_FONT_SIZE = 52
