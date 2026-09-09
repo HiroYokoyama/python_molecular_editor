@@ -73,8 +73,14 @@ BRAND_BLUE = "#3577F7"
 #: Sizes exported as standalone PNGs (used by the Linux .desktop icon theme).
 SMALL_SIZES = (16, 22, 24, 32, 48, 64, 128)
 
-#: Sizes baked into the macOS .icns.
-ICNS_SIZES = ((16, 16), (32, 32), (128, 128), (256, 256), (512, 512))
+#: Sizes Pillow's ICNS writer always bakes in (32, 64, 128, 256, 512, 1024 --
+#: 256 and 512 each cover two of its internal type codes). This is NOT a
+#: `sizes=` argument to Image.save: Pillow's ICNS plugin ignores that kwarg
+#: entirely and hardcodes this exact size set, falling back to a plain
+#: (non-LANCZOS) im.resize() for any size not supplied via append_images.
+#: Passing every size here explicitly is what makes each entry a proper
+#: high-quality downscale of the master instead of that fallback.
+ICNS_SIZES = (32, 64, 128, 256, 512, 1024)
 
 #: The background is drawn in a 100x100-ish data-unit space (matplotlib
 #: "axes" units); everything below is in that space, not pixels.
@@ -83,7 +89,7 @@ DOC_H = 90
 DOC_X = (100 - DOC_W) / 2
 DOC_Y = (100 - DOC_H) / 2
 FOLD_SIZE = 20
-BAR_H = 13
+BAR_H = 16
 BAR_Y = DOC_Y + 12
 
 #: Margin (in the same data units) kept clear around the molecule artwork:
@@ -95,8 +101,14 @@ CONTENT_MARGIN = 6
 #: it doesn't run edge-to-edge against the margin on its long axis.
 MOLECULE_SCALE = 0.8
 
+#: How the leftover vertical space (after fitting+shrinking) is split between
+#: the top and bottom of the molecule's box: 0.5 centers it; higher pushes it
+#: down (more slack kept above it, less below), which reads better than dead
+#: center since the fold notch already crowds the top-right corner.
+VERTICAL_BIAS = 0.65
+
 #: "MoleditPy File" text size, in points (matplotlib fontsize).
-BAR_FONT_SIZE = 40
+BAR_FONT_SIZE = 52
 
 
 #: The data-coordinate window the background is drawn in. Kept as a fixed,
@@ -239,7 +251,7 @@ def _paste_molecule(background: Image.Image) -> Image.Image:
     mol_resized = mol_box.resize(new_size, Image.LANCZOS)
 
     paste_x = round(avail_x0 + (avail_w - new_size[0]) / 2)
-    paste_y = round(avail_y0 + (avail_h - new_size[1]) / 2)
+    paste_y = round(avail_y0 + (avail_h - new_size[1]) * VERTICAL_BIAS)
 
     out = background.copy()
     out.alpha_composite(mol_resized, (paste_x, paste_y))
@@ -273,7 +285,11 @@ def main() -> int:
         small_paths.append(path)
 
     _write_single_frame_ico(master, ICO_PATH)
-    master.save(ICNS_PATH, sizes=[s for s in ICNS_SIZES if s[0] <= master.size[0]])
+    icns_sizes = [s for s in ICNS_SIZES if s <= master.size[0]]
+    master.save(
+        ICNS_PATH,
+        append_images=[master.resize((s, s), Image.LANCZOS) for s in icns_sizes],
+    )
 
     with open(ICO_PATH, "rb") as src, open(APP_ASSET_ICO, "wb") as dst:
         dst.write(src.read())
