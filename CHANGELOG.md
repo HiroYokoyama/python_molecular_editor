@@ -6,6 +6,9 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+* **Brand Color**: Standardized "MoleditPy Blue" as `#3577F7`. The nitrogen atom's default CPK color now uses this exact value (previously `#3377FF`). See `docs/BRAND_COLOR.md`.
+
 ---
 
 ## [4.9.2] - 2026-09-06
