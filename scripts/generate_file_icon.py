@@ -83,13 +83,20 @@ DOC_H = 90
 DOC_X = (100 - DOC_W) / 2
 DOC_Y = (100 - DOC_H) / 2
 FOLD_SIZE = 20
-BAR_H = 10
+BAR_H = 13
 BAR_Y = DOC_Y + 12
 
 #: Margin (in the same data units) kept clear around the molecule artwork:
 #: below the folded corner at the top, above the bar at the bottom, and in
 #: from both sides.
 CONTENT_MARGIN = 6
+
+#: Extra shrink applied after fitting the molecule to its available box, so
+#: it doesn't run edge-to-edge against the margin on its long axis.
+MOLECULE_SCALE = 0.8
+
+#: "MoleditPy File" text size, in points (matplotlib fontsize).
+BAR_FONT_SIZE = 40
 
 
 #: The data-coordinate window the background is drawn in. Kept as a fixed,
@@ -184,8 +191,8 @@ def _draw_background(size_px: int) -> plt.Figure:
 
     ax.text(
         DOC_X + DOC_W / 2, BAR_Y + BAR_H / 2, "MoleditPy File",
-        ha="center", va="center", fontsize=32, color="white", fontweight="bold",
-        fontname="DejaVu Sans", zorder=3,
+        ha="center", va="center", fontsize=BAR_FONT_SIZE, color="white",
+        fontweight="bold", fontname="DejaVu Sans", zorder=3,
     )
     return fig
 
@@ -227,7 +234,7 @@ def _paste_molecule(background: Image.Image) -> Image.Image:
     avail_w = avail_x1 - avail_x0
     avail_h = avail_y1 - avail_y0
 
-    scale = min(avail_w / mol_box.width, avail_h / mol_box.height)
+    scale = min(avail_w / mol_box.width, avail_h / mol_box.height) * MOLECULE_SCALE
     new_size = (max(1, round(mol_box.width * scale)), max(1, round(mol_box.height * scale)))
     mol_resized = mol_box.resize(new_size, Image.LANCZOS)
 
