@@ -89,7 +89,7 @@ DOC_H = 90
 DOC_X = (100 - DOC_W) / 2
 DOC_Y = (100 - DOC_H) / 2
 FOLD_SIZE = 20
-BAR_H = 16
+BAR_H = 12
 BAR_Y = DOC_Y + 12
 
 #: Margin (in the same data units) kept clear around the molecule artwork:
@@ -99,16 +99,16 @@ CONTENT_MARGIN = 6
 
 #: Extra shrink applied after fitting the molecule to its available box, so
 #: it doesn't run edge-to-edge against the margin on its long axis.
-MOLECULE_SCALE = 0.8
+MOLECULE_SCALE = 0.85
 
 #: How the leftover vertical space (after fitting+shrinking) is split between
 #: the top and bottom of the molecule's box: 0.5 centers it; higher pushes it
 #: down (more slack kept above it, less below), which reads better than dead
 #: center since the fold notch already crowds the top-right corner.
-VERTICAL_BIAS = 0.95
+VERTICAL_BIAS = 1.5
 
 #: "MoleditPy File" text size, in points (matplotlib fontsize).
-BAR_FONT_SIZE = 52
+BAR_FONT_SIZE = 44
 
 
 #: The data-coordinate window the background is drawn in. Kept as a fixed,
