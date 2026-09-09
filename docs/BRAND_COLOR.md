@@ -17,11 +17,17 @@ than an arbitrary UI blue.
   `CPK_COLORS["N"]`. Nitrogen's standard CPK blue happens to sit close to the
   brand color, so the default was tightened to the exact brand hex instead of
   an independently-chosen blue.
-- **moleditpy_job_manager** — the plugin's accent color (`CY_ACCENT` in
-  `job_manager/theme.py`) and the blue rack unit in its favicon
-  (`FAVICON_SVG` in `job_manager/web_monitor.py`) both use this value, so the
-  plugin's chrome reads as part of the MoleditPy family rather than a
-  generic blue.
+- **The file icon** — `icon_images/file-icon/file_icon.png` (and every size,
+  `.ico` and `.icns` derived from it by `scripts/generate_file_icon.py`). The
+  "MoleditPy File" bar and the molecule's nitrogen atoms used an
+  independently-picked blue (`#1981dc`) and now use this exact hex. The
+  *application* icon (`icon.png` / `icon.ico`, no bar) is unchanged — only
+  the file-association icon carries the bar.
+- **moleditpy_job_manager** — the blue rack unit in its favicon
+  (`FAVICON_SVG` in `job_manager/web_monitor.py`) uses this value, so the
+  plugin's icon reads as part of the MoleditPy family rather than a
+  generic blue. The plugin's UI accent color (`CY_ACCENT` in `theme.py`) is
+  a separate, deliberately-chosen blue and is not tied to this value.
 
 ### Adding it elsewhere
 
