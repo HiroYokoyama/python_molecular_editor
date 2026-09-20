@@ -130,8 +130,10 @@ class PluginManager:
                 data = json.load(file)
             if isinstance(data, list):
                 values = data
-            elif isinstance(data, dict):
-                values = data.get("disabled_plugins", [])
+            elif isinstance(data, dict) and isinstance(
+                data.get("disabled_plugins"), list
+            ):
+                values = data["disabled_plugins"]
             else:
                 values = []
             return {str(value).replace("\\", "/") for value in values if value}

@@ -1020,6 +1020,13 @@ def test_read_disabled_plugins_formats(tmp_path):
     )
     assert pm._read_disabled_plugins() == {"nested/plugin.py"}
 
+    # Test dictionary with non-list disabled_plugins (e.g. string)
+    disabled_file.write_text(
+        json.dumps({"disabled_plugins": "some_plugin.py"}),
+        encoding="utf-8",
+    )
+    assert pm._read_disabled_plugins() == set()
+
     # Test invalid root type (e.g. integer or unexpected primitive)
     disabled_file.write_text(json.dumps(42), encoding="utf-8")
     assert pm._read_disabled_plugins() == set()
