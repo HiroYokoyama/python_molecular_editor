@@ -17,7 +17,7 @@ from typing import Any, Optional
 
 
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent
+from PyQt6.QtGui import QCloseEvent, QDesktopServices, QDragEnterEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QDialog,
@@ -119,6 +119,12 @@ class PluginManagerWindow(QDialog):
         for row, p in enumerate(plugins):
             status_item = QTableWidgetItem(str(p.get("status", "Unknown")))
             status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            status_item.setFlags(status_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            status_item.setCheckState(
+                Qt.CheckState.Unchecked
+                if p.get("disabled", False)
+                else Qt.CheckState.Checked
+            )
             self.table.setItem(row, 0, status_item)
             self.table.setItem(row, 1, QTableWidgetItem(str(p.get("name", "Unknown"))))
             self.table.setItem(row, 2, QTableWidgetItem(str(p.get("version", ""))))
@@ -150,6 +156,27 @@ class PluginManagerWindow(QDialog):
 
             if color:
                 self.table.item(row, 0).setForeground(color)
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Persist checkbox choices and reload plugins once as the dialog closes."""
+        disabled_paths = set()
+        for row, plugin in enumerate(self.plugin_manager.plugins):
+            status_item = self.table.item(row, 0)
+            if (
+                status_item is not None
+                and status_item.checkState() == Qt.CheckState.Unchecked
+            ):
+                filepath = plugin.get("filepath")
+                if filepath:
+                    disabled_paths.add(self.plugin_manager.plugin_path_key(filepath))
+
+        self.plugin_manager.save_disabled_plugins(disabled_paths)
+        if self.plugin_manager.main_window:
+            self.plugin_manager.discover_plugins(self.plugin_manager.main_window)
+            self.plugin_manager.rebuild_plugin_menus()
+        else:
+            self.plugin_manager.discover_plugins()
+        event.accept()
 
     def update_button_state(self) -> None:
         """Enable or disable the Remove button based on table selection."""

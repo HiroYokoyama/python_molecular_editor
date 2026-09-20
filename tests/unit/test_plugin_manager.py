@@ -1,6 +1,7 @@
 """Tests for PluginManager — metadata extraction, registration, and discovery."""
 
 import os
+import json
 import sys
 import ast
 import zipfile
@@ -959,3 +960,38 @@ def test_is_dragging_atom_ignores_unrelated_windows():
     with patch("moleditpy.plugins.plugin_manager.QApplication") as mock_qapp:
         mock_qapp.topLevelWidgets.return_value = [other]
         assert pm.is_dragging_atom() is False
+
+def test_disabled_plugin_is_listed_without_execution(tmp_path):
+    plugin_dir = tmp_path / "plugins"
+    plugin_dir.mkdir()
+    plugin = plugin_dir / "unsafe.py"
+    plugin.write_text(
+        '''PLUGIN_NAME = "Disabled Plugin"
+raise RuntimeError("must not execute")
+''',
+        encoding="utf-8",
+    )
+    disabled_file = tmp_path / "disabled_plugins.json"
+    disabled_file.write_text(json.dumps(["unsafe.py"]), encoding="utf-8")
+
+    pm = PluginManager()
+    pm.plugin_dir = str(plugin_dir)
+    pm.disabled_plugins_path = str(disabled_file)
+
+    plugins = pm.discover_plugins()
+
+    assert len(plugins) == 1
+    assert plugins[0]["name"] == "Disabled Plugin"
+    assert plugins[0]["status"] == "Disabled"
+    assert plugins[0]["module"] is None
+
+
+def test_save_disabled_plugins_writes_normalized_paths(tmp_path):
+    pm = PluginManager()
+    pm.disabled_plugins_path = str(tmp_path / "disabled_plugins.json")
+
+    pm.save_disabled_plugins({r"category\plugin.py", "root.py"})
+
+    assert json.loads(
+        (tmp_path / "disabled_plugins.json").read_text(encoding="utf-8")
+    ) == ["category/plugin.py", "root.py"]
