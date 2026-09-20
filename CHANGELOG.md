@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+---
+
+## [4.10.0] - 2026-09-21
+
 ### Added
 * **Plugin disabling**: Added Plugin Manager checkboxes with persistent disabled_plugins.json settings applied on dialog close and next launch.
 

@@ -539,7 +539,7 @@ MoleditPyは、Pythonスクリプトによる機能の拡張をサポートし�
 
 ## 11\. バージョン情報・ライセンス
 
-  * **バージョン:** 4.9
+  * **バージョン:** 4.10
   * **作者:** Hiromichi Yokoyama
   * **ライセンス:** GPL-3.0 license
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
