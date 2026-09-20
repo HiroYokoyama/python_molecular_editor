@@ -152,18 +152,14 @@ class PluginManagerWindow(QDialog):
                 color = Qt.GlobalColor.red
             elif status == "Loaded":
                 color = Qt.GlobalColor.darkGreen
-            elif status == "No Entry Point":
+            elif status in ("No Entry Point", "Disabled"):
                 color = Qt.GlobalColor.gray
 
             if color:
                 self.table.item(row, 0).setForeground(color)
 
-    def _apply_plugin_preferences(self) -> None:
-        """Persist checkbox choices and reload plugins."""
-        if self._preferences_applied:
-            return
-        self._preferences_applied = True
-
+    def _save_checkbox_preferences(self) -> set[str]:
+        """Collect and persist checkbox choices."""
         disabled_paths = set()
         for row, plugin in enumerate(self.plugin_manager.plugins):
             status_item = self.table.item(row, 0)
@@ -176,6 +172,15 @@ class PluginManagerWindow(QDialog):
                     disabled_paths.add(self.plugin_manager.plugin_path_key(filepath))
 
         self.plugin_manager.save_disabled_plugins(disabled_paths)
+        return disabled_paths
+
+    def _apply_plugin_preferences(self) -> None:
+        """Persist checkbox choices and reload plugins."""
+        if self._preferences_applied:
+            return
+        self._preferences_applied = True
+
+        self._save_checkbox_preferences()
         if self.plugin_manager.main_window:
             self.plugin_manager.discover_plugins(self.plugin_manager.main_window)
             self.plugin_manager.rebuild_plugin_menus()
@@ -195,6 +200,7 @@ class PluginManagerWindow(QDialog):
 
     def on_reload(self, silent: bool = False) -> None:
         """Reload all plugins from disk, rebuild main-window UI, and refresh the table."""
+        self._save_checkbox_preferences()
         if self.plugin_manager.main_window:
             self.plugin_manager.discover_plugins(self.plugin_manager.main_window)
             self.plugin_manager.rebuild_plugin_menus()

@@ -431,3 +431,37 @@ def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, 
     mock_plugin_manager.save_disabled_plugins.assert_called_once_with({"plugin1.py"})
     mock_plugin_manager.discover_plugins.assert_called_once_with(mock_main_window)
     mock_plugin_manager.rebuild_plugin_menus.assert_called_once_with()
+
+
+def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
+    mock_plugin_manager.main_window = None
+    mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
+        "/", 1
+    )[-1]
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.on_reload(silent=True)
+
+    mock_plugin_manager.save_disabled_plugins.assert_called_with({"plugin1.py"})
+    mock_plugin_manager.discover_plugins.assert_called_with()
+
+
+def test_on_reload_with_main_window_persists_and_rebuilds_menus(
+    mock_plugin_manager, qtbot
+):
+    mock_main_window = MagicMock()
+    mock_plugin_manager.main_window = mock_main_window
+    mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
+        "/", 1
+    )[-1]
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.on_reload(silent=True)
+
+    mock_plugin_manager.save_disabled_plugins.assert_called_with({"plugin1.py"})
+    mock_plugin_manager.discover_plugins.assert_called_with(mock_main_window)
+    mock_plugin_manager.rebuild_plugin_menus.assert_called_with()

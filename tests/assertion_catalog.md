@@ -7862,6 +7862,19 @@ _No description provided._
 - mock_plugin_manager.discover_plugins.assert_called_once_with(mock_main_window)
 - mock_plugin_manager.rebuild_plugin_menus.assert_called_once_with()
 
+### test_on_reload_persists_checkbox_changes
+_No description provided._
+
+- mock_plugin_manager.save_disabled_plugins.assert_called_with({'plugin1.py'})
+- mock_plugin_manager.discover_plugins.assert_called_with()
+
+### test_on_reload_with_main_window_persists_and_rebuilds_menus
+_No description provided._
+
+- mock_plugin_manager.save_disabled_plugins.assert_called_with({'plugin1.py'})
+- mock_plugin_manager.discover_plugins.assert_called_with(mock_main_window)
+- mock_plugin_manager.rebuild_plugin_menus.assert_called_with()
+
 ## tests/unit/test_plugin_menu_manager.py
 
 ### TestConstruction.test_holds_init_manager_reference
