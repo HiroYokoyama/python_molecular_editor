@@ -1663,7 +1663,6 @@ class MainInitManager:
 
             dlg = PluginManagerWindow(self.host.plugin_manager, self.host)
             dlg.exec()
-            self.plugin_menu_manager.rebuild_plugin_menus()
 
         manage_plugins_action.triggered.connect(show_plugin_manager)
         self.plugin_menu.addAction(manage_plugins_action)

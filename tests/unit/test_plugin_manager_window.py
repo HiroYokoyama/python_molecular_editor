@@ -398,7 +398,10 @@ def test_drop_event_pure_folder(
     window.dropEvent(event)
     mock_plugin_manager.install_plugin.assert_called_with("/some/plugin_folder")
 
-def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtbot):
+
+def test_close_persists_disabled_paths_and_reloads_once(
+    mock_plugin_manager, qtbot
+):
     mock_plugin_manager.main_window = None
     mock_plugin_manager.plugin_path_key.side_effect = (
         lambda filepath: filepath.rsplit("/", 1)[-1]
@@ -407,10 +410,9 @@ def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtb
     qtbot.addWidget(window)
 
     window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
-    event = MagicMock()
-    window.closeEvent(event)
+    window.done(0)
+    window.done(0)
 
     mock_plugin_manager.save_disabled_plugins.assert_called_once_with({"plugin1.py"})
     mock_plugin_manager.discover_plugins.assert_called_once_with()
     mock_plugin_manager.rebuild_plugin_menus.assert_not_called()
-    event.accept.assert_called_once()

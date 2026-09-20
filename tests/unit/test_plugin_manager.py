@@ -961,6 +961,7 @@ def test_is_dragging_atom_ignores_unrelated_windows():
         mock_qapp.topLevelWidgets.return_value = [other]
         assert pm.is_dragging_atom() is False
 
+
 def test_disabled_plugin_is_listed_without_execution(tmp_path):
     plugin_dir = tmp_path / "plugins"
     plugin_dir.mkdir()
@@ -995,3 +996,11 @@ def test_save_disabled_plugins_writes_normalized_paths(tmp_path):
     assert json.loads(
         (tmp_path / "disabled_plugins.json").read_text(encoding="utf-8")
     ) == ["category/plugin.py", "root.py"]
+
+
+def test_plugin_manager_initializes_disabled_plugins_path(monkeypatch, tmp_path):
+    monkeypatch.setattr(os.path, "expanduser", lambda _: str(tmp_path))
+
+    pm = PluginManager()
+
+    assert pm.disabled_plugins_path == str(tmp_path / "disabled_plugins.json")

@@ -81,6 +81,10 @@ class PluginManager:
         self.plugin_dir: str = os.path.join(
             os.path.expanduser("~"), ".moleditpy", "plugins"
         )
+        self.disabled_plugins_path: str = os.path.join(
+            os.path.expanduser("~"), ".moleditpy", "disabled_plugins.json"
+        )
+        self.disabled_plugins: set[str] = self._read_disabled_plugins()
         self.plugins: List[Dict[str, Any]] = []  # List of dicts
         self.main_window: Any = main_window
 
@@ -136,7 +140,9 @@ class PluginManager:
 
     def save_disabled_plugins(self, disabled_paths: set[str]) -> None:
         """Persist disabled plugin paths for the next application launch."""
-        normalized = sorted(path.replace("\\", "/") for path in disabled_paths if path)
+        normalized = sorted(
+            path.replace("\\", "/") for path in disabled_paths if path
+        )
         try:
             os.makedirs(os.path.dirname(self.disabled_plugins_path), exist_ok=True)
             with open(self.disabled_plugins_path, "w", encoding="utf-8") as file:
@@ -333,10 +339,12 @@ class PluginManager:
 
                         if self.is_plugin_disabled(entry_point):
                             self._register_disabled_plugin(
-                        entry_point, module_name, category
-                    )
+                                entry_point, module_name, category
+                            )
                         else:
-                            self._load_single_plugin(entry_point, module_name, category)
+                            self._load_single_plugin(
+                                entry_point, module_name, category
+                            )
 
         return self.plugins
 
