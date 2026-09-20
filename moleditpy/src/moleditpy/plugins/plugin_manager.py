@@ -140,9 +140,7 @@ class PluginManager:
 
     def save_disabled_plugins(self, disabled_paths: set[str]) -> None:
         """Persist disabled plugin paths for the next application launch."""
-        normalized = sorted(
-            path.replace("\\", "/") for path in disabled_paths if path
-        )
+        normalized = sorted(path.replace("\\", "/") for path in disabled_paths if path)
         try:
             os.makedirs(os.path.dirname(self.disabled_plugins_path), exist_ok=True)
             with open(self.disabled_plugins_path, "w", encoding="utf-8") as file:
@@ -319,9 +317,7 @@ class PluginManager:
                 module_name = os.path.basename(root)
 
                 if self.is_plugin_disabled(entry_point):
-                    self._register_disabled_plugin(
-                        entry_point, module_name, category
-                    )
+                    self._register_disabled_plugin(entry_point, module_name, category)
                 else:
                     self._load_single_plugin(entry_point, module_name, category)
 
@@ -342,9 +338,7 @@ class PluginManager:
                                 entry_point, module_name, category
                             )
                         else:
-                            self._load_single_plugin(
-                                entry_point, module_name, category
-                            )
+                            self._load_single_plugin(entry_point, module_name, category)
 
         return self.plugins
 

@@ -120,9 +120,7 @@ class PluginManagerWindow(QDialog):
         for row, p in enumerate(plugins):
             status_item = QTableWidgetItem(str(p.get("status", "Unknown")))
             status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            status_item.setFlags(
-                status_item.flags() | Qt.ItemFlag.ItemIsUserCheckable
-            )
+            status_item.setFlags(status_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             status_item.setCheckState(
                 Qt.CheckState.Unchecked
                 if p.get("disabled", False)
@@ -175,9 +173,7 @@ class PluginManagerWindow(QDialog):
             ):
                 filepath = plugin.get("filepath")
                 if filepath:
-                    disabled_paths.add(
-                        self.plugin_manager.plugin_path_key(filepath)
-                    )
+                    disabled_paths.add(self.plugin_manager.plugin_path_key(filepath))
 
         self.plugin_manager.save_disabled_plugins(disabled_paths)
         if self.plugin_manager.main_window:

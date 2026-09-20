@@ -967,9 +967,9 @@ def test_disabled_plugin_is_listed_without_execution(tmp_path):
     plugin_dir.mkdir()
     plugin = plugin_dir / "unsafe.py"
     plugin.write_text(
-        '''PLUGIN_NAME = "Disabled Plugin"
+        """PLUGIN_NAME = "Disabled Plugin"
 raise RuntimeError("must not execute")
-''',
+""",
         encoding="utf-8",
     )
     disabled_file = tmp_path / "disabled_plugins.json"
@@ -1003,4 +1003,6 @@ def test_plugin_manager_initializes_disabled_plugins_path(monkeypatch, tmp_path)
 
     pm = PluginManager()
 
-    assert pm.disabled_plugins_path == str(tmp_path / "disabled_plugins.json")
+    assert pm.disabled_plugins_path == str(
+        tmp_path / ".moleditpy" / "disabled_plugins.json"
+    )

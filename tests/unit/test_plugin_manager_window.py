@@ -399,13 +399,11 @@ def test_drop_event_pure_folder(
     mock_plugin_manager.install_plugin.assert_called_with("/some/plugin_folder")
 
 
-def test_close_persists_disabled_paths_and_reloads_once(
-    mock_plugin_manager, qtbot
-):
+def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtbot):
     mock_plugin_manager.main_window = None
-    mock_plugin_manager.plugin_path_key.side_effect = (
-        lambda filepath: filepath.rsplit("/", 1)[-1]
-    )
+    mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
+        "/", 1
+    )[-1]
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
