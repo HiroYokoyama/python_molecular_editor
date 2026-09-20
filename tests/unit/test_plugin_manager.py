@@ -1006,3 +1006,59 @@ def test_plugin_manager_initializes_disabled_plugins_path(monkeypatch, tmp_path)
     assert pm.disabled_plugins_path == str(
         tmp_path / ".moleditpy" / "disabled_plugins.json"
     )
+
+
+def test_read_disabled_plugins_formats(tmp_path):
+    pm = PluginManager()
+    disabled_file = tmp_path / "disabled_plugins.json"
+    pm.disabled_plugins_path = str(disabled_file)
+
+    # Test dictionary format
+    disabled_file.write_text(
+        json.dumps({"disabled_plugins": [r"nested\plugin.py", ""]}),
+        encoding="utf-8",
+    )
+    assert pm._read_disabled_plugins() == {"nested/plugin.py"}
+
+    # Test invalid root type (e.g. integer or unexpected primitive)
+    disabled_file.write_text(json.dumps(42), encoding="utf-8")
+    assert pm._read_disabled_plugins() == set()
+
+
+def test_save_disabled_plugins_handles_write_error(tmp_path, monkeypatch):
+    pm = PluginManager()
+    pm.disabled_plugins_path = str(tmp_path / "disabled_plugins.json")
+
+    def mock_open(*args, **kwargs):
+        raise OSError("Disk full")
+
+    monkeypatch.setattr("builtins.open", mock_open)
+    # Should not raise exception
+    pm.save_disabled_plugins({"test_plugin.py"})
+
+
+def test_disabled_package_plugin_is_listed_without_execution(tmp_path):
+    plugin_dir = tmp_path / "plugins"
+    pkg_dir = plugin_dir / "test_package"
+    pkg_dir.mkdir(parents=True)
+    init_file = pkg_dir / "__init__.py"
+    init_file.write_text(
+        """PLUGIN_NAME = "Disabled Package Plugin"
+raise RuntimeError("must not execute")
+""",
+        encoding="utf-8",
+    )
+    disabled_file = tmp_path / "disabled_plugins.json"
+    disabled_file.write_text(json.dumps(["test_package/__init__.py"]), encoding="utf-8")
+
+    pm = PluginManager()
+    pm.plugin_dir = str(plugin_dir)
+    pm.disabled_plugins_path = str(disabled_file)
+
+    plugins = pm.discover_plugins()
+
+    assert len(plugins) == 1
+    assert plugins[0]["name"] == "Disabled Package Plugin"
+    assert plugins[0]["status"] == "Disabled"
+    assert plugins[0]["module"] is None
+    assert plugins[0]["disabled"] is True

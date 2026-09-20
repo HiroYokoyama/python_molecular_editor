@@ -414,3 +414,20 @@ def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtb
     mock_plugin_manager.save_disabled_plugins.assert_called_once_with({"plugin1.py"})
     mock_plugin_manager.discover_plugins.assert_called_once_with()
     mock_plugin_manager.rebuild_plugin_menus.assert_not_called()
+
+
+def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, qtbot):
+    mock_main_window = MagicMock()
+    mock_plugin_manager.main_window = mock_main_window
+    mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
+        "/", 1
+    )[-1]
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.done(0)
+
+    mock_plugin_manager.save_disabled_plugins.assert_called_once_with({"plugin1.py"})
+    mock_plugin_manager.discover_plugins.assert_called_once_with(mock_main_window)
+    mock_plugin_manager.rebuild_plugin_menus.assert_called_once_with()
