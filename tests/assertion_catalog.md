@@ -7858,31 +7858,38 @@ _Dropping a directory installs it directly via install_plugin._
 - mock_plugin_manager.install_plugin.assert_called_with('/some/plugin_folder')
 
 ### test_close_persists_disabled_paths_and_reloads_once
-_No description provided._
+_Persists disabled plugin paths and reloads only once when closing._
 
 - mock_plugin_manager.save_disabled_plugins.assert_called_once_with({'plugin1.py'})
 - mock_plugin_manager.discover_plugins.assert_called_once_with()
 - mock_plugin_manager.rebuild_plugin_menus.assert_not_called()
 
 ### test_close_with_main_window_reloads_and_rebuilds_menus
-_No description provided._
+_Persists preferences and rebuilds plugin menus when closing._
 
 - mock_plugin_manager.save_disabled_plugins.assert_called_once_with({'plugin1.py'})
 - mock_plugin_manager.discover_plugins.assert_called_once_with(mock_main_window)
 - mock_plugin_manager.rebuild_plugin_menus.assert_called_once_with()
 
 ### test_on_reload_persists_checkbox_changes
-_No description provided._
+_Saves checkbox changes before reloading plugins without a main window._
 
 - mock_plugin_manager.save_disabled_plugins.assert_called_with({'plugin1.py'})
 - mock_plugin_manager.discover_plugins.assert_called_with()
 
 ### test_on_reload_with_main_window_persists_and_rebuilds_menus
-_No description provided._
+_Saves checkbox changes and rebuilds menus during a main-window reload._
 
 - mock_plugin_manager.save_disabled_plugins.assert_called_with({'plugin1.py'})
 - mock_plugin_manager.discover_plugins.assert_called_with(mock_main_window)
 - mock_plugin_manager.rebuild_plugin_menus.assert_called_with()
+
+### test_status_checkbox_preserves_status_colors
+_Applies status colors to the visible checkbox text._
+
+- assert 'color: red' in window.table.cellWidget(1, 0).styleSheet()
+- assert 'color: darkgreen' in window.table.cellWidget(0, 0).styleSheet()
+- assert 'color: gray' in window.table.cellWidget(2, 0).styleSheet()
 
 ## tests/unit/test_plugin_menu_manager.py
 
