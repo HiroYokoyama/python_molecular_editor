@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtCore import Qt, QMimeData
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QCheckBox, QMessageBox
 
 from moleditpy.plugins.plugin_manager_window import PluginManagerWindow
 
@@ -62,6 +62,19 @@ def test_init_and_refresh(mock_plugin_manager, qtbot):
 
     # Check relative path resolution
     assert window.table.item(0, 4).text() == "plugin1.py"
+    assert isinstance(window.table.cellWidget(0, 0), QCheckBox)
+    assert window.table.cellWidget(0, 0).isChecked()
+
+
+def test_status_checkbox_is_horizontal_cell_widget(mock_plugin_manager, qtbot):
+    """The status toggle is an explicit widget instead of an item check indicator."""
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    checkbox = window.table.cellWidget(0, 0)
+    assert isinstance(checkbox, QCheckBox)
+    assert checkbox.text() == "Loaded"
+    assert checkbox.layoutDirection() == Qt.LayoutDirection.LeftToRight
 
 
 def test_refresh_relative_path_error(mock_plugin_manager, qtbot):
@@ -407,7 +420,7 @@ def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtb
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.table.cellWidget(0, 0).setChecked(False)
     window.done(0)
     window.done(0)
 
@@ -425,7 +438,7 @@ def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, 
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.table.cellWidget(0, 0).setChecked(False)
     window.done(0)
 
     mock_plugin_manager.save_disabled_plugins.assert_called_once_with({"plugin1.py"})
@@ -441,7 +454,7 @@ def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.table.cellWidget(0, 0).setChecked(False)
     window.on_reload(silent=True)
 
     mock_plugin_manager.save_disabled_plugins.assert_called_with({"plugin1.py"})
@@ -459,7 +472,7 @@ def test_on_reload_with_main_window_persists_and_rebuilds_menus(
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.table.cellWidget(0, 0).setChecked(False)
     window.on_reload(silent=True)
 
     mock_plugin_manager.save_disabled_plugins.assert_called_with({"plugin1.py"})
