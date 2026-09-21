@@ -120,8 +120,8 @@ class PluginManagerWindow(QDialog):
 
         self.table.setRowCount(len(plugins))
         for row, p in enumerate(plugins):
-            status_item = QTableWidgetItem(str(p.get("status", "Unknown")))
-            status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            # Keep an empty item for row selection; the checkbox owns visible status text.
+            status_item = QTableWidgetItem()
             self.table.setItem(row, 0, status_item)
 
             # Use an explicit widget so macOS keeps the checkbox and status text
@@ -164,7 +164,6 @@ class PluginManagerWindow(QDialog):
                 checkbox_color = "gray"
 
             if color:
-                self.table.item(row, 0).setForeground(color)
                 status_checkbox.setStyleSheet(
                     f"QCheckBox {{ padding-left: 4px; color: {checkbox_color}; }}"
                 )
