@@ -7704,6 +7704,44 @@ _Windows that are not move dialogs never report a drag._
 
 - assert pm.is_dragging_atom() is False
 
+### test_disabled_plugin_is_listed_without_execution
+_No description provided._
+
+- assert len(plugins) == 1
+- assert plugins[0]['name'] == 'Disabled Plugin'
+- assert plugins[0]['status'] == 'Disabled'
+- assert plugins[0]['module'] is None
+
+### test_save_disabled_plugins_writes_normalized_paths
+_No description provided._
+
+- assert json.loads((tmp_path / 'disabled_plugins.json').read_text(encoding='utf-8')) == ['category/plugin.py', 'root.py']
+
+### test_plugin_manager_initializes_disabled_plugins_path
+_No description provided._
+
+- assert pm.disabled_plugins_path == str(tmp_path / '.moleditpy' / 'disabled_plugins.json')
+
+### test_read_disabled_plugins_formats
+_No description provided._
+
+- assert pm._read_disabled_plugins() == {'nested/plugin.py'}
+- assert pm._read_disabled_plugins() == set()
+- assert pm._read_disabled_plugins() == set()
+
+### test_save_disabled_plugins_handles_write_error
+_No description provided._
+
+
+### test_disabled_package_plugin_is_listed_without_execution
+_No description provided._
+
+- assert len(plugins) == 1
+- assert plugins[0]['name'] == 'Disabled Package Plugin'
+- assert plugins[0]['status'] == 'Disabled'
+- assert plugins[0]['module'] is None
+- assert plugins[0]['disabled'] is True
+
 ## tests/unit/test_plugin_manager_window.py
 
 ### test_init_and_refresh
@@ -7809,6 +7847,33 @@ _Dropping a .zip file installs it via install_plugin._
 _Dropping a directory installs it directly via install_plugin._
 
 - mock_plugin_manager.install_plugin.assert_called_with('/some/plugin_folder')
+
+### test_close_persists_disabled_paths_and_reloads_once
+_No description provided._
+
+- mock_plugin_manager.save_disabled_plugins.assert_called_once_with({'plugin1.py'})
+- mock_plugin_manager.discover_plugins.assert_called_once_with()
+- mock_plugin_manager.rebuild_plugin_menus.assert_not_called()
+
+### test_close_with_main_window_reloads_and_rebuilds_menus
+_No description provided._
+
+- mock_plugin_manager.save_disabled_plugins.assert_called_once_with({'plugin1.py'})
+- mock_plugin_manager.discover_plugins.assert_called_once_with(mock_main_window)
+- mock_plugin_manager.rebuild_plugin_menus.assert_called_once_with()
+
+### test_on_reload_persists_checkbox_changes
+_No description provided._
+
+- mock_plugin_manager.save_disabled_plugins.assert_called_with({'plugin1.py'})
+- mock_plugin_manager.discover_plugins.assert_called_with()
+
+### test_on_reload_with_main_window_persists_and_rebuilds_menus
+_No description provided._
+
+- mock_plugin_manager.save_disabled_plugins.assert_called_with({'plugin1.py'})
+- mock_plugin_manager.discover_plugins.assert_called_with(mock_main_window)
+- mock_plugin_manager.rebuild_plugin_menus.assert_called_with()
 
 ## tests/unit/test_plugin_menu_manager.py
 

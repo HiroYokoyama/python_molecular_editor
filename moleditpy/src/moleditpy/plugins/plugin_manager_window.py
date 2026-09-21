@@ -42,6 +42,7 @@ class PluginManagerWindow(QDialog):
         self.btn_remove: Any = None
         self.table: Any = None
         self.plugin_manager = plugin_manager
+        self._preferences_applied = False
         self.setWindowTitle("Plugin Manager")
         self.resize(800, 500)
         self.setAcceptDrops(True)  # Enable drag & drop for the whole window
@@ -119,6 +120,12 @@ class PluginManagerWindow(QDialog):
         for row, p in enumerate(plugins):
             status_item = QTableWidgetItem(str(p.get("status", "Unknown")))
             status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            status_item.setFlags(status_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            status_item.setCheckState(
+                Qt.CheckState.Unchecked
+                if p.get("disabled", False)
+                else Qt.CheckState.Checked
+            )
             self.table.setItem(row, 0, status_item)
             self.table.setItem(row, 1, QTableWidgetItem(str(p.get("name", "Unknown"))))
             self.table.setItem(row, 2, QTableWidgetItem(str(p.get("version", ""))))
@@ -145,11 +152,45 @@ class PluginManagerWindow(QDialog):
                 color = Qt.GlobalColor.red
             elif status == "Loaded":
                 color = Qt.GlobalColor.darkGreen
-            elif status == "No Entry Point":
+            elif status in ("No Entry Point", "Disabled"):
                 color = Qt.GlobalColor.gray
 
             if color:
                 self.table.item(row, 0).setForeground(color)
+
+    def _save_checkbox_preferences(self) -> set[str]:
+        """Collect and persist checkbox choices."""
+        disabled_paths = set()
+        for row, plugin in enumerate(self.plugin_manager.plugins):
+            status_item = self.table.item(row, 0)
+            if (
+                status_item is not None
+                and status_item.checkState() == Qt.CheckState.Unchecked
+            ):
+                filepath = plugin.get("filepath")
+                if filepath:
+                    disabled_paths.add(self.plugin_manager.plugin_path_key(filepath))
+
+        self.plugin_manager.save_disabled_plugins(disabled_paths)
+        return disabled_paths
+
+    def _apply_plugin_preferences(self) -> None:
+        """Persist checkbox choices and reload plugins."""
+        if self._preferences_applied:
+            return
+        self._preferences_applied = True
+
+        self._save_checkbox_preferences()
+        if self.plugin_manager.main_window:
+            self.plugin_manager.discover_plugins(self.plugin_manager.main_window)
+            self.plugin_manager.rebuild_plugin_menus()
+        else:
+            self.plugin_manager.discover_plugins()
+
+    def done(self, result: int) -> None:
+        """Apply plugin preferences for every way the dialog can close."""
+        self._apply_plugin_preferences()
+        super().done(result)
 
     def update_button_state(self) -> None:
         """Enable or disable the Remove button based on table selection."""
@@ -159,6 +200,7 @@ class PluginManagerWindow(QDialog):
 
     def on_reload(self, silent: bool = False) -> None:
         """Reload all plugins from disk, rebuild main-window UI, and refresh the table."""
+        self._save_checkbox_preferences()
         if self.plugin_manager.main_window:
             self.plugin_manager.discover_plugins(self.plugin_manager.main_window)
             self.plugin_manager.rebuild_plugin_menus()
