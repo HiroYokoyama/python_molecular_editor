@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 import logging
 import os
 import shutil
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 
 from PyQt6.QtCore import Qt, QUrl
@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -42,42 +43,68 @@ class PluginManagerWindow(QDialog):
         super().__init__(parent)
         self.btn_remove: Any = None
         self.table: Any = None
+        self.search_input: Any = None
         self.plugin_manager = plugin_manager
         self._preferences_applied = False
         self.setWindowTitle("Plugin Manager")
-        self.resize(800, 500)
+        self.resize(850, 520)
         self.setAcceptDrops(True)  # Enable drag & drop for the whole window
 
         self.init_ui()
         self.refresh_plugin_list()
 
     def init_ui(self) -> None:
-        """Build the plugin manager UI with table, buttons, and drag-and-drop support."""
+        """Build plugin manager UI with table, buttons, search box, and drop support."""
         layout = QVBoxLayout(self)
 
         lbl_info = QLabel(
-            "Drag & Drop .py or .zip files here to install plugins. Use the checkbox to enable/disable plugins."
+            "Drag & Drop .py or .zip files to install plugins. Use checkboxes to enable/disable."
         )
         lbl_info.setStyleSheet("color: gray; font-style: italic;")
         layout.addWidget(lbl_info)
 
+        # Search Box
+        search_layout = QHBoxLayout()
+        search_label = QLabel("Search:")
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText(
+            "Search plugins by name, author, location, or description..."
+        )
+        self.search_input.setClearButtonEnabled(True)
+        self.search_input.textChanged.connect(self.filter_plugins)
+        search_layout.addWidget(search_label)
+        search_layout.addWidget(self.search_input)
+        layout.addLayout(search_layout)
+
         # Plugin Table
         self.table = QTableWidget()
-        self.table.setColumnCount(6)
+        self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels(
-            ["Status", "Name", "Version", "Author", "Location", "Description"]
+            [
+                "Enabled",
+                "Status",
+                "Name",
+                "Version",
+                "Author",
+                "Location",
+                "Description",
+            ]
         )
         self.table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Interactive
         )
         self.table.horizontalHeader().setSectionResizeMode(
-            4, QHeaderView.ResizeMode.Interactive
+            0, QHeaderView.ResizeMode.ResizeToContents
         )
         self.table.horizontalHeader().setSectionResizeMode(
-            5, QHeaderView.ResizeMode.Stretch
+            5, QHeaderView.ResizeMode.Interactive
+        )
+        self.table.horizontalHeader().setSectionResizeMode(
+            6, QHeaderView.ResizeMode.Stretch
         )  # Description stretches
-        self.table.setColumnWidth(1, 200)  # Make Name column wider
-        self.table.setColumnWidth(0, 120)  # Keep the status checkbox on one line
+        self.table.setColumnWidth(0, 70)  # Enabled checkbox
+        self.table.setColumnWidth(1, 100)  # Status
+        self.table.setColumnWidth(2, 180)  # Name
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.itemSelectionChanged.connect(self.update_button_state)
@@ -115,6 +142,20 @@ class PluginManagerWindow(QDialog):
 
         layout.addLayout(btn_layout)
 
+    def _create_checkbox_container(
+        self, checked: bool, tooltip: str = "Enable or disable this plugin"
+    ) -> tuple[QWidget, QCheckBox]:
+        """Create a centered QCheckBox container widget without custom stylesheets."""
+        container = QWidget()
+        box_layout = QHBoxLayout(container)
+        box_layout.setContentsMargins(0, 0, 0, 0)
+        box_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        checkbox = QCheckBox()
+        checkbox.setChecked(checked)
+        checkbox.setToolTip(tooltip)
+        box_layout.addWidget(checkbox)
+        return container, checkbox
+
     def refresh_plugin_list(self) -> None:
         """Repopulate the plugin table from the current plugin registry."""
         self.table.setRowCount(0)
@@ -122,22 +163,36 @@ class PluginManagerWindow(QDialog):
 
         self.table.setRowCount(len(plugins))
         for row, p in enumerate(plugins):
-            # Keep an empty item for row selection; the checkbox owns visible status text.
-            status_item = QTableWidgetItem()
-            self.table.setItem(row, 0, status_item)
+            # Column 0: Enabled Checkbox (Clean native check, centered)
+            is_enabled = not p.get("disabled", False)
+            container, _ = self._create_checkbox_container(is_enabled)
+            self.table.setCellWidget(row, 0, container)
 
-            # Use an explicit widget so macOS keeps the checkbox and status text
-            # in a stable horizontal layout instead of stacking the item indicator.
-            status_checkbox = QCheckBox(str(p.get("status", "Unknown")))
-            status_checkbox.setChecked(not p.get("disabled", False))
-            status_checkbox.setToolTip("Enable or disable this plugin")
-            status_checkbox.setStyleSheet("QCheckBox { padding-left: 4px; }")
-            self.table.setCellWidget(row, 0, status_checkbox)
-            self.table.setItem(row, 1, QTableWidgetItem(str(p.get("name", "Unknown"))))
-            self.table.setItem(row, 2, QTableWidgetItem(str(p.get("version", ""))))
-            self.table.setItem(row, 3, QTableWidgetItem(str(p.get("author", ""))))
+            # Store the plugin index in the item's UserRole for stable reference during filtering
+            enabled_item = QTableWidgetItem()
+            enabled_item.setData(Qt.ItemDataRole.UserRole, row)
+            self.table.setItem(row, 0, enabled_item)
 
-            # Location (Relative Path)
+            # Column 1: Status (colored text)
+            status = str(p.get("status", "Unknown"))
+            status_item = QTableWidgetItem(status)
+            status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            if status.startswith("Error"):
+                status_item.setForeground(Qt.GlobalColor.red)
+            elif status == "Loaded":
+                status_item.setForeground(Qt.GlobalColor.darkGreen)
+            elif status in ("No Entry Point", "Disabled"):
+                status_item.setForeground(Qt.GlobalColor.gray)
+            self.table.setItem(row, 1, status_item)
+
+            # Column 2: Name
+            self.table.setItem(row, 2, QTableWidgetItem(str(p.get("name", "Unknown"))))
+            # Column 3: Version
+            self.table.setItem(row, 3, QTableWidgetItem(str(p.get("version", ""))))
+            # Column 4: Author
+            self.table.setItem(row, 4, QTableWidgetItem(str(p.get("author", ""))))
+
+            # Column 5: Location (Relative Path)
             full_path = p.get("filepath", "")
             rel_path = ""
             if full_path:
@@ -147,43 +202,85 @@ class PluginManagerWindow(QDialog):
                     )
                 except (AttributeError, RuntimeError, ValueError, TypeError):
                     rel_path = os.path.basename(full_path)
-            self.table.setItem(row, 4, QTableWidgetItem(str(rel_path)))
+            self.table.setItem(row, 5, QTableWidgetItem(str(rel_path)))
 
-            self.table.setItem(row, 5, QTableWidgetItem(str(p.get("description", ""))))
+            # Column 6: Description
+            self.table.setItem(row, 6, QTableWidgetItem(str(p.get("description", ""))))
 
-            # Simple color coding for status
-            status = str(p.get("status", ""))
-            color = None
-            checkbox_color = None
-            if status.startswith("Error"):
-                color = Qt.GlobalColor.red
-                checkbox_color = "red"
-            elif status == "Loaded":
-                color = Qt.GlobalColor.darkGreen
-                checkbox_color = "darkgreen"
-            elif status in ("No Entry Point", "Disabled"):
-                color = Qt.GlobalColor.gray
-                checkbox_color = "gray"
+        if self.search_input and self.search_input.text():
+            self.filter_plugins(self.search_input.text())
 
-            if color:
-                status_checkbox.setStyleSheet(
-                    f"QCheckBox {{ padding-left: 4px; color: {checkbox_color}; }}"
-                )
+    def filter_plugins(self, text: str) -> None:
+        """Filter table rows based on search text."""
+        query = text.strip().lower()
+        for row in range(self.table.rowCount()):
+            if not query:
+                self.table.setRowHidden(row, False)
+                continue
+
+            # Check status, name, author, location, and description
+            status = (
+                self.table.item(row, 1).text().lower()
+                if self.table.item(row, 1)
+                else ""
+            )
+            name = (
+                self.table.item(row, 2).text().lower()
+                if self.table.item(row, 2)
+                else ""
+            )
+            author = (
+                self.table.item(row, 4).text().lower()
+                if self.table.item(row, 4)
+                else ""
+            )
+            location = (
+                self.table.item(row, 5).text().lower()
+                if self.table.item(row, 5)
+                else ""
+            )
+            description = (
+                self.table.item(row, 6).text().lower()
+                if self.table.item(row, 6)
+                else ""
+            )
+
+            match = (
+                query in name
+                or query in author
+                or query in location
+                or query in description
+                or query in status
+            )
+            self.table.setRowHidden(row, not match)
 
     def _status_checkbox(self, row: int) -> Optional[QCheckBox]:
         """Return the visible status checkbox for a plugin table row."""
-        checkbox = self.table.cellWidget(row, 0)
-        return checkbox if isinstance(checkbox, QCheckBox) else None
+        container = self.table.cellWidget(row, 0)
+        if isinstance(container, QCheckBox):
+            return container
+        if isinstance(container, QWidget):
+            checkbox = container.findChild(QCheckBox)
+            return checkbox
+        return None
 
     def _save_checkbox_preferences(self) -> set[str]:
         """Collect and persist checkbox choices."""
         disabled_paths = set()
-        for row, plugin in enumerate(self.plugin_manager.plugins):
-            status_checkbox = self._status_checkbox(row)
-            if status_checkbox is not None and not status_checkbox.isChecked():
-                filepath = plugin.get("filepath")
-                if filepath:
-                    disabled_paths.add(self.plugin_manager.plugin_path_key(filepath))
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            plugin_idx = item.data(Qt.ItemDataRole.UserRole) if item else row
+            if plugin_idx is not None and 0 <= plugin_idx < len(
+                self.plugin_manager.plugins
+            ):
+                plugin = self.plugin_manager.plugins[plugin_idx]
+                status_checkbox = self._status_checkbox(row)
+                if status_checkbox is not None and not status_checkbox.isChecked():
+                    filepath = plugin.get("filepath")
+                    if filepath:
+                        disabled_paths.add(
+                            self.plugin_manager.plugin_path_key(filepath)
+                        )
 
         self.plugin_manager.save_disabled_plugins(disabled_paths)
         return disabled_paths
@@ -226,6 +323,19 @@ class PluginManagerWindow(QDialog):
             self.plugin_manager.discover_plugins()
             self.refresh_plugin_list()
 
+    def _plugin_for_row(self, row: int) -> Optional[dict[str, Any]]:
+        """Retrieve plugin dict for a table row, accounting for search filtering."""
+        if row < 0 or row >= self.table.rowCount():
+            return None
+        item = self.table.item(row, 0)
+        idx = item.data(Qt.ItemDataRole.UserRole) if item else row
+        if idx is not None and 0 <= idx < len(self.plugin_manager.plugins):
+            plugin: dict[str, Any] = cast(
+                dict[str, Any], self.plugin_manager.plugins[idx]
+            )
+            return plugin
+        return None
+
     def on_remove_plugin(self) -> None:
         """Delete the selected plugin file or folder and reload."""
         row = self.table.currentRow()
@@ -233,9 +343,8 @@ class PluginManagerWindow(QDialog):
             QMessageBox.warning(self, "Warning", "Please select a plugin to remove.")
             return
 
-        # Assuming table row index matches plugins list index (confirmed in refresh_plugin_list)
-        if row < len(self.plugin_manager.plugins):
-            plugin = self.plugin_manager.plugins[row]
+        plugin = self._plugin_for_row(row)
+        if plugin is not None:
             filepath = plugin.get("filepath")
 
             if filepath and os.path.exists(filepath):
@@ -280,15 +389,15 @@ class PluginManagerWindow(QDialog):
     def show_plugin_details(self, item: QTableWidgetItem) -> None:
         """Show a message box with full metadata for the double-clicked plugin."""
         row = item.row()
-        if row < len(self.plugin_manager.plugins):
-            p = self.plugin_manager.plugins[row]
+        plugin = self._plugin_for_row(row)
+        if plugin is not None:
             msg = (
-                f"Name: {p.get('name', 'Unknown')}\n"
-                f"Version: {p.get('version', 'Unknown')}\n"
-                f"Author: {p.get('author', 'Unknown')}\n"
-                f"Status: {p.get('status', 'Unknown')}\n"
-                f"Location: {p.get('filepath', 'Unknown')}\n\n"
-                f"Description:\n{p.get('description', 'No description available.')}"
+                f"Name: {plugin.get('name', 'Unknown')}\n"
+                f"Version: {plugin.get('version', 'Unknown')}\n"
+                f"Author: {plugin.get('author', 'Unknown')}\n"
+                f"Status: {plugin.get('status', 'Unknown')}\n"
+                f"Location: {plugin.get('filepath', 'Unknown')}\n\n"
+                f"Description:\n{plugin.get('description', 'No description available.')}"
             )
             QMessageBox.information(self, "Plugin Details", msg)
 
@@ -316,7 +425,8 @@ class PluginManagerWindow(QDialog):
             is_folder = False
 
             if os.path.isfile(file_path):
-                # Special handling: If user drops __init__.py, assume they want to install the package (folder)
+                # Special handling: If user drops __init__.py,
+                # assume they want to install the package (folder)
                 if os.path.basename(file_path) == "__init__.py":
                     file_path = os.path.dirname(file_path)
                     is_valid = True
