@@ -14,6 +14,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import importlib.util
+import json
 import logging
 import os
 import shutil
@@ -80,6 +81,10 @@ class PluginManager:
         self.plugin_dir: str = os.path.join(
             os.path.expanduser("~"), ".moleditpy", "plugins"
         )
+        self.disabled_plugins_path: str = os.path.join(
+            os.path.expanduser("~"), ".moleditpy", "disabled_plugins.json"
+        )
+        self.disabled_plugins: set[str] = self._read_disabled_plugins()
         self.plugins: List[Dict[str, Any]] = []  # List of dicts
         self.main_window: Any = main_window
 
@@ -117,6 +122,42 @@ class PluginManager:
                 os.makedirs(self.plugin_dir)
             except OSError as e:
                 logging.warning(f"Error creating plugin directory: {e}")
+
+    def _read_disabled_plugins(self) -> set[str]:
+        """Read disabled plugin paths without making a malformed file fatal."""
+        try:
+            with open(self.disabled_plugins_path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+            if isinstance(data, list):
+                values = data
+            elif isinstance(data, dict) and isinstance(
+                data.get("disabled_plugins"), list
+            ):
+                values = data["disabled_plugins"]
+            else:
+                values = []
+            return {str(value).replace("\\", "/") for value in values if value}
+        except (OSError, TypeError, ValueError, json.JSONDecodeError):
+            return set()
+
+    def save_disabled_plugins(self, disabled_paths: set[str]) -> None:
+        """Persist disabled plugin paths for the next application launch."""
+        normalized = sorted(path.replace("\\", "/") for path in disabled_paths if path)
+        try:
+            os.makedirs(os.path.dirname(self.disabled_plugins_path), exist_ok=True)
+            with open(self.disabled_plugins_path, "w", encoding="utf-8") as file:
+                json.dump(normalized, file, indent=2, ensure_ascii=False)
+            self.disabled_plugins = set(normalized)
+        except (OSError, TypeError, ValueError):
+            logging.warning("Unable to save disabled plugin list", exc_info=True)
+
+    def plugin_path_key(self, filepath: str) -> str:
+        """Return the stable, portable key used in the disabled-plugin file."""
+        return os.path.relpath(filepath, self.plugin_dir).replace("\\", "/")
+
+    def is_plugin_disabled(self, filepath: str) -> bool:
+        """Return whether *filepath* is disabled in the current settings."""
+        return self.plugin_path_key(filepath) in self.disabled_plugins
 
     def open_plugin_folder(self) -> None:
         """Opens the plugin directory in the OS file explorer."""
@@ -237,6 +278,7 @@ class PluginManager:
             self.main_window = parent
 
         self.ensure_plugin_dir()
+        self.disabled_plugins = self._read_disabled_plugins()
         self.plugins = []
         # Clear registries
         self.menu_actions = []
@@ -276,7 +318,10 @@ class PluginManager:
                 # Module name is the folder name
                 module_name = os.path.basename(root)
 
-                self._load_single_plugin(entry_point, module_name, category)
+                if self.is_plugin_disabled(entry_point):
+                    self._register_disabled_plugin(entry_point, module_name, category)
+                else:
+                    self._load_single_plugin(entry_point, module_name, category)
 
             else:
                 # === Case 2: Category Folder (Load individual .py files) ===
@@ -290,9 +335,34 @@ class PluginManager:
                         entry_point = os.path.join(root, filename)
                         module_name = os.path.splitext(filename)[0]
 
-                        self._load_single_plugin(entry_point, module_name, category)
+                        if self.is_plugin_disabled(entry_point):
+                            self._register_disabled_plugin(
+                                entry_point, module_name, category
+                            )
+                        else:
+                            self._load_single_plugin(entry_point, module_name, category)
 
         return self.plugins
+
+    def _register_disabled_plugin(
+        self, filepath: str, module_name: str, category: str
+    ) -> None:
+        """Add a disabled plugin without importing or initializing its code."""
+        info = self.get_plugin_info_safe(filepath)
+        self.plugins.append(
+            {
+                "name": info.get("name", module_name),
+                "version": info.get("version", "Unknown"),
+                "author": info.get("author", "Unknown"),
+                "description": info.get("description", ""),
+                "module": None,
+                "category": category or info.get("category", ""),
+                "status": "Disabled",
+                "filepath": filepath,
+                "has_run": False,
+                "disabled": True,
+            }
+        )
 
     def _load_single_plugin(
         self, filepath: str, module_name: str, category: str

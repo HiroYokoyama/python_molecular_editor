@@ -428,7 +428,6 @@ class PluginMenuManager:
 
         dlg = PluginManagerWindow(self._im.host.plugin_manager, self._im.host)
         dlg.exec()
-        self.update_plugin_menu(plugin_menu)
 
     def _clear_all_plugin_actions(self) -> None:
         """Remove all tagged plugin actions from every menu and the export button.
