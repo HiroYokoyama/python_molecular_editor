@@ -492,4 +492,5 @@ def test_status_checkbox_preserves_status_colors(mock_plugin_manager, qtbot):
     qtbot.addWidget(window)
 
     assert "color: red" in window.table.cellWidget(1, 0).styleSheet()
+    assert "color: darkgreen" in window.table.cellWidget(0, 0).styleSheet()
     assert "color: gray" in window.table.cellWidget(2, 0).styleSheet()
