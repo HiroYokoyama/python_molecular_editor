@@ -7749,12 +7749,12 @@ _PluginManagerWindow initialises with correct title, row count, and status colou
 
 - assert window.windowTitle() == 'Plugin Manager'
 - assert window.table.rowCount() == 3
-- assert window.table.item(0, 0).text() == 'Loaded'
-- assert window.table.item(0, 0).foreground().color() == Qt.GlobalColor.darkGreen
-- assert window.table.item(1, 0).text() == 'Error'
-- assert window.table.item(1, 0).foreground().color() == Qt.GlobalColor.red
-- assert window.table.item(2, 0).text() == 'No Entry Point'
-- assert window.table.item(2, 0).foreground().color() == Qt.GlobalColor.gray
+- assert window.table.cellWidget(0, 0).text() == 'Loaded'
+- assert 'color: darkgreen' in window.table.cellWidget(0, 0).styleSheet()
+- assert window.table.cellWidget(1, 0).text() == 'Error'
+- assert 'color: red' in window.table.cellWidget(1, 0).styleSheet()
+- assert window.table.cellWidget(2, 0).text() == 'No Entry Point'
+- assert 'color: gray' in window.table.cellWidget(2, 0).styleSheet()
 - assert window.table.item(0, 4).text() == 'plugin1.py'
 - assert isinstance(window.table.cellWidget(0, 0), QCheckBox)
 - assert window.table.cellWidget(0, 0).isChecked()

@@ -55,7 +55,9 @@ class PluginManagerWindow(QDialog):
         """Build the plugin manager UI with table, buttons, and drag-and-drop support."""
         layout = QVBoxLayout(self)
 
-        lbl_info = QLabel("Drag & Drop .py or .zip files here to install plugins. Use the checkbox to enable/disable plugins.")
+        lbl_info = QLabel(
+            "Drag & Drop .py or .zip files here to install plugins. Use the checkbox to enable/disable plugins."
+        )
         lbl_info.setStyleSheet("color: gray; font-style: italic;")
         layout.addWidget(lbl_info)
 
