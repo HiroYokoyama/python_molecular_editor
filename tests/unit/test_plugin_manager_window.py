@@ -53,12 +53,12 @@ def test_init_and_refresh(mock_plugin_manager, qtbot):
     assert window.table.rowCount() == 3
 
     # Check rows are inserted with color correctly
-    assert window.table.item(0, 0).text() == "Loaded"
-    assert window.table.item(0, 0).foreground().color() == Qt.GlobalColor.darkGreen
-    assert window.table.item(1, 0).text() == "Error"
-    assert window.table.item(1, 0).foreground().color() == Qt.GlobalColor.red
-    assert window.table.item(2, 0).text() == "No Entry Point"
-    assert window.table.item(2, 0).foreground().color() == Qt.GlobalColor.gray
+    assert window.table.cellWidget(0, 0).text() == "Loaded"
+    assert "color: darkgreen" in window.table.cellWidget(0, 0).styleSheet()
+    assert window.table.cellWidget(1, 0).text() == "Error"
+    assert "color: red" in window.table.cellWidget(1, 0).styleSheet()
+    assert window.table.cellWidget(2, 0).text() == "No Entry Point"
+    assert "color: gray" in window.table.cellWidget(2, 0).styleSheet()
 
     # Check relative path resolution
     assert window.table.item(0, 4).text() == "plugin1.py"
