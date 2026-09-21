@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtCore import Qt, QMimeData
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QCheckBox, QMessageBox
 
 from moleditpy.plugins.plugin_manager_window import PluginManagerWindow
 
@@ -53,15 +53,28 @@ def test_init_and_refresh(mock_plugin_manager, qtbot):
     assert window.table.rowCount() == 3
 
     # Check rows are inserted with color correctly
-    assert window.table.item(0, 0).text() == "Loaded"
-    assert window.table.item(0, 0).foreground().color() == Qt.GlobalColor.darkGreen
-    assert window.table.item(1, 0).text() == "Error"
-    assert window.table.item(1, 0).foreground().color() == Qt.GlobalColor.red
-    assert window.table.item(2, 0).text() == "No Entry Point"
-    assert window.table.item(2, 0).foreground().color() == Qt.GlobalColor.gray
+    assert window.table.cellWidget(0, 0).text() == "Loaded"
+    assert "color: darkgreen" in window.table.cellWidget(0, 0).styleSheet()
+    assert window.table.cellWidget(1, 0).text() == "Error"
+    assert "color: red" in window.table.cellWidget(1, 0).styleSheet()
+    assert window.table.cellWidget(2, 0).text() == "No Entry Point"
+    assert "color: gray" in window.table.cellWidget(2, 0).styleSheet()
 
     # Check relative path resolution
     assert window.table.item(0, 4).text() == "plugin1.py"
+    assert isinstance(window.table.cellWidget(0, 0), QCheckBox)
+    assert window.table.cellWidget(0, 0).isChecked()
+
+
+def test_status_checkbox_is_horizontal_cell_widget(mock_plugin_manager, qtbot):
+    """The status toggle is an explicit widget instead of an item check indicator."""
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    checkbox = window.table.cellWidget(0, 0)
+    assert isinstance(checkbox, QCheckBox)
+    assert checkbox.text() == "Loaded"
+    assert checkbox.layoutDirection() == Qt.LayoutDirection.LeftToRight
 
 
 def test_refresh_relative_path_error(mock_plugin_manager, qtbot):
@@ -400,6 +413,7 @@ def test_drop_event_pure_folder(
 
 
 def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtbot):
+    """Persists disabled plugin paths and reloads only once when closing."""
     mock_plugin_manager.main_window = None
     mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
         "/", 1
@@ -407,7 +421,7 @@ def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtb
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.table.cellWidget(0, 0).setChecked(False)
     window.done(0)
     window.done(0)
 
@@ -417,6 +431,7 @@ def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtb
 
 
 def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, qtbot):
+    """Persists preferences and rebuilds plugin menus when closing."""
     mock_main_window = MagicMock()
     mock_plugin_manager.main_window = mock_main_window
     mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
@@ -425,7 +440,7 @@ def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, 
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.table.cellWidget(0, 0).setChecked(False)
     window.done(0)
 
     mock_plugin_manager.save_disabled_plugins.assert_called_once_with({"plugin1.py"})
@@ -434,6 +449,7 @@ def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, 
 
 
 def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
+    """Saves checkbox changes before reloading plugins without a main window."""
     mock_plugin_manager.main_window = None
     mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
         "/", 1
@@ -441,7 +457,7 @@ def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.table.cellWidget(0, 0).setChecked(False)
     window.on_reload(silent=True)
 
     mock_plugin_manager.save_disabled_plugins.assert_called_with({"plugin1.py"})
@@ -451,6 +467,7 @@ def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
 def test_on_reload_with_main_window_persists_and_rebuilds_menus(
     mock_plugin_manager, qtbot
 ):
+    """Saves checkbox changes and rebuilds menus during a main-window reload."""
     mock_main_window = MagicMock()
     mock_plugin_manager.main_window = mock_main_window
     mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
@@ -459,9 +476,21 @@ def test_on_reload_with_main_window_persists_and_rebuilds_menus(
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
+    window.table.cellWidget(0, 0).setChecked(False)
     window.on_reload(silent=True)
 
     mock_plugin_manager.save_disabled_plugins.assert_called_with({"plugin1.py"})
     mock_plugin_manager.discover_plugins.assert_called_with(mock_main_window)
     mock_plugin_manager.rebuild_plugin_menus.assert_called_with()
+
+
+def test_status_checkbox_preserves_status_colors(mock_plugin_manager, qtbot):
+    """Applies status colors to the visible checkbox text."""
+    mock_plugin_manager.plugins[1]["status"] = "Error"
+    mock_plugin_manager.plugins[2]["status"] = "Disabled"
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    assert "color: red" in window.table.cellWidget(1, 0).styleSheet()
+    assert "color: darkgreen" in window.table.cellWidget(0, 0).styleSheet()
+    assert "color: gray" in window.table.cellWidget(2, 0).styleSheet()

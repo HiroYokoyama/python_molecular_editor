@@ -8,6 +8,13 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [4.10.1] - 2026-09-21
+
+### Fixed
+* **macOS Plugin Manager layout**: Rendered plugin status toggles as explicit checkbox widgets so they remain horizontally aligned instead of stacking at the top of the table cell.
+
+---
+
 ## [4.10.0] - 2026-09-21
 
 ### Added
