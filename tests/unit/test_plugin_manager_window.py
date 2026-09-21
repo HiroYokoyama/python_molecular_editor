@@ -51,30 +51,33 @@ def test_init_and_refresh(mock_plugin_manager, qtbot):
 
     assert window.windowTitle() == "Plugin Manager"
     assert window.table.rowCount() == 3
+    assert window.table.columnCount() == 7
 
-    # Check rows are inserted with color correctly
-    assert window.table.cellWidget(0, 0).text() == "Loaded"
-    assert "color: darkgreen" in window.table.cellWidget(0, 0).styleSheet()
-    assert window.table.cellWidget(1, 0).text() == "Error"
-    assert "color: red" in window.table.cellWidget(1, 0).styleSheet()
-    assert window.table.cellWidget(2, 0).text() == "No Entry Point"
-    assert "color: gray" in window.table.cellWidget(2, 0).styleSheet()
+    # Check status column (index 1) colors
+    assert window.table.item(0, 1).text() == "Loaded"
+    assert window.table.item(0, 1).foreground().color() == Qt.GlobalColor.darkGreen
+    assert window.table.item(1, 1).text() == "Error"
+    assert window.table.item(1, 1).foreground().color() == Qt.GlobalColor.red
+    assert window.table.item(2, 1).text() == "No Entry Point"
+    assert window.table.item(2, 1).foreground().color() == Qt.GlobalColor.gray
 
-    # Check relative path resolution
-    assert window.table.item(0, 4).text() == "plugin1.py"
-    assert isinstance(window.table.cellWidget(0, 0), QCheckBox)
-    assert window.table.cellWidget(0, 0).isChecked()
+    # Check relative path resolution (column 5)
+    assert window.table.item(0, 5).text() == "plugin1.py"
+    # Column 0 is the Enabled checkbox
+    checkbox = window._status_checkbox(0)
+    assert isinstance(checkbox, QCheckBox)
+    assert checkbox.isChecked()
 
 
 def test_status_checkbox_is_horizontal_cell_widget(mock_plugin_manager, qtbot):
-    """The status toggle is an explicit widget instead of an item check indicator."""
+    """The status toggle is a clean centered QCheckBox in the Enabled column."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    checkbox = window.table.cellWidget(0, 0)
+    checkbox = window._status_checkbox(0)
     assert isinstance(checkbox, QCheckBox)
-    assert checkbox.text() == "Loaded"
-    assert checkbox.layoutDirection() == Qt.LayoutDirection.LeftToRight
+    assert checkbox.text() == ""
+    assert checkbox.toolTip() == "Enable or disable this plugin"
 
 
 def test_refresh_relative_path_error(mock_plugin_manager, qtbot):
@@ -84,7 +87,7 @@ def test_refresh_relative_path_error(mock_plugin_manager, qtbot):
     with patch("os.path.relpath", side_effect=ValueError):
         window = PluginManagerWindow(mock_plugin_manager)
         qtbot.addWidget(window)
-        assert window.table.item(0, 4).text() == "plugin3.py"
+        assert window.table.item(0, 5).text() == "plugin3.py"
 
 
 def test_update_button_state(mock_plugin_manager, qtbot):
@@ -421,7 +424,7 @@ def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtb
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.cellWidget(0, 0).setChecked(False)
+    window._status_checkbox(0).setChecked(False)
     window.done(0)
     window.done(0)
 
@@ -440,7 +443,7 @@ def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, 
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.cellWidget(0, 0).setChecked(False)
+    window._status_checkbox(0).setChecked(False)
     window.done(0)
 
     mock_plugin_manager.save_disabled_plugins.assert_called_once_with({"plugin1.py"})
@@ -457,7 +460,7 @@ def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.cellWidget(0, 0).setChecked(False)
+    window._status_checkbox(0).setChecked(False)
     window.on_reload(silent=True)
 
     mock_plugin_manager.save_disabled_plugins.assert_called_with({"plugin1.py"})
@@ -476,7 +479,7 @@ def test_on_reload_with_main_window_persists_and_rebuilds_menus(
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    window.table.cellWidget(0, 0).setChecked(False)
+    window._status_checkbox(0).setChecked(False)
     window.on_reload(silent=True)
 
     mock_plugin_manager.save_disabled_plugins.assert_called_with({"plugin1.py"})
@@ -484,13 +487,133 @@ def test_on_reload_with_main_window_persists_and_rebuilds_menus(
     mock_plugin_manager.rebuild_plugin_menus.assert_called_with()
 
 
-def test_status_checkbox_preserves_status_colors(mock_plugin_manager, qtbot):
-    """Applies status colors to the visible checkbox text."""
+def test_status_preserves_status_colors(mock_plugin_manager, qtbot):
+    """Applies status foreground colors to the status column item."""
     mock_plugin_manager.plugins[1]["status"] = "Error"
     mock_plugin_manager.plugins[2]["status"] = "Disabled"
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
-    assert "color: red" in window.table.cellWidget(1, 0).styleSheet()
-    assert "color: darkgreen" in window.table.cellWidget(0, 0).styleSheet()
-    assert "color: gray" in window.table.cellWidget(2, 0).styleSheet()
+    assert window.table.item(0, 1).foreground().color() == Qt.GlobalColor.darkGreen
+    assert window.table.item(1, 1).foreground().color() == Qt.GlobalColor.red
+    assert window.table.item(2, 1).foreground().color() == Qt.GlobalColor.gray
+
+
+def test_search_filter_by_name(mock_plugin_manager, qtbot):
+    """Typing in search box filters plugins by name."""
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    # Initially all 3 rows visible
+    assert not window.table.isRowHidden(0)
+    assert not window.table.isRowHidden(1)
+    assert not window.table.isRowHidden(2)
+
+    # Search for "Plugin 2"
+    window.search_input.setText("Plugin 2")
+    assert window.table.isRowHidden(0)
+    assert not window.table.isRowHidden(1)
+    assert window.table.isRowHidden(2)
+
+    # Clear search
+    window.search_input.setText("")
+    assert not window.table.isRowHidden(0)
+    assert not window.table.isRowHidden(1)
+    assert not window.table.isRowHidden(2)
+
+
+def test_search_filter_by_author_and_description(mock_plugin_manager, qtbot):
+    """Search box filters plugins by author or description."""
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    # Filter by Author C
+    window.search_input.setText("Author C")
+    assert window.table.isRowHidden(0)
+    assert window.table.isRowHidden(1)
+    assert not window.table.isRowHidden(2)
+
+    # Filter by description substring
+    window.search_input.setText("Desc 1")
+    assert not window.table.isRowHidden(0)
+    assert window.table.isRowHidden(1)
+    assert window.table.isRowHidden(2)
+
+
+def test_search_filter_by_location_and_status(mock_plugin_manager, qtbot):
+    """Search box filters plugins by location relative path or status."""
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    # Filter by status "Error"
+    window.search_input.setText("Error")
+    assert window.table.isRowHidden(0)
+    assert not window.table.isRowHidden(1)
+    assert window.table.isRowHidden(2)
+
+    # Filter by relative path part
+    window.search_input.setText("pkg_plugin")
+    assert window.table.isRowHidden(0)
+    assert window.table.isRowHidden(1)
+    assert not window.table.isRowHidden(2)
+
+
+def test_checkbox_toggle_and_save_with_search_filter(mock_plugin_manager, qtbot):
+    """Disabling a plugin while search filter is active persists correctly."""
+    mock_plugin_manager.main_window = None
+    mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
+        "/", 1
+    )[-1]
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    # Filter to only show Package Plugin (row 2)
+    window.search_input.setText("Package")
+    assert window.table.isRowHidden(0)
+    assert window.table.isRowHidden(1)
+    assert not window.table.isRowHidden(2)
+
+    # Uncheck row 2's enabled checkbox
+    checkbox = window._status_checkbox(2)
+    assert checkbox is not None
+    checkbox.setChecked(False)
+
+    # Done saves the disabled preference for the right plugin
+    window.done(0)
+    mock_plugin_manager.save_disabled_plugins.assert_called_once_with({"__init__.py"})
+
+
+@patch("moleditpy.plugins.plugin_manager_window.QMessageBox.information")
+def test_show_plugin_details_with_search_filter(mock_info, mock_plugin_manager, qtbot):
+    """Double-clicking a filtered row shows correct plugin metadata."""
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    window.search_input.setText("Plugin 2")
+    item = window.table.item(1, 0)
+    window.show_plugin_details(item)
+
+    mock_info.assert_called_once()
+    assert "Test Plugin 2" in mock_info.call_args[0][2]
+    assert "Author B" in mock_info.call_args[0][2]
+
+
+@patch("moleditpy.plugins.plugin_manager_window.QMessageBox.question")
+@patch("moleditpy.plugins.plugin_manager_window.QMessageBox.information")
+@patch("os.path.exists", return_value=True)
+@patch("os.remove")
+def test_on_remove_plugin_with_search_filter(
+    mock_remove, mock_exists, mock_info, mock_question, mock_plugin_manager, qtbot
+):
+    """Removing a plugin when filtered resolves the correct file path."""
+    mock_question.return_value = QMessageBox.StandardButton.Yes
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    # Filter to show only row 1
+    window.search_input.setText("Plugin 2")
+    window.table.selectRow(1)
+    window.on_remove_plugin()
+
+    mock_remove.assert_called_with("/fake/plugins/plugin2.py")
+    mock_info.assert_called()

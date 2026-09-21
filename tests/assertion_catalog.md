@@ -7749,27 +7749,28 @@ _PluginManagerWindow initialises with correct title, row count, and status colou
 
 - assert window.windowTitle() == 'Plugin Manager'
 - assert window.table.rowCount() == 3
-- assert window.table.cellWidget(0, 0).text() == 'Loaded'
-- assert 'color: darkgreen' in window.table.cellWidget(0, 0).styleSheet()
-- assert window.table.cellWidget(1, 0).text() == 'Error'
-- assert 'color: red' in window.table.cellWidget(1, 0).styleSheet()
-- assert window.table.cellWidget(2, 0).text() == 'No Entry Point'
-- assert 'color: gray' in window.table.cellWidget(2, 0).styleSheet()
-- assert window.table.item(0, 4).text() == 'plugin1.py'
-- assert isinstance(window.table.cellWidget(0, 0), QCheckBox)
-- assert window.table.cellWidget(0, 0).isChecked()
+- assert window.table.columnCount() == 7
+- assert window.table.item(0, 1).text() == 'Loaded'
+- assert window.table.item(0, 1).foreground().color() == Qt.GlobalColor.darkGreen
+- assert window.table.item(1, 1).text() == 'Error'
+- assert window.table.item(1, 1).foreground().color() == Qt.GlobalColor.red
+- assert window.table.item(2, 1).text() == 'No Entry Point'
+- assert window.table.item(2, 1).foreground().color() == Qt.GlobalColor.gray
+- assert window.table.item(0, 5).text() == 'plugin1.py'
+- assert isinstance(checkbox, QCheckBox)
+- assert checkbox.isChecked()
 
 ### test_status_checkbox_is_horizontal_cell_widget
-_The status toggle is an explicit widget instead of an item check indicator._
+_The status toggle is a clean centered QCheckBox in the Enabled column._
 
 - assert isinstance(checkbox, QCheckBox)
-- assert checkbox.text() == 'Loaded'
-- assert checkbox.layoutDirection() == Qt.LayoutDirection.LeftToRight
+- assert checkbox.text() == ''
+- assert checkbox.toolTip() == 'Enable or disable this plugin'
 
 ### test_refresh_relative_path_error
 _When os.path.relpath raises ValueError, the filepath column falls back to basename._
 
-- assert window.table.item(0, 4).text() == 'plugin3.py'
+- assert window.table.item(0, 5).text() == 'plugin3.py'
 
 ### test_update_button_state
 _Remove button is disabled initially and enabled after a row is selected._
@@ -7884,12 +7885,67 @@ _Saves checkbox changes and rebuilds menus during a main-window reload._
 - mock_plugin_manager.discover_plugins.assert_called_with(mock_main_window)
 - mock_plugin_manager.rebuild_plugin_menus.assert_called_with()
 
-### test_status_checkbox_preserves_status_colors
-_Applies status colors to the visible checkbox text._
+### test_status_preserves_status_colors
+_Applies status foreground colors to the status column item._
 
-- assert 'color: red' in window.table.cellWidget(1, 0).styleSheet()
-- assert 'color: darkgreen' in window.table.cellWidget(0, 0).styleSheet()
-- assert 'color: gray' in window.table.cellWidget(2, 0).styleSheet()
+- assert window.table.item(0, 1).foreground().color() == Qt.GlobalColor.darkGreen
+- assert window.table.item(1, 1).foreground().color() == Qt.GlobalColor.red
+- assert window.table.item(2, 1).foreground().color() == Qt.GlobalColor.gray
+
+### test_search_filter_by_name
+_Typing in search box filters plugins by name._
+
+- assert not window.table.isRowHidden(0)
+- assert not window.table.isRowHidden(1)
+- assert not window.table.isRowHidden(2)
+- assert window.table.isRowHidden(0)
+- assert not window.table.isRowHidden(1)
+- assert window.table.isRowHidden(2)
+- assert not window.table.isRowHidden(0)
+- assert not window.table.isRowHidden(1)
+- assert not window.table.isRowHidden(2)
+
+### test_search_filter_by_author_and_description
+_Search box filters plugins by author or description._
+
+- assert window.table.isRowHidden(0)
+- assert window.table.isRowHidden(1)
+- assert not window.table.isRowHidden(2)
+- assert not window.table.isRowHidden(0)
+- assert window.table.isRowHidden(1)
+- assert window.table.isRowHidden(2)
+
+### test_search_filter_by_location_and_status
+_Search box filters plugins by location relative path or status._
+
+- assert window.table.isRowHidden(0)
+- assert not window.table.isRowHidden(1)
+- assert window.table.isRowHidden(2)
+- assert window.table.isRowHidden(0)
+- assert window.table.isRowHidden(1)
+- assert not window.table.isRowHidden(2)
+
+### test_checkbox_toggle_and_save_with_search_filter
+_Disabling a plugin while search filter is active persists correctly._
+
+- assert window.table.isRowHidden(0)
+- assert window.table.isRowHidden(1)
+- assert not window.table.isRowHidden(2)
+- assert checkbox is not None
+- mock_plugin_manager.save_disabled_plugins.assert_called_once_with({'__init__.py'})
+
+### test_show_plugin_details_with_search_filter
+_Double-clicking a filtered row shows correct plugin metadata._
+
+- mock_info.assert_called_once()
+- assert 'Test Plugin 2' in mock_info.call_args[0][2]
+- assert 'Author B' in mock_info.call_args[0][2]
+
+### test_on_remove_plugin_with_search_filter
+_Removing a plugin when filtered resolves the correct file path._
+
+- mock_remove.assert_called_with('/fake/plugins/plugin2.py')
+- mock_info.assert_called()
 
 ## tests/unit/test_plugin_menu_manager.py
 

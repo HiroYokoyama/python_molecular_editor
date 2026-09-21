@@ -483,10 +483,11 @@ You can also reset all settings to defaults via `Settings` \> `Reset All Setting
 MoleditPy supports extending its functionality through Python scripts.
 
 ### 9.1. Plugin Management
-You can open the Plugin Manager via the menu Plugin \> Plugin Manager.... From here, you can view, reload, and remove installed plugins.
+You can open the Plugin Manager via the menu Plugin \> Plugin Manager.... From here, you can view, search, reload, enable/disable, and remove installed plugins.
 
-Each plugin row includes a checkbox in the **Status** column:
-* **Enabling / Disabling Plugins:** Uncheck a plugin's checkbox to disable it. Disabled plugins are displayed with a gray **Disabled** status and are not loaded or executed. Preferences are automatically saved in `~/.moleditpy/disabled_plugins.json` and applied when the dialog is closed or upon next application launch.
+* **Search Box:** A search input above the table lets you quickly filter plugins in real time by name, author, location/path, status, or description.
+* **Enabled Column Checkbox:** Each plugin row features an independent checkbox in the **Enabled** column. Uncheck a plugin's checkbox to disable it. Disabled plugins are shown with a gray **Disabled** status and are not loaded or executed. Preferences are automatically saved in `~/.moleditpy/disabled_plugins.json` and applied when the dialog is closed or upon next application launch.
+* **Status Column:** Displays colored status information (such as green **Loaded**, gray **Disabled**, gray **No Entry Point**, or red **Error**).
 
 ### 9.2. Installing Plugins
 * **Drag & Drop:** Open the Plugin Manager and drag & drop a `.py` or `.zip` file into the window to install it easily. During installation, the Plugin Manager will calculate and display the **SHA-256 hash** of the file so you can verify its integrity before confirming.
