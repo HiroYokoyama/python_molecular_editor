@@ -413,6 +413,7 @@ def test_drop_event_pure_folder(
 
 
 def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtbot):
+    """Persists disabled plugin paths and reloads only once when closing."""
     mock_plugin_manager.main_window = None
     mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
         "/", 1
@@ -430,6 +431,7 @@ def test_close_persists_disabled_paths_and_reloads_once(mock_plugin_manager, qtb
 
 
 def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, qtbot):
+    """Persists preferences and rebuilds plugin menus when closing."""
     mock_main_window = MagicMock()
     mock_plugin_manager.main_window = mock_main_window
     mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
@@ -447,6 +449,7 @@ def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, 
 
 
 def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
+    """Saves checkbox changes before reloading plugins without a main window."""
     mock_plugin_manager.main_window = None
     mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
         "/", 1
@@ -464,6 +467,7 @@ def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
 def test_on_reload_with_main_window_persists_and_rebuilds_menus(
     mock_plugin_manager, qtbot
 ):
+    """Saves checkbox changes and rebuilds menus during a main-window reload."""
     mock_main_window = MagicMock()
     mock_plugin_manager.main_window = mock_main_window
     mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
@@ -478,3 +482,14 @@ def test_on_reload_with_main_window_persists_and_rebuilds_menus(
     mock_plugin_manager.save_disabled_plugins.assert_called_with({"plugin1.py"})
     mock_plugin_manager.discover_plugins.assert_called_with(mock_main_window)
     mock_plugin_manager.rebuild_plugin_menus.assert_called_with()
+
+
+def test_status_checkbox_preserves_status_colors(mock_plugin_manager, qtbot):
+    """Applies status colors to the visible checkbox text."""
+    mock_plugin_manager.plugins[1]["status"] = "Error"
+    mock_plugin_manager.plugins[2]["status"] = "Disabled"
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    assert "color: red" in window.table.cellWidget(1, 0).styleSheet()
+    assert "color: gray" in window.table.cellWidget(2, 0).styleSheet()

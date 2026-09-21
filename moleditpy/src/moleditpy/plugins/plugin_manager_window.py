@@ -152,15 +152,22 @@ class PluginManagerWindow(QDialog):
             # Simple color coding for status
             status = str(p.get("status", ""))
             color = None
+            checkbox_color = None
             if status.startswith("Error"):
                 color = Qt.GlobalColor.red
+                checkbox_color = "red"
             elif status == "Loaded":
                 color = Qt.GlobalColor.darkGreen
+                checkbox_color = "darkgreen"
             elif status in ("No Entry Point", "Disabled"):
                 color = Qt.GlobalColor.gray
+                checkbox_color = "gray"
 
             if color:
                 self.table.item(row, 0).setForeground(color)
+                status_checkbox.setStyleSheet(
+                    f"QCheckBox {{ padding-left: 4px; color: {checkbox_color}; }}"
+                )
 
     def _status_checkbox(self, row: int) -> Optional[QCheckBox]:
         """Return the visible status checkbox for a plugin table row."""
