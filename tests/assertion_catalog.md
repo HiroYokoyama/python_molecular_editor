@@ -7756,6 +7756,15 @@ _PluginManagerWindow initialises with correct title, row count, and status colou
 - assert window.table.item(2, 0).text() == 'No Entry Point'
 - assert window.table.item(2, 0).foreground().color() == Qt.GlobalColor.gray
 - assert window.table.item(0, 4).text() == 'plugin1.py'
+- assert isinstance(window.table.cellWidget(0, 0), QCheckBox)
+- assert window.table.cellWidget(0, 0).isChecked()
+
+### test_status_checkbox_is_horizontal_cell_widget
+_The status toggle is an explicit widget instead of an item check indicator._
+
+- assert isinstance(checkbox, QCheckBox)
+- assert checkbox.text() == 'Loaded'
+- assert checkbox.layoutDirection() == Qt.LayoutDirection.LeftToRight
 
 ### test_refresh_relative_path_error
 _When os.path.relpath raises ValueError, the filepath column falls back to basename._
