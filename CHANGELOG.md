@@ -8,6 +8,15 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [4.10.2] - 2026-09-21
+
+### Added
+* **Plugin Manager Search Box**: Added real-time search filtering in the Plugin Manager to filter plugins dynamically by name, author, location/path, status, or description.
+* **Separated Enabled Column**: Separated the plugin enable/disable toggle from the Status column into a dedicated, cleanly centered "Enabled" column, restoring native OS checkbox styling (with a white checkmark inside) and distinct colored status labels.
+* **AGENTS.md**: Added `AGENTS.md` at the repository root redirecting to `CLAUDE.md`.
+
+---
+
 ## [4.10.1] - 2026-09-21
 
 ### Fixed
