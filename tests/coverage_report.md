@@ -1,6 +1,6 @@
 # MoleditPy Coverage Report
 
-- **Overall Project Coverage**: **90.11%**
+- **Overall Project Coverage**: **90.14%**
 
 ### Coverage Breakdown
 
@@ -12,7 +12,7 @@
 | moleditpy\src\moleditpy\core\molecular_data.py          |    284 |      0 |  100.0% |
 | moleditpy\src\moleditpy\plugins\plugin_interface.py     |    256 |      6 |   97.7% |
 | moleditpy\src\moleditpy\plugins\plugin_manager.py       |    443 |     11 |   97.5% |
-| moleditpy\src\moleditpy\plugins\plugin_manager_window.py |    273 |      6 |   97.8% |
+| moleditpy\src\moleditpy\plugins\plugin_manager_window.py |    273 |      2 |   99.3% |
 | moleditpy\src\moleditpy\ui\__init__.py                  |      7 |      3 |   57.1% |
 | moleditpy\src\moleditpy\ui\about_dialog.py              |     66 |     14 |   78.8% |
 | moleditpy\src\moleditpy\ui\align_plane_dialog.py        |    151 |     15 |   90.1% |
@@ -71,11 +71,11 @@
 | moleditpy\src\moleditpy\utils\sip_isdeleted_safe.py     |     19 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\suppress_log.py           |     10 |      0 |  100.0% |
 | moleditpy\src\moleditpy\utils\system_utils.py           |     40 |      0 |  100.0% |
-| **TOTAL** | **17510** | **1731** | **90.11%** |
+| **TOTAL** | **17510** | **1727** | **90.14%** |
 
 ## Test Suite Status
-- **Total tests passed**: 2374 (1 skipped)
-- **Unit tests**: PASSED (2149 passed)
+- **Total tests passed**: 2376 (1 skipped)
+- **Unit tests**: PASSED (2151 passed)
 - **Integration tests**: PASSED (105 passed)
 - **E2E tests**: PASSED (34 passed, 1 skipped)
 - **GUI tests**: PASSED (86 passed)

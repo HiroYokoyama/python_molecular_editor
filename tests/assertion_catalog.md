@@ -7947,6 +7947,20 @@ _Removing a plugin when filtered resolves the correct file path._
 - mock_remove.assert_called_with('/fake/plugins/plugin2.py')
 - mock_info.assert_called()
 
+### test_status_checkbox_direct_and_none
+__status_checkbox handles direct QCheckBox and missing/empty widgets._
+
+- assert window._status_checkbox(0) is direct_cb
+- assert window._status_checkbox(0) is None
+- assert window._status_checkbox(0) is None
+
+### test_plugin_for_row_boundary_conditions
+__plugin_for_row returns None for negative or out-of-range rows and index mappings._
+
+- assert window._plugin_for_row(-1) is None
+- assert window._plugin_for_row(999) is None
+- assert window._plugin_for_row(0) is None
+
 ## tests/unit/test_plugin_menu_manager.py
 
 ### TestConstruction.test_holds_init_manager_reference

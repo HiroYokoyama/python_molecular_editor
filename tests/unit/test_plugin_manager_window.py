@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtCore import Qt, QMimeData
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
-from PyQt6.QtWidgets import QCheckBox, QMessageBox
+from PyQt6.QtWidgets import QCheckBox, QMessageBox, QWidget
 
 from moleditpy.plugins.plugin_manager_window import PluginManagerWindow
 
@@ -617,3 +617,38 @@ def test_on_remove_plugin_with_search_filter(
 
     mock_remove.assert_called_with("/fake/plugins/plugin2.py")
     mock_info.assert_called()
+
+
+def test_status_checkbox_direct_and_none(mock_plugin_manager, qtbot):
+    """_status_checkbox handles direct QCheckBox and missing/empty widgets."""
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    # When a cell contains directly a QCheckBox (not wrapped in a QWidget container)
+    direct_cb = QCheckBox()
+    window.table.setCellWidget(0, 0, direct_cb)
+    assert window._status_checkbox(0) is direct_cb
+
+    # When a cell contains a QWidget with no QCheckBox child
+    empty_widget = QWidget()
+    window.table.setCellWidget(0, 0, empty_widget)
+    assert window._status_checkbox(0) is None
+
+    # When a cell widget is completely None
+    window.table.setCellWidget(0, 0, None)
+    assert window._status_checkbox(0) is None
+
+
+def test_plugin_for_row_boundary_conditions(mock_plugin_manager, qtbot):
+    """_plugin_for_row returns None for negative or out-of-range rows and index mappings."""
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    # Negative row or beyond rowCount
+    assert window._plugin_for_row(-1) is None
+    assert window._plugin_for_row(999) is None
+
+    # Item with data beyond plugin list length
+    item = window.table.item(0, 0)
+    item.setData(Qt.ItemDataRole.UserRole, 9999)
+    assert window._plugin_for_row(0) is None
