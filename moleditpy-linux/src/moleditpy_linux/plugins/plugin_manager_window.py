@@ -20,6 +20,7 @@ from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QDragEnterEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QDialog,
     QHBoxLayout,
     QHeaderView,
@@ -54,7 +55,9 @@ class PluginManagerWindow(QDialog):
         """Build the plugin manager UI with table, buttons, and drag-and-drop support."""
         layout = QVBoxLayout(self)
 
-        lbl_info = QLabel("Drag & Drop .py or .zip files here to install plugins.")
+        lbl_info = QLabel(
+            "Drag & Drop .py or .zip files here to install plugins. Use the checkbox to enable/disable plugins."
+        )
         lbl_info.setStyleSheet("color: gray; font-style: italic;")
         layout.addWidget(lbl_info)
 
@@ -74,6 +77,7 @@ class PluginManagerWindow(QDialog):
             5, QHeaderView.ResizeMode.Stretch
         )  # Description stretches
         self.table.setColumnWidth(1, 200)  # Make Name column wider
+        self.table.setColumnWidth(0, 120)  # Keep the status checkbox on one line
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.itemSelectionChanged.connect(self.update_button_state)
@@ -118,15 +122,17 @@ class PluginManagerWindow(QDialog):
 
         self.table.setRowCount(len(plugins))
         for row, p in enumerate(plugins):
-            status_item = QTableWidgetItem(str(p.get("status", "Unknown")))
-            status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            status_item.setFlags(status_item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            status_item.setCheckState(
-                Qt.CheckState.Unchecked
-                if p.get("disabled", False)
-                else Qt.CheckState.Checked
-            )
+            # Keep an empty item for row selection; the checkbox owns visible status text.
+            status_item = QTableWidgetItem()
             self.table.setItem(row, 0, status_item)
+
+            # Use an explicit widget so macOS keeps the checkbox and status text
+            # in a stable horizontal layout instead of stacking the item indicator.
+            status_checkbox = QCheckBox(str(p.get("status", "Unknown")))
+            status_checkbox.setChecked(not p.get("disabled", False))
+            status_checkbox.setToolTip("Enable or disable this plugin")
+            status_checkbox.setStyleSheet("QCheckBox { padding-left: 4px; }")
+            self.table.setCellWidget(row, 0, status_checkbox)
             self.table.setItem(row, 1, QTableWidgetItem(str(p.get("name", "Unknown"))))
             self.table.setItem(row, 2, QTableWidgetItem(str(p.get("version", ""))))
             self.table.setItem(row, 3, QTableWidgetItem(str(p.get("author", ""))))
@@ -148,25 +154,33 @@ class PluginManagerWindow(QDialog):
             # Simple color coding for status
             status = str(p.get("status", ""))
             color = None
+            checkbox_color = None
             if status.startswith("Error"):
                 color = Qt.GlobalColor.red
+                checkbox_color = "red"
             elif status == "Loaded":
                 color = Qt.GlobalColor.darkGreen
+                checkbox_color = "darkgreen"
             elif status in ("No Entry Point", "Disabled"):
                 color = Qt.GlobalColor.gray
+                checkbox_color = "gray"
 
             if color:
-                self.table.item(row, 0).setForeground(color)
+                status_checkbox.setStyleSheet(
+                    f"QCheckBox {{ padding-left: 4px; color: {checkbox_color}; }}"
+                )
+
+    def _status_checkbox(self, row: int) -> Optional[QCheckBox]:
+        """Return the visible status checkbox for a plugin table row."""
+        checkbox = self.table.cellWidget(row, 0)
+        return checkbox if isinstance(checkbox, QCheckBox) else None
 
     def _save_checkbox_preferences(self) -> set[str]:
         """Collect and persist checkbox choices."""
         disabled_paths = set()
         for row, plugin in enumerate(self.plugin_manager.plugins):
-            status_item = self.table.item(row, 0)
-            if (
-                status_item is not None
-                and status_item.checkState() == Qt.CheckState.Unchecked
-            ):
+            status_checkbox = self._status_checkbox(row)
+            if status_checkbox is not None and not status_checkbox.isChecked():
                 filepath = plugin.get("filepath")
                 if filepath:
                     disabled_paths.add(self.plugin_manager.plugin_path_key(filepath))

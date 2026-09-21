@@ -23,7 +23,7 @@ Note: As `pip` is not included in this package, plugins requiring external depen
 Please download the app bundle from the link below.
 The download will start upon clicking.
 
-[Download MoleditPy for macOS (Apple Silicon)](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.10.0/MoleditPy_4.10.0_macos_arm64.zip)
+[Download MoleditPy for macOS (Apple Silicon)](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.10.1/MoleditPy_4.10.1_macos_arm64.zip)
 
 ## Installation Steps
 
