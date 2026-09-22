@@ -1100,3 +1100,85 @@ class TestFlexibleEncodingAndBlockLoader:
         assert "M  END" in res_sdf
         assert "999 V2000" in res_sdf
         assert "SecondRecord" not in res_sdf
+
+    def _one_atom_record(self, title="Test"):
+        return (
+            title
+            + chr(10)
+            + "  MoleditPy"
+            + chr(10)
+            + chr(10)
+            + "  1  0  0  0  0  0  0  0  0  0999 V2000"
+            + chr(10)
+            + "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0"
+            + chr(10)
+            + "M  END"
+            + chr(10)
+        )
+
+    def test_sdf_data_fields_survive_the_import(self, tmp_path):
+        """An SDF's data fields must reach the molecule, not be dropped.
+
+        Reading an SDF as a bare MOL block parses the atoms but silently
+        discards every "> <TAG>" field the record carries.
+        """
+        io = IOManager(DummyHost())
+        sdf = tmp_path / "tagged.sdf"
+        sdf.write_text(
+            self._one_atom_record("First")
+            + "> <NAME>"
+            + chr(10)
+            + "Methane"
+            + chr(10)
+            + chr(10)
+            + "> <MW>"
+            + chr(10)
+            + "16.04"
+            + chr(10)
+            + chr(10)
+            + "$$$$"
+            + chr(10)
+            + self._one_atom_record("Second")
+            + "$$$$"
+            + chr(10),
+            encoding="utf-8",
+        )
+
+        mol = io._read_mol_or_sdf(str(sdf))
+
+        assert mol is not None
+        assert mol.GetProp("_Name") == "First"
+        assert mol.GetPropsAsDict()["NAME"] == "Methane"
+        assert mol.GetPropsAsDict()["MW"] == 16.04
+
+    def test_sdf_data_fields_survive_a_cp932_file(self, tmp_path):
+        """Data fields and non-UTF-8 encoding must work together, not one or the other."""
+        io = IOManager(DummyHost())
+        sdf = tmp_path / "jp.sdf"
+        sdf.write_bytes(
+            (
+                self._one_atom_record()
+                + "> <"
+                + "備考"
+                + ">"
+                + chr(10)
+                + "メタン"
+                + chr(10)
+                + chr(10)
+                + "$$$$"
+                + chr(10)
+            ).encode("cp932")
+        )
+
+        mol = io._read_mol_or_sdf(str(sdf))
+
+        assert mol is not None
+        assert mol.GetPropsAsDict()["備考"] == "メタン"
+
+    def test_unreadable_sdf_falls_back_without_raising(self, tmp_path):
+        """A record the SD supplier rejects returns None rather than propagating."""
+        io = IOManager(DummyHost())
+        sdf = tmp_path / "junk.sdf"
+        sdf.write_text("not a molecule at all" + chr(10), encoding="utf-8")
+
+        assert io._read_mol_or_sdf(str(sdf)) is None

@@ -33,6 +33,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from io import BytesIO
+
 from rdkit import Chem
 from rdkit.Chem import (
     Descriptors,
@@ -142,6 +144,29 @@ class IOManager:
         if file_path.lower().endswith(".sdf"):
             raw = self._first_sdf_record(raw)
         return self.fix_mol_block(raw)
+
+    def _read_mol_or_sdf(self, file_path: str) -> Optional[Chem.Mol]:
+        """Read the molecule from a .mol or .sdf file, whatever its encoding.
+
+        An SDF goes through ForwardSDMolSupplier over the already-decoded text
+        re-encoded as UTF-8, so the record's data fields (``> <NAME>`` and the
+        rest) survive onto the molecule -- reading it as a bare MOL block
+        silently drops every one of them. ForwardSDMolSupplier takes a binary
+        stream rather than a path, which is what lets the encoding fallbacks in
+        _read_text_lines_flexible apply; Chem.SDMolSupplier(path) reads the file
+        itself and mishandles CP932/Shift-JIS. MolFromMolBlock on the first
+        record remains the fallback for an SDF the supplier rejects.
+        """
+        if file_path.lower().endswith(".sdf"):
+            raw = "".join(self._read_text_lines_flexible(file_path))
+            stream = BytesIO(self.fix_mol_block(raw).encode("utf-8"))
+            supplier = Chem.ForwardSDMolSupplier(stream, removeHs=False)
+            mol = next(supplier, None)
+            if mol is not None:
+                return mol
+        return Chem.MolFromMolBlock(
+            self._load_mol_block_text(file_path), sanitize=True, removeHs=False
+        )
 
     @staticmethod
     def _read_text_lines_flexible(file_path: str) -> list[str]:
@@ -839,13 +864,10 @@ class IOManager:
             return
 
         try:
-            fixed_block = self._load_mol_block_text(file_path)
-            # MolFromMolBlock can come back empty on a malformed file; the
-            # stub does not say so, hence the explicit declaration. The None
-            # check below covers that.
-            mol: Optional[Chem.Mol] = Chem.MolFromMolBlock(
-                fixed_block, sanitize=True, removeHs=False
-            )
+            # Both readers can come back empty on a malformed file; the stubs
+            # do not say so, hence the explicit declaration. The None check
+            # below covers that.
+            mol: Optional[Chem.Mol] = self._read_mol_or_sdf(file_path)
 
             if mol is None:
                 raise ValueError("Failed to read molecule from file.")
@@ -1047,8 +1069,7 @@ class IOManager:
             if not file_path:
                 return
         try:
-            fixed_block = self._load_mol_block_text(file_path)
-            mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
+            mol = self._read_mol_or_sdf(file_path)
 
             if mol is None:
                 raise ValueError("Failed to load molecule.")

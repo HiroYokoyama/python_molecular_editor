@@ -348,17 +348,12 @@ class PluginManager:
         self, filepath: str, module_name: str, category: str
     ) -> None:
         """Add a disabled plugin without importing or initializing its code."""
-        info = self.get_plugin_info_safe(filepath)
-        # get_plugin_info_safe always seeds "name" with the file's basename, so
-        # its own fallback never fires. Mirror the loaded path, which falls back
-        # to the module name: otherwise every disabled package plugin lists --
-        # and is searched for -- as "__init__.py".
-        name = info.get("name") or ""
-        if name == os.path.basename(filepath):
-            name = module_name
+        # module_name as the fallback mirrors _load_single_plugin's
+        # getattr(module, "PLUGIN_NAME", module_name).
+        info = self.get_plugin_info_safe(filepath, fallback_name=module_name)
         self.plugins.append(
             {
-                "name": name,
+                "name": info["name"],
                 "version": info.get("version", "Unknown"),
                 "author": info.get("author", "Unknown"),
                 "description": info.get("description", ""),
@@ -807,10 +802,18 @@ class PluginManager:
             logging.debug("Suppressed non-critical error", exc_info=True)
         return False
 
-    def get_plugin_info_safe(self, file_path: str) -> Dict[str, str]:
-        """Extracts plugin metadata using AST parsing (safe, no execution)."""
+    def get_plugin_info_safe(
+        self, file_path: str, fallback_name: Optional[str] = None
+    ) -> Dict[str, str]:
+        """Extracts plugin metadata using AST parsing (safe, no execution).
+
+        ``fallback_name`` is what "name" holds when the file declares no
+        PLUGIN_NAME. It defaults to the file's basename, which is wrong for a
+        package plugin -- every one of those would be presented as
+        "__init__.py" -- so callers holding a better name should pass it.
+        """
         info = {
-            "name": os.path.basename(file_path),
+            "name": fallback_name or os.path.basename(file_path),
             "version": "Unknown",
             "author": "Unknown",
             "description": "",
