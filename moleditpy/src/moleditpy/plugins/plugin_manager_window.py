@@ -254,6 +254,22 @@ class PluginManagerWindow(QDialog):
             )
             self.table.setRowHidden(row, not match)
 
+        self._drop_hidden_selection()
+
+    def _drop_hidden_selection(self) -> None:
+        """Clear the selection when the filter hides the row it points at.
+
+        Qt keeps the current row current even once it is hidden, so Remove
+        Plugin stayed armed and aimed at a plugin the filtered list no longer
+        shows -- the confirmation named it, but the user was looking at a
+        different row.
+        """
+        row = self.table.currentRow()
+        if row >= 0 and self.table.isRowHidden(row):
+            self.table.clearSelection()
+            self.table.setCurrentCell(-1, -1)
+            self.update_button_state()
+
     def _status_checkbox(self, row: int) -> Optional[QCheckBox]:
         """Return the visible status checkbox for a plugin table row."""
         container = self.table.cellWidget(row, 0)

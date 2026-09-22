@@ -471,6 +471,26 @@ def test_close_hides_the_dialog_before_rediscovering(mock_plugin_manager, qtbot)
     assert visible_during_discovery == [False]
 
 
+def test_filtering_disarms_remove_for_a_hidden_selection(mock_plugin_manager, qtbot):
+    """Remove Plugin must not stay aimed at a row the search box has hidden.
+
+    Qt keeps a hidden row current, so filtering to another plugin used to leave
+    the button armed against the one no longer on screen.
+    """
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    window.table.selectRow(0)
+    assert window.btn_remove.isEnabled()
+
+    window.search_input.setText("Test Plugin 2")
+
+    assert window.table.isRowHidden(0)
+    assert window.table.currentRow() == -1
+    assert not window.btn_remove.isEnabled()
+    assert window._plugin_for_row(window.table.currentRow()) is None
+
+
 def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
     """Saves checkbox changes before reloading plugins without a main window."""
     mock_plugin_manager.main_window = None
