@@ -6,6 +6,9 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+* **CP932 gaiji decoding**: Preserve F0-lead CP932 private-use gaiji characters instead of replacing them with a later CP1252 decoding.
+
 ---
 
 ## [4.10.3] - 2026-09-22

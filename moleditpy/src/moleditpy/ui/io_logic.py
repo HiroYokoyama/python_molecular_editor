@@ -180,18 +180,25 @@ class IOManager:
         # (mojibake) characters instead of raising, so trying cp932 first
         # would never let euc_jp text reach its correct decoding.
         mojibake: Optional[List[str]] = None
+        cp932_gaiji: Optional[List[str]] = None
         for encoding in ("utf-8-sig", "euc_jp", "cp932", "shift_jis", "cp1252"):
             try:
                 with open(file_path, "r", encoding=encoding) as f:
                     lines = f.readlines()
             except UnicodeDecodeError:
                 continue
-            # A wrong codec lands bytes in the private-use area; a real comment
-            # does not. Keep looking, but remember this in case nothing is clean
-            # -- a cp932 file using gaiji decodes correctly and lands there too.
+            # A wrong codec can land bytes in the private-use area. Keep looking,
+            # but preserve CP932's F0-lead gaiji range: CP1252 can otherwise
+            # decode bytes such as F0 40 cleanly while losing U+E000.
             if any(unicodedata.category(ch) == "Co" for line in lines for ch in line):
+                if encoding == "cp932" and any(
+                    "\ue000" <= ch <= "\ue0bb" for line in lines for ch in line
+                ):
+                    cp932_gaiji = lines
                 mojibake = mojibake if mojibake is not None else lines
                 continue
+            if encoding == "cp1252" and cp932_gaiji is not None:
+                return cp932_gaiji
             return lines
         if mojibake is not None:
             return mojibake

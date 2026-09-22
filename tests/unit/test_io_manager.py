@@ -13,6 +13,7 @@ Follows the same conventions as test_edit_actions_extended.py:
 
 import os
 import sys
+from pathlib import Path
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -1084,8 +1085,8 @@ class TestFlexibleEncodingAndBlockLoader:
         ],
     )
     def test_western_comments_survive_alongside_japanese_ones(
-        self, tmp_path, text, encoding
-    ):
+        self, tmp_path: Path, text: str, encoding: str
+    ) -> None:
         """A Western-encoded comment must not be read as Japanese, or vice versa.
 
         "1.09 Å (Angström)" is the case that needs the private-use check: those
@@ -1096,6 +1097,13 @@ class TestFlexibleEncodingAndBlockLoader:
         path.write_bytes(("2\n" + text + "\nC 0 0 0\nH 1 0 0\n").encode(encoding))
 
         assert IOManager._read_text_lines_flexible(str(path))[1].rstrip("\n") == text
+
+    def test_cp932_gaiji_comment_remains_authoritative(self, tmp_path: Path) -> None:
+        """CP932 gaiji bytes must not be replaced by a clean CP1252 decoding."""
+        path = tmp_path / "gaiji.xyz"
+        path.write_bytes(b"2\n\xf0\x40\nC 0 0 0\nH 1 0 0\n")
+
+        assert IOManager._read_text_lines_flexible(str(path))[1] == "\ue000\n"
 
     def test_load_mol_block_text_mol_and_sdf(self, tmp_path):
         """_load_mol_block_text reads and fixes V2000 counts line for both .mol and .sdf."""
