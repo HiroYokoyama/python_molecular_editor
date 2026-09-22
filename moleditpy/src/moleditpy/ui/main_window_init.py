@@ -681,8 +681,9 @@ class MainInitManager:
         left_buttons_layout.addWidget(self.cleanup_button)
 
         self.convert_button = QPushButton("Convert 2D to 3D")
+        # Wrapped: clicked(bool) would otherwise arrive as conversion_mode.
         self.convert_button.clicked.connect(
-            self.host.compute_manager.trigger_conversion
+            lambda: self.host.compute_manager.trigger_conversion()
         )
         # Allow right-click to open a temporary conversion-mode menu
         try:
@@ -726,7 +727,7 @@ class MainInitManager:
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
         self.optimize_3d_button.clicked.connect(
-            self.host.compute_manager.optimize_3d_structure
+            lambda: self.host.compute_manager.optimize_3d_structure()
         )
         self.optimize_3d_button.setEnabled(False)
         # Initialized via _enable_3d_features(False)

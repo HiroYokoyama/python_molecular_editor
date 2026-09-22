@@ -449,3 +449,36 @@ class TestPluginConversionPreOptimize:
 
         cb.assert_called_once_with(mol)
         assert run_id not in compute._pending_plugin_opt
+
+
+class TestConvertButtonDoesNotLeakClickedArg:
+    """The Convert button's clicked(bool) must not arrive as conversion_mode."""
+
+    def test_button_click_consumes_the_pending_mode(self, host):
+        """A click must take the pending-mode branch, exactly as a bare call does.
+
+        Connected straight to the method, clicked(False) binds to
+        conversion_mode, so `if conversion_mode is None` is skipped: the
+        plugin-set mode is neither used nor cleared, and it survives into the
+        next conversion.
+        """
+        from PyQt6.QtWidgets import QPushButton
+
+        host.init_manager.convert_button = QPushButton()
+        host.init_manager.optimize_3d_button = QPushButton()
+        compute = ComputeManager(host)
+        compute._pending_conversion_mode = "rdkit"
+
+        seen = {}
+
+        def _capture(_self, conversion_mode=None, optimization_method=None):
+            seen["mode"] = conversion_mode
+            if conversion_mode is None:
+                seen["pending"] = compute.__dict__.pop("_pending_conversion_mode", None)
+
+        with patch.object(ComputeManager, "trigger_conversion", _capture):
+            compute._restore_button_ui()
+            host.init_manager.convert_button.click()
+
+        assert seen["mode"] is None
+        assert seen["pending"] == "rdkit"
