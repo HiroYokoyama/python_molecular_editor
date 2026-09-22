@@ -10,8 +10,12 @@
 # still clean:
 #     pip install -r requirements-lint.txt
 #     mypy && ruff check moleditpy/src/moleditpy/ && pylint moleditpy/src/moleditpy/ --errors-only
+#     flake8 moleditpy/src/ --select=F
 
 mypy==2.3.1
 ruff==0.16.8
 pylint==4.0.8
+# CONTRIBUTING.md and the PR checklist ask contributors to run this, so CI
+# runs the same command. Its pyflakes checks overlap ruff's F rules.
+flake8==7.3.0
 
