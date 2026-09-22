@@ -61,9 +61,10 @@ class TestPluginInterface:
             ),
             (
                 lambda ctx, cb: ctx.register_optimization_method("My Opt", cb),
-                lambda mgr,
-                cb: mgr.register_optimization_method.assert_called_once_with(
-                    "TestPlugin", "My Opt", cb
+                lambda mgr, cb: (
+                    mgr.register_optimization_method.assert_called_once_with(
+                        "TestPlugin", "My Opt", cb
+                    )
                 ),
             ),
             (
@@ -98,9 +99,10 @@ class TestPluginInterface:
             ),
             (
                 lambda ctx, cb: ctx.register_document_reset_handler(cb),
-                lambda mgr,
-                cb: mgr.register_document_reset_handler.assert_called_once_with(
-                    "TestPlugin", cb
+                lambda mgr, cb: (
+                    mgr.register_document_reset_handler.assert_called_once_with(
+                        "TestPlugin", cb
+                    )
                 ),
             ),
             (
