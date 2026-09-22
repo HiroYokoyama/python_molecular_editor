@@ -91,7 +91,7 @@ All code changes go inside `moleditpy/` only. Never edit `moleditpy-linux/` — 
 
 - Pylint > 9.0/10, PEP 8
 - Type hints required for all functions and methods
-- **Full Application coverage around 80%** (tracked in `tests/coverage_report.md`)
+- **Full Application coverage around 80%** (tracked on [Codecov](https://codecov.io/gh/HiroYokoyama/python_molecular_editor); `tests/coverage_report.md` is generated locally and not committed)
 - All new public methods in `plugins/` must have tests
 - Error handling: use `logging.exception()` or `logging.error()` in `except` blocks — never `print`, never bare `pass`
 - No unnecessary comments — only add comments where logic is genuinely non-obvious

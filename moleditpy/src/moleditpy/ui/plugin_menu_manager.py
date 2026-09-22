@@ -462,8 +462,9 @@ class PluginMenuManager:
                     action = QAction(style_name, self._im.host)
                     action.setCheckable(True)
                     action.triggered.connect(
-                        lambda checked=False,
-                        s=style_name: self._im.host.view_3d_manager.set_3d_style(s)
+                        lambda checked=False, s=style_name: (
+                            self._im.host.view_3d_manager.set_3d_style(s)
+                        )
                     )
                     action.setData(self._PLUGIN_ACTION_TAG)
                     style_menu.addAction(action)
@@ -528,9 +529,8 @@ class PluginMenuManager:
             for p in sorted(categorized[cat], key=lambda x: x["name"]):
                 a = QAction(p["name"], self._im.host)
                 a.triggered.connect(
-                    lambda checked,
-                    mod=p["module"]: self._im.host.plugin_manager.run_plugin(
-                        mod, self._im.host
+                    lambda checked, mod=p["module"]: (
+                        self._im.host.plugin_manager.run_plugin(mod, self._im.host)
                     )
                 )
                 current_parent.addAction(a)
@@ -538,9 +538,8 @@ class PluginMenuManager:
         for p in sorted(root, key=lambda x: x["name"]):
             a = QAction(p["name"], self._im.host)
             a.triggered.connect(
-                lambda checked,
-                mod=p["module"]: self._im.host.plugin_manager.run_plugin(
-                    mod, self._im.host
+                lambda checked, mod=p["module"]: (
+                    self._im.host.plugin_manager.run_plugin(mod, self._im.host)
                 )
             )
             plugin_menu.addAction(a)

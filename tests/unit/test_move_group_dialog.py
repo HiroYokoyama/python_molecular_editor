@@ -247,7 +247,7 @@ class TestApplyTranslation:
     def test_no_group_shows_warning(self, make_dialog):
         """apply_translation shows a warning when no group is selected."""
         dlg, _, _ = make_dialog()
-        with patch("moleditpy.ui.move_group_dialog.QMessageBox") as mb:
+        with patch("moleditpy.ui.move_dialog_mixin.QMessageBox") as mb:
             dlg.apply_translation()
         mb.warning.assert_called_once()
 
@@ -256,7 +256,7 @@ class TestApplyTranslation:
         dlg, _, _ = make_dialog()
         self._pick_all(dlg)
         dlg.x_trans_input.setText("bad")
-        with patch("moleditpy.ui.move_group_dialog.QMessageBox") as mb:
+        with patch("moleditpy.ui.move_dialog_mixin.QMessageBox") as mb:
             dlg.apply_translation()
         mb.warning.assert_called_once()
 
@@ -309,7 +309,7 @@ class TestApplyRotation:
     def test_no_group_shows_warning(self, make_dialog):
         """apply_rotation shows a warning when no group is selected."""
         dlg, _, _ = make_dialog()
-        with patch("moleditpy.ui.move_group_dialog.QMessageBox") as mb:
+        with patch("moleditpy.ui.move_dialog_mixin.QMessageBox") as mb:
             dlg.apply_rotation()
         mb.warning.assert_called_once()
 
@@ -318,7 +318,7 @@ class TestApplyRotation:
         dlg, _, _ = make_dialog()
         self._pick_all(dlg)
         dlg.x_rot_input.setText("not_a_number")
-        with patch("moleditpy.ui.move_group_dialog.QMessageBox") as mb:
+        with patch("moleditpy.ui.move_dialog_mixin.QMessageBox") as mb:
             dlg.apply_rotation()
         mb.warning.assert_called_once()
 
@@ -476,7 +476,7 @@ def test_show_atom_labels_camera_restore(qapp):
     dlg.group_atoms.add(0)
 
     with (
-        patch("moleditpy.ui.move_group_dialog.pv") as mock_pv,
+        patch("moleditpy.ui.move_dialog_mixin.pv") as mock_pv,
         patch.object(dlg, "clear_atom_labels") as mock_clear,
     ):
         mock_pd = MagicMock()
@@ -510,7 +510,7 @@ class TestInit:
 
         mol = _ethane()
         mw = _make_main_window(mol)
-        with patch("moleditpy.ui.move_group_dialog.pv", MagicMock()):
+        with patch("moleditpy.ui.move_dialog_mixin.pv", MagicMock()):
             dlg = MoveGroupDialog(mol, mw, preselected_atoms=[0])
         assert len(dlg.group_atoms) == mol.GetNumAtoms()
         assert dlg.selected_atoms == {0}
@@ -524,7 +524,7 @@ class TestInit:
 
         mol = _ethane()
         mw = _make_main_window(mol)
-        with patch("moleditpy.ui.move_group_dialog.pv", MagicMock()):
+        with patch("moleditpy.ui.move_dialog_mixin.pv", MagicMock()):
             dlg = MoveGroupDialog(mol, mw, preselected_atoms=[0])
         assert mw.view_3d_manager.plotter.add_mesh.called
         dlg.picking_enabled = False

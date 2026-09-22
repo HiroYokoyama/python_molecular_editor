@@ -460,8 +460,8 @@ class TestDihedralDialogPicking:
     def test_sequential_picking(self, dihedral_dlg):
         """Four sequential picks fill all four atom indices in order."""
         dlg, *_ = dihedral_dlg
-        for i, (attr, expected) in enumerate(
-            zip(["atom1_idx", "atom2_idx", "atom3_idx", "atom4_idx"], [2, 0, 1, 5])
+        for attr, expected in zip(
+            ["atom1_idx", "atom2_idx", "atom3_idx", "atom4_idx"], [2, 0, 1, 5]
         ):
             dlg.on_atom_picked(expected)
             assert getattr(dlg, attr) == expected

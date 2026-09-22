@@ -51,9 +51,9 @@ def _scene(host):
     return scene
 
 
-def _event(pos=QPointF(100, 100), button=Qt.MouseButton.LeftButton):
+def _event(pos=None, button=Qt.MouseButton.LeftButton):
     ev = MagicMock()
-    ev.scenePos.return_value = pos
+    ev.scenePos.return_value = QPointF(100, 100) if pos is None else pos
     ev.button.return_value = button
     return ev
 
@@ -655,7 +655,8 @@ class TestLeaveEvent:
 # ---------------------------------------------------------------------------
 
 
-def _rclick(pos=QPointF(10, 10)):
+def _rclick(pos=None):
+    pos = QPointF(10, 10) if pos is None else pos
     return _event(pos=pos, button=Qt.MouseButton.RightButton)
 
 

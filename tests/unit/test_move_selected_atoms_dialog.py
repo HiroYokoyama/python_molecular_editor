@@ -132,7 +132,7 @@ class TestApplyTranslation:
     def test_no_atoms_shows_warning(self, make_dialog):
         """apply_translation shows a warning when no atoms are selected."""
         dlg, _, _ = make_dialog()
-        with patch("moleditpy.ui.move_selected_atoms_dialog.QMessageBox") as mb:
+        with patch("moleditpy.ui.move_dialog_mixin.QMessageBox") as mb:
             dlg.apply_translation()
         mb.warning.assert_called_once()
 
@@ -141,7 +141,7 @@ class TestApplyTranslation:
         dlg, _, _ = make_dialog()
         dlg.selected_atoms.add(0)
         dlg.x_trans_input.setText("bad")
-        with patch("moleditpy.ui.move_selected_atoms_dialog.QMessageBox") as mb:
+        with patch("moleditpy.ui.move_dialog_mixin.QMessageBox") as mb:
             dlg.apply_translation()
         mb.warning.assert_called_once()
 
@@ -177,7 +177,7 @@ class TestApplyRotation:
     def test_no_atoms_shows_warning(self, make_dialog):
         """apply_rotation shows a warning when no atoms are selected."""
         dlg, _, _ = make_dialog()
-        with patch("moleditpy.ui.move_selected_atoms_dialog.QMessageBox") as mb:
+        with patch("moleditpy.ui.move_dialog_mixin.QMessageBox") as mb:
             dlg.apply_rotation()
         mb.warning.assert_called_once()
 
@@ -186,7 +186,7 @@ class TestApplyRotation:
         dlg, _, _ = make_dialog()
         dlg.selected_atoms.add(0)
         dlg.x_rot_input.setText("not_a_number")
-        with patch("moleditpy.ui.move_selected_atoms_dialog.QMessageBox") as mb:
+        with patch("moleditpy.ui.move_dialog_mixin.QMessageBox") as mb:
             dlg.apply_rotation()
         mb.warning.assert_called_once()
 
@@ -318,7 +318,7 @@ def test_show_and_clear_atom_labels(make_dialog):
 
     dlg.selected_atoms.update([0, 1])
 
-    with patch("moleditpy.ui.move_selected_atoms_dialog.pv") as mock_pv:
+    with patch("moleditpy.ui.move_dialog_mixin.pv") as mock_pv:
         mock_pd = MagicMock()
         mock_pv.PolyData.return_value = mock_pd
         mock_pd.glyph.return_value = MagicMock()
@@ -748,7 +748,7 @@ def test_show_atom_labels_camera_restore(qapp):
     dlg.selected_atoms.add(0)
 
     with (
-        patch("moleditpy.ui.move_selected_atoms_dialog.pv") as mock_pv,
+        patch("moleditpy.ui.move_dialog_mixin.pv") as mock_pv,
         patch.object(dlg, "clear_atom_labels") as mock_clear,
     ):
         mock_pd = MagicMock()

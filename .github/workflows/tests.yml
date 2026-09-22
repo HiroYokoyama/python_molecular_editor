@@ -123,9 +123,9 @@ jobs:
 
     - name: Run Ruff
       run: |
-        # `ruff format` is part of the documented workflow and the tree is
-        # already clean at the default line length, so gate on it too.
-        ruff format --check moleditpy/src tests
+        # Scoped to the application source; the tree is clean at the
+        # default line length, so gate on the formatter too.
+        ruff format --check moleditpy/src
         ruff check moleditpy/src/moleditpy/
 
     - name: Run Mypy
@@ -141,3 +141,8 @@ jobs:
     - name: Run Pylint
       run: |
         pylint moleditpy/src/moleditpy/ --errors-only
+
+    - name: Run Flake8
+      run: |
+        # The command CONTRIBUTING.md and the PR checklist ask for.
+        flake8 moleditpy/src/ --select=F

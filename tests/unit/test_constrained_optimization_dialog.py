@@ -672,10 +672,8 @@ class TestCancelAndUndoIntegrity:
         dlg.main_window.edit_3d_manager.constraints_3d = []
 
         seen_at_push = []
-        dlg.main_window.edit_actions_manager.push_undo_state.side_effect = (
-            lambda: seen_at_push.append(
-                list(dlg.main_window.edit_3d_manager.constraints_3d)
-            )
+        dlg.main_window.edit_actions_manager.push_undo_state.side_effect = lambda: (
+            seen_at_push.append(list(dlg.main_window.edit_3d_manager.constraints_3d))
         )
 
         mock_conf = MagicMock()

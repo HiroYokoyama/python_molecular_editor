@@ -115,7 +115,8 @@ class PluginManagerWindow(QDialog):
         btn_layout = QHBoxLayout()
 
         btn_reload = QPushButton("Reload Plugins")
-        btn_reload.clicked.connect(self.on_reload)
+        # Not connect(self.on_reload): clicked(bool) would land in *silent*.
+        btn_reload.clicked.connect(lambda: self.on_reload())
         btn_layout.addWidget(btn_reload)
 
         btn_folder = QPushButton("Open Plugin Folder")
@@ -144,8 +145,8 @@ class PluginManagerWindow(QDialog):
 
     def _create_checkbox_container(
         self, checked: bool, tooltip: str = "Enable or disable this plugin"
-    ) -> tuple[QWidget, QCheckBox]:
-        """Create a centered QCheckBox container widget without custom stylesheets."""
+    ) -> QWidget:
+        """Create a centered QCheckBox container; read it back via _status_checkbox."""
         container = QWidget()
         box_layout = QHBoxLayout(container)
         box_layout.setContentsMargins(0, 0, 0, 0)
@@ -154,7 +155,7 @@ class PluginManagerWindow(QDialog):
         checkbox.setChecked(checked)
         checkbox.setToolTip(tooltip)
         box_layout.addWidget(checkbox)
-        return container, checkbox
+        return container
 
     def refresh_plugin_list(self) -> None:
         """Repopulate the plugin table from the current plugin registry."""
@@ -165,13 +166,12 @@ class PluginManagerWindow(QDialog):
         for row, p in enumerate(plugins):
             # Column 0: Enabled Checkbox (Clean native check, centered)
             is_enabled = not p.get("disabled", False)
-            container, _ = self._create_checkbox_container(is_enabled)
-            self.table.setCellWidget(row, 0, container)
+            self.table.setCellWidget(
+                row, 0, self._create_checkbox_container(is_enabled)
+            )
 
-            # Store the plugin index in the item's UserRole for stable reference during filtering
-            enabled_item = QTableWidgetItem()
-            enabled_item.setData(Qt.ItemDataRole.UserRole, row)
-            self.table.setItem(row, 0, enabled_item)
+            # Empty item behind the widget so the column still selects the row.
+            self.table.setItem(row, 0, QTableWidgetItem())
 
             # Column 1: Status (colored text)
             status = str(p.get("status", "Unknown"))
@@ -254,6 +254,16 @@ class PluginManagerWindow(QDialog):
             )
             self.table.setRowHidden(row, not match)
 
+        self._drop_hidden_selection()
+
+    def _drop_hidden_selection(self) -> None:
+        """Clear the selection when the filter hides the row it points at."""
+        row = self.table.currentRow()
+        if row >= 0 and self.table.isRowHidden(row):
+            self.table.clearSelection()
+            self.table.setCurrentCell(-1, -1)
+            self.update_button_state()
+
     def _status_checkbox(self, row: int) -> Optional[QCheckBox]:
         """Return the visible status checkbox for a plugin table row."""
         container = self.table.cellWidget(row, 0)
@@ -265,22 +275,17 @@ class PluginManagerWindow(QDialog):
         return None
 
     def _save_checkbox_preferences(self) -> set[str]:
-        """Collect and persist checkbox choices."""
+        """Collect and persist checkbox choices, hidden rows included."""
         disabled_paths = set()
         for row in range(self.table.rowCount()):
-            item = self.table.item(row, 0)
-            plugin_idx = item.data(Qt.ItemDataRole.UserRole) if item else row
-            if plugin_idx is not None and 0 <= plugin_idx < len(
-                self.plugin_manager.plugins
-            ):
-                plugin = self.plugin_manager.plugins[plugin_idx]
-                status_checkbox = self._status_checkbox(row)
-                if status_checkbox is not None and not status_checkbox.isChecked():
-                    filepath = plugin.get("filepath")
-                    if filepath:
-                        disabled_paths.add(
-                            self.plugin_manager.plugin_path_key(filepath)
-                        )
+            plugin = self._plugin_for_row(row)
+            if plugin is None:
+                continue
+            status_checkbox = self._status_checkbox(row)
+            if status_checkbox is not None and not status_checkbox.isChecked():
+                filepath = plugin.get("filepath")
+                if filepath:
+                    disabled_paths.add(self.plugin_manager.plugin_path_key(filepath))
 
         self.plugin_manager.save_disabled_plugins(disabled_paths)
         return disabled_paths
@@ -299,9 +304,12 @@ class PluginManagerWindow(QDialog):
             self.plugin_manager.discover_plugins()
 
     def done(self, result: int) -> None:
-        """Apply plugin preferences for every way the dialog can close."""
-        self._apply_plugin_preferences()
+        """Apply plugin preferences for every way the dialog can close.
+
+        Close first: applying them re-runs every plugin's ``initialize()``.
+        """
         super().done(result)
+        self._apply_plugin_preferences()
 
     def update_button_state(self) -> None:
         """Enable or disable the Remove button based on table selection."""
@@ -324,17 +332,15 @@ class PluginManagerWindow(QDialog):
             self.refresh_plugin_list()
 
     def _plugin_for_row(self, row: int) -> Optional[dict[str, Any]]:
-        """Retrieve plugin dict for a table row, accounting for search filtering."""
-        if row < 0 or row >= self.table.rowCount():
+        """Retrieve the plugin dict a table row was built from.
+
+        Row index is the plugin index; filtering hides rows, never reorders.
+        """
+        if row < 0 or row >= min(
+            self.table.rowCount(), len(self.plugin_manager.plugins)
+        ):
             return None
-        item = self.table.item(row, 0)
-        idx = item.data(Qt.ItemDataRole.UserRole) if item else row
-        if idx is not None and 0 <= idx < len(self.plugin_manager.plugins):
-            plugin: dict[str, Any] = cast(
-                dict[str, Any], self.plugin_manager.plugins[idx]
-            )
-            return plugin
-        return None
+        return cast(dict[str, Any], self.plugin_manager.plugins[row])
 
     def on_remove_plugin(self) -> None:
         """Delete the selected plugin file or folder and reload."""
@@ -456,8 +462,14 @@ class PluginManagerWindow(QDialog):
                     # Try to parse __init__.py if it exists
                     init_path = os.path.join(file_path, "__init__.py")
                     if os.path.exists(init_path):
-                        info = self.plugin_manager.get_plugin_info_safe(init_path)
-                        info["description"] += f" (Package: {info['name']})"
+                        folder_note = info["description"]
+                        info = self.plugin_manager.get_plugin_info_safe(
+                            init_path, fallback_name=os.path.basename(file_path)
+                        )
+                        declared = info["description"]
+                        info["description"] = f"{folder_note} (Package: {info['name']})"
+                        if declared:
+                            info["description"] += f" - {declared}"
 
                 elif is_zip:
                     info["description"] = "ZIP Package Plugin"

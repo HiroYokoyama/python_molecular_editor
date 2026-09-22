@@ -13,6 +13,7 @@ Follows the same conventions as test_edit_actions_extended.py:
 
 import os
 import sys
+from pathlib import Path
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -1072,6 +1073,38 @@ class TestFlexibleEncodingAndBlockLoader:
         lines = IOManager._read_text_lines_flexible(str(test_file))
         assert lines == ["あああ\n"]
 
+    @pytest.mark.parametrize(
+        "text, encoding",
+        [
+            ("he said “hi” — ok", "cp1252"),
+            ("caf\xe9 na\xefve r\xe9sum\xe9", "latin-1"),
+            ("1.09 \xc5 (Angstr\xf6m)", "latin-1"),
+            ("エタノール 分子", "cp932"),
+            ("エタノール 分子", "euc_jp"),
+            ("エタノール 分子", "utf-8"),
+        ],
+    )
+    def test_western_comments_survive_alongside_japanese_ones(
+        self, tmp_path: Path, text: str, encoding: str
+    ) -> None:
+        """A Western-encoded comment must not be read as Japanese, or vice versa.
+
+        "1.09 Å (Angström)" is the case that needs the private-use check: those
+        bytes are also valid CP932, so the chain used to accept that decoding
+        and hand back "1.09 ﾅ (Angstr)".
+        """
+        path = tmp_path / "comment.xyz"
+        path.write_bytes(("2\n" + text + "\nC 0 0 0\nH 1 0 0\n").encode(encoding))
+
+        assert IOManager._read_text_lines_flexible(str(path))[1].rstrip("\n") == text
+
+    def test_cp932_gaiji_comment_remains_authoritative(self, tmp_path: Path) -> None:
+        """CP932 gaiji bytes must not be replaced by a clean CP1252 decoding."""
+        path = tmp_path / "gaiji.xyz"
+        path.write_bytes(b"2\n\xf0\x40\nC 0 0 0\nH 1 0 0\n")
+
+        assert IOManager._read_text_lines_flexible(str(path))[1] == "\ue000\n"
+
     def test_load_mol_block_text_mol_and_sdf(self, tmp_path):
         """_load_mol_block_text reads and fixes V2000 counts line for both .mol and .sdf."""
         host = DummyHost()
@@ -1100,3 +1133,171 @@ class TestFlexibleEncodingAndBlockLoader:
         assert "M  END" in res_sdf
         assert "999 V2000" in res_sdf
         assert "SecondRecord" not in res_sdf
+
+    def _one_atom_record(self, title="Test"):
+        return (
+            title
+            + chr(10)
+            + "  MoleditPy"
+            + chr(10)
+            + chr(10)
+            + "  1  0  0  0  0  0  0  0  0  0999 V2000"
+            + chr(10)
+            + "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0"
+            + chr(10)
+            + "M  END"
+            + chr(10)
+        )
+
+    def test_sdf_data_fields_survive_the_import(self, tmp_path):
+        """An SDF's data fields must reach the molecule, not be dropped.
+
+        Reading an SDF as a bare MOL block parses the atoms but silently
+        discards every "> <TAG>" field the record carries.
+        """
+        io = IOManager(DummyHost())
+        sdf = tmp_path / "tagged.sdf"
+        sdf.write_text(
+            self._one_atom_record("First")
+            + "> <NAME>"
+            + chr(10)
+            + "Methane"
+            + chr(10)
+            + chr(10)
+            + "> <MW>"
+            + chr(10)
+            + "16.04"
+            + chr(10)
+            + chr(10)
+            + "$$$$"
+            + chr(10)
+            + self._one_atom_record("Second")
+            + "$$$$"
+            + chr(10),
+            encoding="utf-8",
+        )
+
+        mol = io._read_mol_or_sdf(str(sdf))
+
+        assert mol is not None
+        assert mol.GetProp("_Name") == "First"
+        assert mol.GetPropsAsDict()["NAME"] == "Methane"
+        assert mol.GetPropsAsDict()["MW"] == 16.04
+
+    def test_sdf_data_fields_survive_a_cp932_file(self, tmp_path):
+        """Data fields and non-UTF-8 encoding must work together, not one or the other."""
+        io = IOManager(DummyHost())
+        sdf = tmp_path / "jp.sdf"
+        sdf.write_bytes(
+            (
+                self._one_atom_record()
+                + "> <"
+                + "備考"
+                + ">"
+                + chr(10)
+                + "メタン"
+                + chr(10)
+                + chr(10)
+                + "$$$$"
+                + chr(10)
+            ).encode("cp932")
+        )
+
+        mol = io._read_mol_or_sdf(str(sdf))
+
+        assert mol is not None
+        assert mol.GetPropsAsDict()["備考"] == "メタン"
+
+    def test_unreadable_sdf_falls_back_without_raising(self, tmp_path):
+        """A record the SD supplier rejects returns None rather than propagating."""
+        io = IOManager(DummyHost())
+        sdf = tmp_path / "junk.sdf"
+        sdf.write_text("not a molecule at all" + chr(10), encoding="utf-8")
+
+        assert io._read_mol_or_sdf(str(sdf)) is None
+
+
+class TestMolToSceneStereo:
+    """Double-bond geometry must survive the MOL file -> 2D scene conversion."""
+
+    @staticmethod
+    def _load(tmp_path, smiles):
+        from rdkit.Chem import AllChem
+
+        mol = Chem.MolFromSmiles(smiles)
+        AllChem.Compute2DCoords(mol)
+        path = tmp_path / "geom.mol"
+        path.write_text(Chem.MolToMolBlock(mol), encoding="utf-8")
+
+        host = DummyHost()
+        host.init_manager.scene.create_atom.side_effect = range(mol.GetNumAtoms())
+        IOManager(host).load_mol_file(str(path))
+        return [
+            call.kwargs["bond_stereo"]
+            for call in host.init_manager.scene.create_bond.call_args_list
+        ]
+
+    def test_trans_double_bond_arrives_as_e(self, tmp_path):
+        """A trans alkene must reach create_bond as bond_stereo 4 (E), not 0.
+
+        The scene draws the geometry from this code alone; losing it here is
+        how an E double bond silently becomes an undefined one on import.
+        """
+        assert 4 in self._load(tmp_path, r"F/C=C/F")
+
+    def test_cis_double_bond_arrives_as_z(self, tmp_path):
+        """The mirror case: a cis alkene must reach create_bond as bond_stereo 3."""
+        assert 3 in self._load(tmp_path, r"F/C=C\F")
+
+    def test_plain_double_bond_stays_undefined(self, tmp_path):
+        """A double bond with no geometry must not be given one."""
+        assert set(self._load(tmp_path, "C=C")) == {0}
+
+    def test_the_two_alanine_enantiomers_arrive_wedged_opposite_ways(self, tmp_path):
+        """A chiral centre must reach the scene as a wedge (1) or a hash (2).
+
+        MolFromMolBlock returns the wedging as atom chiral tags and leaves
+        every GetBondDir() at NONE; load_mol_file's WedgeMolBonds call is what
+        puts the directions back. Drop that call and both enantiomers arrive
+        as plain lines -- the drawing stops distinguishing them, while still
+        looking like a successful import.
+        """
+        r = self._load(tmp_path, "N[C@@H](C)C(=O)O")
+        s = self._load(tmp_path, "N[C@H](C)C(=O)O")
+
+        assert set(r) & {1, 2} and set(s) & {1, 2}
+        assert r != s
+
+
+class TestXyzBlockEntryPoints:
+    """load_xyz_block and show_xyz_data are the paths plugins hand XYZ text to."""
+
+    def test_load_xyz_block_reports_unparsable_text(self):
+        """Bad XYZ text returns None and says so, rather than raising at the caller."""
+        host = DummyHost()
+
+        assert IOManager(host).load_xyz_block("not xyz at all") is None
+        assert (
+            "Error parsing XYZ data"
+            in (host.statusBar_mock.showMessage.call_args[0][0])
+        )
+
+    def test_show_xyz_data_enters_the_3d_viewer(self):
+        """A good block is drawn, switches the window to 3D, and clears the dirty flag."""
+        host = DummyHost()
+        xyz = chr(10).join(["2", "hydrogen", "H 0.0 0.0 0.0", "H 0.0 0.0 0.74"])
+
+        mol = IOManager(host).show_xyz_data(xyz, source_name="probe.xyz")
+
+        assert mol is not None
+        host.view_3d_manager.draw_molecule_3d.assert_called_once()
+        host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+        assert host.state_manager.has_unsaved_changes is False
+        assert "probe.xyz" in host.statusBar_mock.showMessage.call_args[0][0]
+
+    def test_show_xyz_data_returns_none_on_bad_text(self):
+        """An unparsable block stops before touching the 3D view."""
+        host = DummyHost()
+
+        assert IOManager(host).show_xyz_data("not xyz at all") is None
+        host.view_3d_manager.draw_molecule_3d.assert_not_called()

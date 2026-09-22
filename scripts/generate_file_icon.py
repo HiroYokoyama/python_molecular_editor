@@ -141,7 +141,11 @@ def _draw_background(size_px: int) -> plt.Figure:
 
     shadow_coords = [(p[0] + 3, p[1] - 3) for p in paper_coords]
     shadow_poly = patches.Polygon(
-        shadow_coords, closed=True, facecolor="black", alpha=0.2, zorder=0,
+        shadow_coords,
+        closed=True,
+        facecolor="black",
+        alpha=0.2,
+        zorder=0,
         joinstyle="round",
     )
     shadow_poly.set_path_effects(
@@ -150,8 +154,13 @@ def _draw_background(size_px: int) -> plt.Figure:
     ax.add_patch(shadow_poly)
 
     paper_poly = patches.Polygon(
-        paper_coords, closed=True, facecolor="#F9F9F9", edgecolor="#DDDDDD",
-        linewidth=1, zorder=1, joinstyle="round",
+        paper_coords,
+        closed=True,
+        facecolor="#F9F9F9",
+        edgecolor="#DDDDDD",
+        linewidth=1,
+        zorder=1,
+        joinstyle="round",
     )
     ax.add_patch(paper_poly)
 
@@ -174,24 +183,43 @@ def _draw_background(size_px: int) -> plt.Figure:
                 x_pos += h_step / 2
             angles = np.linspace(0, 2 * np.pi, 7)
             poly = patches.Polygon(
-                np.column_stack((x_pos + hex_size * np.cos(angles), y_pos + hex_size * np.sin(angles))),
-                closed=True, edgecolor="#39CCCC", facecolor="none", linewidth=1,
-                alpha=0.15, zorder=2,
+                np.column_stack(
+                    (
+                        x_pos + hex_size * np.cos(angles),
+                        y_pos + hex_size * np.sin(angles),
+                    )
+                ),
+                closed=True,
+                edgecolor="#39CCCC",
+                facecolor="none",
+                linewidth=1,
+                alpha=0.15,
+                zorder=2,
             )
             poly.set_clip_path(paper_poly)
             ax.add_patch(poly)
 
     fold_coords = [p3, (DOC_X + DOC_W - FOLD_SIZE, DOC_Y + DOC_H - FOLD_SIZE), p4]
     fold_shadow = patches.Polygon(
-        fold_coords, closed=True, fc="black", alpha=0.1, zorder=2.5, joinstyle="round",
+        fold_coords,
+        closed=True,
+        fc="black",
+        alpha=0.1,
+        zorder=2.5,
+        joinstyle="round",
     )
     fold_shadow.set_path_effects(
         [path_effects.withStroke(linewidth=5, foreground="black", alpha=0.1)]
     )
     ax.add_patch(fold_shadow)
     fold_poly = patches.Polygon(
-        fold_coords, closed=True, facecolor="#EEEEEE", edgecolor="#CCCCCC",
-        linewidth=1, zorder=3, joinstyle="round",
+        fold_coords,
+        closed=True,
+        facecolor="#EEEEEE",
+        edgecolor="#CCCCCC",
+        linewidth=1,
+        zorder=3,
+        joinstyle="round",
     )
     ax.add_patch(fold_poly)
 
@@ -202,9 +230,16 @@ def _draw_background(size_px: int) -> plt.Figure:
     ax.add_patch(bar_rect)
 
     ax.text(
-        DOC_X + DOC_W / 2, BAR_Y + BAR_H / 2, "MoleditPy File",
-        ha="center", va="center", fontsize=BAR_FONT_SIZE, color="white",
-        fontweight="bold", fontname="DejaVu Sans", zorder=3,
+        DOC_X + DOC_W / 2,
+        BAR_Y + BAR_H / 2,
+        "MoleditPy File",
+        ha="center",
+        va="center",
+        fontsize=BAR_FONT_SIZE,
+        color="white",
+        fontweight="bold",
+        fontname="DejaVu Sans",
+        zorder=3,
     )
     return fig
 
@@ -247,7 +282,10 @@ def _paste_molecule(background: Image.Image) -> Image.Image:
     avail_h = avail_y1 - avail_y0
 
     scale = min(avail_w / mol_box.width, avail_h / mol_box.height) * MOLECULE_SCALE
-    new_size = (max(1, round(mol_box.width * scale)), max(1, round(mol_box.height * scale)))
+    new_size = (
+        max(1, round(mol_box.width * scale)),
+        max(1, round(mol_box.height * scale)),
+    )
     mol_resized = mol_box.resize(new_size, Image.LANCZOS)
 
     paste_x = round(avail_x0 + (avail_w - new_size[0]) / 2)
@@ -325,7 +363,9 @@ def main() -> int:
     if installer_updated:
         print(f"Updated {len(installer_updated)} files in {INSTALLER_DATA_DIR}")
     else:
-        print(f"Installer repo not found beside this one ({INSTALLER_DATA_DIR}); skipped")
+        print(
+            f"Installer repo not found beside this one ({INSTALLER_DATA_DIR}); skipped"
+        )
     print(
         "Note: moleditpy-linux/.../assets/file_icon.ico is synced separately "
         "by scripts/sync_linux_version.py."

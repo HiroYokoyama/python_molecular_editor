@@ -82,7 +82,7 @@ class TestMarkProjectModified(unittest.TestCase):
             hasattr(PluginContext, "mark_project_modified"),
             "PluginContext must expose mark_project_modified()",
         )
-        self.assertTrue(callable(getattr(PluginContext, "mark_project_modified")))
+        self.assertTrue(callable(PluginContext.mark_project_modified))
 
 
 class TestCurrentFile(unittest.TestCase):

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtCore import Qt, QMimeData
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
-from PyQt6.QtWidgets import QCheckBox, QMessageBox, QWidget
+from PyQt6.QtWidgets import QCheckBox, QMessageBox, QPushButton, QWidget
 
 from moleditpy.plugins.plugin_manager_window import PluginManagerWindow
 
@@ -451,6 +451,124 @@ def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, 
     mock_plugin_manager.rebuild_plugin_menus.assert_called_once_with()
 
 
+def test_close_hides_the_dialog_before_rediscovering(mock_plugin_manager, qtbot):
+    """The dialog must be closed before discovery re-runs plugin initialize().
+
+    Discovery executes every plugin's initialize(); one that raises its own
+    dialog would sit behind this window while it is still modal and visible.
+    """
+    mock_plugin_manager.main_window = MagicMock()
+    visible_during_discovery = []
+    mock_plugin_manager.discover_plugins.side_effect = lambda *a, **k: (
+        visible_during_discovery.append(window.isVisible())
+    )
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+    window.show()
+
+    window.done(0)
+
+    assert visible_during_discovery == [False]
+
+
+def test_saving_skips_rows_the_plugin_list_no_longer_backs(mock_plugin_manager, qtbot):
+    """A table row with no plugin behind it must not break the save."""
+    mock_plugin_manager.main_window = None
+    mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
+        "/", 1
+    )[-1]
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+    window._status_checkbox(0).setChecked(False)
+
+    # Plugins removed from under a table that has not been refreshed yet
+    mock_plugin_manager.plugins = mock_plugin_manager.plugins[:1]
+
+    assert window._save_checkbox_preferences() == {"plugin1.py"}
+
+
+def test_filtering_disarms_remove_for_a_hidden_selection(mock_plugin_manager, qtbot):
+    """Remove Plugin must not stay aimed at a row the search box has hidden.
+
+    Qt keeps a hidden row current, so filtering to another plugin used to leave
+    the button armed against the one no longer on screen.
+    """
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    window.table.selectRow(0)
+    assert window.btn_remove.isEnabled()
+
+    window.search_input.setText("Test Plugin 2")
+
+    assert window.table.isRowHidden(0)
+    assert window.table.currentRow() == -1
+    assert not window.btn_remove.isEnabled()
+    assert window._plugin_for_row(window.table.currentRow()) is None
+
+
+def test_reload_button_does_not_feed_clicked_into_silent(mock_plugin_manager, qtbot):
+    """The Reload button must reach on_reload as a non-silent reload.
+
+    clicked(bool) carries an argument; connected directly it would bind to the
+    *silent* flag, so a checkable button would one day suppress the
+    confirmation without anyone touching on_reload.
+    """
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+    btn_reload = next(
+        b for b in window.findChildren(QPushButton) if b.text() == "Reload Plugins"
+    )
+
+    with patch.object(window, "on_reload") as mock_reload:
+        btn_reload.click()
+
+    mock_reload.assert_called_once_with()
+
+
+def test_folder_drop_keeps_the_folder_name_and_the_category_note(
+    mock_plugin_manager, qtbot, tmp_path
+):
+    """A dropped package plugin with no PLUGIN_NAME is named for its folder.
+
+    The basename of __init__.py is not a name the user recognises, and the
+    "Folder Plugin / Category" note used to be overwritten by the parsed
+    metadata rather than extended.
+    """
+    from moleditpy.plugins.plugin_manager import PluginManager
+
+    pkg = tmp_path / "my_pkg"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text(
+        '"""Does a thing."""'
+        + chr(10)
+        + "def run(mw):"
+        + chr(10)
+        + "    pass"
+        + chr(10)
+    )
+    mock_plugin_manager.get_plugin_info_safe.side_effect = (
+        PluginManager.get_plugin_info_safe.__get__(mock_plugin_manager)
+    )
+    mock_plugin_manager.compute_sha256.return_value = "abc"
+
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    event = MagicMock(spec=QDropEvent)
+    url_mock = MagicMock()
+    url_mock.toLocalFile.return_value = str(pkg)
+    event.mimeData.return_value = MagicMock(urls=lambda: [url_mock])
+
+    with patch.object(QMessageBox, "question") as ask:
+        ask.return_value = QMessageBox.StandardButton.No
+        window.dropEvent(event)
+
+    msg = ask.call_args[0][2]
+    assert "Name: my_pkg" in msg
+    assert "Folder Plugin / Category (Package: my_pkg) - Does a thing." in msg
+
+
 def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
     """Saves checkbox changes before reloading plugins without a main window."""
     mock_plugin_manager.main_window = None
@@ -640,7 +758,7 @@ def test_status_checkbox_direct_and_none(mock_plugin_manager, qtbot):
 
 
 def test_plugin_for_row_boundary_conditions(mock_plugin_manager, qtbot):
-    """_plugin_for_row returns None for negative or out-of-range rows and index mappings."""
+    """_plugin_for_row returns None outside the rows the plugin list can back."""
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
 
@@ -648,7 +766,9 @@ def test_plugin_for_row_boundary_conditions(mock_plugin_manager, qtbot):
     assert window._plugin_for_row(-1) is None
     assert window._plugin_for_row(999) is None
 
-    # Item with data beyond plugin list length
-    item = window.table.item(0, 0)
-    item.setData(Qt.ItemDataRole.UserRole, 9999)
-    assert window._plugin_for_row(0) is None
+    # Rows the plugin list no longer reaches: a plugin removed from under a
+    # table that has not been refreshed yet.
+    assert window._plugin_for_row(2)["name"] == "Package Plugin"
+    mock_plugin_manager.plugins = mock_plugin_manager.plugins[:1]
+    assert window.table.rowCount() == 3
+    assert window._plugin_for_row(2) is None

@@ -66,12 +66,12 @@ class ComputeManager:
         self._active_calc_threads = []
 
     def _safe_disconnect(self, signal: Any) -> None:
-        """Safely disconnect a signal, silently ignoring RuntimeError."""
+        """Disconnect a signal, tolerating one that has nothing connected."""
         try:
             signal.disconnect()
-        except RuntimeError:
-            # Safe defensive fallback catching RuntimeError
-            logging.debug("Suppressed non-critical error", exc_info=True)
+        except (RuntimeError, TypeError):
+            # PyQt raises TypeError, not RuntimeError, when nothing is attached.
+            logging.debug("Nothing to disconnect from %s", signal, exc_info=True)
 
     def _remove_calculating_text(self) -> None:
         """Safely remove the 'Calculating...' text actor from the plotter."""
@@ -90,14 +90,17 @@ class ComputeManager:
         """Restore the Convert and Optimize buttons to their default state."""
         self._safe_disconnect(self.host.init_manager.convert_button.clicked)  # type: ignore[union-attr]
         self.host.init_manager.convert_button.setText("Convert 2D to 3D")  # type: ignore[union-attr]
-        self.host.init_manager.convert_button.clicked.connect(self.trigger_conversion)  # type: ignore[union-attr]
+        # Wrapped: clicked(bool) would otherwise arrive as conversion_mode.
+        self.host.init_manager.convert_button.clicked.connect(  # type: ignore[union-attr]
+            lambda: self.trigger_conversion()
+        )
         self.host.init_manager.convert_button.setEnabled(True)  # type: ignore[union-attr]
 
         if self.host.init_manager.optimize_3d_button:
             self._safe_disconnect(self.host.init_manager.optimize_3d_button.clicked)
             self.host.init_manager.optimize_3d_button.setText("Optimize 3D")
             self.host.init_manager.optimize_3d_button.clicked.connect(
-                self.optimize_3d_structure
+                lambda: self.optimize_3d_structure()
             )
             self.host.init_manager.optimize_3d_button.setEnabled(True)
 

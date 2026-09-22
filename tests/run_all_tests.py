@@ -433,7 +433,7 @@ if __name__ == "__main__":
     print("         TEST SUITE SUMMARY")
     print("=" * 40)
     all_passed = True
-    for name, path in [
+    for name, _path in [
         ("UNIT", UNIT_DIR),
         ("INTEGRATION", INTEGRATION_DIR),
         ("E2E", E2E_DIR),

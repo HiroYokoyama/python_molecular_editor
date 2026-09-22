@@ -987,6 +987,37 @@ raise RuntimeError("must not execute")
     assert plugins[0]["module"] is None
 
 
+def test_disabled_plugin_without_plugin_name_keeps_the_loaded_name(tmp_path):
+    """Disabling a plugin must not rename it to its file name in the manager.
+
+    Neither plugin here declares PLUGIN_NAME, so the disabled entries used to
+    be listed under their file names -- every disabled package showing as
+    "__init__.py", indistinguishable from the others and no longer findable by
+    the name the user knows.
+    """
+    source = "def run(mw):" + chr(10) + "    pass" + chr(10)
+    plugin_dir = tmp_path / "plugins"
+    (plugin_dir / "my_pkg").mkdir(parents=True)
+    (plugin_dir / "my_pkg" / "__init__.py").write_text(source, encoding="utf-8")
+    (plugin_dir / "solo.py").write_text(source, encoding="utf-8")
+    disabled_file = tmp_path / "disabled_plugins.json"
+
+    pm = PluginManager()
+    pm.plugin_dir = str(plugin_dir)
+    pm.disabled_plugins_path = str(disabled_file)
+
+    enabled_names = {p["name"] for p in pm.discover_plugins()}
+    assert enabled_names == {"my_pkg", "solo"}
+
+    disabled_file.write_text(
+        json.dumps(["my_pkg/__init__.py", "solo.py"]), encoding="utf-8"
+    )
+    disabled = pm.discover_plugins()
+
+    assert {p["status"] for p in disabled} == {"Disabled"}
+    assert {p["name"] for p in disabled} == enabled_names
+
+
 def test_save_disabled_plugins_writes_normalized_paths(tmp_path):
     pm = PluginManager()
     pm.disabled_plugins_path = str(tmp_path / "disabled_plugins.json")

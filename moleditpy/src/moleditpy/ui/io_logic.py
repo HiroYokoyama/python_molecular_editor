@@ -16,6 +16,7 @@ import logging
 import os
 import json
 import pickle
+import unicodedata
 from ..utils.suppress_log import suppress_log
 from typing import Any, Callable, List, Optional, Tuple
 
@@ -32,6 +33,8 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QWidget,
 )
+
+from io import BytesIO
 
 from rdkit import Chem
 from rdkit.Chem import (
@@ -143,6 +146,23 @@ class IOManager:
             raw = self._first_sdf_record(raw)
         return self.fix_mol_block(raw)
 
+    def _read_mol_or_sdf(self, file_path: str) -> Optional[Chem.Mol]:
+        """Read the molecule from a .mol or .sdf file, whatever its encoding.
+
+        The SDF goes through a stream, not a path, so both the encoding
+        fallbacks and the record's data fields survive.
+        """
+        if file_path.lower().endswith(".sdf"):
+            raw = "".join(self._read_text_lines_flexible(file_path))
+            stream = BytesIO(self.fix_mol_block(raw).encode("utf-8"))
+            supplier = Chem.ForwardSDMolSupplier(stream, removeHs=False)
+            mol = next(supplier, None)
+            if mol is not None:
+                return mol
+        return Chem.MolFromMolBlock(
+            self._load_mol_block_text(file_path), sanitize=True, removeHs=False
+        )
+
     @staticmethod
     def _read_text_lines_flexible(file_path: str) -> list[str]:
         """Read a text file's lines, tolerating non-UTF-8 encodings.
@@ -159,12 +179,29 @@ class IOManager:
         # some genuinely EUC-JP byte sequences and decodes them to the wrong
         # (mojibake) characters instead of raising, so trying cp932 first
         # would never let euc_jp text reach its correct decoding.
-        for encoding in ("utf-8-sig", "euc_jp", "cp932", "shift_jis"):
+        mojibake: Optional[List[str]] = None
+        cp932_gaiji: Optional[List[str]] = None
+        for encoding in ("utf-8-sig", "euc_jp", "cp932", "shift_jis", "cp1252"):
             try:
                 with open(file_path, "r", encoding=encoding) as f:
-                    return f.readlines()
+                    lines = f.readlines()
             except UnicodeDecodeError:
                 continue
+            # A wrong codec can land bytes in the private-use area. Keep looking,
+            # but preserve CP932's F0-lead gaiji range: CP1252 can otherwise
+            # decode bytes such as F0 40 cleanly while losing U+E000.
+            if any(unicodedata.category(ch) == "Co" for line in lines for ch in line):
+                if encoding == "cp932" and any(
+                    "\ue000" <= ch <= "\ue0bb" for line in lines for ch in line
+                ):
+                    cp932_gaiji = lines
+                mojibake = mojibake if mojibake is not None else lines
+                continue
+            if encoding == "cp1252" and cp932_gaiji is not None:
+                return cp932_gaiji
+            return lines
+        if mojibake is not None:
+            return mojibake
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             return f.readlines()
 
@@ -839,13 +876,10 @@ class IOManager:
             return
 
         try:
-            fixed_block = self._load_mol_block_text(file_path)
-            # MolFromMolBlock can come back empty on a malformed file; the
-            # stub does not say so, hence the explicit declaration. The None
-            # check below covers that.
-            mol: Optional[Chem.Mol] = Chem.MolFromMolBlock(
-                fixed_block, sanitize=True, removeHs=False
-            )
+            # Both readers can come back empty on a malformed file; the stubs
+            # do not say so, hence the explicit declaration. The None check
+            # below covers that.
+            mol: Optional[Chem.Mol] = self._read_mol_or_sdf(file_path)
 
             if mol is None:
                 raise ValueError("Failed to read molecule from file.")
@@ -1047,8 +1081,7 @@ class IOManager:
             if not file_path:
                 return
         try:
-            fixed_block = self._load_mol_block_text(file_path)
-            mol = Chem.MolFromMolBlock(fixed_block, sanitize=True, removeHs=False)
+            mol = self._read_mol_or_sdf(file_path)
 
             if mol is None:
                 raise ValueError("Failed to load molecule.")

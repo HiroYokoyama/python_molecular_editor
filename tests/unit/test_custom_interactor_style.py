@@ -323,8 +323,8 @@ def test_custom_interactor_style_right_click_rotation(app, mock_parser_host):
     mock_conformer = MagicMock()
     mock_pos0 = MagicMock(x=0.0, y=0.0, z=0.0)
     mock_pos1 = MagicMock(x=2.0, y=0.0, z=0.0)
-    mock_conformer.GetAtomPosition.side_effect = (
-        lambda idx: mock_pos0 if idx == 0 else mock_pos1
+    mock_conformer.GetAtomPosition.side_effect = lambda idx: (
+        mock_pos0 if idx == 0 else mock_pos1
     )
     mock_mol.GetConformer.return_value = mock_conformer
     mock_parser_host.view_3d_manager.current_mol = mock_mol

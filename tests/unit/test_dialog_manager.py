@@ -437,7 +437,7 @@ class TestModelessGeometryDialogs:
             instance = MagicMock()
             MockDlg.return_value = instance
             cbs = []
-            instance.accepted.connect.side_effect = lambda cb: cbs.append(cb)
+            instance.accepted.connect.side_effect = cbs.append
             dlgm.open_align_plane_dialog("xz")
         cbs[0]()
         assert "XZ" in host.statusBar_mock.showMessage.call_args[0][0]
@@ -458,7 +458,7 @@ class TestModelessGeometryDialogs:
             instance = MagicMock()
             MockDlg.return_value = instance
             cbs = []
-            instance.accepted.connect.side_effect = lambda cb: cbs.append(cb)
+            instance.accepted.connect.side_effect = cbs.append
             dlgm.open_alignment_dialog("y")
         cbs[0]()
         assert "Y" in host.statusBar_mock.showMessage.call_args[0][0]
@@ -512,7 +512,7 @@ class TestModelessGeometryDialogs:
                 instance = MagicMock()
                 MockDlg.return_value = instance
                 cbs = []
-                instance.accepted.connect.side_effect = lambda cb: cbs.append(cb)
+                instance.accepted.connect.side_effect = cbs.append
                 getattr(dlgm, method)(*args)
             cbs[0]()
             actual = host.statusBar_mock.showMessage.call_args[0][0]
@@ -526,7 +526,7 @@ class TestModelessGeometryDialogs:
             instance = MagicMock()
             MockDlg.return_value = instance
             cbs = []
-            instance.accepted.connect.side_effect = lambda cb: cbs.append(cb)
+            instance.accepted.connect.side_effect = cbs.append
             dlgm.open_translation_dialog()
         cbs[1]()
         host.edit_actions_manager.push_undo_state.assert_called_once()
@@ -539,7 +539,7 @@ class TestModelessGeometryDialogs:
             instance = MagicMock()
             MockDlg.return_value = instance
             fin_cbs = []
-            instance.finished.connect.side_effect = lambda cb: fin_cbs.append(cb)
+            instance.finished.connect.side_effect = fin_cbs.append
             dlgm.open_translation_dialog()
         fin_cbs[0]()
         host.edit_3d_manager.remove_dialog_from_list.assert_called_once_with(instance)
@@ -656,7 +656,7 @@ class TestOpenConstrainedOptimizationDialog:
             instance = MagicMock()
             MockCO.return_value = instance
             fin_cbs = []
-            instance.finished.connect.side_effect = lambda cb: fin_cbs.append(cb)
+            instance.finished.connect.side_effect = fin_cbs.append
             dm.open_constrained_optimization_dialog()
         fin_cbs[0]()
         dm.host.edit_3d_manager.remove_dialog_from_list.assert_called_once_with(

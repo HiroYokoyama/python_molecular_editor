@@ -80,8 +80,8 @@ def scene_setup(qapp):
             self.edit_actions_manager.undo_stack = []
             self.edit_actions_manager.redo_stack = []
             self.statusBar_msg = ""
-            self.edit_actions_manager.push_undo_state.side_effect = (
-                lambda: self.edit_actions_manager.undo_stack.append("state")
+            self.edit_actions_manager.push_undo_state.side_effect = lambda: (
+                self.edit_actions_manager.undo_stack.append("state")
             )
 
         def push_undo_state(self):

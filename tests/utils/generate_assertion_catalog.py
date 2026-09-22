@@ -85,8 +85,8 @@ def generate_catalog():
         ]
 
         for test_file in sorted(test_files):
-            rel_path = f"tests/{subdir}/{test_file}"
-            markdown_lines.append(f"## {rel_path.replace('\\', '/')}")
+            rel_path = f"tests/{subdir}/{test_file}".replace("\\", "/")
+            markdown_lines.append(f"## {rel_path}")
             markdown_lines.append("")
 
             file_results = extract_assertions(os.path.join(target_path, test_file))

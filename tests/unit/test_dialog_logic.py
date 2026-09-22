@@ -214,7 +214,7 @@ def test_move_group_logic(mock_parser_host, mol):
         initial_pos0 = np.array(conf.GetAtomPosition(0))
         initial_pos5 = np.array(conf.GetAtomPosition(5))
 
-        with patch("moleditpy.ui.move_group_dialog.QMessageBox"):
+        with patch("moleditpy.ui.move_dialog_mixin.QMessageBox"):
             dialog.apply_translation()
 
         assert np.allclose(
@@ -236,7 +236,7 @@ def test_move_group_logic(mock_parser_host, mol):
         pos2 = np.array(mol.GetConformer().GetAtomPosition(2))
         centroid = (pos0 + pos1 + pos2) / 3.0
 
-        with patch("moleditpy.ui.move_group_dialog.QMessageBox"):
+        with patch("moleditpy.ui.move_dialog_mixin.QMessageBox"):
             dialog.apply_rotation()
 
         new_pos0 = np.array(mol.GetConformer().GetAtomPosition(0))

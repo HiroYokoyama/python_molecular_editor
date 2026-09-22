@@ -280,7 +280,9 @@ def main() -> None:
                 metadata_file = init_py
 
         info = (
-            pm.get_plugin_info_safe(metadata_file)
+            pm.get_plugin_info_safe(
+                metadata_file, fallback_name=os.path.basename(plugin_path)
+            )
             if metadata_file.endswith(".py")
             else {}
         )
