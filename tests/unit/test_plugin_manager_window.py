@@ -451,6 +451,26 @@ def test_close_with_main_window_reloads_and_rebuilds_menus(mock_plugin_manager, 
     mock_plugin_manager.rebuild_plugin_menus.assert_called_once_with()
 
 
+def test_close_hides_the_dialog_before_rediscovering(mock_plugin_manager, qtbot):
+    """The dialog must be closed before discovery re-runs plugin initialize().
+
+    Discovery executes every plugin's initialize(); one that raises its own
+    dialog would sit behind this window while it is still modal and visible.
+    """
+    mock_plugin_manager.main_window = MagicMock()
+    visible_during_discovery = []
+    mock_plugin_manager.discover_plugins.side_effect = lambda *a, **k: (
+        visible_during_discovery.append(window.isVisible())
+    )
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+    window.show()
+
+    window.done(0)
+
+    assert visible_during_discovery == [False]
+
+
 def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
     """Saves checkbox changes before reloading plugins without a main window."""
     mock_plugin_manager.main_window = None

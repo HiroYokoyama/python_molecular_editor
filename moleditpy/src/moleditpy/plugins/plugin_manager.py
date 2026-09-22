@@ -349,9 +349,16 @@ class PluginManager:
     ) -> None:
         """Add a disabled plugin without importing or initializing its code."""
         info = self.get_plugin_info_safe(filepath)
+        # get_plugin_info_safe always seeds "name" with the file's basename, so
+        # its own fallback never fires. Mirror the loaded path, which falls back
+        # to the module name: otherwise every disabled package plugin lists --
+        # and is searched for -- as "__init__.py".
+        name = info.get("name") or ""
+        if name == os.path.basename(filepath):
+            name = module_name
         self.plugins.append(
             {
-                "name": info.get("name", module_name),
+                "name": name,
                 "version": info.get("version", "Unknown"),
                 "author": info.get("author", "Unknown"),
                 "description": info.get("description", ""),

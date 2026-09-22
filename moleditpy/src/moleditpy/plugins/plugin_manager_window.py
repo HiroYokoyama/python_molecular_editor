@@ -299,9 +299,15 @@ class PluginManagerWindow(QDialog):
             self.plugin_manager.discover_plugins()
 
     def done(self, result: int) -> None:
-        """Apply plugin preferences for every way the dialog can close."""
-        self._apply_plugin_preferences()
+        """Apply plugin preferences for every way the dialog can close.
+
+        Closing first matters: applying preferences re-runs discovery, which
+        executes every plugin's ``initialize()``. A plugin that raises its own
+        dialog there would sit behind this still-modal window if the order were
+        reversed.
+        """
         super().done(result)
+        self._apply_plugin_preferences()
 
     def update_button_state(self) -> None:
         """Enable or disable the Remove button based on table selection."""
