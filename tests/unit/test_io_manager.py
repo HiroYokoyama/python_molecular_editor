@@ -1182,3 +1182,73 @@ class TestFlexibleEncodingAndBlockLoader:
         sdf.write_text("not a molecule at all" + chr(10), encoding="utf-8")
 
         assert io._read_mol_or_sdf(str(sdf)) is None
+
+
+class TestMolToSceneStereo:
+    """Double-bond geometry must survive the MOL file -> 2D scene conversion."""
+
+    @staticmethod
+    def _load(tmp_path, smiles):
+        from rdkit.Chem import AllChem
+
+        mol = Chem.MolFromSmiles(smiles)
+        AllChem.Compute2DCoords(mol)
+        path = tmp_path / "geom.mol"
+        path.write_text(Chem.MolToMolBlock(mol), encoding="utf-8")
+
+        host = DummyHost()
+        host.init_manager.scene.create_atom.side_effect = range(mol.GetNumAtoms())
+        IOManager(host).load_mol_file(str(path))
+        return [
+            call.kwargs["bond_stereo"]
+            for call in host.init_manager.scene.create_bond.call_args_list
+        ]
+
+    def test_trans_double_bond_arrives_as_e(self, tmp_path):
+        """A trans alkene must reach create_bond as bond_stereo 4 (E), not 0.
+
+        The scene draws the geometry from this code alone; losing it here is
+        how an E double bond silently becomes an undefined one on import.
+        """
+        assert 4 in self._load(tmp_path, r"F/C=C/F")
+
+    def test_cis_double_bond_arrives_as_z(self, tmp_path):
+        """The mirror case: a cis alkene must reach create_bond as bond_stereo 3."""
+        assert 3 in self._load(tmp_path, r"F/C=C\F")
+
+    def test_plain_double_bond_stays_undefined(self, tmp_path):
+        """A double bond with no geometry must not be given one."""
+        assert set(self._load(tmp_path, "C=C")) == {0}
+
+
+class TestXyzBlockEntryPoints:
+    """load_xyz_block and show_xyz_data are the paths plugins hand XYZ text to."""
+
+    def test_load_xyz_block_reports_unparsable_text(self):
+        """Bad XYZ text returns None and says so, rather than raising at the caller."""
+        host = DummyHost()
+
+        assert IOManager(host).load_xyz_block("not xyz at all") is None
+        assert "Error parsing XYZ data" in (
+            host.statusBar_mock.showMessage.call_args[0][0]
+        )
+
+    def test_show_xyz_data_enters_the_3d_viewer(self):
+        """A good block is drawn, switches the window to 3D, and clears the dirty flag."""
+        host = DummyHost()
+        xyz = chr(10).join(["2", "hydrogen", "H 0.0 0.0 0.0", "H 0.0 0.0 0.74"])
+
+        mol = IOManager(host).show_xyz_data(xyz, source_name="probe.xyz")
+
+        assert mol is not None
+        host.view_3d_manager.draw_molecule_3d.assert_called_once()
+        host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+        assert host.state_manager.has_unsaved_changes is False
+        assert "probe.xyz" in host.statusBar_mock.showMessage.call_args[0][0]
+
+    def test_show_xyz_data_returns_none_on_bad_text(self):
+        """An unparsable block stops before touching the 3D view."""
+        host = DummyHost()
+
+        assert IOManager(host).show_xyz_data("not xyz at all") is None
+        host.view_3d_manager.draw_molecule_3d.assert_not_called()
