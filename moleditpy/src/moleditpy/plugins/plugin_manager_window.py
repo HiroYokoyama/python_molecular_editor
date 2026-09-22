@@ -146,12 +146,7 @@ class PluginManagerWindow(QDialog):
     def _create_checkbox_container(
         self, checked: bool, tooltip: str = "Enable or disable this plugin"
     ) -> QWidget:
-        """Create a centered QCheckBox container widget without custom stylesheets.
-
-        The checkbox is reached through _status_checkbox rather than returned:
-        the table owns the container, and a Python-side reference would outlive
-        the widget the next refresh deletes.
-        """
+        """Create a centered QCheckBox container; read it back via _status_checkbox."""
         container = QWidget()
         box_layout = QHBoxLayout(container)
         box_layout.setContentsMargins(0, 0, 0, 0)
@@ -175,8 +170,7 @@ class PluginManagerWindow(QDialog):
                 row, 0, self._create_checkbox_container(is_enabled)
             )
 
-            # An empty item behind the checkbox widget, so clicking anywhere in
-            # this column still selects the row like every other column does.
+            # Empty item behind the widget so the column still selects the row.
             self.table.setItem(row, 0, QTableWidgetItem())
 
             # Column 1: Status (colored text)
@@ -263,13 +257,7 @@ class PluginManagerWindow(QDialog):
         self._drop_hidden_selection()
 
     def _drop_hidden_selection(self) -> None:
-        """Clear the selection when the filter hides the row it points at.
-
-        Qt keeps the current row current even once it is hidden, so Remove
-        Plugin stayed armed and aimed at a plugin the filtered list no longer
-        shows -- the confirmation named it, but the user was looking at a
-        different row.
-        """
+        """Clear the selection when the filter hides the row it points at."""
         row = self.table.currentRow()
         if row >= 0 and self.table.isRowHidden(row):
             self.table.clearSelection()
@@ -318,10 +306,7 @@ class PluginManagerWindow(QDialog):
     def done(self, result: int) -> None:
         """Apply plugin preferences for every way the dialog can close.
 
-        Closing first matters: applying preferences re-runs discovery, which
-        executes every plugin's ``initialize()``. A plugin that raises its own
-        dialog there would sit behind this still-modal window if the order were
-        reversed.
+        Close first: applying them re-runs every plugin's ``initialize()``.
         """
         super().done(result)
         self._apply_plugin_preferences()
@@ -349,9 +334,7 @@ class PluginManagerWindow(QDialog):
     def _plugin_for_row(self, row: int) -> Optional[dict[str, Any]]:
         """Retrieve the plugin dict a table row was built from.
 
-        Row index is the plugin index: refresh_plugin_list populates the table
-        in list order, the table is not sortable, and filtering only hides rows
-        -- it never reorders them.
+        Row index is the plugin index; filtering hides rows, never reorders.
         """
         if row < 0 or row >= min(
             self.table.rowCount(), len(self.plugin_manager.plugins)

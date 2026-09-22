@@ -43,8 +43,6 @@ select = ["E4", "E7", "E9", "F", "B", "C4"]
 "tests/**" = ["E402"]
 
 [format]
-# `ruff format` reformats python code blocks inside Markdown from 0.16 on. The
-# manuals lay their examples out for reading -- compact one-liners, trailing
-# comments aligned into a column -- and the formatter undoes all of it (148
-# lines across the two plugin manuals on the first run). Format python only.
+# From 0.16 the formatter also rewrites python inside Markdown, undoing the
+# manuals' hand-laid examples. Python files only.
 exclude = ["*.md"]

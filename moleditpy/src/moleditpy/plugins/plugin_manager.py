@@ -348,8 +348,7 @@ class PluginManager:
         self, filepath: str, module_name: str, category: str
     ) -> None:
         """Add a disabled plugin without importing or initializing its code."""
-        # module_name as the fallback mirrors _load_single_plugin's
-        # getattr(module, "PLUGIN_NAME", module_name).
+        # Same fallback as _load_single_plugin's getattr(..., module_name).
         info = self.get_plugin_info_safe(filepath, fallback_name=module_name)
         self.plugins.append(
             {
@@ -805,13 +804,8 @@ class PluginManager:
     def get_plugin_info_safe(
         self, file_path: str, fallback_name: Optional[str] = None
     ) -> Dict[str, str]:
-        """Extracts plugin metadata using AST parsing (safe, no execution).
-
-        ``fallback_name`` is what "name" holds when the file declares no
-        PLUGIN_NAME. It defaults to the file's basename, which is wrong for a
-        package plugin -- every one of those would be presented as
-        "__init__.py" -- so callers holding a better name should pass it.
-        """
+        """Extract plugin metadata by AST parsing; ``fallback_name`` stands in
+        for a missing PLUGIN_NAME, defaulting to the file's basename."""
         info = {
             "name": fallback_name or os.path.basename(file_path),
             "version": "Unknown",
