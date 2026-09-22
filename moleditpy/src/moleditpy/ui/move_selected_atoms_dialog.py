@@ -10,9 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-from typing import Optional, Any, cast
+from typing import Optional, Any
 import logging
-import numpy as np
 import pyvista as pv
 from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QMouseEvent
@@ -21,18 +20,22 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QPushButton,
     QVBoxLayout,
 )
 
 from .atom_picking import pick_atom_index_from_screen
 from .base_picking_dialog import BasePickingDialog
-from ..utils.constants import VDW_DISPLAY_RADII
+from .move_dialog_mixin import MoveDialogMixin
 
 
-class MoveSelectedAtomsDialog(BasePickingDialog):
+class MoveSelectedAtomsDialog(MoveDialogMixin, BasePickingDialog):
     """Dialog to select specific atoms and perform translation/rotation on them."""
+
+    HIGHLIGHT_ACTOR = "move_selected_atoms_highlight"
+    EMPTY_SELECTION_WARNING = "Please select atoms first."
+    NO_SELECTION_TEXT = "No atoms selected"
+    SELECTION_PREFIX = "Selected"
 
     def __init__(
         self,
@@ -77,36 +80,6 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         """Set the selected atom group."""
         self.selected_atoms = value
 
-    @property
-    def x_trans_input(self) -> QLineEdit:
-        """Expose x_trans_input widget."""
-        return cast(QLineEdit, self.widgets["x_trans_input"])
-
-    @property
-    def y_trans_input(self) -> QLineEdit:
-        """Expose y_trans_input widget."""
-        return cast(QLineEdit, self.widgets["y_trans_input"])
-
-    @property
-    def z_trans_input(self) -> QLineEdit:
-        """Expose z_trans_input widget."""
-        return cast(QLineEdit, self.widgets["z_trans_input"])
-
-    @property
-    def x_rot_input(self) -> QLineEdit:
-        """Expose x_rot_input widget."""
-        return cast(QLineEdit, self.widgets["x_rot_input"])
-
-    @property
-    def y_rot_input(self) -> QLineEdit:
-        """Expose y_rot_input widget."""
-        return cast(QLineEdit, self.widgets["y_rot_input"])
-
-    @property
-    def z_rot_input(self) -> QLineEdit:
-        """Expose z_rot_input widget."""
-        return cast(QLineEdit, self.widgets["z_rot_input"])
-
     def init_ui(self) -> None:
         """Initialize UI widgets and layout."""
         self.setWindowTitle("Move Selected Atoms")
@@ -124,8 +97,9 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         layout.addWidget(instruction_label)
 
         # Selected atoms display
-        self.widgets["selection_label"] = QLabel("No atoms selected")
-        layout.addWidget(self.widgets["selection_label"])
+        self.selection_label = QLabel("No atoms selected")
+        self.widgets["selection_label"] = self.selection_label
+        layout.addWidget(self.selection_label)
 
         self._init_translation_ui(layout)
         self._init_rotation_ui(layout)
@@ -145,8 +119,11 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         y_in = QLineEdit("0.0")
         z_in = QLineEdit("0.0")
 
+        self.x_trans_input = x_in
         self.widgets["x_trans_input"] = x_in
+        self.y_trans_input = y_in
         self.widgets["y_trans_input"] = y_in
+        self.z_trans_input = z_in
         self.widgets["z_trans_input"] = z_in
 
         # Execute apply_translation on Enter key
@@ -184,8 +161,11 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
         y_rot = QLineEdit("0.0")
         z_rot = QLineEdit("0.0")
 
+        self.x_rot_input = x_rot
         self.widgets["x_rot_input"] = x_rot
+        self.y_rot_input = y_rot
         self.widgets["y_rot_input"] = y_rot
+        self.z_rot_input = z_rot
         self.widgets["z_rot_input"] = z_rot
 
         # Execute apply_rotation on Enter key
@@ -471,209 +451,6 @@ class MoveSelectedAtomsDialog(BasePickingDialog):
 
         self.show_atom_labels()
         self.update_display()
-
-    def update_display(self) -> None:
-        """Update the selected atoms text label."""
-        if not self.selected_atoms:
-            self.widgets["selection_label"].setText("No atoms selected")
-        else:
-            atom_info = []
-            for atom_idx in sorted(self.selected_atoms):
-                symbol = self.mol.GetAtomWithIdx(atom_idx).GetSymbol()
-                atom_info.append(f"{symbol}({atom_idx})")
-
-            info_str = ", ".join(atom_info[:5])
-            if len(atom_info) > 5:
-                info_str += " ..."
-            self.widgets["selection_label"].setText(
-                f"Selected: {len(self.selected_atoms)} atoms - {info_str}"
-            )
-
-    def show_atom_labels(self) -> None:
-        """Highlight selected atoms."""
-        plotter = self.main_window.view_3d_manager.plotter
-        try:
-            cam = plotter.camera_position if plotter else None
-        except (AttributeError, RuntimeError, TypeError):
-            cam = None
-
-        self.clear_atom_labels()
-
-        if not self.selected_atoms:
-            return
-
-        selected_indices = list(self.selected_atoms)
-        if self.main_window.view_3d_manager.atom_positions_3d is None:
-            logging.warning("atom_positions_3d is None in update_atom_labels")
-            return
-        selected_positions = self.main_window.view_3d_manager.atom_positions_3d[
-            selected_indices
-        ]
-        selected_radii = np.array(
-            [
-                VDW_DISPLAY_RADII.get(self.mol.GetAtomWithIdx(i).GetSymbol(), 0.4) * 1.3
-                for i in selected_indices
-            ]
-        )
-
-        highlight_source = pv.PolyData(selected_positions)
-        highlight_source["radii"] = selected_radii
-        highlight_glyphs = highlight_source.glyph(
-            scale="radii",
-            geom=pv.Sphere(radius=1.0, theta_resolution=16, phi_resolution=16),
-            orient=False,
-        )
-
-        if plotter is None:
-            return
-        self.highlight_actor = plotter.add_mesh(
-            highlight_glyphs,
-            color="yellow",
-            opacity=0.3,
-            name="move_selected_atoms_highlight",
-            pickable=False,
-            reset_camera=False,
-        )
-
-        if cam is not None:
-            try:
-                plotter.camera_position = cam
-            except (AttributeError, RuntimeError, TypeError):
-                # Safe defensive fallback catching AttributeError, RuntimeError, TypeError
-                logging.debug("Suppressed non-critical error", exc_info=True)
-
-        plotter.render()
-
-    def clear_atom_labels(self) -> None:
-        """Clear highlights."""
-        super().clear_atom_labels()
-
-        plotter = self.main_window.view_3d_manager.plotter
-        if plotter is not None:
-            try:
-                plotter.remove_actor("move_selected_atoms_highlight")  # type: ignore[arg-type]
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                logging.debug("Suppressed non-critical error", exc_info=True)
-
-        if self.highlight_actor:
-            if plotter is not None:
-                try:
-                    plotter.remove_actor(self.highlight_actor)
-                except (AttributeError, RuntimeError, ValueError, TypeError):
-                    # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                    logging.debug("Suppressed non-critical error", exc_info=True)
-            self.highlight_actor = None
-
-        if plotter is not None:
-            try:
-                plotter.render()
-            except (AttributeError, RuntimeError, ValueError, TypeError):
-                # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError
-                logging.debug("Suppressed non-critical error", exc_info=True)
-
-    def reset_translation_inputs(self) -> None:
-        """Reset translation entry fields to 0.0."""
-        self.widgets["x_trans_input"].setText("0.0")
-        self.widgets["y_trans_input"].setText("0.0")
-        self.widgets["z_trans_input"].setText("0.0")
-
-    def apply_translation(self) -> None:
-        """Translate the selected atoms."""
-        if not self.selected_atoms:
-            QMessageBox.warning(self, "Warning", "Please select atoms first.")
-            return
-
-        try:
-            dx = float(self.widgets["x_trans_input"].text())
-            dy = float(self.widgets["y_trans_input"].text())
-            dz = float(self.widgets["z_trans_input"].text())
-        except ValueError:
-            QMessageBox.warning(
-                self, "Warning", "Please enter valid translation values."
-            )
-            return
-
-        translation_vector = np.array([dx, dy, dz])
-        positions = self.mol.GetConformer().GetPositions()
-        for atom_idx in self.selected_atoms:
-            positions[atom_idx] += translation_vector
-
-        self._update_molecule_geometry(positions)
-        self._push_undo()
-        self.show_atom_labels()
-
-    def reset_rotation_inputs(self) -> None:
-        """Reset rotation entry fields to 0.0."""
-        self.widgets["x_rot_input"].setText("0.0")
-        self.widgets["y_rot_input"].setText("0.0")
-        self.widgets["z_rot_input"].setText("0.0")
-
-    def apply_rotation(self) -> None:
-        """Rotate the selected atoms around their centroid."""
-        if not self.selected_atoms:
-            QMessageBox.warning(self, "Warning", "Please select atoms first.")
-            return
-
-        try:
-            rx_rad, ry_rad, rz_rad = np.radians(
-                [
-                    float(self.widgets["x_rot_input"].text()),
-                    float(self.widgets["y_rot_input"].text()),
-                    float(self.widgets["z_rot_input"].text()),
-                ]
-            )
-        except ValueError:
-            QMessageBox.warning(self, "Warning", "Please enter valid rotation values.")
-            return
-
-        positions = self.mol.GetConformer().GetPositions()
-
-        # Calculate centroid of the selected atoms
-        selected_indices = list(self.selected_atoms)
-        selected_positions = positions[selected_indices]
-        centroid = np.mean(selected_positions, axis=0)
-
-        # Rotation matrices
-        r_x = np.array(
-            [
-                [1, 0, 0],
-                [0, np.cos(rx_rad), -np.sin(rx_rad)],
-                [0, np.sin(rx_rad), np.cos(rx_rad)],
-            ]
-        )
-        r_y = np.array(
-            [
-                [np.cos(ry_rad), 0, np.sin(ry_rad)],
-                [0, 1, 0],
-                [-np.sin(ry_rad), 0, np.cos(ry_rad)],
-            ]
-        )
-        r_z = np.array(
-            [
-                [np.cos(rz_rad), -np.sin(rz_rad), 0],
-                [np.sin(rz_rad), np.cos(rz_rad), 0],
-                [0, 0, 1],
-            ]
-        )
-        rot_matrix = r_z @ r_y @ r_x
-
-        for atom_idx in self.selected_atoms:
-            pos = positions[atom_idx]
-            new_pos = rot_matrix @ (pos - centroid) + centroid
-            positions[atom_idx] = new_pos
-
-        self._update_molecule_geometry(positions)
-        self._push_undo()
-        self.show_atom_labels()
-
-    def clear_selection(self) -> None:
-        """Clear selection."""
-        self.selected_atoms.clear()
-        self.clear_atom_labels()
-        self.update_display()
-        self.is_dragging_group = False
-        self.drag_start_pos = None
 
     def toggle_box_selection(self, checked: bool) -> None:
         """Toggle Box Selection mode using PyVista's rectangle picker."""
