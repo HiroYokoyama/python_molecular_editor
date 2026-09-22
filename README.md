@@ -24,7 +24,10 @@
 **Repository**: [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
 
 -----
-![](img/icon.png)
+<p align="center">
+  <img src="img/icon.png" width="500" alt="MoleditPy Icon">
+</p>
+
 ![](img/screenshot.png)
 
 
