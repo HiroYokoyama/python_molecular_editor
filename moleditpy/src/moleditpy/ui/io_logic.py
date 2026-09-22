@@ -16,6 +16,7 @@ import logging
 import os
 import json
 import pickle
+import unicodedata
 from ..utils.suppress_log import suppress_log
 from typing import Any, Callable, List, Optional, Tuple
 
@@ -148,14 +149,8 @@ class IOManager:
     def _read_mol_or_sdf(self, file_path: str) -> Optional[Chem.Mol]:
         """Read the molecule from a .mol or .sdf file, whatever its encoding.
 
-        An SDF goes through ForwardSDMolSupplier over the already-decoded text
-        re-encoded as UTF-8, so the record's data fields (``> <NAME>`` and the
-        rest) survive onto the molecule -- reading it as a bare MOL block
-        silently drops every one of them. ForwardSDMolSupplier takes a binary
-        stream rather than a path, which is what lets the encoding fallbacks in
-        _read_text_lines_flexible apply; Chem.SDMolSupplier(path) reads the file
-        itself and mishandles CP932/Shift-JIS. MolFromMolBlock on the first
-        record remains the fallback for an SDF the supplier rejects.
+        The SDF goes through a stream, not a path, so both the encoding
+        fallbacks and the record's data fields survive.
         """
         if file_path.lower().endswith(".sdf"):
             raw = "".join(self._read_text_lines_flexible(file_path))
@@ -184,12 +179,22 @@ class IOManager:
         # some genuinely EUC-JP byte sequences and decodes them to the wrong
         # (mojibake) characters instead of raising, so trying cp932 first
         # would never let euc_jp text reach its correct decoding.
-        for encoding in ("utf-8-sig", "euc_jp", "cp932", "shift_jis"):
+        mojibake: Optional[List[str]] = None
+        for encoding in ("utf-8-sig", "euc_jp", "cp932", "shift_jis", "cp1252"):
             try:
                 with open(file_path, "r", encoding=encoding) as f:
-                    return f.readlines()
+                    lines = f.readlines()
             except UnicodeDecodeError:
                 continue
+            # A wrong codec lands bytes in the private-use area; a real comment
+            # does not. Keep looking, but remember this in case nothing is clean
+            # -- a cp932 file using gaiji decodes correctly and lands there too.
+            if any(unicodedata.category(ch) == "Co" for line in lines for ch in line):
+                mojibake = mojibake if mojibake is not None else lines
+                continue
+            return lines
+        if mojibake is not None:
+            return mojibake
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             return f.readlines()
 

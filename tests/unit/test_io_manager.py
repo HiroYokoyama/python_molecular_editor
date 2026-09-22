@@ -1072,6 +1072,31 @@ class TestFlexibleEncodingAndBlockLoader:
         lines = IOManager._read_text_lines_flexible(str(test_file))
         assert lines == ["あああ\n"]
 
+    @pytest.mark.parametrize(
+        "text, encoding",
+        [
+            ("he said “hi” — ok", "cp1252"),
+            ("caf\xe9 na\xefve r\xe9sum\xe9", "latin-1"),
+            ("1.09 \xc5 (Angstr\xf6m)", "latin-1"),
+            ("エタノール 分子", "cp932"),
+            ("エタノール 分子", "euc_jp"),
+            ("エタノール 分子", "utf-8"),
+        ],
+    )
+    def test_western_comments_survive_alongside_japanese_ones(
+        self, tmp_path, text, encoding
+    ):
+        """A Western-encoded comment must not be read as Japanese, or vice versa.
+
+        "1.09 Å (Angström)" is the case that needs the private-use check: those
+        bytes are also valid CP932, so the chain used to accept that decoding
+        and hand back "1.09 ﾅ (Angstr)".
+        """
+        path = tmp_path / "comment.xyz"
+        path.write_bytes(("2\n" + text + "\nC 0 0 0\nH 1 0 0\n").encode(encoding))
+
+        assert IOManager._read_text_lines_flexible(str(path))[1].rstrip("\n") == text
+
     def test_load_mol_block_text_mol_and_sdf(self, tmp_path):
         """_load_mol_block_text reads and fixes V2000 counts line for both .mol and .sdf."""
         host = DummyHost()
@@ -1220,6 +1245,21 @@ class TestMolToSceneStereo:
         """A double bond with no geometry must not be given one."""
         assert set(self._load(tmp_path, "C=C")) == {0}
 
+    def test_the_two_alanine_enantiomers_arrive_wedged_opposite_ways(self, tmp_path):
+        """A chiral centre must reach the scene as a wedge (1) or a hash (2).
+
+        MolFromMolBlock returns the wedging as atom chiral tags and leaves
+        every GetBondDir() at NONE; load_mol_file's WedgeMolBonds call is what
+        puts the directions back. Drop that call and both enantiomers arrive
+        as plain lines -- the drawing stops distinguishing them, while still
+        looking like a successful import.
+        """
+        r = self._load(tmp_path, "N[C@@H](C)C(=O)O")
+        s = self._load(tmp_path, "N[C@H](C)C(=O)O")
+
+        assert set(r) & {1, 2} and set(s) & {1, 2}
+        assert r != s
+
 
 class TestXyzBlockEntryPoints:
     """load_xyz_block and show_xyz_data are the paths plugins hand XYZ text to."""
@@ -1229,8 +1269,9 @@ class TestXyzBlockEntryPoints:
         host = DummyHost()
 
         assert IOManager(host).load_xyz_block("not xyz at all") is None
-        assert "Error parsing XYZ data" in (
-            host.statusBar_mock.showMessage.call_args[0][0]
+        assert (
+            "Error parsing XYZ data"
+            in (host.statusBar_mock.showMessage.call_args[0][0])
         )
 
     def test_show_xyz_data_enters_the_3d_viewer(self):
