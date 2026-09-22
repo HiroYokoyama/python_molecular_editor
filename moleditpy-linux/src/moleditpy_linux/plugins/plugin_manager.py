@@ -348,10 +348,11 @@ class PluginManager:
         self, filepath: str, module_name: str, category: str
     ) -> None:
         """Add a disabled plugin without importing or initializing its code."""
-        info = self.get_plugin_info_safe(filepath)
+        # Same fallback as _load_single_plugin's getattr(..., module_name).
+        info = self.get_plugin_info_safe(filepath, fallback_name=module_name)
         self.plugins.append(
             {
-                "name": info.get("name", module_name),
+                "name": info["name"],
                 "version": info.get("version", "Unknown"),
                 "author": info.get("author", "Unknown"),
                 "description": info.get("description", ""),
@@ -800,10 +801,13 @@ class PluginManager:
             logging.debug("Suppressed non-critical error", exc_info=True)
         return False
 
-    def get_plugin_info_safe(self, file_path: str) -> Dict[str, str]:
-        """Extracts plugin metadata using AST parsing (safe, no execution)."""
+    def get_plugin_info_safe(
+        self, file_path: str, fallback_name: Optional[str] = None
+    ) -> Dict[str, str]:
+        """Extract plugin metadata by AST parsing; ``fallback_name`` stands in
+        for a missing PLUGIN_NAME, defaulting to the file's basename."""
         info = {
-            "name": os.path.basename(file_path),
+            "name": fallback_name or os.path.basename(file_path),
             "version": "Unknown",
             "author": "Unknown",
             "description": "",
