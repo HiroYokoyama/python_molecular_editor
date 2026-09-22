@@ -2,9 +2,9 @@
 
 ## MoleditPy Blue
 
-| Hex | RGB |
-|---|---|
-| `#3577F7` | `53, 119, 247` |
+| Color | Hex | RGB |
+| :---: | :---: | :---: |
+| ![MoleditPy Blue](brand_color_box.svg) | `#3577F7` | `53, 119, 247` |
 
 Use this exact hex for any MoleditPy-branded accent, instead of picking a
 similar-looking blue.
