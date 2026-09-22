@@ -471,6 +471,22 @@ def test_close_hides_the_dialog_before_rediscovering(mock_plugin_manager, qtbot)
     assert visible_during_discovery == [False]
 
 
+def test_saving_skips_rows_the_plugin_list_no_longer_backs(mock_plugin_manager, qtbot):
+    """A table row with no plugin behind it must not break the save."""
+    mock_plugin_manager.main_window = None
+    mock_plugin_manager.plugin_path_key.side_effect = lambda filepath: filepath.rsplit(
+        "/", 1
+    )[-1]
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+    window._status_checkbox(0).setChecked(False)
+
+    # Plugins removed from under a table that has not been refreshed yet
+    mock_plugin_manager.plugins = mock_plugin_manager.plugins[:1]
+
+    assert window._save_checkbox_preferences() == {"plugin1.py"}
+
+
 def test_filtering_disarms_remove_for_a_hidden_selection(mock_plugin_manager, qtbot):
     """Remove Plugin must not stay aimed at a row the search box has hidden.
 
@@ -523,7 +539,14 @@ def test_folder_drop_keeps_the_folder_name_and_the_category_note(
 
     pkg = tmp_path / "my_pkg"
     pkg.mkdir()
-    (pkg / "__init__.py").write_text("def run(mw):" + chr(10) + "    pass" + chr(10))
+    (pkg / "__init__.py").write_text(
+        '"""Does a thing."""'
+        + chr(10)
+        + "def run(mw):"
+        + chr(10)
+        + "    pass"
+        + chr(10)
+    )
     mock_plugin_manager.get_plugin_info_safe.side_effect = (
         PluginManager.get_plugin_info_safe.__get__(mock_plugin_manager)
     )
@@ -543,7 +566,7 @@ def test_folder_drop_keeps_the_folder_name_and_the_category_note(
 
     msg = ask.call_args[0][2]
     assert "Name: my_pkg" in msg
-    assert "Folder Plugin / Category (Package: my_pkg)" in msg
+    assert "Folder Plugin / Category (Package: my_pkg) - Does a thing." in msg
 
 
 def test_on_reload_persists_checkbox_changes(mock_plugin_manager, qtbot):
