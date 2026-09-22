@@ -4,7 +4,7 @@
 ![MoleditPy](https://img.shields.io/badge/MoleditPy-v4-3577F7)
 [![Powered by RDKit](https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAFVBMVEXc3NwUFP8UPP9kZP+MjP+0tP////9ZXZotAAAAAXRSTlMAQObYZgAAAAFiS0dEBmFmuH0AAAAHdElNRQfmAwsPGi+MyC9RAAAAQElEQVQI12NgQABGQUEBMENISUkRLKBsbGwEEhIyBgJFsICLC0iIUdnExcUZwnANQWfApKCK4doRBsKtQFgKAQC5Ww1JEHSEkAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMi0wMy0xMVQxNToyNjo0NyswMDowMDzr2J4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjItMDMtMTFUMTU6MjY6NDcrMDA6MDBNtmAiAAAAAElFTkSuQmCC)](https://www.rdkit.org/)
 [![PyPI version](https://badge.fury.io/py/MoleditPy.svg)](https://badge.fury.io/py/MoleditPy)
-[![Python Versions](https://img.shields.io/pypi/pyversions/MoleditPy.svg)](https://pypi.org/project/MoleditPy/)
+[![Python Versions](https://img.shields.io/badge/python-3.9--3.14-blue.svg)](https://pypi.org/project/MoleditPy/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Build Status](https://github.com/HiroYokoyama/python_molecular_editor/actions/workflows/tests.yml/badge.svg)](https://github.com/HiroYokoyama/python_molecular_editor/actions)
 [![codecov](https://codecov.io/gh/HiroYokoyama/python_molecular_editor/graph/badge.svg)](https://codecov.io/gh/HiroYokoyama/python_molecular_editor)
