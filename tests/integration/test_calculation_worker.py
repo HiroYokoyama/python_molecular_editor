@@ -205,7 +205,7 @@ def test_calculation_worker_conversion_no_optimize(qtbot, app):
         worker.run_calculation(mol_block, settings)
 
     mol_3d = blocker.args[0][1]
-    symbols = set(a.GetSymbol() for a in mol_3d.GetAtoms())
+    symbols = {a.GetSymbol() for a in mol_3d.GetAtoms()}
     assert "F" in symbols
     assert "Cl" in symbols
     # Verification: Bond length is non-zero (3D coordinates generated)

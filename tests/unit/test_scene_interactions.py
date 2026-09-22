@@ -19,9 +19,9 @@ def setup_scene_with_view(mock_parser_host):
     return scene
 
 
-def create_mock_event(pos=QPointF(100, 100), button=Qt.MouseButton.LeftButton):
+def create_mock_event(pos=None, button=Qt.MouseButton.LeftButton):
     event = MagicMock()
-    event.scenePos.return_value = pos
+    event.scenePos.return_value = QPointF(100, 100) if pos is None else pos
     event.button.return_value = button
     return event
 
@@ -150,7 +150,7 @@ def test_double_click_select_component(mock_dbl, mock_parser_host):
     scene.create_bond(scene.atom_items[id2], scene.atom_items[id3])
     id_iso = scene.create_atom("O", QPointF(100, 100))
     atom_iso = scene.atom_items[id_iso]
-    for aid, it in scene.atom_items.items():
+    for it in scene.atom_items.values():
         it.__class__ = AtomItem
         it.setSelected = MagicMock()
     with patch.object(MoleculeScene, "itemAt", return_value=scene.atom_items[id1]):

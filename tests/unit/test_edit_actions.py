@@ -274,11 +274,9 @@ class TestEditActionsExtended:
         host.edit_actions_manager = mgr
 
         if not hasattr(sys.modules[mgr.__module__], "CLIPBOARD_MIME_TYPE"):
-            setattr(
-                sys.modules[mgr.__module__],
-                "CLIPBOARD_MIME_TYPE",
-                "application/x-moleditpy-pme",
-            )
+            sys.modules[
+                mgr.__module__
+            ].CLIPBOARD_MIME_TYPE = "application/x-moleditpy-pme"
 
         return mgr
 
@@ -1065,10 +1063,8 @@ def test_clean_up_2d_structure_passes_prefer_coordgen_setting(
     editor.scene.create_bond(editor.scene.atom_items[a1], editor.scene.atom_items[a2])
     mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
     editor.scene.bond_items = {}
-    editor.scene.get_setting.side_effect = (
-        lambda key, default=None: prefer_coordgen_setting
-        if key == "prefer_coordgen_2d"
-        else default
+    editor.scene.get_setting.side_effect = lambda key, default=None: (
+        prefer_coordgen_setting if key == "prefer_coordgen_2d" else default
     )
 
     with (

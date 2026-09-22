@@ -71,7 +71,7 @@ def assert_is_2d_benzene(data):
     assert orders == [1, 1, 1, 2, 2, 2], f"expected Kekule benzene, got {orders}"
 
     # Every carbon must carry exactly two ring bonds.
-    degree = {aid: 0 for aid in data.atoms}
+    degree = dict.fromkeys(data.atoms, 0)
     for a1, a2 in data.bonds:
         degree[a1] += 1
         degree[a2] += 1

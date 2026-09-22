@@ -454,7 +454,7 @@ if moleditpy is not None:
                 spec = _il.spec_from_file_location("moleditpy.ui.main_window", mm_path)
                 mod = _il.module_from_spec(spec)
                 spec.loader.exec_module(mod)
-                setattr(moleditpy, "MainWindow", getattr(mod, "MainWindow", None))
+                moleditpy.MainWindow = getattr(mod, "MainWindow", None)
         except Exception:
             import traceback
 
@@ -489,7 +489,7 @@ if moleditpy is not None:
                 )
                 mod = _il.module_from_spec(spec)
                 spec.loader.exec_module(mod)
-                setattr(moleditpy, "MolecularData", getattr(mod, "MolecularData", None))
+                moleditpy.MolecularData = getattr(mod, "MolecularData", None)
         except Exception:
             import traceback
 
@@ -507,7 +507,7 @@ if moleditpy is not None:
                     # behaviour expected by the main window: ignore drop acceptance
                     return
 
-                setattr(_CQI, "setAcceptDrops", _no_op_setAcceptDrops)
+                _CQI.setAcceptDrops = _no_op_setAcceptDrops
         except Exception:
             import traceback
 
@@ -520,11 +520,7 @@ if moleditpy is not None:
                 def _no_op_setSizePolicy(self, *a, **k):
                     return
 
-                setattr(_CQI, "setSizePolicy", _no_op_setSizePolicy)
-        except Exception:
-            import traceback
-
-            traceback.print_exc()
+                _CQI.setSizePolicy = _no_op_setSizePolicy
         except Exception:
             import traceback
 
@@ -545,10 +541,8 @@ if moleditpy is not None:
                 )
                 mod = _il.module_from_spec(spec)
                 spec.loader.exec_module(mod)
-                setattr(
-                    moleditpy,
-                    "CLIPBOARD_MIME_TYPE",
-                    getattr(mod, "CLIPBOARD_MIME_TYPE", None),
+                moleditpy.CLIPBOARD_MIME_TYPE = getattr(
+                    mod, "CLIPBOARD_MIME_TYPE", None
                 )
         except Exception:
             import traceback
@@ -737,8 +731,8 @@ def window(app, qtbot, monkeypatch, tmp_path):
             lambda self: _get_safe(self, "edit_3d_manager", "active_3d_dialogs"),
             lambda self, v: _set_safe(self, "edit_3d_manager", "active_3d_dialogs", v),
         )
-        cls.close_all_3d_edit_dialogs = (
-            lambda self: self.edit_3d_manager.close_all_3d_edit_dialogs()
+        cls.close_all_3d_edit_dialogs = lambda self: (
+            self.edit_3d_manager.close_all_3d_edit_dialogs()
         )
 
         # IOManager proxies
@@ -760,8 +754,8 @@ def window(app, qtbot, monkeypatch, tmp_path):
                 self.view_3d_manager, "current_atom_info_labels", v
             ),
         )
-        cls.toggle_atom_info_display = (
-            lambda self, mode: self.view_3d_manager.toggle_atom_info_display(mode)
+        cls.toggle_atom_info_display = lambda self, mode: (
+            self.view_3d_manager.toggle_atom_info_display(mode)
         )
         cls.current_mol = property(
             lambda self: _get_safe(self, "view_3d_manager", "current_mol"),
@@ -820,16 +814,16 @@ def window(app, qtbot, monkeypatch, tmp_path):
         )
 
         # EditActionsManager proxies (accept and ignore triggered bool arg)
-        cls.add_hydrogen_atoms = (
-            lambda self, *a: self.edit_actions_manager.add_hydrogen_atoms()
+        cls.add_hydrogen_atoms = lambda self, *a: (
+            self.edit_actions_manager.add_hydrogen_atoms()
         )
-        cls.remove_hydrogen_atoms = (
-            lambda self, *a: self.edit_actions_manager.remove_hydrogen_atoms()
+        cls.remove_hydrogen_atoms = lambda self, *a: (
+            self.edit_actions_manager.remove_hydrogen_atoms()
         )
 
         # DialogManager proxies (accept and ignore triggered bool arg)
-        cls.save_2d_as_template = (
-            lambda self, *a: self.dialog_manager.save_2d_as_template()
+        cls.save_2d_as_template = lambda self, *a: (
+            self.dialog_manager.save_2d_as_template()
         )
 
         # ComputeManager proxies
@@ -839,8 +833,8 @@ def window(app, qtbot, monkeypatch, tmp_path):
         from PyQt6.QtWidgets import QMainWindow as _QMainWindow
 
         _orig_statusBar = _QMainWindow.statusBar
-        cls.statusBar = (
-            lambda self: self._statusBar_mock
+        cls.statusBar = lambda self: (
+            self._statusBar_mock
             if hasattr(self, "_statusBar_mock")
             else _orig_statusBar(self)
         )
@@ -904,7 +898,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
                     except Exception:
                         MainWindowClass = None
                     try:
-                        setattr(app_mod, "MainWindow", MainWindowClass)
+                        app_mod.MainWindow = MainWindowClass
                     except Exception:
                         import traceback
 
@@ -1092,10 +1086,8 @@ def window(app, qtbot, monkeypatch, tmp_path):
                             if mol is not None:
                                 # Ensure HasProp/GetIntProp/GetAtomWithIdx are present
                                 if not hasattr(mol, "HasProp"):
-                                    mol.HasProp = (
-                                        lambda prop: True
-                                        if prop == "_original_atom_id"
-                                        else False
+                                    mol.HasProp = lambda prop: (
+                                        True if prop == "_original_atom_id" else False
                                     )
                                 if not hasattr(mol, "GetIntProp"):
                                     mol.GetIntProp = lambda p: 0
@@ -1496,7 +1488,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
     try:
         # Instrument toggle for debugging and ensure that triggered signals call it
         if hasattr(main_window, "toggle_atom_info_display"):
-            orig_toggle = getattr(main_window, "toggle_atom_info_display")
+            orig_toggle = main_window.toggle_atom_info_display
 
             def _dbg_toggle(mode):
                 return orig_toggle(mode)
@@ -1811,8 +1803,9 @@ def window(app, qtbot, monkeypatch, tmp_path):
             ):
                 try:
                     a.triggered.connect(
-                        lambda checked,
-                        t=toggle_map[attr_name]: main_window.toggle_atom_info_display(t)
+                        lambda checked, t=toggle_map[attr_name]: (
+                            main_window.toggle_atom_info_display(t)
+                        )
                     )
                 except Exception:
                     a.triggered.connect(lambda: QDialog().exec())

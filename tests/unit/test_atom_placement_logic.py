@@ -7,9 +7,9 @@ from moleditpy.ui.molecular_scene_handler import KeyboardMixin
 from moleditpy.ui.atom_item import AtomItem
 
 
-def MockAtom(pos=QPointF(0, 0), symbol="C"):
+def MockAtom(pos=None, symbol="C"):
     atom = MagicMock(spec=AtomItem)
-    atom.pos = MagicMock(return_value=pos)
+    atom.pos = MagicMock(return_value=QPointF(0, 0) if pos is None else pos)
     atom.symbol = symbol
     atom.bonds = []
     return atom

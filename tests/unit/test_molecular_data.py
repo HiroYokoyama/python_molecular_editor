@@ -311,7 +311,7 @@ def test_to_mol_block_contains_all_atoms():
     # Must round-trip through RDKit and back
     ref_mol = Chem.MolFromMolBlock(mol_block, sanitize=False)
     if ref_mol:
-        symbols = set(a.GetSymbol() for a in ref_mol.GetAtoms())
+        symbols = {a.GetSymbol() for a in ref_mol.GetAtoms()}
         assert symbols == {"C", "N", "O"}
 
 

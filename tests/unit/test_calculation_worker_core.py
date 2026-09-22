@@ -91,7 +91,7 @@ def test_calculation_worker_none_conversion_mode_defaults_to_fallback(worker):
 
 def test_calculation_worker_safe_helpers_halted(worker):
     """halt_all=True prevents the finished signal from being emitted."""
-    setattr(worker, "halt_all", True)
+    worker.halt_all = True
 
     status_captor = SignalCaptor()
     worker.status_update.connect(status_captor.capture)

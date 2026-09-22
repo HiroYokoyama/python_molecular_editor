@@ -416,7 +416,6 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
         patch("moleditpy.ui.compute_logic.QThread"),
         patch("PyQt6.QtCore.QTimer.singleShot"),
     ):
-        MockWorker.return_value
         compute.optimize_3d_structure("MMFF_RDKIT")
 
         # In the new async implementation, it should create a worker

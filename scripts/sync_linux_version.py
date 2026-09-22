@@ -194,7 +194,7 @@ def sync_linux(dry_run=False, verbose=False):
                     synced_files_count += 1
 
     # Cleanup orphan files in destination
-    for root, dirs, files in os.walk(SRC_LINUX, topdown=False):
+    for root, _dirs, files in os.walk(SRC_LINUX, topdown=False):
         for file in files:
             dest_file = os.path.abspath(os.path.join(root, file))
             if dest_file not in valid_dest_files:

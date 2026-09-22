@@ -117,11 +117,11 @@ def test_fusing_onto_another_atom_relabels_the_ghost(window):
     preview = scene.template_preview
 
     scene.update_template_preview(scene.atom_items[lone].pos())
-    fused = [i for i in preview.existing_indices]
+    fused = list(preview.existing_indices)
     assert fused and preview.ghost_atoms[fused[0]].implicit_h_count == 2
 
     scene.update_template_preview(scene.atom_items[bonded].pos())
-    fused = [i for i in preview.existing_indices]
+    fused = list(preview.existing_indices)
     assert fused and preview.ghost_atoms[fused[0]].implicit_h_count == 1
 
 
@@ -268,8 +268,9 @@ _HEX_STEP = math.radians(60.0)
 _KEKULE = [(0, 1, 2), (1, 2, 1), (2, 3, 2), (3, 4, 1), (4, 5, 2), (5, 0, 1)]
 
 
-def _hex_points(centre=QPointF(0.0, 0.0)):
+def _hex_points(centre=None):
     """The six vertices a benzene template lands on when centred at *centre*."""
+    centre = QPointF(0.0, 0.0) if centre is None else centre
     return [
         centre
         + QPointF(

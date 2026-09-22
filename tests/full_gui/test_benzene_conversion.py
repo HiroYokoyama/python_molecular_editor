@@ -196,12 +196,14 @@ def test_optimize_3d_keeps_benzene_valid(full_window, qtbot):
         full_window.init_manager.optimize_3d_button, Qt.MouseButton.LeftButton
     )
     qtbot.waitUntil(
-        lambda: full_window.view_3d_manager.current_mol is not None
-        and not np.array_equal(
-            np.array(
-                full_window.view_3d_manager.current_mol.GetConformer().GetPositions()
-            ),
-            before,
+        lambda: (
+            full_window.view_3d_manager.current_mol is not None
+            and not np.array_equal(
+                np.array(
+                    full_window.view_3d_manager.current_mol.GetConformer().GetPositions()
+                ),
+                before,
+            )
         ),
         timeout=CONVERT_TIMEOUT_MS,
     )
