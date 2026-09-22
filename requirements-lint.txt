@@ -11,7 +11,7 @@
 #     pip install -r requirements-lint.txt
 #     mypy && ruff check moleditpy/src/moleditpy/ && pylint moleditpy/src/moleditpy/ --errors-only
 
-mypy==1.20.2
-ruff==0.14.5
-pylint==4.0.4
+mypy==2.3.1
+ruff==0.16.8
+pylint==4.0.8
 

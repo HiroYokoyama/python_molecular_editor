@@ -979,7 +979,7 @@ class MainInitManager:
             if key == "ball_and_stick":
                 action.setChecked(True)
             action.triggered.connect(
-                lambda checked=False, k=key: (self.host.view_3d_manager.set_3d_style(k))
+                lambda checked=False, k=key: self.host.view_3d_manager.set_3d_style(k)
             )
             style_menu.addAction(action)
             style_group.addAction(action)
@@ -1392,9 +1392,11 @@ class MainInitManager:
         view_menu.addSeparator()
         reset_3d_view_action = QAction("Reset 3D View", self.host)
         reset_3d_view_action.triggered.connect(
-            lambda: self.host.view_3d_manager.plotter.reset_camera()
-            if self.host.view_3d_manager.plotter
-            else None
+            lambda: (
+                self.host.view_3d_manager.plotter.reset_camera()
+                if self.host.view_3d_manager.plotter
+                else None
+            )
         )
         reset_3d_view_action.setShortcut(QKeySequence("Ctrl+Shift+R"))
         view_menu.addAction(reset_3d_view_action)
@@ -1750,8 +1752,9 @@ class MainInitManager:
             if key.endswith("_OBABEL") and not OBABEL_AVAILABLE:
                 action.setEnabled(False)
             action.triggered.connect(
-                lambda checked,
-                m=key: self.host.compute_manager.set_optimization_method(m)
+                lambda checked, m=key: (
+                    self.host.compute_manager.set_optimization_method(m)
+                )
             )
             self.optimization_menu.addAction(action)
             self.opt_group.addAction(action)
@@ -1796,8 +1799,9 @@ class MainInitManager:
         action = QAction(label, self.host)
         action.setCheckable(True)
         action.triggered.connect(
-            lambda checked,
-            m=key_upper: self.host.compute_manager.set_optimization_method(m)
+            lambda checked, m=key_upper: (
+                self.host.compute_manager.set_optimization_method(m)
+            )
         )
 
         self.optimization_menu.insertAction(self.opt3d_separator, action)

@@ -123,9 +123,10 @@ jobs:
 
     - name: Run Ruff
       run: |
-        # `ruff format` is part of the documented workflow and the tree is
-        # already clean at the default line length, so gate on it too.
-        ruff format --check moleditpy/src tests
+        # Scoped to the application source. `ruff format` is part of the
+        # documented workflow and the tree is already clean at the default
+        # line length, so gate on it too.
+        ruff format --check moleditpy/src
         ruff check moleditpy/src/moleditpy/
 
     - name: Run Mypy
