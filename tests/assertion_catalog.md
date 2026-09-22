@@ -5128,6 +5128,61 @@ __load_mol_block_text reads and fixes V2000 counts line for both .mol and .sdf._
 - assert '999 V2000' in res_sdf
 - assert 'SecondRecord' not in res_sdf
 
+### TestFlexibleEncodingAndBlockLoader.test_sdf_data_fields_survive_the_import
+_An SDF's data fields must reach the molecule, not be dropped._
+
+- assert mol is not None
+- assert mol.GetProp('_Name') == 'First'
+- assert mol.GetPropsAsDict()['NAME'] == 'Methane'
+- assert mol.GetPropsAsDict()['MW'] == 16.04
+
+### TestFlexibleEncodingAndBlockLoader.test_sdf_data_fields_survive_a_cp932_file
+_Data fields and non-UTF-8 encoding must work together, not one or the other._
+
+- assert mol is not None
+- assert mol.GetPropsAsDict()['備考'] == 'メタン'
+
+### TestFlexibleEncodingAndBlockLoader.test_unreadable_sdf_falls_back_without_raising
+_A record the SD supplier rejects returns None rather than propagating._
+
+- assert io._read_mol_or_sdf(str(sdf)) is None
+
+### TestMolToSceneStereo.test_trans_double_bond_arrives_as_e
+_A trans alkene must reach create_bond as bond_stereo 4 (E), not 0._
+
+- assert 4 in self._load(tmp_path, 'F/C=C/F')
+
+### TestMolToSceneStereo.test_cis_double_bond_arrives_as_z
+_The mirror case: a cis alkene must reach create_bond as bond_stereo 3._
+
+- assert 3 in self._load(tmp_path, 'F/C=C\\F')
+
+### TestMolToSceneStereo.test_plain_double_bond_stays_undefined
+_A double bond with no geometry must not be given one._
+
+- assert set(self._load(tmp_path, 'C=C')) == {0}
+
+### TestXyzBlockEntryPoints.test_load_xyz_block_reports_unparsable_text
+_Bad XYZ text returns None and says so, rather than raising at the caller._
+
+- assert IOManager(host).load_xyz_block('not xyz at all') is None
+- assert 'Error parsing XYZ data' in host.statusBar_mock.showMessage.call_args[0][0]
+
+### TestXyzBlockEntryPoints.test_show_xyz_data_enters_the_3d_viewer
+_A good block is drawn, switches the window to 3D, and clears the dirty flag._
+
+- assert mol is not None
+- host.view_3d_manager.draw_molecule_3d.assert_called_once()
+- host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+- assert host.state_manager.has_unsaved_changes is False
+- assert 'probe.xyz' in host.statusBar_mock.showMessage.call_args[0][0]
+
+### TestXyzBlockEntryPoints.test_show_xyz_data_returns_none_on_bad_text
+_An unparsable block stops before touching the 3D view._
+
+- assert IOManager(host).show_xyz_data('not xyz at all') is None
+- host.view_3d_manager.draw_molecule_3d.assert_not_called()
+
 ## tests/unit/test_items_visual.py
 
 ### test_atom_item_visual_states
@@ -7036,7 +7091,7 @@ _mark_project_modified does not propagate exceptions from state_manager._
 _PluginContext exposes a callable mark_project_modified method._
 
 - self.assertTrue(hasattr(PluginContext, 'mark_project_modified'), 'PluginContext must expose mark_project_modified()')
-- self.assertTrue(callable(getattr(PluginContext, 'mark_project_modified')))
+- self.assertTrue(callable(PluginContext.mark_project_modified))
 
 ### TestCurrentFile.test_set_records_the_path
 _set_current_file stores the path where the window title is read from._
@@ -7712,6 +7767,13 @@ _No description provided._
 - assert plugins[0]['status'] == 'Disabled'
 - assert plugins[0]['module'] is None
 
+### test_disabled_plugin_without_plugin_name_keeps_the_loaded_name
+_Disabling a plugin must not rename it to its file name in the manager._
+
+- assert enabled_names == {'my_pkg', 'solo'}
+- assert {p['status'] for p in disabled} == {'Disabled'}
+- assert {p['name'] for p in disabled} == enabled_names
+
 ### test_save_disabled_plugins_writes_normalized_paths
 _No description provided._
 
@@ -7872,6 +7934,36 @@ _Persists preferences and rebuilds plugin menus when closing._
 - mock_plugin_manager.discover_plugins.assert_called_once_with(mock_main_window)
 - mock_plugin_manager.rebuild_plugin_menus.assert_called_once_with()
 
+### test_close_hides_the_dialog_before_rediscovering
+_The dialog must be closed before discovery re-runs plugin initialize()._
+
+- assert visible_during_discovery == [False]
+
+### test_saving_skips_rows_the_plugin_list_no_longer_backs
+_A table row with no plugin behind it must not break the save._
+
+- assert window._save_checkbox_preferences() == {'plugin1.py'}
+
+### test_filtering_disarms_remove_for_a_hidden_selection
+_Remove Plugin must not stay aimed at a row the search box has hidden._
+
+- assert window.btn_remove.isEnabled()
+- assert window.table.isRowHidden(0)
+- assert window.table.currentRow() == -1
+- assert not window.btn_remove.isEnabled()
+- assert window._plugin_for_row(window.table.currentRow()) is None
+
+### test_reload_button_does_not_feed_clicked_into_silent
+_The Reload button must reach on_reload as a non-silent reload._
+
+- mock_reload.assert_called_once_with()
+
+### test_folder_drop_keeps_the_folder_name_and_the_category_note
+_A dropped package plugin with no PLUGIN_NAME is named for its folder._
+
+- assert 'Name: my_pkg' in msg
+- assert 'Folder Plugin / Category (Package: my_pkg) - Does a thing.' in msg
+
 ### test_on_reload_persists_checkbox_changes
 _Saves checkbox changes before reloading plugins without a main window._
 
@@ -7955,11 +8047,13 @@ __status_checkbox handles direct QCheckBox and missing/empty widgets._
 - assert window._status_checkbox(0) is None
 
 ### test_plugin_for_row_boundary_conditions
-__plugin_for_row returns None for negative or out-of-range rows and index mappings._
+__plugin_for_row returns None outside the rows the plugin list can back._
 
 - assert window._plugin_for_row(-1) is None
 - assert window._plugin_for_row(999) is None
-- assert window._plugin_for_row(0) is None
+- assert window._plugin_for_row(2)['name'] == 'Package Plugin'
+- assert window.table.rowCount() == 3
+- assert window._plugin_for_row(2) is None
 
 ## tests/unit/test_plugin_menu_manager.py
 
