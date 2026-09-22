@@ -6,18 +6,17 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
-### Fixed
-* **CP932 gaiji decoding**: Preserve F0-lead CP932 private-use gaiji characters instead of replacing them with a later CP1252 decoding.
 
 ---
 
-## [4.10.3] - 2026-09-22
+## [4.10.3] - 2026-09-23
 
 ### Fixed
 * **Disabled plugins lost their name**: A plugin that declares no `PLUGIN_NAME` was listed under its file name once disabled, so every disabled package plugin showed as `__init__.py` — indistinguishable from the others, and no longer findable through the search box that is the way back to re-enabling it. Fixed at its source, so the `--install-plugin` and drag-and-drop install confirmations name the folder too.
 * **Remove Plugin acted on a hidden row**: Qt keeps a row current after the search box hides it, so Remove Plugin stayed enabled and aimed at a plugin the filtered list no longer showed. The selection is now cleared with the row.
 * **Plugin re-discovery ran behind the open dialog**: `PluginManagerWindow` applied its preferences — re-running every plugin's `initialize()` — before closing, so a plugin raising its own dialog would be blocked behind the window that was closing.
 * **SDF data fields were discarded on import**: Reading an SDF as a bare MOL block parsed the atoms and dropped every `> <TAG>` field. SDFs now go through a stream, which keeps both the data fields and the CP932/EUC-JP encoding fallbacks.
+* **CP932 gaiji decoding**: Preserve F0-lead CP932 private-use gaiji characters instead of replacing them with a later CP1252 decoding.
 * **Folder plugin install note**: The drag-and-drop confirmation overwrote its own "Folder Plugin / Category" note with the parsed metadata instead of extending it.
 
 ### Tests & CI
