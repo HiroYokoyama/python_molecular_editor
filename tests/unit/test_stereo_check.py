@@ -299,3 +299,58 @@ def test_worker_explicit_stereo_uses_cip(stereo, expected):
     Chem.AssignStereochemistryFrom3D(mol)
     rdCIPLabeler.AssignCIPLabels(mol)
     assert mol.GetBondWithIdx(bond.GetIdx()).GetProp("_CIPCode") == expected
+
+
+# --- E/Z check -------------------------------------------------------------
+
+
+def test_ez_check_passes_a_correct_conversion(app):
+    """A labelled double bond converted correctly reports nothing."""
+    from moleditpy.core.stereo_check import find_ez_mismatches
+
+    data, _ = _labelled_alkene("CC(Cl)=CC", 3)
+    assert find_ez_mismatches(data, _convert(data)) == []
+
+
+def test_ez_check_reports_a_wrong_double_bond(app):
+    """A 3D bond with the other configuration is reported with its atoms."""
+    from moleditpy.core.stereo_check import find_ez_mismatches
+
+    data, double = _labelled_alkene("CC(Cl)=CC", 3)
+    mol = _convert(data)
+    data.bonds[double]["stereo"] = 4  # the label now asks for E; 3D is Z
+
+    (m,) = find_ez_mismatches(data, mol)
+    assert m.atom_ids == double
+    assert (m.drawn, m.actual) == ("E", "Z")
+    assert m.symbols == ("C", "C")
+    assert m.rdkit_bond_index is not None
+    assert m.rdkit_atom_indices is not None
+
+
+def test_ez_labels_without_cip_ez_are_not_compared(app):
+    """Two identical groups on one end: the label is unverifiable, skip it."""
+    from moleditpy.core.stereo_check import drawn_ez, find_ez_mismatches
+
+    data, _ = _labelled_alkene("CC(C)=CC", 3)
+    assert drawn_ez(data) == {}
+    assert find_ez_mismatches(data, _convert(data)) == []
+
+
+def test_ez_check_needs_a_labelled_bond():
+    """Without an E/Z label nothing is compared, even with a double bond."""
+    from moleditpy.core.stereo_check import drawn_ez, find_ez_mismatches
+
+    data = _draw("CC=CC")
+    mol = Chem.AddHs(data.to_rdkit_mol())
+    AllChem.EmbedMolecule(mol, randomSeed=2)
+    assert drawn_ez(data) == {}
+    assert find_ez_mismatches(data, mol) == []
+
+
+def test_ez_check_without_conformer_is_skipped():
+    """No 3D coordinates, nothing to compare."""
+    from moleditpy.core.stereo_check import find_ez_mismatches
+
+    data, _ = _labelled_alkene("CC(Cl)=CC", 3)
+    assert find_ez_mismatches(data, data.to_rdkit_mol()) == []

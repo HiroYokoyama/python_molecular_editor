@@ -52,7 +52,7 @@ def test_every_default_is_in_app_defaults():
     """All label keys are part of DEFAULT_SETTINGS, so Reset restores them."""
     for key, value in DEFAULT_LABEL_SETTINGS.items():
         assert DEFAULT_SETTINGS[key] == value
-    assert DEFAULT_SETTINGS["check_chirality_after_conversion"] is True
+    assert DEFAULT_SETTINGS["check_stereo_after_conversion"] is True
 
 
 def test_user_settings_are_applied():

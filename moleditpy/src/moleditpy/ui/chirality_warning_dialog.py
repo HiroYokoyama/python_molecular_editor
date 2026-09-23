@@ -27,15 +27,16 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..core.stereo_check import ChiralityMismatch
+from ..core.stereo_check import ChiralityMismatch, EZMismatch
 
 
 class ChiralityWarningDialog(QDialog):
-    """Non-modal, always-on-top warning that the 3D result has wrong chirality.
+    """Non-modal, always-on-top warning that the 3D result has wrong stereo.
 
-    While it is open the 3D view shows chiral labels, whatever the View menu
-    says, with the wrong centers in red; closing it hands the labels back to
-    the menu setting.
+    Covers stereocenters (R/S) and labelled double bonds (E/Z). While it is
+    open the 3D view shows chiral and E/Z labels, whatever the View menu says,
+    with the wrong ones in red; closing it hands the labels back to the menu
+    setting.
     """
 
     def __init__(
@@ -44,39 +45,67 @@ class ChiralityWarningDialog(QDialog):
         mismatches: List[ChiralityMismatch],
         total_centers: int,
         parent: Optional[QWidget] = None,
+        ez_mismatches: Optional[List[EZMismatch]] = None,
+        total_double_bonds: int = 0,
     ) -> None:
-        """Build the warning for *mismatches* out of *total_centers* drawn centers."""
+        """Build the warning for *mismatches* and *ez_mismatches*.
+
+        *total_centers* and *total_double_bonds* count what the drawing
+        specifies, for the "N of M" summary.
+        """
         super().__init__(parent)
         self.main_window = main_window
         self.mismatches = mismatches
-        self.setWindowTitle("Chirality Check")
+        self.ez_mismatches = ez_mismatches or []
+        self.setWindowTitle("Stereochemistry Check")
         self.setModal(False)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-        self._build_ui(total_centers)
+        self._build_ui(total_centers + total_double_bonds)
         self.finished.connect(self._restore_chiral_labels)
         self._force_chiral_labels()
 
-    def _build_ui(self, total_centers: int) -> None:
-        """Lay out the summary, the per-atom table and the close button."""
+    def _rows(self) -> List[List[str]]:
+        """Table rows: stereocenters first, then double bonds."""
+        rows = [
+            [
+                f"{m.symbol} (ID {m.atom_id})",
+                "" if m.rdkit_index is None else str(m.rdkit_index),
+                m.drawn,
+                m.actual or "none",
+            ]
+            for m in self.mismatches
+        ]
+        for b in self.ez_mismatches:
+            (s1, s2), (i1, i2) = b.symbols, b.atom_ids
+            index = (
+                ""
+                if b.rdkit_atom_indices is None
+                else "=".join(str(i) for i in b.rdkit_atom_indices)
+            )
+            rows.append(
+                [f"{s1}={s2} (ID {i1}={i2})", index, b.drawn, b.actual or "none"]
+            )
+        return rows
+
+    def _build_ui(self, total: int) -> None:
+        """Lay out the summary, the per-item table and the close button."""
         layout = QVBoxLayout(self)
 
-        count = len(self.mismatches)
+        rows = self._rows()
         summary = QLabel(
             f"<b>The 3D structure is wrong.</b><br>"
-            f"{count} of {total_centers} stereocenter(s) drawn in 2D have a "
-            f"different configuration in 3D."
+            f"{len(rows)} of {total} stereo element(s) drawn in 2D (R/S centers, "
+            f"E/Z double bonds) have a different configuration in 3D."
         )
         summary.setWordWrap(True)
         layout.addWidget(summary)
 
-        table = QTableWidget(count, 4, self)
-        table.setHorizontalHeaderLabels(["Atom", "Index", "Drawn (2D)", "3D"])
+        table = QTableWidget(len(rows), 4, self)
+        table.setHorizontalHeaderLabels(["Atom / Bond", "Index", "Drawn (2D)", "3D"])
         table.verticalHeader().setVisible(False)  # type: ignore[union-attr]
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        for row, m in enumerate(self.mismatches):
-            index = "" if m.rdkit_index is None else str(m.rdkit_index)
-            cells = [f"{m.symbol} (ID {m.atom_id})", index, m.drawn, m.actual or "none"]
+        for row, cells in enumerate(rows):
             for col, text in enumerate(cells):
                 item = QTableWidgetItem(text)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -87,9 +116,9 @@ class ChiralityWarningDialog(QDialog):
         layout.addWidget(table)
 
         hint = QLabel(
-            "Please flip these stereocenters manually in the 3D structure. "
-            "While this window is open, the 3D view shows chiral labels: "
-            "wrong centers in red, correct ones in the usual color."
+            "Please flip these manually in the 3D structure. While this window "
+            "is open, the 3D view shows chiral and E/Z labels: wrong ones in "
+            "red, correct ones in the usual color."
         )
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -113,7 +142,7 @@ class ChiralityWarningDialog(QDialog):
                 logging.warning("Redraw for chiral labels failed: %s", e)
 
     def _force_chiral_labels(self) -> None:
-        """Show chiral labels, wrong centers marked, for as long as the dialog is open."""
+        """Show stereo labels, wrong ones marked, for as long as the dialog is open."""
         view_3d = self._view_3d()
         if view_3d is None:
             return
@@ -121,6 +150,11 @@ class ChiralityWarningDialog(QDialog):
             m.rdkit_index: m.actual or "?"
             for m in self.mismatches
             if m.rdkit_index is not None
+        }
+        view_3d.ez_mismatches = {
+            b.rdkit_bond_index: b.actual or "?"
+            for b in self.ez_mismatches
+            if b.rdkit_bond_index is not None
         }
         view_3d.show_chiral_labels = True
         self._redraw(view_3d)
@@ -136,6 +170,7 @@ class ChiralityWarningDialog(QDialog):
             None,
         )
         view_3d.chirality_mismatches = {}
+        view_3d.ez_mismatches = {}
         view_3d.show_chiral_labels = (
             bool(action.isChecked()) if action is not None else False
         )

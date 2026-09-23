@@ -20,7 +20,11 @@ _GET_COLOR = "moleditpy.ui.settings_tabs.settings_labels_tab.QColorDialog.getCol
 def test_defaults_round_trip(app):
     """A fresh tab reports exactly the default label settings."""
     out = SettingsLabelsTab(DEFAULT_SETTINGS).get_settings()
-    assert out == dict(DEFAULT_LABEL_SETTINGS, check_chirality_after_conversion=True)
+    assert out == dict(
+        DEFAULT_LABEL_SETTINGS,
+        check_stereo_after_conversion=True,
+        check_stereo_after_optimization=False,
+    )
 
 
 def test_one_color_row_per_label_kind(app):
@@ -39,7 +43,7 @@ def test_sections_are_headed(app):
     for title, _ in LABEL_SECTIONS:
         assert f"<i>{title}</i>" in headings
     assert "<b>Label Appearance</b>" in headings
-    assert "<b>Chirality Check</b>" in headings
+    assert "<b>Stereo Check (R/S, E/Z)</b>" in headings
 
 
 def test_update_ui_then_get_settings(app):
@@ -55,7 +59,7 @@ def test_update_ui_then_get_settings(app):
             "label_font_family_3d": "courier",
             "label_font_bold_3d": False,
             "label_font_italic_3d": True,
-            "check_chirality_after_conversion": False,
+            "check_stereo_after_conversion": False,
         }
     )
     tab.update_ui(custom)
@@ -68,7 +72,7 @@ def test_update_ui_then_get_settings(app):
         "label_font_family_3d",
         "label_font_bold_3d",
         "label_font_italic_3d",
-        "check_chirality_after_conversion",
+        "check_stereo_after_conversion",
     ):
         assert out[key] == custom[key], key
     assert "#112233" in tab.color_buttons[color_key("chiral")].styleSheet()

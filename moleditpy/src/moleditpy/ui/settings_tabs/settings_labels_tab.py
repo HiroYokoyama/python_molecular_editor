@@ -52,6 +52,7 @@ class SettingsLabelsTab(SettingsTabBase):
         self.colors: Dict[str, str] = {}
         self.color_buttons: Dict[str, QPushButton] = {}
         self.chirality_check_checkbox: Any = None
+        self.opt_check_checkbox: Any = None
         self._setup_ui()
         self.update_ui(default_settings)
 
@@ -108,15 +109,19 @@ class SettingsLabelsTab(SettingsTabBase):
         form_layout.addRow("Label Font Style:", style_widget)
 
         form_layout.addRow(self._create_separator())
-        form_layout.addRow(QLabel("<b>Chirality Check</b>"))
+        form_layout.addRow(QLabel("<b>Stereo Check (R/S, E/Z)</b>"))
         self.chirality_check_checkbox = QCheckBox()
         self.chirality_check_checkbox.setToolTip(
             "After Convert 2D to 3D, compare every stereocenter drawn with a\n"
-            "wedge or hash against the 3D result, and warn if any differs."
+            "wedge or hash, and every E/Z-labelled double bond, against the 3D\n"
+            "result, and warn if any differs."
         )
-        form_layout.addRow(
-            "Check Chirality After 3D Conversion:", self.chirality_check_checkbox
+        form_layout.addRow("Check After 3D Conversion:", self.chirality_check_checkbox)
+        self.opt_check_checkbox = QCheckBox()
+        self.opt_check_checkbox.setToolTip(
+            "Run the same check after Optimize 3D. Off by default."
         )
+        form_layout.addRow("Check After 3D Optimization:", self.opt_check_checkbox)
 
     @staticmethod
     def _make_style_button(
@@ -169,7 +174,10 @@ class SettingsLabelsTab(SettingsTabBase):
         self.font_bold_btn.setChecked(shared["bold"])
         self.font_italic_btn.setChecked(shared["italic"])
         self.chirality_check_checkbox.setChecked(
-            settings_dict.get("check_chirality_after_conversion", True)
+            settings_dict.get("check_stereo_after_conversion", True)
+        )
+        self.opt_check_checkbox.setChecked(
+            settings_dict.get("check_stereo_after_optimization", False)
         )
 
     def get_settings(self) -> dict[str, Any]:
@@ -181,5 +189,6 @@ class SettingsLabelsTab(SettingsTabBase):
             FONT_FAMILY_KEY: self.font_family_combo.currentData(),
             FONT_BOLD_KEY: self.font_bold_btn.isChecked(),
             FONT_ITALIC_KEY: self.font_italic_btn.isChecked(),
-            "check_chirality_after_conversion": self.chirality_check_checkbox.isChecked(),
+            "check_stereo_after_conversion": self.chirality_check_checkbox.isChecked(),
+            "check_stereo_after_optimization": self.opt_check_checkbox.isChecked(),
         }

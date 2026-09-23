@@ -38,7 +38,12 @@ from ..core.mol_geometry import (
     identify_valence_problems,
     inject_ez_stereo_to_mol_block,
 )
-from ..core.stereo_check import drawn_chirality, find_chirality_mismatches
+from ..core.stereo_check import (
+    drawn_chirality,
+    drawn_ez,
+    find_chirality_mismatches,
+    find_ez_mismatches,
+)
 from .chirality_warning_dialog import ChiralityWarningDialog
 
 
@@ -63,6 +68,9 @@ class ComputeManager:
         # as a post-step once conversion's built-in pre-optimization completes.
         self._pending_plugin_opt: Dict[int, Tuple[str, Dict[str, Any]]] = {}
         self._chirality_dialog: Optional[ChiralityWarningDialog] = None
+        # Worker ids of 2D->3D conversions; the stereo check runs only for these,
+        # not for Optimize 3D, which uses the same worker and finish handler.
+        self._conversion_run_ids: Set[int] = set()
 
     def reset_active_threads(self) -> None:
         """Reset active calculation threads list."""
@@ -261,6 +269,7 @@ class ComputeManager:
         run_id = self.next_conversion_id
         self.next_conversion_id = run_id + 1
         self.active_worker_ids.add(run_id)
+        self._conversion_run_ids.add(run_id)
 
         # The worker only runs built-in force fields. If the selected method is a
         # plugin optimizer, pre-optimize with MMFF (RDKit) in the worker (which
@@ -327,6 +336,7 @@ class ComputeManager:
             self.halt_ids.update(wids_to_halt)
         self.active_worker_ids.clear()
         self._pending_plugin_opt.clear()
+        getattr(self, "_conversion_run_ids", set()).clear()
 
         self._restore_button_ui()
         self.host.init_manager.cleanup_button.setEnabled(True)  # type: ignore[union-attr]
@@ -363,6 +373,8 @@ class ComputeManager:
         plugin_entry = _reg.get(method) if isinstance(_reg, dict) else None
         if plugin_entry:
             self._run_plugin_optimization(method, plugin_entry)
+            # Plugin optimizers run in-process, not through the worker.
+            self.check_chirality_against_2d(after_optimization=True)
             return
 
         self.host.statusBar().showMessage(f"Optimizing 3D structure ({method})...")  # type: ignore[union-attr]
@@ -633,10 +645,20 @@ class ComputeManager:
         if pending and mol:
             self._run_plugin_optimization(*pending)
 
-        self.check_chirality_against_2d()
+        conversions: Set[int] = getattr(self, "_conversion_run_ids", set())
+        # No worker id: a legacy/direct caller, which only conversions use.
+        is_conversion = worker_id is None or worker_id in conversions
+        conversions.discard(worker_id)  # type: ignore[arg-type]
+        self.check_chirality_against_2d(after_optimization=not is_conversion)
 
-    def check_chirality_against_2d(self) -> None:
-        """Warn when the 3D result does not keep a stereocenter drawn in 2D."""
+    def check_chirality_against_2d(self, after_optimization: bool = False) -> None:
+        """Warn when the 3D result does not keep the stereo drawn in 2D.
+
+        Compares wedged/hashed stereocenters (R/S) and E/Z-labelled double
+        bonds with the 3D structure. Runs after a 2D->3D conversion when
+        check_stereo_after_conversion is on (default), and after Optimize 3D
+        only when check_stereo_after_optimization is on (default off).
+        """
         dialog = getattr(self, "_chirality_dialog", None)
         if dialog is not None:
             # A new result replaces the warning about the previous one.
@@ -645,7 +667,12 @@ class ComputeManager:
                 dialog.close()
 
         settings = getattr(self.host.init_manager, "settings", {}) or {}
-        if not settings.get("check_chirality_after_conversion", True):
+        key, default = (
+            ("check_stereo_after_optimization", False)
+            if after_optimization
+            else ("check_stereo_after_conversion", True)
+        )
+        if not settings.get(key, default):
             return
         mol = self.host.view_3d_manager.current_mol
         data = self.host.state_manager.data
@@ -653,14 +680,21 @@ class ComputeManager:
             return
 
         mismatches = find_chirality_mismatches(data, mol)
-        if not mismatches:
+        ez_mismatches = find_ez_mismatches(data, mol)
+        if not mismatches and not ez_mismatches:
             return
         self._chirality_dialog = ChiralityWarningDialog(
-            self.host, mismatches, len(drawn_chirality(data)), parent=self.host
+            self.host,
+            mismatches,
+            len(drawn_chirality(data)),
+            parent=self.host,
+            ez_mismatches=ez_mismatches,
+            total_double_bonds=len(drawn_ez(data)),
         )
         self._chirality_dialog.show()
+        count = len(mismatches) + len(ez_mismatches)
         self.host.update_status_message(
-            f"Warning: {len(mismatches)} stereocenter(s) differ from the 2D drawing."
+            f"Warning: {count} stereo element(s) differ from the 2D drawing."
         )
 
     def on_calculation_error(self, message: Union[str, Tuple[int, str]]) -> None:
@@ -668,6 +702,7 @@ class ComputeManager:
         # Accept either a string or (worker_id, message) tuple from the worker signal
         if isinstance(message, tuple) and len(message) == 2:
             worker_id, msg = message
+            getattr(self, "_conversion_run_ids", set()).discard(worker_id)
             if worker_id not in self.active_worker_ids:
                 # Still cleanup overlay/buttons even if stale
                 self._remove_calculating_text()

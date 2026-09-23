@@ -1393,3 +1393,23 @@ def test_no_red_group_without_mismatches(mock_parser_host):
 
     names = [c.kwargs["name"] for c in view3d.plotter.add_point_labels.call_args_list]
     assert names == ["chiral_labels"]
+
+
+def test_wrong_ez_labels_are_drawn_in_red(mock_parser_host):
+    """Double bonds the stereo check found wrong get a red E/Z label."""
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.settings = {"label_color_ez_3d": "#006400"}
+    mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C.C/C=C\C"))
+    AllChem.EmbedMolecule(mol, randomSeed=5)
+    doubles = [b.GetIdx() for b in mol.GetBonds() if b.GetBondTypeAsDouble() == 2]
+    view3d.ez_mismatches = {doubles[0]: "Z"}
+
+    view3d.show_ez_labels_3d(mol)
+
+    calls = {
+        c.kwargs["name"]: c for c in view3d.plotter.add_point_labels.call_args_list
+    }
+    assert calls["ez_labels_wrong"].kwargs["text_color"] == "#FF0000"
+    assert calls["ez_labels_wrong"].args[1] == ["Z"]
+    assert calls["ez_labels"].kwargs["text_color"] == "#006400"
+    assert len(calls["ez_labels"].args[1]) == 1

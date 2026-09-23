@@ -27,7 +27,8 @@ DEFAULT_SETTINGS = {
     "rotate_group_follow_mouse": False,
     # --- 3D Labels --- (keys and how stored values are checked: utils/label_style.py)
     **DEFAULT_LABEL_SETTINGS,
-    "check_chirality_after_conversion": True,
+    "check_stereo_after_conversion": True,
+    "check_stereo_after_optimization": False,
     # --- 3D Model Parameters (Ball and Stick) ---
     "ball_stick_atom_scale": 1.0,
     "ball_stick_bond_radius": 0.1,

@@ -37,8 +37,8 @@ from ..utils.label_style import label_kwargs
 from .template_preview_item import TemplatePreviewItem
 
 
-# Fixed on purpose (not a setting): marks a stereocenter the chirality check
-# found inverted, against the normal chiral label color.
+# Fixed on purpose (not a setting): marks a stereocenter or double bond the
+# stereo check found wrong, against the normal chiral / E/Z label color.
 WRONG_CHIRAL_COLOR = "#FF0000"
 
 
@@ -65,6 +65,8 @@ class View3DManager:
         # RDKit atom index -> R/S the 3D structure actually has, for centers
         # the chirality check found wrong; drawn in WRONG_CHIRAL_COLOR.
         self.chirality_mismatches: Dict[int, str] = {}
+        # Same for labelled double bonds: RDKit bond index -> actual E/Z.
+        self.ez_mismatches: Dict[int, str] = {}
         self.current_atom_info_labels: Optional[List[pv.Actor]] = None
         self.atom_label_legend_names: List[str] = []
         self._camera_initialized: bool = False
@@ -1215,16 +1217,20 @@ class View3DManager:
             return
 
         # Remove existing E/Z labels
-        if (
-            hasattr(self.plotter, "renderer")
-            and "ez_labels" in self.plotter.renderer.actors  # type: ignore[union-attr]
-        ):
-            try:
-                self.plotter.remove_actor("ez_labels")  # type: ignore[arg-type, union-attr]
-            except (AttributeError, RuntimeError, TypeError) as e:
-                logging.warning(f"Failed to remove EZ labels: {e}")
+        for actor_name in ("ez_labels", "ez_labels_wrong"):
+            if (
+                hasattr(self.plotter, "renderer")
+                and actor_name in self.plotter.renderer.actors  # type: ignore[union-attr]
+            ):
+                try:
+                    self.plotter.remove_actor(actor_name)  # type: ignore[arg-type, union-attr]
+                except (AttributeError, RuntimeError, TypeError) as e:
+                    logging.warning("Failed to remove EZ labels: %s", e)
 
         pts, labels = [], []
+        wrong_pts: List[Any] = []
+        wrong_labels: List[str] = []
+        wrong = getattr(self, "ez_mismatches", {}) or {}
 
         # Check if 3D coordinates exist
         if mol.GetNumConformers() == 0:
@@ -1296,8 +1302,37 @@ class View3DManager:
                                 "Suppressed non-critical error", exc_info=True
                             )
 
-                    pts.append(center_pos)
-                    labels.append(label)
+                    if bond.GetIdx() in wrong:
+                        # The check's own CIP descriptor, matching the dialog.
+                        wrong_pts.append(center_pos)
+                        wrong_labels.append(wrong[bond.GetIdx()])
+                    else:
+                        pts.append(center_pos)
+                        labels.append(label)
+                elif bond.GetIdx() in wrong:
+                    # The label's configuration was lost entirely in 3D.
+                    p1 = conf.GetAtomPosition(bond.GetBeginAtomIdx())
+                    p2 = conf.GetAtomPosition(bond.GetEndAtomIdx())
+                    wrong_pts.append(
+                        (np.array([p1.x, p1.y, p1.z]) + np.array([p2.x, p2.y, p2.z]))
+                        / 2
+                    )
+                    wrong_labels.append(wrong[bond.GetIdx()])
+
+        if wrong_pts:
+            style = self._label_kwargs("ez")
+            style["text_color"] = WRONG_CHIRAL_COLOR
+            self.plotter.add_point_labels(  # type: ignore[union-attr]
+                np.array(wrong_pts),
+                wrong_labels,
+                point_size=0,
+                name="ez_labels_wrong",
+                always_visible=True,
+                shape="rect",
+                tolerance=0.01,
+                show_points=False,
+                **style,
+            )
 
         if pts and labels:
             self.plotter.add_point_labels(  # type: ignore[union-attr]
