@@ -289,3 +289,18 @@ def test_missing_font_is_not_rewritten_on_save(app):
     if families:
         tab.atom_font_family_2d_combo.setCurrentFont(QFont(families[0]))
         assert tab.get_settings()["atom_font_family_2d"] == families[0]
+
+
+def test_explicit_font_activation_saves_the_displayed_substitute(app):
+    """Re-selecting the shown item replaces an unavailable stored font."""
+    tab = Settings2DTab(DEFAULT_SETTINGS)
+    settings = dict(DEFAULT_SETTINGS)
+    settings["atom_font_family_2d"] = "No Such Font Family XYZ"
+    tab.update_ui(settings)
+    displayed = tab.atom_font_family_2d_combo.currentFont().family()
+
+    tab.atom_font_family_2d_combo.activated.emit(
+        tab.atom_font_family_2d_combo.currentIndex()
+    )
+
+    assert tab.get_settings()["atom_font_family_2d"] == displayed
