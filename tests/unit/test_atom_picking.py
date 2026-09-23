@@ -121,6 +121,21 @@ def test_pick_atom_index_from_screen_fallback():
     assert pick_atom_index_from_screen(view_obj, (111, 100), _Mol()) == 0
 
 
+def test_vectorized_miss_does_not_rerun_the_sequential_picker():
+    """A miss is final; only an unavailable vectorized path falls back.
+
+    Every hover over empty space in 3D edit mode used to re-check each atom
+    with VTK calls after the vectorized picker had already missed.
+    """
+    from unittest.mock import patch as _patch
+
+    with _patch(
+        "moleditpy.ui.atom_picking.pick_atom_index_from_screen_sequential"
+    ) as sequential:
+        assert pick_atom_index_from_screen(_view(), (200, 200), _Mol()) is None
+    sequential.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # Helper internals and guard paths
 # ---------------------------------------------------------------------------
