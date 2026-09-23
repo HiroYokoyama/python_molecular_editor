@@ -415,8 +415,6 @@ class AngleDialog(GeometryBaseDialog):
 
         # Calculate baseline angle from the POSITIONS we are working on (important for snapshot stability)
         p_a, p_b, p_c = positions[idx_a], positions[idx_b], positions[idx_c]
-        from moleditpy.core.mol_geometry import calc_angle_deg
-
         baseline_angle = calc_angle_deg(p_a, p_b, p_c)
 
         if self.both_groups_radio.isChecked():
