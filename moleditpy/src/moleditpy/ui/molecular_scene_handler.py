@@ -1278,6 +1278,7 @@ class KeyboardMixin:
                             bond_data = self.data.bonds.pop(current_key)
                             new_key = (current_key[1], current_key[0])
                             self.data.bonds[new_key] = bond_data
+                            self.rekey_bond_item(bond, new_key)
                             bond.atom1, bond.atom2 = bond.atom2, bond.atom1
                             bond.update_position()
                             any_bond_changed = True
@@ -1290,6 +1291,7 @@ class KeyboardMixin:
                             bond_data = self.data.bonds.pop(current_key)
                             new_key = (current_key[1], current_key[0])
                             self.data.bonds[new_key] = bond_data
+                            self.rekey_bond_item(bond, new_key)
                             bond.atom1, bond.atom2 = bond.atom2, bond.atom1
                             bond.update_position()
                             any_bond_changed = True
@@ -1327,6 +1329,7 @@ class KeyboardMixin:
 
                         new_key = (new_key_id1, new_key_id2)
                         self.data.bonds[new_key] = bond_data
+                        self.rekey_bond_item(bond, new_key)
 
                         bond.update()
 
@@ -1785,6 +1788,17 @@ class SceneQueryMixin:
                 if QLineF(it.pos(), pos).length() <= tol:
                     return it
         return None
+
+    def rekey_bond_item(self, bond_item: Any, new_key: Tuple[int, int]) -> None:
+        """File *bond_item* under *new_key* only, as data.bonds now does.
+
+        A bond re-created in the other direction or with a different stereo
+        gets a new data key; leaving the old key in bond_items made lookups
+        through it index data.bonds with a key that no longer exists.
+        """
+        for key in [k for k, item in self.bond_items.items() if item is bond_item]:
+            del self.bond_items[key]
+        self.bond_items[new_key] = bond_item
 
     def find_bond_between(self, atom1: Any, atom2: Any) -> Any:
         """Return the BondItem connecting two atoms, or None if none exists."""
