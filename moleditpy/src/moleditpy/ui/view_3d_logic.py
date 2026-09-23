@@ -1601,7 +1601,13 @@ class View3DManager:
         rdkit_color = self._label_setting("index_label_color_3d")
         id_color = self._label_setting("original_id_label_color_3d")
         xyz_color = self._label_setting("xyz_index_label_color_3d")
-        other_color = self._label_setting("atom_info_label_color_3d")
+        # Coordinates and element symbols share one label group (only one
+        # display mode is active at a time) but have separate color settings.
+        other_color = self._label_setting(
+            "coords_label_color_3d"
+            if self.atom_info_display_mode == "coords"
+            else "symbol_label_color_3d"
+        )
 
         # Add labels for each group and keep references in a list
         self.current_atom_info_labels = []

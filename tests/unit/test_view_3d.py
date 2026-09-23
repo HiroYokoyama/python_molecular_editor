@@ -1215,8 +1215,11 @@ def _atom_info_view(mock_parser_host, settings):
             "#112233",
             "#ffffff",
         ),
-        ("symbol", {"atom_info_label_color_3d": "#445566"}, "#445566", "#808080"),
-        ("coords", {}, "#000000", "#808080"),
+        ("symbol", {"symbol_label_color_3d": "#445566"}, "#445566", "#808080"),
+        ("coords", {"coords_label_color_3d": "#778899"}, "#778899", "#808080"),
+        # Each of the two shares the label group but not the other's color.
+        ("coords", {"symbol_label_color_3d": "#445566"}, "#000000", "#808080"),
+        ("symbol", {"coords_label_color_3d": "#778899"}, "#000000", "#808080"),
         # An empty value (hand-edited settings file) falls back to the default.
         ("rdkit_index", {"index_label_color_3d": ""}, "#003366", "#808080"),
     ],

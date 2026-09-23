@@ -8,7 +8,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Added
 * **Chirality check after 3D conversion** (on by default; Settings → 3D Scene → 3D Labels): every stereocenter drawn with a wedge or hash is compared with the 3D result. If any comes out inverted or lost, a non-modal, always-on-top warning lists each one (drawn vs 3D configuration) and shows chiral labels in the 3D view for as long as it stays open. The comparison is CIP-based, lives in the UI-free `core/stereo_check.py`, and takes about 0.5 ms for tetrodotoxin (9 centers).
-* **3D label colors** (Settings → 3D Scene → 3D Labels): one color per label type — Index, Original ID, XYZ Index, Coordinates / Symbol, Chiral (R/S) and E/Z — plus the label background shared by all of them. The defaults are the colors these labels always had.
+* **3D label colors** (Settings → 3D Scene → 3D Labels): one color per label type — Index, Original ID, XYZ Index, Element Symbol, Coordinates, Chiral (R/S) and E/Z — plus the label background shared by all of them. The defaults are the colors these labels always had.
 
 ### Fixed
 * **An E/Z label inverted a wedged stereocenter in 3D**: When any double bond carried an explicit E/Z label, the 2D layout sent to 3D generation was rebuilt from scratch, but the wedge and hash bonds were carried over unchanged onto the new coordinates, where they could encode the opposite configuration. The same drawing converted to one enantiomer without the label and the other with it. Wedges are now read into chiral tags first and re-drawn on the new layout.

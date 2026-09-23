@@ -59,7 +59,8 @@ def test_scene_tab_get_settings_keys(app):
         "index_label_color_3d",
         "original_id_label_color_3d",
         "xyz_index_label_color_3d",
-        "atom_info_label_color_3d",
+        "symbol_label_color_3d",
+        "coords_label_color_3d",
         "chiral_label_color_3d",
         "ez_label_color_3d",
         "label_background_color_3d",
@@ -341,7 +342,8 @@ def test_scene_tab_label_defaults_match_previous_colors(app):
     assert out["index_label_color_3d"] == "#003366"
     assert out["original_id_label_color_3d"] == "#009000"
     assert out["xyz_index_label_color_3d"] == "#8B0000"
-    assert out["atom_info_label_color_3d"] == "#000000"
+    assert out["symbol_label_color_3d"] == "#000000"
+    assert out["coords_label_color_3d"] == "#000000"
     assert out["chiral_label_color_3d"] == "#0000FF"
     assert out["ez_label_color_3d"] == "#006400"
     assert out["label_background_color_3d"] == "#808080"
