@@ -333,3 +333,18 @@ def test_read_startup_log_settings_invalid_json(tmp_path):
     with patch("os.path.expanduser", return_value=str(tmp_path)):
         result = _read_startup_log_settings()
     assert result == (False, False)
+
+
+@pytest.mark.parametrize("content", ["[]", "null", "1", '"text"'])
+def test_read_startup_log_settings_non_object_json(tmp_path, content):
+    """Valid JSON that is not an object falls back instead of crashing startup.
+
+    data.get() raised AttributeError, which the except clause did not cover,
+    so the app died before any window opened.
+    """
+    settings_dir = tmp_path / ".moleditpy"
+    settings_dir.mkdir()
+    (settings_dir / "settings.json").write_text(content, encoding="utf-8")
+    with patch("os.path.expanduser", return_value=str(tmp_path)):
+        result = _read_startup_log_settings()
+    assert result == (False, False)

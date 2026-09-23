@@ -166,6 +166,9 @@ def _read_startup_log_settings() -> tuple[bool, bool]:
     try:
         with open(settings_path, encoding="utf-8") as f:
             data = json.load(f)
+        # Valid JSON that is not an object ([] or null) must not stop startup.
+        if not isinstance(data, dict):
+            return False, False
         return bool(data.get("log_to_file", False)), bool(
             data.get("log_level_debug", False)
         )
