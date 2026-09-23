@@ -92,3 +92,28 @@ def test_headless_install_invalid_path(tmp_path, capsys):
 
     captured = capsys.readouterr()
     assert "Error: Plugin path not found" in captured.out
+
+
+def test_headless_install_no_terminal_aborts(tmp_path, capsys):
+    """With no terminal to answer (EOF on stdin) the install is aborted.
+
+    input() raised EOFError, so a piped or scripted run ended in a traceback.
+    """
+    plugin_src = tmp_path / "eof_plugin.py"
+    plugin_src.write_text("PLUGIN_NAME = 'EOF Plugin'")
+
+    with (
+        patch("moleditpy.plugins.plugin_manager.PluginManager") as MockPM,
+        patch.object(sys, "argv", ["moleditpy", "--install-plugin", str(plugin_src)]),
+        patch("builtins.input", side_effect=EOFError),
+    ):
+        mock_pm = MockPM.return_value
+        mock_pm.get_plugin_info_safe.return_value = {"name": "EOF"}
+        mock_pm.compute_sha256.return_value = "fake-sha256"
+
+        with pytest.raises(SystemExit) as cm:
+            main()
+        assert cm.value.code == 0
+
+    mock_pm.install_plugin.assert_not_called()
+    assert "Installation aborted." in capsys.readouterr().out
