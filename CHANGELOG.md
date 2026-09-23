@@ -6,10 +6,6 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
-### Tests & CI
-* **Zenodo archiving no longer invents an "updated" date**: `scripts/update_zenodo.py` filled a date whose value the record's API view drops with today's date; since 2026-09-23 Zenodo rejects such a draft at publish with an HTTP 500. A date is now copied only when it carries a value.
-* **Zenodo archiving resumes a leftover draft**: a run that failed after creating its new-version draft left one behind that Zenodo hands back to every retry, and re-registering its files failed with "already exists". Files already in the draft with the same MD5 are skipped; a stale or half-uploaded one is replaced.
-
 ---
 
 ## [4.11.0] - 2026-09-23
