@@ -208,7 +208,8 @@ class PluginContext:
         """
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
-            return mw.view_3d_manager.current_mol
+            mol: Optional[Chem.Mol] = mw.view_3d_manager.current_mol
+            return mol
         return None
 
     @current_mol.setter
@@ -585,7 +586,8 @@ class PluginContext:
         if mw and hasattr(mw, "io_manager"):
             show = getattr(mw.io_manager, "show_xyz_data", None)
             if show is not None:
-                return show(xyz_text, source_name=source_name)
+                loaded: Optional[Chem.Mol] = show(xyz_text, source_name=source_name)
+                return loaded
         return None
 
     def to_xyz_block(self) -> Optional[str]:
