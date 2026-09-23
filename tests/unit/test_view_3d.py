@@ -1219,7 +1219,7 @@ def test_atom_info_labels_use_their_kind_style(mock_parser_host, mode, kind):
         f"label_color_{kind}_3d": "#123456",
         "label_background_color_3d": "#ffffff",
         "label_background_opacity_3d": 0.0,
-        f"label_font_size_{kind}_3d": 36,
+        "label_font_size_3d": 36,
         "label_font_family_3d": "courier",
         "label_font_italic_3d": True,
     }
@@ -1264,7 +1264,7 @@ def test_chiral_labels_use_label_style(mock_parser_host):
     assert kwargs["name"] == "chiral_labels"
     assert kwargs["text_color"] == "#ff0000"
     assert kwargs["shape_color"] == "#00ff00"
-    assert kwargs["font_size"] == 20
+    assert kwargs["font_size"] == 18
 
 
 def test_ez_labels_use_label_style(mock_parser_host):
@@ -1308,7 +1308,7 @@ def test_tool_labels_use_their_kind_style():
     settings = {
         "label_color_selection_3d": "#111111",
         "label_color_measurement_3d": "#222222",
-        "label_font_size_measurement_3d": 30,
+        "label_font_size_3d": 30,
     }
     host = SimpleNamespace(init_manager=SimpleNamespace(settings=settings))
 

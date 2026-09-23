@@ -21,7 +21,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QSpinBox,
     QWidget,
 )
 
@@ -32,12 +31,12 @@ from ...utils.label_style import (
     FONT_FAMILIES,
     FONT_FAMILY_KEY,
     FONT_ITALIC_KEY,
+    FONT_SIZE_KEY,
     FONT_SIZE_RANGE,
     LABEL_KINDS,
     LABEL_SECTIONS,
     color_key,
     label_kwargs,
-    size_key,
 )
 from .settings_tab_base import SettingsTabBase
 
@@ -52,7 +51,6 @@ class SettingsLabelsTab(SettingsTabBase):
         super().__init__(default_settings, parent)
         self.colors: Dict[str, str] = {}
         self.color_buttons: Dict[str, QPushButton] = {}
-        self.size_spins: Dict[str, QSpinBox] = {}
         self.chirality_check_checkbox: Any = None
         self._setup_ui()
         self.update_ui(default_settings)
@@ -61,12 +59,14 @@ class SettingsLabelsTab(SettingsTabBase):
         """Construct the color rows, appearance sliders and chirality option."""
         form_layout = self._create_form_layout()
 
-        form_layout.addRow(QLabel("<b>Label Colors and Sizes</b>"))
-        names = {kind: name for kind, name, _, _ in LABEL_KINDS}
+        form_layout.addRow(QLabel("<b>Label Colors</b>"))
+        names = {kind: name for kind, name, _ in LABEL_KINDS}
         for title, kinds in LABEL_SECTIONS:
             form_layout.addRow(QLabel(f"<i>{title}</i>"))
             for kind in kinds:
-                form_layout.addRow(f"{names[kind]}:", self._make_label_row(kind))
+                form_layout.addRow(
+                    f"{names[kind]}:", self._make_color_button(color_key(kind))
+                )
         form_layout.addRow(self._create_separator())
 
         form_layout.addRow(QLabel("<b>Label Appearance</b>"))
@@ -85,6 +85,14 @@ class SettingsLabelsTab(SettingsTabBase):
         for value, name in FONT_FAMILIES:
             self.font_family_combo.addItem(name, value)
         form_layout.addRow("Label Font Family:", self.font_family_combo)
+
+        self.font_size_slider, self.font_size_label = self._create_slider(
+            *FONT_SIZE_RANGE, 1.0, is_int=True
+        )
+        form_layout.addRow(
+            "Label Font Size:",
+            self._wrap_layout(self.font_size_slider, self.font_size_label),
+        )
 
         # B / I toggles, as for the 2D atom label font (VTK has no underline).
         self.font_bold_btn = self._make_style_button("B", bold=True)
@@ -109,23 +117,6 @@ class SettingsLabelsTab(SettingsTabBase):
         form_layout.addRow(
             "Check Chirality After 3D Conversion:", self.chirality_check_checkbox
         )
-
-    def _make_label_row(self, kind: str) -> QWidget:
-        """Color swatch and font size box for one label kind."""
-        size = QSpinBox()
-        size.setRange(*FONT_SIZE_RANGE)
-        size.setSuffix(" pt")
-        size.setToolTip("Font size")
-        self.size_spins[size_key(kind)] = size
-
-        row = QHBoxLayout()
-        row.setContentsMargins(0, 0, 0, 0)
-        row.addWidget(self._make_color_button(color_key(kind)))
-        row.addWidget(size)
-        row.addStretch()
-        widget = QWidget()
-        widget.setLayout(row)
-        return widget
 
     @staticmethod
     def _make_style_button(
@@ -165,14 +156,14 @@ class SettingsLabelsTab(SettingsTabBase):
 
     def update_ui(self, settings_dict: Mapping[str, Any]) -> None:
         """Update every control from the settings dictionary."""
-        for kind, _, _, _ in LABEL_KINDS:
+        for kind, _, _ in LABEL_KINDS:
             style = label_kwargs(settings_dict, kind)
             self._set_color(color_key(kind), style["text_color"])
-            self.size_spins[size_key(kind)].setValue(style["font_size"])
         # Background, opacity and font are shared, so any kind reads them.
         shared = label_kwargs(settings_dict, LABEL_KINDS[0][0])
         self._set_color(BACKGROUND_COLOR_KEY, shared["shape_color"])
         self.opacity_slider.setValue(int(round(shared["shape_opacity"] * 100)))
+        self.font_size_slider.setValue(shared["font_size"])
         index = self.font_family_combo.findData(shared["font_family"])
         self.font_family_combo.setCurrentIndex(max(index, 0))
         self.font_bold_btn.setChecked(shared["bold"])
@@ -185,7 +176,7 @@ class SettingsLabelsTab(SettingsTabBase):
         """Collect the label settings into a dictionary."""
         return {
             **self.colors,
-            **{key: spin.value() for key, spin in self.size_spins.items()},
+            FONT_SIZE_KEY: self.font_size_slider.value(),
             BACKGROUND_OPACITY_KEY: self.opacity_slider.value() / 100.0,
             FONT_FAMILY_KEY: self.font_family_combo.currentData(),
             FONT_BOLD_KEY: self.font_bold_btn.isChecked(),

@@ -16,20 +16,19 @@ import re
 from collections.abc import Mapping
 from typing import Any, Dict, Tuple
 
-# (kind, display name, default text color, base font size). The defaults
-# reproduce how each 3D label looked before it could be styled. Grouped as
-# LABEL_SECTIONS below lists them.
-LABEL_KINDS: Tuple[Tuple[str, str, str, int], ...] = (
-    ("index", "Index", "#003366", 18),
-    ("original_id", "Original ID", "#009000", 18),
-    ("xyz_index", "XYZ Index", "#8B0000", 18),
-    ("symbol", "Element Symbol", "#000000", 18),
-    ("coords", "Coordinates", "#000000", 18),
-    ("chiral", "Chiral (R/S)", "#0000FF", 20),
-    ("ez", "E/Z", "#006400", 18),
-    ("selection", "Selection", "#FFFF00", 12),
-    ("measurement", "Measurement", "#FF0000", 16),
-    ("constraint", "Constraint", "#00FFFF", 12),
+# (kind, display name, default text color). The colors reproduce how each 3D
+# label looked before it could be styled. Grouped as LABEL_SECTIONS lists them.
+LABEL_KINDS: Tuple[Tuple[str, str, str], ...] = (
+    ("index", "Index", "#003366"),
+    ("original_id", "Original ID", "#009000"),
+    ("xyz_index", "XYZ Index", "#8B0000"),
+    ("symbol", "Element Symbol", "#000000"),
+    ("coords", "Coordinates", "#000000"),
+    ("chiral", "Chiral (R/S)", "#0000FF"),
+    ("ez", "E/Z", "#006400"),
+    ("selection", "Selection", "#FFFF00"),
+    ("measurement", "Measurement", "#FF0000"),
+    ("constraint", "Constraint", "#00FFFF"),
 )
 
 # Settings-tab subsections of the label colors: (title, kinds in display order).
@@ -41,6 +40,7 @@ LABEL_SECTIONS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
 
 BACKGROUND_COLOR_KEY = "label_background_color_3d"
 BACKGROUND_OPACITY_KEY = "label_background_opacity_3d"
+FONT_SIZE_KEY = "label_font_size_3d"
 FONT_SIZE_RANGE = (6, 72)
 FONT_FAMILY_KEY = "label_font_family_3d"
 FONT_BOLD_KEY = "label_font_bold_3d"
@@ -58,14 +58,9 @@ def color_key(kind: str) -> str:
     return f"label_color_{kind}_3d"
 
 
-def size_key(kind: str) -> str:
-    """Settings key of one label kind's font size."""
-    return f"label_font_size_{kind}_3d"
-
-
 DEFAULT_LABEL_SETTINGS: Dict[str, Any] = {
-    **{color_key(kind): color for kind, _, color, _ in LABEL_KINDS},
-    **{size_key(kind): size for kind, _, _, size in LABEL_KINDS},
+    **{color_key(kind): color for kind, _, color in LABEL_KINDS},
+    FONT_SIZE_KEY: 18,
     BACKGROUND_COLOR_KEY: "#808080",
     BACKGROUND_OPACITY_KEY: 0.5,
     FONT_FAMILY_KEY: "arial",
@@ -121,7 +116,7 @@ def label_kwargs(settings: Any, kind: str) -> Dict[str, Any]:
         "text_color": _color(settings, color_key(kind)),
         "shape_color": _color(settings, BACKGROUND_COLOR_KEY),
         "shape_opacity": _number(settings, BACKGROUND_OPACITY_KEY, 0.0, 1.0),
-        "font_size": int(round(_number(settings, size_key(kind), *FONT_SIZE_RANGE))),
+        "font_size": int(round(_number(settings, FONT_SIZE_KEY, *FONT_SIZE_RANGE))),
         "font_family": _family(settings),
         "bold": _flag(settings, FONT_BOLD_KEY),
         "italic": _flag(settings, FONT_ITALIC_KEY),

@@ -12,7 +12,6 @@ from moleditpy.utils.label_style import (
     LABEL_KINDS,
     LABEL_SECTIONS,
     color_key,
-    size_key,
 )
 
 _GET_COLOR = "moleditpy.ui.settings_tabs.settings_labels_tab.QColorDialog.getColor"
@@ -36,7 +35,7 @@ def test_sections_are_headed(app):
     """Label colors carry one subsection per group; every section has a heading."""
     tab = SettingsLabelsTab(DEFAULT_SETTINGS)
     headings = {lbl.text() for lbl in tab.findChildren(QLabel)}
-    assert "<b>Label Colors and Sizes</b>" in headings
+    assert "<b>Label Colors</b>" in headings
     for title, _ in LABEL_SECTIONS:
         assert f"<i>{title}</i>" in headings
     assert "<b>Label Appearance</b>" in headings
@@ -52,7 +51,7 @@ def test_update_ui_then_get_settings(app):
             color_key("chiral"): "#112233",
             "label_background_color_3d": "#445566",
             "label_background_opacity_3d": 0.0,
-            size_key("chiral"): 30,
+            "label_font_size_3d": 30,
             "label_font_family_3d": "courier",
             "label_font_bold_3d": False,
             "label_font_italic_3d": True,
@@ -65,7 +64,7 @@ def test_update_ui_then_get_settings(app):
         color_key("chiral"),
         "label_background_color_3d",
         "label_background_opacity_3d",
-        size_key("chiral"),
+        "label_font_size_3d",
         "label_font_family_3d",
         "label_font_bold_3d",
         "label_font_italic_3d",
@@ -80,10 +79,10 @@ def test_update_ui_then_get_settings(app):
 def test_malformed_settings_show_defaults(app):
     """A hand-edited settings file with bad values shows the defaults."""
     tab = SettingsLabelsTab(DEFAULT_SETTINGS)
-    tab.update_ui({"label_font_family_3d": "wingdings", size_key("index"): "x"})
+    tab.update_ui({"label_font_family_3d": "wingdings", "label_font_size_3d": "x"})
     out = tab.get_settings()
     assert out["label_font_family_3d"] == "arial"
-    assert out[size_key("index")] == 18
+    assert out["label_font_size_3d"] == 18
 
 
 def test_pick_color(app):
@@ -105,9 +104,9 @@ def test_cancelled_color_pick_changes_nothing(app):
 def test_reset_to_defaults(app):
     """Reset Current Tab restores every label setting."""
     tab = SettingsLabelsTab(DEFAULT_SETTINGS)
-    tab.update_ui({**DEFAULT_SETTINGS, size_key("measurement"): 40})
+    tab.update_ui({**DEFAULT_SETTINGS, "label_font_size_3d": 40})
     tab.reset_to_defaults()
-    assert tab.get_settings()[size_key("measurement")] == 16
+    assert tab.get_settings()["label_font_size_3d"] == 18
 
 
 def test_dialog_has_labels_tab_after_scene(app):
