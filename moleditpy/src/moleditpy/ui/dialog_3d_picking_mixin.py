@@ -15,8 +15,9 @@ from __future__ import annotations
 import logging
 from PyQt6.QtCore import QEvent, Qt, QObject, QPoint
 from PyQt6.QtGui import QMouseEvent
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
+from ..utils.label_style import label_kwargs
 from .atom_picking import pick_atom_index_from_screen
 
 if TYPE_CHECKING:
@@ -199,8 +200,22 @@ class Dialog3DPickingMixin(_MixinBase):
 
     clear_selection_labels = clear_atom_labels
 
+    def _label_kwargs(self, kind: str) -> Dict[str, Any]:
+        """add_point_labels style arguments for one label kind, from settings."""
+        settings = getattr(
+            getattr(self.main_window, "init_manager", None), "settings", None
+        )
+        return label_kwargs(settings, kind)
+
+    def _selection_label_kwargs(self, color: Optional[str]) -> Dict[str, Any]:
+        """Selection label style; an explicit *color* overrides the text color."""
+        kwargs = self._label_kwargs("selection")
+        if color is not None:
+            kwargs["text_color"] = color
+        return kwargs
+
     def add_selection_label(
-        self, atom_idx: int, label_text: str, color: str = "yellow"
+        self, atom_idx: int, label_text: str, color: Optional[str] = None
     ) -> None:
         """Add a point label at the position of *atom_idx*."""
         plotter = self.main_window.view_3d_manager.plotter
@@ -218,13 +233,10 @@ class Dialog3DPickingMixin(_MixinBase):
                 [pos],
                 [label_text],
                 point_size=0,
-                font_size=12,
-                text_color=color,
                 always_visible=True,
                 show_points=False,
                 shape="rect",
-                shape_color="gray",
-                shape_opacity=0.5,
+                **self._selection_label_kwargs(color),
             )
             self.selection_labels.append(label_actor)
 
@@ -236,7 +248,7 @@ class Dialog3DPickingMixin(_MixinBase):
                     logging.debug("Suppressed non-critical error", exc_info=True)
 
     def show_atom_labels_for(
-        self, atoms_and_labels: list[tuple[int, str]], color: str = "yellow"
+        self, atoms_and_labels: list[tuple[int, str]], color: Optional[str] = None
     ) -> None:
         """Clear existing labels and add new ones for each *(idx, text)* pair."""
         plotter = self.main_window.view_3d_manager.plotter
@@ -257,13 +269,10 @@ class Dialog3DPickingMixin(_MixinBase):
                     [pos],
                     [label_text],
                     point_size=0,
-                    font_size=12,
-                    text_color=color,
                     always_visible=True,
                     show_points=False,
                     shape="rect",
-                    shape_color="gray",
-                    shape_opacity=0.5,
+                    **self._selection_label_kwargs(color),
                 )
                 self.selection_labels.append(label_actor)
 

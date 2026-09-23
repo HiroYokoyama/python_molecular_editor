@@ -11,7 +11,7 @@ DOI: 10.5281/zenodo.17268532
 """
 
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
@@ -36,6 +36,9 @@ class Settings2DTab(SettingsTabBase):
         """Initialize the 2D view and styling settings tab."""
         super().__init__(default_settings, parent)
         self.atom_font_family_2d_combo: Any = None
+        # The stored family and the combo's stand-in for it when the font is
+        # not installed; see get_settings().
+        self._loaded_font_family: Optional[Tuple[str, str]] = None
         self.atom_font_bold_2d_btn: Any = None
         self.atom_font_italic_2d_btn: Any = None
         self.atom_font_underline_2d_btn: Any = None
@@ -137,6 +140,7 @@ class Settings2DTab(SettingsTabBase):
         self.atom_font_family_2d_combo.setFontFilters(
             QFontComboBox.FontFilter.ScalableFonts
         )
+        self.atom_font_family_2d_combo.activated.connect(self._on_font_family_activated)
         form_layout.addRow("Atom Label Font Family:", self.atom_font_family_2d_combo)
 
         self.atom_font_size_2d_slider, self.atom_font_size_2d_label = (
@@ -330,6 +334,10 @@ class Settings2DTab(SettingsTabBase):
 
         font_family = settings_dict.get("atom_font_family_2d", "Arial")
         self.atom_font_family_2d_combo.setCurrentFont(QFont(font_family))
+        self._loaded_font_family = (
+            font_family,
+            self.atom_font_family_2d_combo.currentFont().family(),
+        )
 
         self.atom_font_size_2d_slider.setValue(
             settings_dict.get("atom_font_size_2d", 22)
@@ -363,6 +371,24 @@ class Settings2DTab(SettingsTabBase):
             int(settings_dict.get("template_snapping_distance_2d", 14.0))
         )
 
+    def _on_font_family_activated(self, _index: int) -> None:
+        """Mark the displayed font as the user's explicit selection."""
+        self._loaded_font_family = None
+
+    def _font_family_setting(self) -> str:
+        """The atom font family to save.
+
+        When the stored font is not installed, the combo shows a substitute;
+        saving that would rewrite the setting on a plain OK. Keep the stored
+        name unless the user picked a different font.
+        """
+        shown = str(self.atom_font_family_2d_combo.currentFont().family())
+        if self._loaded_font_family is not None:
+            stored, substitute = self._loaded_font_family
+            if shown == substitute:
+                return stored
+        return shown
+
     def get_settings(self) -> dict[str, Any]:
         """Collect current 2D view settings as a dictionary."""
         return {
@@ -374,7 +400,7 @@ class Settings2DTab(SettingsTabBase):
             "bond_cap_style_2d": self.bond_cap_style_2d_combo.currentText(),
             "bond_wedge_width_2d": self.bond_wedge_width_2d_slider.value() / 10.0,
             "bond_dash_count_2d": self.bond_dash_count_2d_slider.value(),
-            "atom_font_family_2d": self.atom_font_family_2d_combo.currentFont().family(),
+            "atom_font_family_2d": self._font_family_setting(),
             "atom_font_size_2d": self.atom_font_size_2d_slider.value(),
             "atom_font_bold_2d": self.atom_font_bold_2d_btn.isChecked(),
             "atom_font_italic_2d": self.atom_font_italic_2d_btn.isChecked(),

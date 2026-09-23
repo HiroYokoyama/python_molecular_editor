@@ -88,7 +88,7 @@ class ExportManager:
             combined_mesh.save(file_path, binary=True)
             self.host.statusBar().showMessage(f"STL exported to {file_path}")
 
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, OSError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_obj_mtl(self) -> None:
@@ -259,7 +259,7 @@ class ExportManager:
             combined_mesh.save(file_path, binary=True)
             self.host.statusBar().showMessage(f"STL exported to {file_path}")
 
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, OSError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error exporting STL: {e}")
 
     def export_from_3d_view(self) -> Optional[pv.PolyData]:
@@ -901,7 +901,12 @@ class ExportManager:
 
             # 4. Render
             painter = QPainter()
-            painter.begin(generator)
+            # begin() fails, without raising, when the file cannot be opened.
+            if not painter.begin(generator):
+                self.host.statusBar().showMessage(
+                    "Failed to save SVG. Check file path or permissions."
+                )
+                return
             try:
                 self.host.init_manager.scene.render(
                     painter, rect_to_render, rect_to_render
@@ -960,5 +965,5 @@ class ExportManager:
                 filePath, transparent_background=is_transparent
             )
             self.host.statusBar().showMessage(f"3D view exported to {filePath}", 3000)
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, OSError, RuntimeError, ValueError) as e:
             self.host.statusBar().showMessage(f"Error exporting 3D PNG: {e}")

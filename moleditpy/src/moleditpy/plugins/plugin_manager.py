@@ -497,6 +497,33 @@ class PluginManager:
             logging.warning(
                 "Failed to load plugin %s: %s", module_name, e, exc_info=True
             )
+            self._register_failed_plugin(filepath, module_name, category, e)
+
+    def _register_failed_plugin(
+        self, filepath: str, module_name: str, category: str, error: BaseException
+    ) -> None:
+        """List a plugin whose import failed, so the Plugin Manager shows why.
+
+        The half-executed module is dropped from ``sys.modules``; the entry
+        carries no module, like a disabled plugin, so no menu is built for it.
+        """
+        for key in [k for k in sys.modules if k.endswith(module_name)]:
+            if getattr(sys.modules[key], "__file__", None) == filepath:
+                del sys.modules[key]
+        info = self.get_plugin_info_safe(filepath, fallback_name=module_name)
+        self.plugins.append(
+            {
+                "name": info["name"],
+                "version": info.get("version", "Unknown"),
+                "author": info.get("author", "Unknown"),
+                "description": info.get("description", ""),
+                "module": None,
+                "category": category or info.get("category", ""),
+                "status": f"Error (Load): {error}",
+                "filepath": filepath,
+                "has_run": False,
+            }
+        )
 
     def run_plugin(self, module: Any, main_window: Any) -> None:
         """Executes the plugin's run method (Legacy manual trigger)."""

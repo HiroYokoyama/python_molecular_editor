@@ -737,3 +737,99 @@ class TestRingEditFeedback:
         dlg._warn_if_angle_not_applied(95.0, 95.0)
 
         mw.statusBar().showMessage.assert_not_called()
+
+
+class TestEditsMadeElsewhereSurvive:
+    """The dialogs are modeless: an optimization, undo or other dialog can move
+    atoms while one is open. Applying afterwards used to rebuild the molecule
+    from the positions saved at selection time, silently reverting those moves.
+    """
+
+    @staticmethod
+    def _move_h3_elsewhere(mol):
+        from rdkit.Geometry import Point3D
+
+        conf = mol.GetConformer()
+        p = conf.GetAtomPosition(3)
+        moved = (p.x + 1.0, p.y, p.z)
+        conf.SetAtomPosition(3, Point3D(*moved))
+        return np.array(moved)
+
+    @pytest.mark.parametrize(
+        "fixture, picks, value",
+        [
+            ("bond_dlg", (0, 1), 1.6),
+            ("angle_dlg", (2, 0, 1), 100.0),
+            ("dihedral_dlg", (2, 0, 1, 5), 60.0),
+        ],
+    )
+    def test_external_move_kept_on_apply(self, request, fixture, picks, value):
+        dlg, mol, _mw = request.getfixturevalue(fixture)
+        for idx in picks:
+            dlg.on_atom_picked(idx)
+        # A first update from the dialog itself, as a slider drag would do.
+        dlg.apply_geometry_update(value)
+
+        moved = self._move_h3_elsewhere(mol)
+        dlg.apply_geometry_update(value)
+
+        # H3 sits on C0, which none of these edits move.
+        assert np.allclose(mol.GetConformer().GetPositions()[3], moved)
+
+    def test_own_slider_updates_keep_the_baseline(self, angle_dlg):
+        """Repeated updates from the dialog itself still start from the baseline."""
+        dlg, mol, _mw = angle_dlg
+        for idx in (2, 0, 1):
+            dlg.on_atom_picked(idx)
+        baseline = dlg._baseline_positions.copy()
+        dlg.apply_geometry_update(100.0)
+        dlg.apply_geometry_update(120.0)
+        assert np.array_equal(dlg._baseline_positions, baseline)
+
+
+@pytest.mark.parametrize("text", ["inf", "-inf", "1e400", "nan"])
+def test_live_slider_sync_ignores_non_finite_input(bond_dlg, text):
+    """Typing a non-finite value must not raise out of the textChanged slot.
+
+    float("inf") parsed fine, then int(round(inf * scale)) raised
+    OverflowError, which the handler did not catch.
+    """
+    dlg, *_ = bond_dlg
+    dlg.distance_slider.setValue(154)
+    dlg._sync_input_to_slider(text, dlg.distance_slider, 100.0)
+    assert dlg.distance_slider.value() == 154
+
+
+class TestStalePositionGuards:
+    """_drop_stale_positions / _update_molecule_geometry on unreadable conformers."""
+
+    def test_unreadable_conformer_is_left_alone(self, angle_dlg):
+        dlg, mol, _mw = angle_dlg
+        for idx in (2, 0, 1):
+            dlg.on_atom_picked(idx)
+        baseline = dlg._baseline_positions.copy()
+        with patch.object(dlg, "mol") as broken:
+            broken.GetConformer.side_effect = RuntimeError("no conformer")
+            dlg._drop_stale_positions()
+        assert np.array_equal(dlg._baseline_positions, baseline)
+
+    def test_non_2d_positions_are_ignored(self, angle_dlg):
+        dlg, _mol, _mw = angle_dlg
+        dlg._snapshot_positions = np.zeros((3, 3))
+        with patch.object(dlg, "mol") as odd:
+            odd.GetConformer.return_value.GetPositions.return_value = np.zeros(3)
+            dlg._drop_stale_positions()
+        assert np.array_equal(dlg._snapshot_positions, np.zeros((3, 3)))
+
+    def test_write_without_readable_conformer_forgets_last_write(self, angle_dlg):
+        dlg, _mol, _mw = angle_dlg
+        dlg._last_written_positions = np.zeros((1, 3))
+        with (
+            patch(
+                "moleditpy.ui.base_picking_dialog.BasePickingDialog._update_molecule_geometry"
+            ),
+            patch.object(dlg, "mol") as broken,
+        ):
+            broken.GetConformer.side_effect = RuntimeError("no conformer")
+            dlg._update_molecule_geometry(np.zeros((1, 3)))
+        assert dlg._last_written_positions is None

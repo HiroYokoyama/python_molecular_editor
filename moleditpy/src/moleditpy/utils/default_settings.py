@@ -10,6 +10,8 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from .label_style import DEFAULT_LABEL_SETTINGS
+
 DEFAULT_SETTINGS = {
     # --- 3D Scene Visuals ---
     "background_color": "#919191",
@@ -23,6 +25,10 @@ DEFAULT_SETTINGS = {
     "mouse_rotation_sensitivity": 1.0,
     "realtime_3d_drag": True,
     "rotate_group_follow_mouse": False,
+    # --- 3D Labels --- (keys and how stored values are checked: utils/label_style.py)
+    **DEFAULT_LABEL_SETTINGS,
+    "check_stereo_after_conversion": True,
+    "check_stereo_after_optimization": False,
     # --- 3D Model Parameters (Ball and Stick) ---
     "ball_stick_atom_scale": 1.0,
     "ball_stick_bond_radius": 0.1,

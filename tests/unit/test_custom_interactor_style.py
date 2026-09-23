@@ -374,10 +374,24 @@ def test_custom_interactor_style_right_click_rotation(app, mock_parser_host):
         mock_renderer.GetDisplayPoint.return_value = (100.0, 100.0, 0.5)
         mock_renderer.GetWorldPoint.return_value = (1.0, 1.0, 0.0, 1.0)
 
-        interactor_style.on_right_button_up(None, None)
+        # The redraw + undo push is deferred out of the VTK callback, as on
+        # left release (re-entrant render() can deadlock the render window).
+        deferred = []
+        with patch(
+            "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+            side_effect=lambda _ms, fn: deferred.append(fn),
+        ):
+            interactor_style.on_right_button_up(None, None)
         assert mock_dialog.is_rotating_group_vtk is False
         assert mock_dialog.rotation_start_pos is None
+        mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
+        assert len(deferred) == 1
+        # The deferred redraw runs after the event; if the dialog has closed
+        # by then, the failure must stay inside and the undo push still run.
+        mock_dialog.show_atom_labels.side_effect = RuntimeError("deleted")
+        deferred[0]()
         mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
+        mock_parser_host.edit_actions_manager.push_undo_state.assert_called()
 
 
 # ---------------------------------------------------------------------------
@@ -1082,12 +1096,10 @@ def test_left_click_outside_group_triggers_bfs(app):
     style.GetInteractor = MagicMock(return_value=mock_interactor)
 
     move_group_dialog = _move_dialog(group_atoms={0, 1}, selected_atoms=set())
-    host.view_3d_manager.current_mol = MagicMock()
-    host.view_3d_manager.current_mol.GetNumBonds.return_value = 1
-    bond = MagicMock()
-    bond.GetBeginAtomIdx.return_value = 2
-    bond.GetEndAtomIdx.return_value = 3
-    host.view_3d_manager.current_mol.GetBondWithIdx.return_value = bond
+    from rdkit import Chem
+
+    # Two fragments: atoms 0-1 and 2-3; clicking atom 2 selects {2, 3}.
+    host.view_3d_manager.current_mol = Chem.MolFromSmiles("CC.CC")
 
     deferred = []
     with (
@@ -1519,3 +1531,71 @@ def test_unreadable_atom_count_keeps_realtime_drag(app):
 
     host.view_3d_manager.current_mol = None
     assert style._molecule_too_large_for_realtime() is False
+
+
+def test_click_on_group_atom_closes_the_drag_gesture():
+    """A click (no movement) on a Move Group atom sends plugins both start and end.
+
+    The release reset the drag flag before the block that closed the gesture,
+    so "end" only arrived at the next mouse press.
+    """
+    host = MagicMock()
+    style = CustomInteractorStyle(host)
+    mock_interactor = MagicMock()
+    mock_interactor.GetEventPosition.return_value = (100, 100)
+    style.GetInteractor = MagicMock(return_value=mock_interactor)
+
+    move_group_dialog = _move_dialog(group_atoms={0, 1}, selected_atoms=set())
+    conf = MagicMock()
+    conf.GetAtomPosition.return_value = MagicMock(x=0.0, y=0.0, z=0.0)
+    host.view_3d_manager.current_mol.GetConformer.return_value = conf
+
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=0,
+        ),
+        patch("moleditpy.ui.custom_interactor_style.QTimer.singleShot"),
+    ):
+        mock_qapp.topLevelWidgets.return_value = [move_group_dialog]
+        style.on_left_button_down(None, None)
+        style.on_left_button_up(None, None)
+
+    events = [
+        c.args[0] for c in host.plugin_manager.invoke_atom_drag_handlers.call_args_list
+    ]
+    assert events == ["start", "end"]
+    move_group_dialog.on_atom_picked.assert_called_once_with(0)
+
+
+def test_measurement_pick_error_is_logged_not_raised():
+    """A failing measurement selection in the deferred callback is contained."""
+    from rdkit import Chem
+
+    host = MagicMock()
+    host.edit_3d_manager.measurement_mode = True
+    host.view_3d_manager.current_mol = Chem.MolFromSmiles("CC")
+    host.edit_3d_manager.handle_measurement_atom_selection.side_effect = RuntimeError(
+        "boom"
+    )
+    style = CustomInteractorStyle(host)
+    style.GetInteractor = MagicMock(return_value=MagicMock())
+
+    deferred = []
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=0,
+        ),
+        patch(
+            "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+            side_effect=lambda _ms, fn: deferred.append(fn),
+        ),
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        style.on_left_button_down(None, None)
+    assert len(deferred) == 1
+    deferred[0]()  # must not raise
+    host.edit_3d_manager.handle_measurement_atom_selection.assert_called_once_with(0)

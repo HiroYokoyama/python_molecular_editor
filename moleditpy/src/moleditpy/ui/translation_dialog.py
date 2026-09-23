@@ -14,6 +14,7 @@ import logging
 from typing import Any
 
 import numpy as np
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
@@ -27,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .base_picking_dialog import BasePickingDialog
+from ..utils.finite_float import finite_float
 
 _TAB_ABSOLUTE = 0
 _TAB_DELTA = 1
@@ -206,6 +208,25 @@ class TranslationDialog(BasePickingDialog):
         layout.addStretch()
         return widget
 
+    def keyPressEvent(self, event: Any) -> None:
+        """Enter applies the current tab's action.
+
+        The base class clicks ``apply_button``, which is the Delta tab's: on
+        the Absolute tab Enter then did nothing, or ran a delta translation
+        left enabled from before a tab switch.
+        """
+        if event is not None and event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            button = (
+                self.abs_apply_btn
+                if self.tabs.currentIndex() == _TAB_ABSOLUTE
+                else self.apply_button
+            )
+            if button is not None and button.isEnabled():
+                button.click()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
     # ------------------------------------------------------------------
     # Tab switching
     # ------------------------------------------------------------------
@@ -316,9 +337,9 @@ class TranslationDialog(BasePickingDialog):
             return
 
         try:
-            tx = float(self.abs_x_input.text())
-            ty = float(self.abs_y_input.text())
-            tz = float(self.abs_z_input.text())
+            tx = finite_float(self.abs_x_input.text())
+            ty = finite_float(self.abs_y_input.text())
+            tz = finite_float(self.abs_z_input.text())
         except ValueError:
             QMessageBox.warning(
                 self, "Warning", "Please enter valid numbers for X, Y, Z."
@@ -383,9 +404,9 @@ class TranslationDialog(BasePickingDialog):
             return
 
         try:
-            dx = float(self.dx_input.text())
-            dy = float(self.dy_input.text())
-            dz = float(self.dz_input.text())
+            dx = finite_float(self.dx_input.text())
+            dy = finite_float(self.dy_input.text())
+            dz = finite_float(self.dz_input.text())
         except ValueError:
             QMessageBox.warning(
                 self, "Warning", "Please enter valid numbers for dx, dy, dz."

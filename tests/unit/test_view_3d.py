@@ -357,10 +357,12 @@ def test_show_ez_labels_3d(app, mock_parser_host):
     for i, atom in enumerate(mol.GetAtoms()):
         atom.SetIntProp("_original_atom_id", i)
 
+    # A 2D label that disagrees used to turn the 3D label into "?"; the label
+    # now always shows the real 3D configuration.
     view3d.plotter.add_point_labels.reset_mock()
     view3d.show_ez_labels_3d(mol)
     args, kwargs = view3d.plotter.add_point_labels.call_args
-    assert "?" in args[1]
+    assert args[1] == ["E"]
 
 
 def test_chiral_labels_logic(app, mock_parser_host, mock_pv):
@@ -1193,3 +1195,297 @@ def test_menu_state_keeps_original_id_mode_when_ids_present(mock_parser_host):
     view3d.update_atom_id_menu_state()
 
     assert view3d.atom_info_display_mode == "original_id"
+
+
+def _atom_info_view(mock_parser_host, settings):
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.settings = settings
+    view3d.atom_info_display_mode = "rdkit_index"
+    view3d.atom_index_base = 0
+    view3d.atom_positions_3d = np.array([[0.0, 0.0, 0.0]])
+    view3d.current_mol = Chem.MolFromSmiles("C")
+    return view3d
+
+
+@pytest.mark.parametrize(
+    "mode,kind",
+    [
+        ("rdkit_index", "index"),
+        ("symbol", "symbol"),
+        ("coords", "coords"),
+    ],
+)
+def test_atom_info_labels_use_their_kind_style(mock_parser_host, mode, kind):
+    """Each atom info mode is drawn with its own label color and the shared style."""
+    settings = {
+        f"label_color_{kind}_3d": "#123456",
+        "label_background_color_3d": "#ffffff",
+        "label_background_opacity_3d": 0.0,
+        "label_font_size_3d": 36,
+        "label_font_family_3d": "courier",
+        "label_font_italic_3d": True,
+    }
+    view3d = _atom_info_view(mock_parser_host, settings)
+    view3d.atom_info_display_mode = mode
+    view3d.show_all_atom_info()
+
+    kwargs = view3d.plotter.add_point_labels.call_args.kwargs
+    assert kwargs["text_color"] == "#123456"
+    assert kwargs["shape_color"] == "#ffffff"
+    assert kwargs["shape_opacity"] == 0.0
+    assert kwargs["font_size"] == 36
+    assert kwargs["font_family"] == "courier"
+    assert kwargs["italic"] is True
+
+
+def test_coords_and_symbol_colors_are_independent(mock_parser_host):
+    """Coordinates and symbols share a label group but not a color."""
+    view3d = _atom_info_view(mock_parser_host, {"label_color_symbol_3d": "#445566"})
+    view3d.atom_info_display_mode = "coords"
+    view3d.show_all_atom_info()
+    assert view3d.plotter.add_point_labels.call_args.kwargs["text_color"] == "#000000"
+
+
+def test_chiral_labels_use_label_style(mock_parser_host):
+    """3D R/S labels use the chiral label color and the shared style."""
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.settings = {
+        "label_color_chiral_3d": "#ff0000",
+        "label_background_color_3d": "#00ff00",
+    }
+    view3d.show_chiral_labels = True
+    view3d.show_ez_labels_3d = MagicMock()
+    mol = Chem.AddHs(Chem.MolFromSmiles("N[C@@H](C)C(=O)O"))
+    AllChem.EmbedMolecule(mol, randomSeed=7)
+    Chem.AssignStereochemistryFrom3D(mol)
+    view3d.atom_positions_3d = mol.GetConformer().GetPositions()
+
+    view3d._add_3d_labels(mol, mol)
+
+    kwargs = view3d.plotter.add_point_labels.call_args.kwargs
+    assert kwargs["name"] == "chiral_labels"
+    assert kwargs["text_color"] == "#ff0000"
+    assert kwargs["shape_color"] == "#00ff00"
+    assert kwargs["font_size"] == 18
+
+
+def test_ez_labels_use_label_style(mock_parser_host):
+    """3D E/Z labels use the E/Z label color and the shared style."""
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.settings = {
+        "label_color_ez_3d": "#aa00aa",
+        "label_background_color_3d": "#00ffff",
+    }
+    mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C"))
+    AllChem.EmbedMolecule(mol, randomSeed=5)
+    view3d.show_ez_labels_3d(mol)
+
+    kwargs = view3d.plotter.add_point_labels.call_args.kwargs
+    assert kwargs["name"] == "ez_labels"
+    assert kwargs["text_color"] == "#aa00aa"
+    assert kwargs["shape_color"] == "#00ffff"
+
+
+def test_labels_keep_previous_look_by_default(mock_parser_host):
+    """With no label settings the index labels look exactly as before."""
+    view3d = _atom_info_view(mock_parser_host, {})
+    view3d.show_all_atom_info()
+    kwargs = view3d.plotter.add_point_labels.call_args.kwargs
+    assert kwargs["text_color"] == "#003366"
+    assert kwargs["shape_color"] == "#808080"
+    assert kwargs["shape_opacity"] == 0.5
+    assert kwargs["font_size"] == 18
+    assert kwargs["font_family"] == "arial"
+    assert kwargs["bold"] is True
+    assert kwargs["italic"] is False
+
+
+def test_tool_labels_use_their_kind_style():
+    """Selection, measurement and constraint labels each read their own style."""
+    from types import SimpleNamespace
+
+    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from moleditpy.ui.edit_3d_logic import Edit3DManager
+
+    settings = {
+        "label_color_selection_3d": "#111111",
+        "label_color_measurement_3d": "#222222",
+        "label_font_size_3d": 30,
+    }
+    host = SimpleNamespace(init_manager=SimpleNamespace(settings=settings))
+
+    picker = Dialog3DPickingMixin.__new__(Dialog3DPickingMixin)
+    picker.main_window = host
+    assert picker._selection_label_kwargs(None)["text_color"] == "#111111"
+    # An explicit color from a caller still wins over the setting.
+    assert picker._selection_label_kwargs("#abcdef")["text_color"] == "#abcdef"
+
+    edit = Edit3DManager.__new__(Edit3DManager)
+    edit.host = host
+    measurement = edit._label_kwargs("measurement")
+    assert measurement["text_color"] == "#222222"
+    assert measurement["font_size"] == 30
+    assert picker._label_kwargs("constraint")["text_color"] == "#00FFFF"
+
+
+@pytest.mark.parametrize(
+    "mode,kind,legend,prop",
+    [
+        ("rdkit_index", "index", "legend_rdkit", None),
+        ("original_id", "original_id", "legend_id", "_original_atom_id"),
+        ("xyz_index", "xyz_index", "legend_xyz", "xyz_unique_id"),
+    ],
+)
+def test_legend_uses_label_color_setting(mock_parser_host, mode, kind, legend, prop):
+    """The 3D legend entry is drawn in the same color as its labels."""
+    view3d = _atom_info_view(mock_parser_host, {f"label_color_{kind}_3d": "#123456"})
+    view3d.atom_info_display_mode = mode
+    if prop:
+        mol = Chem.RWMol(Chem.MolFromSmiles("C"))
+        mol.GetAtomWithIdx(0).SetIntProp(prop, 0)
+        view3d.current_mol = mol
+    view3d.show_all_atom_info()
+
+    calls = [
+        c
+        for c in view3d.plotter.add_text.call_args_list
+        if c.kwargs.get("name") == legend
+    ]
+    assert calls, legend
+    assert calls[0].kwargs["color"] == "#123456"
+    labels = view3d.plotter.add_point_labels.call_args.kwargs
+    assert labels["text_color"] == "#123456"
+
+
+def test_wrong_chiral_centers_are_drawn_in_red(mock_parser_host):
+    """Centers the chirality check found wrong get a red label; others keep theirs."""
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.settings = {"label_color_chiral_3d": "#0000FF"}
+    view3d.show_chiral_labels = True
+    view3d.show_ez_labels_3d = MagicMock()
+    mol = Chem.AddHs(Chem.MolFromSmiles("N[C@@H](C)[C@H](O)C(=O)O"))
+    AllChem.EmbedMolecule(mol, randomSeed=7)
+    Chem.AssignStereochemistryFrom3D(mol)
+    view3d.atom_positions_3d = mol.GetConformer().GetPositions()
+    centers = [idx for idx, _ in Chem.FindMolChiralCenters(mol)]
+    view3d.chirality_mismatches = {centers[0]: "S"}
+
+    view3d._add_3d_labels(mol, mol)
+
+    calls = {
+        c.kwargs["name"]: c for c in view3d.plotter.add_point_labels.call_args_list
+    }
+    assert calls["chiral_labels_wrong"].kwargs["text_color"] == "#FF0000"
+    assert calls["chiral_labels_wrong"].args[1] == ["S"]
+    assert calls["chiral_labels"].kwargs["text_color"] == "#0000FF"
+    assert len(calls["chiral_labels"].args[1]) == len(centers) - 1
+
+
+def test_no_red_group_without_mismatches(mock_parser_host):
+    """Normally only the usual chiral label group is drawn."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.show_chiral_labels = True
+    view3d.show_ez_labels_3d = MagicMock()
+    mol = Chem.AddHs(Chem.MolFromSmiles("N[C@@H](C)C(=O)O"))
+    AllChem.EmbedMolecule(mol, randomSeed=7)
+    Chem.AssignStereochemistryFrom3D(mol)
+    view3d.atom_positions_3d = mol.GetConformer().GetPositions()
+
+    view3d._add_3d_labels(mol, mol)
+
+    names = [c.kwargs["name"] for c in view3d.plotter.add_point_labels.call_args_list]
+    assert names == ["chiral_labels"]
+
+
+def test_wrong_ez_labels_are_drawn_in_red(mock_parser_host):
+    """Double bonds the stereo check found wrong get a red E/Z label."""
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.settings = {"label_color_ez_3d": "#006400"}
+    mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C.C/C=C\C"))
+    AllChem.EmbedMolecule(mol, randomSeed=5)
+    doubles = [b.GetIdx() for b in mol.GetBonds() if b.GetBondTypeAsDouble() == 2]
+    # The first bond is E in 3D (drawn Z, say); the red label is its 3D E/Z.
+    view3d.ez_mismatches = {doubles[0]: "E"}
+
+    view3d.show_ez_labels_3d(mol)
+
+    calls = {
+        c.kwargs["name"]: c for c in view3d.plotter.add_point_labels.call_args_list
+    }
+    assert calls["ez_labels_wrong"].kwargs["text_color"] == "#FF0000"
+    assert calls["ez_labels_wrong"].args[1] == ["E"]
+    assert calls["ez_labels"].kwargs["text_color"] == "#006400"
+    assert len(calls["ez_labels"].args[1]) == 1
+
+
+def test_ez_label_lost_in_3d_uses_check_marker(mock_parser_host):
+    """A labelled bond with no E/Z left in 3D is still marked, with "?"."""
+    view3d = _make_view3d(mock_parser_host)
+    mol = Chem.AddHs(Chem.MolFromSmiles("C=C"))  # no E/Z possible
+    AllChem.EmbedMolecule(mol, randomSeed=5)
+    double = next(b.GetIdx() for b in mol.GetBonds() if b.GetBondTypeAsDouble() == 2)
+    view3d.ez_mismatches = {double: "?"}
+
+    view3d.show_ez_labels_3d(mol)
+
+    calls = {
+        c.kwargs["name"]: c for c in view3d.plotter.add_point_labels.call_args_list
+    }
+    assert calls["ez_labels_wrong"].args[1] == ["?"]
+    assert "ez_labels" not in calls
+
+
+def test_chiral_labels_survive_actor_removal_errors(mock_parser_host):
+    """A failing remove_actor for old chiral labels does not stop the redraw."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.show_chiral_labels = True
+    mol = Chem.AddHs(Chem.MolFromSmiles("C[C@H](F)Cl"))
+    AllChem.EmbedMolecule(mol, randomSeed=3)
+    view3d.atom_positions_3d = mol.GetConformer().GetPositions()
+    view3d.plotter.remove_actor.side_effect = RuntimeError("gone")
+
+    view3d._add_3d_labels(mol, mol)
+
+    names = [c.kwargs["name"] for c in view3d.plotter.add_point_labels.call_args_list]
+    assert "chiral_labels" in names
+
+
+def test_chiral_labels_skipped_without_3d_positions(mock_parser_host, caplog):
+    """Chiral centers but no cached positions: warn and draw nothing."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.show_chiral_labels = True
+    mol = Chem.AddHs(Chem.MolFromSmiles("C[C@H](F)Cl"))
+    AllChem.EmbedMolecule(mol, randomSeed=3)
+    view3d.atom_positions_3d = None
+
+    view3d._add_3d_labels(mol, mol)
+
+    assert "atom_positions_3d is None" in caplog.text
+    view3d.plotter.add_point_labels.assert_not_called()
+
+
+def test_ez_labels_survive_actor_removal_errors(mock_parser_host):
+    """Old E/Z label actors that cannot be removed do not stop the new ones."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.plotter.renderer.actors = {"ez_labels": 1, "ez_labels_wrong": 1}
+    view3d.plotter.remove_actor.side_effect = RuntimeError("gone")
+    mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C"))
+    AllChem.EmbedMolecule(mol, randomSeed=5)
+
+    view3d.show_ez_labels_3d(mol)
+
+    call = view3d.plotter.add_point_labels.call_args
+    assert call.kwargs["name"] == "ez_labels"
+    assert call.args[1] == ["E"]
+
+
+def test_ez_labels_skipped_when_3d_perception_fails(mock_parser_host):
+    """An E/Z perception error leaves the scene without E/Z labels."""
+    view3d = _make_view3d(mock_parser_host)
+    mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C"))
+    AllChem.EmbedMolecule(mol, randomSeed=5)
+    with patch(
+        "moleditpy.ui.view_3d_logic.actual_ez", side_effect=RuntimeError("boom")
+    ):
+        view3d.show_ez_labels_3d(mol)
+    view3d.plotter.add_point_labels.assert_not_called()

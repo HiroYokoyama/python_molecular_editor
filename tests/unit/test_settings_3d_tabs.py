@@ -55,8 +55,34 @@ def test_scene_tab_get_settings_keys(app):
         "mouse_rotation_sensitivity",
         "realtime_3d_drag",
         "rotate_group_follow_mouse",
+        "check_stereo_after_conversion",
+        "check_stereo_after_optimization",
     }
     assert expected_keys == set(result.keys())
+
+
+def test_scene_tab_stereo_check_options(app):
+    """The stereo check lives on the 3D Scene tab, under its own heading."""
+    from PyQt6.QtWidgets import QLabel
+
+    tab = Settings3DSceneTab(DEFAULT_SETTINGS)
+    tab.update_ui(DEFAULT_SETTINGS)
+    headings = {lbl.text() for lbl in tab.findChildren(QLabel)}
+    assert "<b>Stereo Check (R/S, E/Z)</b>" in headings
+    out = tab.get_settings()
+    assert out["check_stereo_after_conversion"] is True
+    assert out["check_stereo_after_optimization"] is False
+
+    tab.update_ui(
+        dict(
+            DEFAULT_SETTINGS,
+            check_stereo_after_conversion=False,
+            check_stereo_after_optimization=True,
+        )
+    )
+    out = tab.get_settings()
+    assert out["check_stereo_after_conversion"] is False
+    assert out["check_stereo_after_optimization"] is True
 
 
 def test_scene_tab_roundtrip(app):

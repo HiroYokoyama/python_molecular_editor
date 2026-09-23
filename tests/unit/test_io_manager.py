@@ -18,7 +18,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from PyQt6.QtCore import QPointF
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QDialog
 
 # Make the local moleditpy package discoverable
 workspace_src_path = os.path.abspath(
@@ -1177,7 +1177,13 @@ class TestFlexibleEncodingAndBlockLoader:
             encoding="utf-8",
         )
 
-        mol = io._read_mol_or_sdf(str(sdf))
+        # Two records now open the selector; pick the first, as the
+        # first-record-only reader used to do implicitly.
+        with patch("moleditpy.ui.io_logic.SdfRecordDialog") as dialog_cls:
+            dialog = dialog_cls.return_value
+            dialog.exec.return_value = QDialog.DialogCode.Accepted
+            dialog.selected_record.side_effect = lambda: dialog_cls.call_args.args[0][0]
+            mol = io._read_mol_or_sdf(str(sdf))
 
         assert mol is not None
         assert mol.GetProp("_Name") == "First"

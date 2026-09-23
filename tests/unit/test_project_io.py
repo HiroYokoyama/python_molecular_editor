@@ -226,6 +226,35 @@ def test_load_json_data_invalid_format(mock_parser_host, tmp_path):
         assert mock_warn.called
 
 
+@pytest.mark.parametrize("content", ['{"format": "Unknown"}', "[1, 2]", "not json"])
+def test_load_json_data_bad_file_keeps_document(mock_parser_host, tmp_path, content):
+    """A foreign or corrupt project file must not clear the open document."""
+    io = DummyProjectIo(mock_parser_host)
+    json_file = tmp_path / "bad.pmeprj"
+    json_file.write_text(content, encoding="utf-8")
+
+    with (
+        patch("PyQt6.QtWidgets.QMessageBox.warning"),
+        patch.object(io.host.edit_actions_manager, "clear_all") as clear_all,
+    ):
+        io.load_json_data(str(json_file))
+    clear_all.assert_not_called()
+
+
+def test_load_raw_data_bad_file_keeps_document(mock_parser_host, tmp_path):
+    """An unreadable .pmeraw must not clear the open document."""
+    io = DummyProjectIo(mock_parser_host)
+    raw_file = tmp_path / "bad.pmeraw"
+    raw_file.write_bytes(b"not a pickle")
+
+    with (
+        patch.object(io, "_confirm_pickle_load", return_value=True),
+        patch.object(io.host.edit_actions_manager, "clear_all") as clear_all,
+    ):
+        io.load_raw_data(str(raw_file))
+    clear_all.assert_not_called()
+
+
 def test_open_project_file_dispatch(mock_parser_host):
     """Verify dispatching to correct load method based on file extension."""
     io = DummyProjectIo(mock_parser_host)
@@ -281,14 +310,25 @@ def test_load_raw_data_error_paths(mock_parser_host):
 
 
 def test_open_project_file_unsaved_check(mock_parser_host):
-    """Verify that 'open project' checks for unsaved changes before proceeding."""
+    """Declining the unsaved-changes prompt aborts the load after the picker.
+
+    The check lives in load_json_data/load_raw_data (so cancelling the picker
+    never prompts); this used to pass only when an earlier test had already
+    patched QFileDialog, and failed standalone.
+    """
     io = DummyProjectIo(mock_parser_host)
-    with patch.object(
-        io.host.state_manager, "check_unsaved_changes", return_value=False
+    with (
+        patch.object(
+            io.host.state_manager, "check_unsaved_changes", return_value=False
+        ),
+        patch(
+            "moleditpy.ui.io_logic.QFileDialog.getOpenFileName",
+            return_value=("x.pmeprj", ""),
+        ),
+        patch.object(io.host.edit_actions_manager, "clear_all") as clear_all,
     ):
         io.open_project_file()
-        with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName") as mock_open:
-            assert not mock_open.called
+    clear_all.assert_not_called()
 
 
 def test_save_project_io_error(mock_parser_host, tmp_path):
@@ -892,3 +932,30 @@ def test_set_mol_prop_safe_module_helper():
     _set_mol_prop_safe(mol, "k_float", 2.25)
     assert mol.GetIntProp("k_int") == 5
     assert mol.GetDoubleProp("k_float") == 2.25
+
+
+def test_load_json_data_stops_when_clearing_is_refused(mock_parser_host, tmp_path):
+    """A valid project is not loaded if the document cannot be cleared."""
+    io = DummyProjectIo(mock_parser_host)
+    json_file = tmp_path / "ok.pmeprj"
+    json_file.write_text(json.dumps({"format": "PME Project"}), encoding="utf-8")
+    with (
+        patch.object(io.host.edit_actions_manager, "clear_all", return_value=False),
+        patch.object(io.host.state_manager, "load_from_json_data") as load,
+    ):
+        io.load_json_data(str(json_file))
+    load.assert_not_called()
+
+
+def test_load_raw_data_stops_when_clearing_is_refused(mock_parser_host, tmp_path):
+    """A readable .pmeraw is not applied if the document cannot be cleared."""
+    io = DummyProjectIo(mock_parser_host)
+    raw_file = tmp_path / "ok.pmeraw"
+    raw_file.write_bytes(pickle.dumps({"atoms": {}}))
+    with (
+        patch.object(io, "_confirm_pickle_load", return_value=True),
+        patch.object(io.host.edit_actions_manager, "clear_all", return_value=False),
+        patch.object(io.host.state_manager, "set_state_from_data") as apply_state,
+    ):
+        io.load_raw_data(str(raw_file))
+    apply_state.assert_not_called()

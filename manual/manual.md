@@ -204,7 +204,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
   * **Add Hydrogens:** Select `Edit` \> `Add Hydrogens` from the menu to explicitly add hydrogen atoms based on the current bonding.
   * **Remove Hydrogens:** Select `Edit` \> `Remove Hydrogens` from the menu to remove all hydrogen atoms.
   * **Clear All:** To delete all atoms and bonds on the canvas, execute `Edit` \> `Clear All` (Ctrl+Shift+C) from the menu.
-  * **Show Chiral Labels:** Check `View` \> `Show Chiral Labels` from the menu to display R/S labels for chiral centers.
+  * **Show Chiral Labels:** Check `View` \> `Show Chiral Labels` from the menu to display R/S labels for chiral centers. Label colors, sizes and font are set in `Settings` \> `Settings...` \> **3D Labels**.
 
 -----
 
@@ -226,6 +226,8 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 *   **RDKit Mode**: Uses RDKit's ETKDGv2 (Experimental-Torsion Knowledge Distance Geometry) algorithm for conformer generation. If the initial embedding fails, it applies bounds matrix triangle smoothing with explicit stereochemistry constraints before trying again.
 *   **Open Babel Mode**: Uses Open Babel's `make3D()` coordinate generator run in a secure, isolated background subprocess to prevent application hangs or crashes.
 *   **Direct Mode**: Bypasses 3D conformer embedding to retain your exact 2D layout. Atoms are placed on the $Z = 0.0$ plane, with missing hydrogen atoms added geometrically. Stereochemistry is preserved by adding offset Z-coordinates ($Z = \pm 1.5$ Å) to wedge/dash atoms.
+
+**Stereo Check:** After each conversion, every stereocenter you drew with a wedge or hash (R/S) and every double bond you labelled E or Z is compared with the 3D result. If any of them comes out inverted or lost, a **Stereochemistry Check** window lists each one with its drawn and 3D configuration. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral and E/Z labels, with the wrong ones in red and the correct ones in the usual color; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Flip the listed stereocenters and double bonds manually in the 3D structure. The check can be turned off in `Settings` \> `Settings...` \> **3D Scene** (Check After 3D Conversion). It can also be run after `Optimize 3D` (Check After 3D Optimization, off by default).
 
 ### 5.2. 3D Structure Optimization
 
@@ -368,10 +370,10 @@ Perform various file operations from the `File` menu in the menu bar.
 
 ### 6.2. Import
 
-  * **Import \> MOL/SDF File...:** Loads a MOL or SDF file and displays it as a 2D structure. Even if the file contains 3D coordinates, 2D coordinates will be recalculated (stereochemistry is preserved). The imported molecule is automatically appended to the current canvas without overwriting existing structures.
+  * **Import \> MOL/SDF File...:** Loads a MOL or SDF file and displays it as a 2D structure. Even if the file contains 3D coordinates, 2D coordinates will be recalculated (stereochemistry is preserved). The imported molecule is automatically appended to the current canvas without overwriting existing structures. If an SDF file holds more than one molecule, a **Select Molecule** window lists them (number, name and formula) so you can choose which one to load; records that cannot be read are shown greyed out.
   * **Import \> SMILES...:** Opens a dialog to input a SMILES string and displays the input molecule as a 2D structure. The imported molecule is automatically appended to the current canvas.
   * **Import \> InChI...:** Opens a dialog to input an InChI string and displays the input molecule as a 2D structure. The imported molecule is automatically appended to the current canvas.
-  * **Import \> 3D MOL/SDF (3D View Only)...:** Loads a MOL/SDF file with 3D coordinates and displays it **in the 3D view only** (the 2D editor is cleared). This enters 3D viewer mode.
+  * **Import \> 3D MOL/SDF (3D View Only)...:** Loads a MOL/SDF file with 3D coordinates and displays it **in the 3D view only** (the 2D editor is cleared). This enters 3D viewer mode. A multi-molecule SDF asks which molecule to open, as above.
   * **Import \> 3D XYZ (3D View Only)...:** Loads an XYZ file and displays it **in the 3D view only** (the 2D editor is cleared). Bonds are estimated based on interatomic distances. This enters 3D viewer mode.
 
 ### 6.3. Export
@@ -456,6 +458,13 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
     * Mouse rotation sensitivity (speed multiplier for 3D view rotation)
     * Real-time 3D Drag (update the structure continuously while dragging an atom or group; turn it off to only apply the move on mouse release). Structures larger than 300 atoms always use release-only updates, since redrawing them every frame would be slower than the drag itself.
     * Rotate Groups: Follow Mouse (when on, right-drag rotation must start on an atom of the group and that atom follows the cursor; when off — the default — right-dragging anywhere rotates the group)
+    * **Stereo Check (R/S, E/Z):** Check After 3D Conversion (see 5.1; on by default) and Check After 3D Optimization (off by default)
+* **3D Labels Tab:**
+    * **Label Colors:** a color for each kind of 3D label, in three groups:
+        * Atom Info — Index, Original ID, XYZ Index, Element Symbol, Coordinates (the `View` \> `3D Atom Info Display` labels)
+        * Stereo — Chiral (R/S), E/Z
+        * Tool — Selection (atoms picked in the measurement, alignment and editing dialogs), Measurement, Constraint
+    * **Label Appearance** (shared by all labels): background color and opacity (opacity 0 makes the background transparent), font family (Arial / Courier / Times), font size (default 18 pt) and bold / italic
 * **Display Style Tabs (Ball & Stick, CPK, Wireframe, Stick):**
     * Atom size/radius scale
     * Bond radius
@@ -558,7 +567,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 4.10
+  * **Version:** 4.11
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

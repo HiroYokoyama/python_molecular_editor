@@ -121,6 +121,21 @@ def test_pick_atom_index_from_screen_fallback():
     assert pick_atom_index_from_screen(view_obj, (111, 100), _Mol()) == 0
 
 
+def test_vectorized_miss_does_not_rerun_the_sequential_picker():
+    """A miss is final; only an unavailable vectorized path falls back.
+
+    Every hover over empty space in 3D edit mode used to re-check each atom
+    with VTK calls after the vectorized picker had already missed.
+    """
+    from unittest.mock import patch as _patch
+
+    with _patch(
+        "moleditpy.ui.atom_picking.pick_atom_index_from_screen_sequential"
+    ) as sequential:
+        assert pick_atom_index_from_screen(_view(), (200, 200), _Mol()) is None
+    sequential.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # Helper internals and guard paths
 # ---------------------------------------------------------------------------
@@ -298,3 +313,69 @@ def test_pick_falls_back_when_vectorized_raises():
         side_effect=RuntimeError("vtk exploded"),
     ):
         assert pick_atom_index_from_screen(view_obj, (111, 100), _Mol()) == 0
+
+
+# ---------------------------------------------------------------------------
+# _pick_vectorized: "could not run" versus "ran and missed"
+# ---------------------------------------------------------------------------
+
+from moleditpy.ui.atom_picking import _pick_vectorized  # noqa: E402
+
+
+def _vm(positions, mol=None, plotter=True):
+    vm = SimpleNamespace(atom_positions_3d=positions, current_mol=mol)
+    if plotter:
+        vm.plotter = SimpleNamespace(renderer=object())
+    return vm
+
+
+def test_pick_vectorized_cannot_run_without_plotter():
+    assert _pick_vectorized(
+        _vm([[0, 0, 0]], plotter=False), (0, 0), None, 8, 14, 96
+    ) == (
+        False,
+        None,
+    )
+
+
+def test_pick_vectorized_cannot_run_on_unparseable_positions():
+    assert _pick_vectorized(_vm([["a", "b", "c"]]), (0, 0), None, 8, 14, 96) == (
+        False,
+        None,
+    )
+
+
+def test_pick_vectorized_cannot_run_on_wrong_shape():
+    assert _pick_vectorized(_vm([0.0, 1.0, 2.0]), (0, 0), None, 8, 14, 96) == (
+        False,
+        None,
+    )
+
+
+def test_pick_vectorized_broken_mol_falls_back_to_position_count():
+    """A mol whose GetNumAtoms raises uses the position count instead."""
+
+    class BrokenMol:
+        def GetNumAtoms(self):
+            raise RuntimeError("broken")
+
+    class NoCamera:
+        def GetActiveCamera(self):
+            raise RuntimeError("no camera")
+
+    vm = _vm(np.zeros((2, 3)), mol=BrokenMol())
+    vm.plotter.renderer = NoCamera()
+    ran, _idx = _pick_vectorized(vm, (0, 0), None, 8, 14, 96)
+    # It got past the atom count; the camera then stops it.
+    assert ran is False
+
+
+def test_pick_vectorized_empty_molecule_is_a_miss():
+    """Positions left over for a molecule with no atoms: ran, nothing picked."""
+    empty = SimpleNamespace(GetNumAtoms=lambda: 0)
+    assert _pick_vectorized(
+        _vm(np.zeros((2, 3)), mol=empty), (0, 0), None, 8, 14, 96
+    ) == (
+        True,
+        None,
+    )

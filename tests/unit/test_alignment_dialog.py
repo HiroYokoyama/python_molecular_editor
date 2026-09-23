@@ -361,3 +361,18 @@ class TestApplyAlignmentMath:
             dlg.apply_alignment()
         pos = mol.GetConformer().GetPositions()
         assert pos[0] == pytest.approx([0.0, 0.0, 0.0], abs=1e-5)
+
+
+def test_remove_atom_label_renumbers_the_remaining_atoms(make_dialog):
+    """Removing one label redraws the rest as #1, #2, ... in selection order."""
+    from moleditpy.ui.alignment_dialog import AlignmentDialog
+
+    dlg, _mol, _mw = make_dialog()
+    dlg.selected_atoms = [3, 5]
+    with (
+        patch.object(AlignmentDialog, "clear_selection_labels") as clear,
+        patch.object(AlignmentDialog, "add_selection_label") as add,
+    ):
+        dlg.remove_atom_label(4)
+    clear.assert_called_once()
+    assert [c.args for c in add.call_args_list] == [(3, "#1"), (5, "#2")]

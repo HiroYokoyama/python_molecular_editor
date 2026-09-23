@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import (
 from rdkit.Chem import rdForceFieldHelpers, rdMolTransforms
 
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
+from ..utils.finite_float import finite_float
 
 
 class ConstrainedOptimizationThread(QThread):
@@ -308,7 +309,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         # Retrieve Force Constant
         try:
-            force_const = float(self.force_const_input.text())
+            force_const = finite_float(self.force_const_input.text())
         except ValueError:
             QMessageBox.warning(
                 self, "Warning", "Invalid Force Constant. Using default 1.0e5."
@@ -469,13 +470,10 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     positions,
                     texts,
                     point_size=0,
-                    font_size=12,
-                    text_color="cyan",
                     always_visible=True,
                     show_points=False,
                     shape="rect",
-                    shape_color="gray",
-                    shape_opacity=0.5,
+                    **self._label_kwargs("constraint"),
                 )
                 self.constraint_labels.append(label_actor)
 
@@ -778,13 +776,10 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                     positions,
                     texts,
                     point_size=0,
-                    font_size=12,
-                    text_color="yellow",
                     always_visible=True,
                     show_points=False,
                     shape="rect",
-                    shape_color="gray",
-                    shape_opacity=0.5,
+                    **self._label_kwargs("selection"),
                 )
                 # Consider case where add_point_labels returns a list
                 if isinstance(label_actor, list):
@@ -812,7 +807,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         try:
             new_value_str = item.text()
-            new_value = float(new_value_str)
+            # Non-finite input is rejected and restored like non-numeric text.
+            new_value = finite_float(new_value_str)
 
             # Update internal constraints list
             old_constraint = self.constraints[row]

@@ -23,6 +23,7 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera  # 
 
 
 from .atom_picking import pick_atom_index_from_screen
+from ..core.mol_geometry import get_connected_group
 from ..utils.constants import MOVE_DIALOG_TYPES
 
 from rdkit import Geometry
@@ -429,28 +430,10 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         self._suppress_next_left_button_up = True
                         return
 
-                    # Clicked outside group - Search connected component
-                    visited = set()
-                    queue = [clicked_atom_idx]
-                    visited.add(clicked_atom_idx)
-
-                    while queue:
-                        current_idx = queue.pop(0)
-                        for bond_idx in range(
-                            mw.view_3d_manager.current_mol.GetNumBonds()
-                        ):
-                            bond = mw.view_3d_manager.current_mol.GetBondWithIdx(
-                                bond_idx
-                            )
-                            begin_idx = bond.GetBeginAtomIdx()
-                            end_idx = bond.GetEndAtomIdx()
-
-                            if begin_idx == current_idx and end_idx not in visited:
-                                visited.add(end_idx)
-                                queue.append(end_idx)
-                            elif end_idx == current_idx and begin_idx not in visited:
-                                visited.add(begin_idx)
-                                queue.append(begin_idx)
+                    # Clicked outside group - select its connected component
+                    visited = get_connected_group(
+                        mw.view_3d_manager.current_mol, clicked_atom_idx
+                    )
 
                     # Multi-selection with Ctrl
                     is_ctrl_pressed = bool(
@@ -527,22 +510,21 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         int(closest_atom_idx)
                     )
                     if atom:
-                        if True:
 
-                            def _deferred_measure() -> None:
-                                """Measure distance between picked atoms in deferred callback."""
-                                try:
-                                    mw.edit_3d_manager.handle_measurement_atom_selection(
-                                        closest_atom_idx
-                                    )
-                                except (AttributeError, RuntimeError):
-                                    logging.warning(
-                                        "Measurement selection failed", exc_info=True
-                                    )
+                        def _deferred_measure() -> None:
+                            """Measure distance between picked atoms in deferred callback."""
+                            try:
+                                mw.edit_3d_manager.handle_measurement_atom_selection(
+                                    closest_atom_idx
+                                )
+                            except (AttributeError, RuntimeError):
+                                logging.warning(
+                                    "Measurement selection failed", exc_info=True
+                                )
 
-                            QTimer.singleShot(0, _deferred_measure)
-                            self._suppress_next_left_button_up = True
-                            return  # Selection complete, disable camera rotation
+                        QTimer.singleShot(0, _deferred_measure)
+                        self._suppress_next_left_button_up = True
+                        return  # Selection complete, disable camera rotation
 
             # Clear measurement if not dragging
             self._is_dragging_atom = False
@@ -567,17 +549,16 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         int(closest_atom_idx)
                     )
                     if atom:
-                        if True:
-                            # Successfully grabbed atom
-                            self._is_dragging_atom = True
-                            self.is_dragging = False
-                            mw.dragged_atom_info = {"id": int(closest_atom_idx)}
-                            mw.view_3d_manager.plotter.setCursor(
-                                Qt.CursorShape.ClosedHandCursor
-                            )
-                            self._begin_drag_event([int(closest_atom_idx)])
-                            self._suppress_next_left_button_up = True
-                            return  # Prevent camera rotation
+                        # Successfully grabbed atom
+                        self._is_dragging_atom = True
+                        self.is_dragging = False
+                        mw.dragged_atom_info = {"id": int(closest_atom_idx)}
+                        mw.view_3d_manager.plotter.setCursor(
+                            Qt.CursorShape.ClosedHandCursor
+                        )
+                        self._begin_drag_event([int(closest_atom_idx)])
+                        self._suppress_next_left_button_up = True
+                        return  # Prevent camera rotation
 
         # Track mouse event to distinguish rotation from click
         self._mouse_press_pos = self.GetInteractor().GetEventPosition()
@@ -1096,6 +1077,9 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         move_group_dialog.on_atom_picked(clicked_atom)
                     except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                         logging.warning(f"Error in toggle: {e}")
+                # A click is a whole gesture: close the drag opened on press
+                # (the moved-path block below is skipped once the flag drops).
+                self._end_drag_event()
                 # Reset if multi-clicked without drag
                 move_group_dialog.is_dragging_group_vtk = False
                 move_group_dialog.drag_start_pos_vtk = None
@@ -1177,14 +1161,7 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                     QTimer.singleShot(0, _deferred_group_redraw)
                 except (AttributeError, RuntimeError, TypeError, ValueError):
                     logging.warning("Error finalizing group drag", exc_info=True)
-            else:
-                # No drag = click only -> toggle
-                clicked_atom = getattr(move_group_dialog, "drag_atom_idx_vtk", None)
-                if clicked_atom is not None:
-                    try:
-                        move_group_dialog.on_atom_picked(clicked_atom)
-                    except (AttributeError, RuntimeError, TypeError, ValueError):
-                        logging.warning("Error in toggle", exc_info=True)
+            # (A click without movement was handled, and its flag reset, above.)
             self._end_drag_event()
 
         # Background click: deselect Move Group
@@ -1437,12 +1414,36 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                             )
                             mw.view_3d_manager.atom_positions_3d[atom_idx] = new_pos
 
-                        mw.view_3d_manager.draw_molecule_3d(
-                            mw.view_3d_manager.current_mol
-                        )
-                        mw.view_3d_manager.update_chiral_labels()
-                        move_group_dialog.show_atom_labels()
-                        mw.edit_actions_manager.push_undo_state()
+                        # Defer out of the VTK observer callback, as on left
+                        # release: a re-entrant plotter.render() can deadlock
+                        # the render window on some OS/driver combinations.
+                        _rot_mol = mw.view_3d_manager.current_mol
+                        _rot_dlg = move_group_dialog
+
+                        def _deferred_rotation_redraw() -> None:
+                            """Redraw the rotated group and record it for undo.
+
+                            Runs after the event returns, when the dialog may
+                            already be closed; a failed redraw must not escape
+                            into Qt or skip the undo push.
+                            """
+                            try:
+                                mw.view_3d_manager.draw_molecule_3d(_rot_mol)
+                                mw.view_3d_manager.update_chiral_labels()
+                                _rot_dlg.show_atom_labels()
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                TypeError,
+                                ValueError,
+                            ):
+                                logging.warning(
+                                    "Error redrawing rotated group", exc_info=True
+                                )
+                            finally:
+                                mw.edit_actions_manager.push_undo_state()
+
+                        QTimer.singleShot(0, _deferred_rotation_redraw)
                 except (AttributeError, RuntimeError, TypeError, ValueError):
                     logging.warning("Error finalizing group rotation", exc_info=True)
             self._end_drag_event()

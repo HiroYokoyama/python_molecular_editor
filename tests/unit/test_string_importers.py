@@ -124,7 +124,11 @@ def test_smiles_empty_shows_error(mock_parser_host):
     with patch.object(QTimer, "singleShot"):
         importer.load_from_smiles("")
 
-    mock_parser_host.statusBar().showMessage.assert_called()
+    # Real RDKit parses "" as an empty mol (not None); this used to report
+    # "Successfully loaded from SMILES." with nothing added.
+    msg = mock_parser_host.statusBar().showMessage.call_args.args[0]
+    assert msg == "Invalid SMILES: SMILES string was empty."
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
 
 
 # =============================================================================
@@ -283,8 +287,8 @@ def _last_status(mock_parser_host):
 
 def test_smiles_truly_empty_after_strip_reports_empty(mock_parser_host):
     importer = DummyImporter(mock_parser_host)
-    with patch("moleditpy.ui.string_importers.Chem.MolFromSmiles", return_value=None):
-        importer.load_from_smiles("   ")
+    # No MolFromSmiles mock: the real parser returns an empty mol for "".
+    importer.load_from_smiles("   ")
     assert "SMILES string was empty." in _last_status(mock_parser_host)
 
 

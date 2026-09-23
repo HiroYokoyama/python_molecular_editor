@@ -777,6 +777,55 @@ def test_paste_invalid_json_reports_error(mock_parser_host):
     )
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"atoms": [{"symbol": "C", "rel_pos": [0.0, 0.0]}]},  # no "bonds"
+        {
+            "atoms": [
+                {"symbol": "C", "rel_pos": [0.0, 0.0]},
+                {"symbol": "O"},
+            ],
+            "bonds": [],
+        },  # missing atom field
+        {
+            "atoms": [{"symbol": "C", "rel_pos": [0.0, 0.0]}],
+            "bonds": [{"idx1": 0}],
+        },  # missing bond field
+        {
+            "atoms": [{"symbol": "C", "rel_pos": [0.0, 0.0]}],
+            "bonds": [{"idx1": 0, "idx2": 1}],
+        },  # index out of range
+        [1, 2],  # not an object
+        {"atoms": {}, "bonds": []},  # atoms not a list
+        {"atoms": [1], "bonds": []},  # atom not an object
+        {"atoms": [{"symbol": "", "rel_pos": [0, 0]}], "bonds": []},  # no symbol
+        {"atoms": [{"symbol": "C", "rel_pos": [0, 0, 0]}], "bonds": []},
+        {"atoms": [{"symbol": "C", "rel_pos": [float("inf"), 0]}], "bonds": []},
+        {"atoms": [{"symbol": "C", "rel_pos": [0, 0], "charge": "1"}], "bonds": []},
+        {"atoms": [{"symbol": "C", "rel_pos": [0, 0]}], "bonds": [1]},
+        {
+            "atoms": [
+                {"symbol": "C", "rel_pos": [0, 0]},
+                {"symbol": "C", "rel_pos": [1, 0]},
+            ],
+            "bonds": [{"idx1": 0, "idx2": 1, "order": 5}],
+        },  # impossible bond order
+    ],
+)
+def test_paste_malformed_fragment_reports_error(mock_parser_host, payload):
+    """Valid JSON with a broken fragment is reported, not raised."""
+    _paste_with(mock_parser_host, _FakeMime(_json.dumps(payload).encode("utf-8")))
+    assert any(
+        "Error during paste operation." in str(c.args[0])
+        for c in mock_parser_host.statusBar().showMessage.call_args_list
+    )
+    assert len(mock_parser_host.state_manager.data.atoms) == 0
+    assert len(mock_parser_host.state_manager.data.bonds) == 0
+    mock_parser_host.init_manager.scene.create_atom.assert_not_called()
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
+
+
 def test_paste_foreign_clipboard_format_ignored(mock_parser_host):
     editor = _paste_with(mock_parser_host, _FakeMime(b"", has_format=False))
     assert len(editor.data.atoms) == 0

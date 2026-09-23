@@ -3,6 +3,7 @@
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
+from moleditpy.core.molecular_data import MolecularData
 from moleditpy.ui.compute_logic import ComputeManager
 from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QMessageBox
@@ -1763,3 +1764,62 @@ def test_ez_block_falls_back_when_layout_fails(mock_parser_host):
         side_effect=RuntimeError("depiction failed"),
     ):
         assert compute._ez_consistent_mol_block() is None
+
+
+def _wedged_stereocenter_with_alkene(data, wedge, ez_label):
+    """CFClBr stereocenter drawn with a wedge/hash, plus a but-2-enyl arm."""
+    c = data.add_atom("C", QPointF(0.0, 0.0))
+    for symbol, pos in (("F", (50, 0)), ("Cl", (-25, 43)), ("Br", (-25, -43))):
+        data.add_bond(c, data.add_atom(symbol, QPointF(*pos)), order=1)
+    arm = data.add_atom("C", QPointF(0.0, -50.0))
+    data.add_bond(c, arm, order=1, stereo=wedge)
+    c2 = data.add_atom("C", QPointF(40.0, -80.0))
+    data.add_bond(arm, c2, order=1)
+    c3 = data.add_atom("C", QPointF(80.0, -60.0))
+    data.add_bond(c2, c3, order=2, stereo=ez_label)
+    data.add_bond(c3, data.add_atom("C", QPointF(120.0, -80.0)), order=1)
+
+
+def _chiral_tag(block):
+    parsed = Chem.MolFromMolBlock(block)
+    assert parsed is not None
+    return Chem.FindMolChiralCenters(parsed, useLegacyImplementation=False)
+
+
+@pytest.mark.parametrize("wedge", [1, 2])
+@pytest.mark.parametrize("ez_label", [3, 4])
+def test_ez_block_keeps_drawn_stereocenter(mock_parser_host, wedge, ez_label):
+    """An E/Z label must not invert a wedged stereocenter elsewhere.
+
+    The E/Z block re-lays out the 2D coordinates; a wedge carried over onto
+    the new layout used to encode the opposite enantiomer.
+    """
+    reference_data = MolecularData()
+    _wedged_stereocenter_with_alkene(reference_data, wedge, 0)
+    reference = _chiral_tag(reference_data.to_mol_block())
+    assert len(reference) == 1
+
+    compute = DummyCompute(mock_parser_host)
+    _wedged_stereocenter_with_alkene(compute.data, wedge, ez_label)
+    mol = compute.data.to_rdkit_mol()
+    block = ComputeManager._setup_mol_block_for_worker(compute, mol)
+
+    assert _chiral_tag(block) == reference
+
+
+def test_plugin_optimization_without_3d_structure_reports_failure(mock_parser_host):
+    """No 3D molecule: the plugin is not called and the run counts as failed."""
+    from moleditpy.ui.compute_logic import ComputeManager
+
+    compute = ComputeManager(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = None
+    callback = MagicMock()
+    ok = compute._run_plugin_optimization(
+        "X", {"label": "My Opt", "callback": callback}
+    )
+    assert ok is False
+    callback.assert_not_called()
+    assert (
+        "needs a 3D structure"
+        in (mock_parser_host.update_status_message.call_args.args[0])
+    )

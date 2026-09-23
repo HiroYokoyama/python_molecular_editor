@@ -166,6 +166,9 @@ def _read_startup_log_settings() -> tuple[bool, bool]:
     try:
         with open(settings_path, encoding="utf-8") as f:
             data = json.load(f)
+        # Valid JSON that is not an object ([] or null) must not stop startup.
+        if not isinstance(data, dict):
+            return False, False
         return bool(data.get("log_to_file", False)), bool(
             data.get("log_level_debug", False)
         )
@@ -265,10 +268,9 @@ def main() -> None:
             print(f"Error: Plugin path not found: {plugin_path}")
             sys.exit(1)
 
-        try:
-            from moleditpy.plugins.plugin_manager import PluginManager
-        except ImportError:
-            from .plugins.plugin_manager import PluginManager
+        # Relative: an absolute "moleditpy" import would pick up the other
+        # package when both the main and Linux builds are installed.
+        from .plugins.plugin_manager import PluginManager
 
         pm = PluginManager()
         sha256 = pm.compute_sha256(plugin_path)
@@ -299,9 +301,15 @@ def main() -> None:
         print(f" SHA-256:     {sha256}")
         print("=" * 40)
 
-        confirm = (
-            input("\nDo you want to proceed with installation? (y/N): ").strip().lower()
-        )
+        try:
+            confirm = (
+                input("\nDo you want to proceed with installation? (y/N): ")
+                .strip()
+                .lower()
+            )
+        except EOFError:
+            # No terminal to answer from (piped or scripted run): treat as No.
+            confirm = ""
         if confirm == "y":
             success, msg = pm.install_plugin(plugin_path)
             if success:
@@ -321,8 +329,6 @@ def main() -> None:
 
     if sys.platform == "win32":
         try:
-            from PyQt6.QtCore import QTimer
-
             QTimer.singleShot(100, lambda: window.setWindowIcon(window.windowIcon()))
         except (
             Exception

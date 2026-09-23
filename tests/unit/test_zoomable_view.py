@@ -355,6 +355,28 @@ def test_viewport_event_zoom_native_gesture_scales(app):
     assert view.transform().m11() > before
 
 
+def _pinch(view, value):
+    ev = MagicMock()
+    ev.type.return_value = QEvent.Type.NativeGesture
+    ev.gestureType.return_value = Qt.NativeGestureType.ZoomNativeGesture
+    ev.value.return_value = value
+    return view.viewportEvent(ev)
+
+
+def test_pinch_zoom_stays_within_the_wheel_zoom_bounds(app):
+    """Pinch had no limits: it could pass 20x/0.05x, and a delta < -1 flipped it."""
+    from moleditpy.ui.zoomable_view import MAX_SCALE, MIN_SCALE
+
+    view, _ = _make_view(app)
+    for _ in range(80):
+        _pinch(view, 0.5)
+    assert view.transform().m11() == pytest.approx(MAX_SCALE)
+
+    _pinch(view, -1.5)  # factor -0.5 would mirror the view
+    assert view.transform().m11() == pytest.approx(MIN_SCALE)
+    assert view.transform().m22() > 0
+
+
 # ---------------------------------------------------------------------------
 # Zoom re-indexing
 # ---------------------------------------------------------------------------

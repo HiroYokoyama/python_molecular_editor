@@ -39,6 +39,18 @@ from ..utils.constants import VERSION
 import json
 import logging
 import os
+import re
+
+
+def template_file_stem(name: str) -> str:
+    """Turn a template name into a safe file stem inside the templates folder.
+
+    Path separators and characters Windows forbids become ``_``, so a name
+    like ``Ring/Chain`` saves instead of failing and ``../x`` cannot leave
+    the folder; spaces become ``_`` as before.
+    """
+    stem = re.sub(r'[\\/:*?"<>|\s]', "_", name).strip(". ")
+    return stem or "template"
 
 
 class UserTemplateDialog(QDialog):
@@ -210,7 +222,7 @@ class UserTemplateDialog(QDialog):
         self.user_templates.clear()
 
         try:
-            for filename in os.listdir(template_dir):
+            for filename in sorted(os.listdir(template_dir)):
                 if filename.endswith(".pmetmplt"):
                     filepath = os.path.join(template_dir, filename)
                     template_data = self.load_template_file(filepath)
@@ -224,13 +236,19 @@ class UserTemplateDialog(QDialog):
         self.update_template_grid()
 
     def load_template_file(self, filepath: str) -> Any:
-        """Load and parse a template JSON file."""
+        """Load and parse a template JSON file; None if unreadable or not an object."""
         try:
             with open(filepath, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (OSError, json.JSONDecodeError) as e:
-            logging.warning(f"Error loading template file {filepath}: {e}")
+                data = json.load(f)
+        except (OSError, ValueError) as e:
+            # ValueError covers JSONDecodeError and UnicodeDecodeError; letting
+            # the latter through aborted loading every template after this one.
+            logging.warning("Error loading template file %s: %s", filepath, e)
             return None
+        if not isinstance(data, dict):
+            logging.warning("Template file %s is not a JSON object", filepath)
+            return None
+        return data
 
     def save_template_file(self, filepath: str, template_data: Any) -> bool:
         """Save template data to a JSON file."""
@@ -486,7 +504,7 @@ class UserTemplateDialog(QDialog):
             template_data = self.convert_structure_to_template(name)
 
             # Save to file
-            filename = f"{name.replace(' ', '_')}.pmetmplt"
+            filename = f"{template_file_stem(name)}.pmetmplt"
             filepath = os.path.join(self.get_template_directory(), filename)
 
             if os.path.exists(filepath):

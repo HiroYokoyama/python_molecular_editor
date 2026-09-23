@@ -533,3 +533,15 @@ class TestPluginInterface:
         # test no mol
         mock_main_window.view_3d_manager.current_mol = None
         controller.set_bond_color_by_atoms(1, 2, "#112233")
+
+
+def test_to_xyz_block_returns_none_when_the_mol_has_no_conformer():
+    """A molecule RDKit cannot give coordinates for yields None, not a crash."""
+    from rdkit import Chem
+
+    manager = MagicMock()
+    manager.get_main_window.return_value.view_3d_manager.current_mol = (
+        Chem.MolFromSmiles("CC")
+    )
+    ctx = PluginContext(manager, "Test")
+    assert ctx.to_xyz_block() is None

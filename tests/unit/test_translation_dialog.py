@@ -433,3 +433,59 @@ class TestPreselectedAtoms:
         dlg, _, _ = make_dialog(preselected_atoms=[0, 1, 2])
         assert dlg.tabs.currentIndex() == 1
         assert {0, 1, 2}.issubset(dlg.selected_atoms)
+
+
+class TestEnterKey:
+    def _enter(self):
+        from unittest.mock import MagicMock
+        from PyQt6.QtCore import Qt
+
+        ev = MagicMock()
+        ev.key.return_value = Qt.Key.Key_Return
+        return ev
+
+    def test_enter_on_absolute_tab_moves_to_the_target(self, make_dialog):
+        """Enter used to click the Delta tab's button from the Absolute tab."""
+        from moleditpy.ui.translation_dialog import _TAB_ABSOLUTE
+
+        dlg, _mol, _mw = make_dialog(preselected_atoms=[0])
+        assert dlg.tabs.currentIndex() == _TAB_ABSOLUTE
+        with (
+            patch.object(dlg, "apply_absolute") as absolute,
+            patch.object(dlg, "apply_translation") as delta,
+        ):
+            dlg.abs_apply_btn.clicked.disconnect()
+            dlg.abs_apply_btn.clicked.connect(absolute)
+            dlg.apply_button.clicked.disconnect()
+            dlg.apply_button.clicked.connect(delta)
+            dlg.apply_button.setEnabled(True)  # left enabled from the Delta tab
+            dlg.keyPressEvent(self._enter())
+        absolute.assert_called_once()
+        delta.assert_not_called()
+
+    def test_enter_on_delta_tab_applies_the_delta(self, make_dialog):
+        from moleditpy.ui.translation_dialog import _TAB_DELTA
+
+        dlg, _mol, _mw = make_dialog(preselected_atoms=[0, 1])
+        assert dlg.tabs.currentIndex() == _TAB_DELTA
+        with patch.object(dlg, "apply_translation") as delta:
+            dlg.apply_button.clicked.disconnect()
+            dlg.apply_button.clicked.connect(delta)
+            dlg.keyPressEvent(self._enter())
+        delta.assert_called_once()
+
+
+def test_non_enter_key_is_passed_on(make_dialog):
+    """Only Enter is intercepted; other keys reach the base handler."""
+    from unittest.mock import MagicMock
+
+    from PyQt6.QtCore import Qt
+
+    from moleditpy.ui.base_picking_dialog import BasePickingDialog
+
+    dlg, _mol, _mw = make_dialog(preselected_atoms=[0])
+    ev = MagicMock()
+    ev.key.return_value = Qt.Key.Key_A
+    with patch.object(BasePickingDialog, "keyPressEvent") as base:
+        dlg.keyPressEvent(ev)
+    base.assert_called_once_with(ev)

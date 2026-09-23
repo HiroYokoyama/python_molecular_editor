@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
 from rdkit import Chem
+from rdkit.Chem import rdCIPLabeler
 
 from ..utils.constants import ANGSTROM_PER_PIXEL
 
@@ -115,6 +116,38 @@ def _to_v3000_block(
     lines.append("M  V30 END CTAB")
     lines.append("M  END")
     return "\n".join(lines) + "\n"
+
+
+def align_ez_to_cip(mol: Chem.Mol, wanted: Dict[int, str]) -> None:
+    """Make labelled double bonds read as the wanted CIP E/Z, flipping if needed.
+
+    *wanted* maps bond index to "E" or "Z". The bonds' STEREOE/STEREOZ is
+    encoded against whichever neighbors were picked as stereo atoms, which
+    need not be the CIP-higher ones (on CH3-C(Cl)=CH-CH3 the methyl is picked
+    over Cl), so a "Z" label could encode E. Ask the CIP labeler what each
+    bond currently means and flip the ones that read the other way. Bonds
+    with no CIP E/Z (two identical substituents on one end) are left alone.
+    """
+    if not wanted:
+        return
+    probe = Chem.Mol(mol)
+    try:
+        rdCIPLabeler.AssignCIPLabels(probe)
+    except (RuntimeError, ValueError) as e:
+        logging.warning("CIP labelling for E/Z labels failed: %s", e)
+        return
+    flipped = {
+        Chem.BondStereo.STEREOZ: Chem.BondStereo.STEREOE,
+        Chem.BondStereo.STEREOE: Chem.BondStereo.STEREOZ,
+    }
+    for bond_idx, label in wanted.items():
+        probe_bond = probe.GetBondWithIdx(bond_idx)
+        if not probe_bond.HasProp("_CIPCode"):
+            continue
+        if probe_bond.GetProp("_CIPCode") != label:
+            bond = mol.GetBondWithIdx(bond_idx)
+            if bond.GetStereo() in flipped:
+                bond.SetStereo(flipped[bond.GetStereo()])
 
 
 class MolecularData:
@@ -355,6 +388,7 @@ class MolecularData:
             return None
 
         # Overwrite based on labels (E/Z has highest priority) ---
+        ez_wanted: Dict[int, str] = {}
         for bond_idx, info in bond_stereo_info.items():
             stereo_type = info["type"]
             bond = final_mol.GetBondWithIdx(bond_idx)
@@ -402,6 +436,7 @@ class MolecularData:
                     bond.SetStereo(Chem.BondStereo.STEREOZ)
                 elif stereo_type == 4:
                     bond.SetStereo(Chem.BondStereo.STEREOE)
+                ez_wanted[bond_idx] = "Z" if stereo_type == 3 else "E"
 
                 # Clear BondDir (wedge/dash) of adjacent single bonds assigned via coordinates to avoid label conflicts
                 b1 = final_mol.GetBondBetweenAtoms(begin_atom_idx, neigh1_idx)
@@ -410,6 +445,10 @@ class MolecularData:
                     b1.SetBondDir(Chem.BondDir.NONE)
                 if b2 is not None:
                     b2.SetBondDir(Chem.BondDir.NONE)
+
+        # The labels are CIP E/Z; the neighbors picked above are not always
+        # the CIP-higher ones.
+        align_ez_to_cip(final_mol, ez_wanted)
 
         # Finalization (cache update + stereochemistry reassignment)
         final_mol.UpdatePropertyCache(strict=False)

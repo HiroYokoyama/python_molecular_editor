@@ -19,6 +19,10 @@ from PyQt6.QtGui import QMouseEvent, QWheelEvent, QNativeGestureEvent
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QWidget
 
 
+# Zoom bounds shared by Ctrl+wheel and trackpad pinch.
+MIN_SCALE, MAX_SCALE = 0.05, 20.0
+
+
 class ZoomableView(QGraphicsView):
     """QGraphicsView with zoom functionality via mouse wheel and panning via middle button or Shift+left drag"""
 
@@ -57,13 +61,12 @@ class ZoomableView(QGraphicsView):
 
             transform = self.transform()
             current_scale = transform.m11()
-            min_scale, max_scale = 0.05, 20.0
 
             if event.angleDelta().y() > 0:
-                if max_scale > current_scale:
+                if MAX_SCALE > current_scale:
                     self.scale(zoom_in_factor, zoom_in_factor)
             else:
-                if min_scale < current_scale:
+                if MIN_SCALE < current_scale:
                     self.scale(zoom_out_factor, zoom_out_factor)
 
             event.accept()
@@ -166,8 +169,13 @@ class ZoomableView(QGraphicsView):
                 # (positive for zoom-in, negative for zoom-out)
                 factor = 1.0 + gesture.value()
 
-                # Apply scaling if within limits
-                self.scale(factor, factor)
+                # Keep the result within the wheel-zoom bounds; a delta below
+                # -1 would otherwise give a negative factor and flip the view.
+                current = self.transform().m11()
+                target = min(MAX_SCALE, max(MIN_SCALE, current * factor))
+                if current > 0 and target != current:
+                    factor = target / current
+                    self.scale(factor, factor)
                 return True
 
         return super().viewportEvent(event)

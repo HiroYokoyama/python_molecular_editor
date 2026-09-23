@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 from .atom_picking import pick_atom_index_from_screen
 from .base_picking_dialog import BasePickingDialog
 from .move_dialog_mixin import MoveDialogMixin
+from ..core.mol_geometry import get_connected_group
 
 
 class MoveGroupDialog(MoveDialogMixin, BasePickingDialog):
@@ -415,24 +416,9 @@ class MoveGroupDialog(MoveDialogMixin, BasePickingDialog):
         if getattr(self, "is_dragging_group", False):
             return
 
-        # BFS for connected atoms
-        visited = set()
-        queue = [atom_idx]
-        visited.add(atom_idx)
-
-        while queue:
-            current_idx = queue.pop(0)
-            for bond_idx in range(self.mol.GetNumBonds()):
-                bond = self.mol.GetBondWithIdx(bond_idx)
-                begin_idx = bond.GetBeginAtomIdx()
-                end_idx = bond.GetEndAtomIdx()
-
-                if begin_idx == current_idx and end_idx not in visited:
-                    visited.add(end_idx)
-                    queue.append(end_idx)
-                elif end_idx == current_idx and begin_idx not in visited:
-                    visited.add(begin_idx)
-                    queue.append(begin_idx)
+        # Walks each atom's own bonds; scanning every bond per visited atom
+        # was O(atoms x bonds) and froze the dialog on large structures.
+        visited = get_connected_group(self.mol, atom_idx)
 
         # Toggle group
         if visited.issubset(self.group_atoms):

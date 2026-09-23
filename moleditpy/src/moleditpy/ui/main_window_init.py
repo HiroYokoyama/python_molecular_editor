@@ -575,7 +575,7 @@ class MainInitManager:
                 json.dump(self.settings, f, indent=4)
             self.settings_dirty = False
             self.host.initial_settings = self.settings.copy()
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError, OSError) as e:
             logging.warning(f"Error saving settings: {e}")
 
     # --- UI Initialization Helpers ---
@@ -645,17 +645,6 @@ class MainInitManager:
             if loaded_settings["use_obabel_optimization"]:
                 loaded_settings["optimization_method"] = "MMFF94_OBABEL"
             del loaded_settings["use_obabel_optimization"]
-
-    def _clear_plugin_ui_elements(self, plugin_menu: QMenu) -> None:
-        """Clean up tagged plugin actions from menus and toolbars."""
-        # 1. Clear plugin-specific actions from Plugin menu (excluding the Manager)
-        for action in plugin_menu.actions():
-            if action.data() == "plugin_action":
-                plugin_menu.removeAction(action)
-
-        # 2. Clear plugin-specific toolbars or buttons
-        self.plugin_toolbar.clear()  # type: ignore[union-attr]
-        self.plugin_toolbar.hide()  # type: ignore[union-attr]
 
     def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""

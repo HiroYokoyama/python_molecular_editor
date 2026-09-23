@@ -36,6 +36,7 @@ from ..core.mol_geometry import (
     get_connected_group,
 )
 from ..utils.suppress_log import suppress_log
+from ..utils.finite_float import finite_float
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -365,7 +366,7 @@ class AngleDialog(GeometryBaseDialog):
             return
 
         try:
-            raw_angle = float(self.angle_input.text())
+            raw_angle = finite_float(self.angle_input.text())
             # Automatic Range Wrapping
             new_angle = (raw_angle + 180) % 360 - 180
 
@@ -394,6 +395,7 @@ class AngleDialog(GeometryBaseDialog):
 
     def apply_geometry_update(self, new_angle_deg: float) -> None:  # pylint: disable=arguments-renamed
         """Adjust the bond angle."""
+        self._drop_stale_positions()
         conf = self.mol.GetConformer()
 
         # Use baseline positions (fixed for dialog session) to keep the rotation axis stable.
@@ -415,8 +417,6 @@ class AngleDialog(GeometryBaseDialog):
 
         # Calculate baseline angle from the POSITIONS we are working on (important for snapshot stability)
         p_a, p_b, p_c = positions[idx_a], positions[idx_b], positions[idx_c]
-        from moleditpy.core.mol_geometry import calc_angle_deg
-
         baseline_angle = calc_angle_deg(p_a, p_b, p_c)
 
         if self.both_groups_radio.isChecked():

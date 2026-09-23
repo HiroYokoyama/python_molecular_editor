@@ -107,24 +107,7 @@ class AtomItem(QGraphicsItem):
         """Refresh font, color, and visibility based on current scene settings."""
         if sip_isdeleted_safe(self):
             return
-        font_size = 22
-        font_family = FONT_FAMILY
-        font_bold = True
-        font_italic = False
-        font_underline = False
-
-        scene: Any = self.scene()
-        if scene is not None:
-            font_size = scene.get_setting("atom_font_size_2d", 22)
-            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-            font_bold = scene.get_setting("atom_font_bold_2d", True)
-            font_italic = scene.get_setting("atom_font_italic_2d", False)
-            font_underline = scene.get_setting("atom_font_underline_2d", False)
-
-        weight = QFont.Weight.Bold if font_bold else QFont.Weight.Normal
-        self.font = QFont(font_family, font_size, weight)
-        self.font.setItalic(font_italic)
-        self.font.setUnderline(font_underline)
+        self.font = self._label_font()
         self.prepareGeometryChange()
 
         self.is_visible = not (
@@ -135,8 +118,8 @@ class AtomItem(QGraphicsItem):
         )
         self.update()
 
-    def visual_rect(self) -> QRectF:
-        """Return the rectangle the atom draws into; highlights use this."""
+    def _label_font(self) -> QFont:
+        """The atom label font from the scene's 2D settings (defaults off-scene)."""
         font_size = 22
         font_family = FONT_FAMILY
         font_bold = True
@@ -154,48 +137,61 @@ class AtomItem(QGraphicsItem):
         font = QFont(font_family, font_size, weight)
         font.setItalic(font_italic)
         font.setUnderline(font_underline)
-        fm = QFontMetricsF(font)
+        return font
 
-        hydrogen_part = ""
-        if self.implicit_h_count > 0:
-            is_skeletal_carbon = (
-                self.symbol == "C"
-                and self.charge == 0
-                and self.radical == 0
-                and len(self.bonds) > 0
-            )
-            if not is_skeletal_carbon:
-                hydrogen_part = "H"
-                if self.implicit_h_count > 1:
-                    hydrogen_part += str(self.implicit_h_count).translate(SUBSCRIPT_MAP)
+    def _hydrogen_part(self) -> str:
+        """Implicit-H suffix such as "H" or "H₂"; empty for a skeletal carbon."""
+        if self.implicit_h_count <= 0:
+            return ""
+        is_skeletal_carbon = (
+            self.symbol == "C"
+            and self.charge == 0
+            and self.radical == 0
+            and len(self.bonds) > 0
+        )
+        if is_skeletal_carbon:
+            return ""
+        hydrogen_part = "H"
+        if self.implicit_h_count > 1:
+            hydrogen_part += str(self.implicit_h_count).translate(SUBSCRIPT_MAP)
+        return hydrogen_part
 
-        flip_text = False
-        if hydrogen_part and self.bonds:
-            my_pos_x = self.pos().x()
-            total_dx = 0.0
-            # Defensive: some bonds may have missing atom references (None) or C++ wrappers
-            # that have been deleted. Iterate and accumulate only valid partner positions.
-            for b in self.bonds:
-                # partner is the atom at the other end of the bond
-                partner = b.atom2 if b.atom1 is self else b.atom1
-                try:
-                    if partner is None:
-                        continue
-                    # If SIP reports the wrapper as deleted, skip it
-                    if sip_isdeleted_safe(partner):
-                        continue
-                    partner_pos = partner.pos()
-                    if partner_pos is None:
-                        continue
-                    total_dx += partner_pos.x() - my_pos_x
-                except (AttributeError, RuntimeError, TypeError):
-                    # Skip any bond that raises while inspecting; keep UI tolerant.
-                    # This happens if the underlying C++ object is being destroyed.
+    def _label_flipped(self, hydrogen_part: str) -> bool:
+        """Whether to write the label H-first ("H₂O"), away from the bonds.
+
+        True when the bonds lie mostly to the right. Partners with a missing
+        or deleted wrapper are skipped.
+        """
+        if not hydrogen_part or not self.bonds:
+            return False
+        my_pos_x = self.pos().x()
+        total_dx = 0.0
+        for bond in self.bonds:
+            try:
+                partner = bond.atom2 if bond.atom1 is self else bond.atom1
+                if partner is None or sip_isdeleted_safe(partner):
                     continue
+                partner_pos = partner.pos()
+                if partner_pos is None:
+                    continue
+                total_dx += partner_pos.x() - my_pos_x
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                # The partner's C++ object can be mid-destruction.
+                continue
+        return total_dx > 0
 
-            if total_dx > 0:
-                flip_text = True
+    def _charge_text(self) -> str:
+        """Charge label by chemical convention: "+"/"-" for ±1, "2+"/"2-" beyond."""
+        if self.charge == 1:
+            return "+"
+        if self.charge == -1:
+            return "-"
+        sign = "+" if self.charge > 0 else "-"
+        return f"{abs(self.charge)}{sign}"
 
+    def _label_text_rect(self, hydrogen_part: str, flip_text: bool) -> QRectF:
+        """Rectangle of the label text, element symbol centred on the atom."""
+        fm = QFontMetricsF(self._label_font())
         if flip_text:
             display_text = hydrogen_part + self.symbol
         else:
@@ -213,6 +209,13 @@ class AtomItem(QGraphicsItem):
                 text_rect.moveTo(offset_x, -text_rect.height() / 2)
         else:
             text_rect.moveCenter(QPointF(0, 0))
+        return text_rect
+
+    def visual_rect(self) -> QRectF:
+        """Return the rectangle the atom draws into; highlights use this."""
+        hydrogen_part = self._hydrogen_part()
+        flip_text = self._label_flipped(hydrogen_part)
+        text_rect = self._label_text_rect(hydrogen_part, flip_text)
 
         # 1. Calculate the background rectangle (bg_rect) used in paint()
         bg_rect = text_rect.adjusted(-5, -8, 5, 8)
@@ -222,17 +225,8 @@ class AtomItem(QGraphicsItem):
 
         # Include charge symbol area in calculation
         if self.charge != 0:
-            # Chemical convention: single charge as "+"/"-", multiple as "2+"/"2-"
-            if self.charge == 1:
-                charge_str = "+"
-            elif self.charge == -1:
-                charge_str = "-"
-            else:
-                sign = "+" if self.charge > 0 else "-"
-                charge_str = f"{abs(self.charge)}{sign}"
             charge_font = QFont("Arial", 12, QFont.Weight.Bold)
-            charge_fm = QFontMetricsF(charge_font)
-            charge_rect = charge_fm.boundingRect(charge_str)
+            charge_rect = QFontMetricsF(charge_font).boundingRect(self._charge_text())
 
             if flip_text:
                 charge_pos = QPointF(
@@ -266,77 +260,11 @@ class AtomItem(QGraphicsItem):
         if not self.is_visible:
             return path
 
-        font_size = 22
-        font_family = FONT_FAMILY
-        font_bold = True
-        font_italic = False
-        font_underline = False
-        scene: Any = self.scene()
-        if scene is not None:
-            font_size = scene.get_setting("atom_font_size_2d", 22)
-            font_family = scene.get_setting("atom_font_family_2d", FONT_FAMILY)
-            font_bold = scene.get_setting("atom_font_bold_2d", True)
-            font_italic = scene.get_setting("atom_font_italic_2d", False)
-            font_underline = scene.get_setting("atom_font_underline_2d", False)
-
-        weight = QFont.Weight.Bold if font_bold else QFont.Weight.Normal
-        font = QFont(font_family, font_size, weight)
-        font.setItalic(font_italic)
-        font.setUnderline(font_underline)
-        fm = QFontMetricsF(font)
-
-        hydrogen_part = ""
-        if self.implicit_h_count > 0:
-            is_skeletal_carbon = (
-                self.symbol == "C"
-                and self.charge == 0
-                and self.radical == 0
-                and len(self.bonds) > 0
-            )
-            if not is_skeletal_carbon:
-                hydrogen_part = "H"
-                if self.implicit_h_count > 1:
-                    hydrogen_part += str(self.implicit_h_count).translate(SUBSCRIPT_MAP)
-
-        flip_text = False
-        if hydrogen_part and self.bonds:
-            my_pos_x = self.pos().x()
-            total_dx = 0.0
-            for b in self.bonds:
-                partner = b.atom2 if b.atom1 is self else b.atom1
-                try:
-                    if partner is None or sip_isdeleted_safe(partner):
-                        continue
-                    partner_pos = partner.pos()
-                    if partner_pos is None:
-                        continue
-                    total_dx += partner_pos.x() - my_pos_x
-                except (AttributeError, RuntimeError, TypeError, ValueError):
-                    # Suppress non-critical UI sync errors during atom position retrieval
-                    continue
-            if total_dx > 0:
-                flip_text = True
-
-        if flip_text:
-            display_text = hydrogen_part + self.symbol
-        else:
-            display_text = self.symbol + hydrogen_part
-
-        text_rect = fm.boundingRect(display_text)
-        text_rect.adjust(-2, -2, 2, 2)
-        if hydrogen_part:
-            symbol_rect = fm.boundingRect(self.symbol)
-            if flip_text:
-                offset_x = symbol_rect.width() // 2
-                text_rect.moveTo(offset_x - text_rect.width(), -text_rect.height() / 2)
-            else:
-                offset_x = -symbol_rect.width() // 2
-                text_rect.moveTo(offset_x, -text_rect.height() / 2)
-        else:
-            text_rect.moveCenter(QPointF(0, 0))
-
-        bg_rect = text_rect.adjusted(-5, -8, 5, 8)
-        path.addEllipse(bg_rect)
+        hydrogen_part = self._hydrogen_part()
+        text_rect = self._label_text_rect(
+            hydrogen_part, self._label_flipped(hydrogen_part)
+        )
+        path.addEllipse(text_rect.adjusted(-5, -8, 5, 8))
         return path
 
     def hit_radius(self) -> float:
@@ -377,66 +305,8 @@ class AtomItem(QGraphicsItem):
             painter.setFont(self.font)
             fm = painter.fontMetrics()
 
-            # --- Create text for the hydrogen part ---
-            hydrogen_part = ""
-            if self.implicit_h_count > 0:
-                is_skeletal_carbon = (
-                    self.symbol == "C"
-                    and self.charge == 0
-                    and self.radical == 0
-                    and len(self.bonds) > 0
-                )
-                if not is_skeletal_carbon:
-                    hydrogen_part = "H"
-                    if self.implicit_h_count > 1:
-                        hydrogen_part += str(self.implicit_h_count).translate(
-                            SUBSCRIPT_MAP
-                        )
-
-            # --- Determine if the text should be flipped ---
-            flip_text = False
-            # Consider flipping only if H-label exists and there are one or more bonds
-            if hydrogen_part and self.bonds:
-                # Determine bias (left/right) based on relative X-coordinates
-                my_pos_x = self.pos().x()
-                total_dx = 0.0
-                # Defensive: some bonds may have missing atom references (None) or
-                # wrappers that were deleted by SIP. Only accumulate valid partner positions.
-                for bond in self.bonds:
-                    try:
-                        other_atom = bond.atom1 if bond.atom2 is self else bond.atom2
-                        if other_atom is None:
-                            continue
-                        # If SIP reports the wrapper as deleted, skip it
-                        try:
-                            if sip_isdeleted_safe(other_atom):
-                                continue
-                        except (AttributeError, RuntimeError, TypeError):
-                            # If sip check fails, continue defensively.
-                            # This usually means the object is in an inconsistent state.
-                            # Safe defensive fallback catching AttributeError, RuntimeError, TypeError  # Silent failure for non-critical partner state check
-                            logging.debug(
-                                "Suppressed non-critical error", exc_info=True
-                            )
-
-                        other_pos = None
-                        try:
-                            other_pos = other_atom.pos()
-                        except (AttributeError, RuntimeError, TypeError):
-                            # Accessing .pos() may raise if the C++ object was destroyed
-                            other_pos = None
-
-                        if other_pos is None:
-                            continue
-
-                        total_dx += other_pos.x() - my_pos_x
-                    except (AttributeError, RuntimeError, TypeError):
-                        # Skip any problematic bond/partner rather than crashing the paint
-                        continue
-
-                # Flip text if bonds are primarily on the right
-                if total_dx > 0:
-                    flip_text = True
+            hydrogen_part = self._hydrogen_part()
+            flip_text = self._label_flipped(hydrogen_part)
 
             # --- Finalize display text and alignment ---
             if flip_text:
@@ -477,14 +347,7 @@ class AtomItem(QGraphicsItem):
 
             # --- Draw charge and radical ---
             if self.charge != 0:
-                # Chemical convention: single charge as "+"/"-", multiple as "2+"/"2-"
-                if self.charge == 1:
-                    charge_str = "+"
-                elif self.charge == -1:
-                    charge_str = "-"
-                else:
-                    sign = "+" if self.charge > 0 else "-"
-                    charge_str = f"{abs(self.charge)}{sign}"
+                charge_str = self._charge_text()
                 charge_font = QFont("Arial", 12, QFont.Weight.Bold)
                 painter.setFont(charge_font)
                 charge_rect = painter.fontMetrics().boundingRect(charge_str)

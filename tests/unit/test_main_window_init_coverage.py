@@ -31,3 +31,23 @@ def test_mainwindow_init_with_mocks(app):
         finally:
             mw.close()
             mw.deleteLater()
+
+
+def test_save_settings_logs_unwritable_settings_file(tmp_path, caplog):
+    """A settings file that cannot be written is logged, not raised on close."""
+    from types import SimpleNamespace
+
+    from moleditpy.ui.main_window_init import MainInitManager
+
+    fake = SimpleNamespace(
+        settings={"bond_color": "#000000"},
+        settings_dirty=True,
+        settings_dir=str(tmp_path),
+        settings_file=str(tmp_path / "settings.json"),
+        host=SimpleNamespace(initial_settings={}),
+    )
+    with patch("builtins.open", side_effect=PermissionError("read-only")):
+        MainInitManager.save_settings(fake)
+
+    assert fake.settings_dirty is True
+    assert "Error saving settings" in caplog.text

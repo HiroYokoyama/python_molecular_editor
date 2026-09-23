@@ -176,6 +176,36 @@ def test_on_remove_plugin_single_file(
     mock_info.assert_called()
 
 
+@patch("moleditpy.plugins.plugin_manager_window.QMessageBox.critical")
+@patch("moleditpy.plugins.plugin_manager_window.QMessageBox.question")
+@patch("moleditpy.plugins.plugin_manager_window.QMessageBox.information")
+@patch("os.path.exists", return_value=True)
+@patch("os.remove", side_effect=PermissionError("file is in use"))
+def test_on_remove_plugin_failure_is_reported(
+    mock_remove,
+    mock_exists,
+    mock_info,
+    mock_question,
+    mock_critical,
+    mock_plugin_manager,
+    qtbot,
+):
+    """A delete that fails (locked or read-only file) tells the user.
+
+    It used to be logged only, so clicking Yes appeared to do nothing.
+    """
+    mock_question.return_value = QMessageBox.StandardButton.Yes
+    window = PluginManagerWindow(mock_plugin_manager)
+    qtbot.addWidget(window)
+
+    window.table.selectRow(0)
+    window.on_remove_plugin()
+
+    mock_critical.assert_called_once()
+    assert "file is in use" in mock_critical.call_args[0][2]
+    mock_info.assert_not_called()
+
+
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.question")
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.information")
 @patch("os.path.exists", return_value=True)
@@ -195,13 +225,23 @@ def test_on_remove_plugin_package(
     mock_info.assert_called()
 
 
+@patch("moleditpy.plugins.plugin_manager_window.QMessageBox.critical")
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.question")
 @patch("os.path.exists", return_value=True)
 @patch("os.remove", side_effect=PermissionError("Remove error"))
 def test_on_remove_plugin_error(
-    mock_remove, mock_exists, mock_question, mock_plugin_manager, qtbot, caplog
+    mock_remove,
+    mock_exists,
+    mock_question,
+    mock_critical,
+    mock_plugin_manager,
+    qtbot,
+    caplog,
 ):
-    """on_remove_plugin logs the error when os.remove raises OSError."""
+    """on_remove_plugin logs the error when os.remove raises OSError.
+
+    It now also shows an error dialog (patched here, or it would block).
+    """
     mock_question.return_value = QMessageBox.StandardButton.Yes
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
@@ -211,6 +251,7 @@ def test_on_remove_plugin_error(
         window.on_remove_plugin()
 
     assert "Failed to delete plugin: Remove error" in caplog.text
+    mock_critical.assert_called_once()
 
 
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.warning")
