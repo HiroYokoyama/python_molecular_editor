@@ -306,7 +306,8 @@ class ColorSettingsDialog(QDialog):
             cdict = settings.get("cpk_colors", {}).copy()
             cdict.update(self.changed_cpk)
             settings["cpk_colors"] = cdict
-            self.parent_window.settings_dirty = True
+            # init_manager owns the flag; save_settings() skips a clean one.
+            self.parent_window.init_manager.settings_dirty = True
 
             # Persist to disk immediately
             self.parent_window.init_manager.save_settings()

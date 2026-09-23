@@ -7,6 +7,7 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Fixed
+* **CPK element colours were not saved**: a colour changed in *Settings → CPK Colors* applied at once but was lost on restart. The dialog marked the wrong object as having unsaved settings, so saving skipped it.
 * **Bond Length, Angle and Dihedral undid moves made while they were open**: these dialogs build each change from positions saved when the atoms were picked or the slider was pressed. Because they stay open alongside the main window, an optimization, an undo or another geometry dialog could move atoms in the meantime, and the next Apply or slider change silently put those atoms back. The saved positions are now re-taken when the molecule was changed elsewhere.
 * **Plugin Manager: failed removal was silent**: when a plugin file or folder could not be deleted (locked by another process, read-only), the error was only logged. The dialog now shows it.
 * **Translate Atoms: Enter on the Absolute tab**: Enter was wired to the Delta tab's Apply button, so on the Absolute tab it did nothing, or ran a delta translation left enabled from before a tab switch. It now applies the tab that is showing.

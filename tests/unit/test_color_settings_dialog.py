@@ -74,7 +74,7 @@ def test_color_settings_dialog_apply_changes(app, mock_parser_host):
 
     dialog.apply_changes()
 
-    assert mock_parser_host.settings_dirty is True
+    assert mock_parser_host.init_manager.settings_dirty is True
     assert mock_parser_host.settings["cpk_colors"]["O"] == "#00ff00"
     assert mock_parser_host.settings["ball_stick_bond_color"] == "#112233"
 
@@ -283,3 +283,25 @@ def test_init_cpk_override_applied_to_button(app):
     dialog = ColorSettingsDialog(current_settings=settings, parent=None)
     style = dialog.element_buttons["C"].styleSheet()
     assert "#112233" in style
+
+
+def test_element_color_change_is_saved_to_disk(app):
+    """A changed element colour reaches save_settings() with the dirty flag set.
+
+    The dialog used to set settings_dirty on the main window, a stray
+    attribute. InitManager.save_settings() returns early unless its own
+    flag is set, so the colour was never written and was lost on restart.
+    """
+    dialog = ColorSettingsDialog(current_settings={}, parent=None)
+    parent = _make_parent()
+    parent.init_manager.settings_dirty = False
+    saved_dirty = []
+    parent.init_manager.save_settings.side_effect = lambda: saved_dirty.append(
+        parent.init_manager.settings_dirty
+    )
+    dialog.parent_window = parent
+    dialog.changed_cpk["O"] = "#00ff00"
+
+    dialog.apply_changes()
+
+    assert saved_dirty == [True]
