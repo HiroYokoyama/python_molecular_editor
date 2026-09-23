@@ -201,7 +201,7 @@ MoleditPy のメインウィンドウは、主に以下の要素で構成され�
   * **Add Hydrogens:** メニューの `Edit` \> `Add Hydrogens` を選択すると、現在の結合状態に基づいて水素原子を明示的に追加します。
   * **Remove Hydrogens:** メニューの `Edit` \> `Remove Hydrogens` を選択すると、すべての水素原子を削除します。
   * **Clear All:** キャンバス上のすべての原子と結合を削除するには、メニューの `Edit` \> `Clear All` (Ctrl+Shift+C) を実行します。
-  * **Show Chiral Labels:** メニューの `View` \> `Show Chiral Labels` をチェックすると、不斉中心の R/S ラベルを表示できます。ラベルの色は `Settings` \> `Settings...` \> **3D Scene** で設定できます。
+  * **Show Chiral Labels:** メニューの `View` \> `Show Chiral Labels` をチェックすると、不斉中心の R/S ラベルを表示できます。ラベルの色・サイズ・フォントは `Settings` \> `Settings...` \> **3D Labels** で設定できます。
 
 -----
 
@@ -224,7 +224,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 *   **Open Babel モード**: Open Babel の `make3D()` 座標ジェネレーターを使用します。プログラムのハングアップやクラッシュを防ぐため、バックグラウンドの分離されたサブプロセスで安全に実行されます。
 *   **Direct モード**: 3Dコンフォーマー生成を行わず、2Dキャンバスの配置をそのまま保持します。重原子は $Z = 0.0$ 平面に配置され、不足している水素原子が幾何学的に追加されます。立体化学は、Wedge/Dash結合を持つ原子にZ座標のオフセット ($Z = \pm 1.5$ Å) を加えることで再現されます。
 
-**キラリティーチェック:** 変換のたびに、Wedge/Dash で描いたすべての不斉中心を 3D 構造と R/S で比較します。反転または消失した中心がある場合は **Chirality Check** ウィンドウが開き、該当する原子ごとに 2D で描いた配置と 3D での配置を一覧表示します。このウィンドウは常に手前に表示されますがメインウィンドウの操作は妨げず、開いている間は誤った中心を見つけやすいよう 3D ビューに不斉ラベルを表示します。閉じると `View` \> `Show Chiral Labels` の設定に戻ります。立体化学を確実には再現しない Direct モードで最も起こりやすい現象です。一覧の原子の Wedge/Dash を確認し、再度変換してください。このチェックは `Settings` \> `Settings...` \> **3D Scene** (Check Chirality After 3D Conversion) でオフにできます。
+**キラリティーチェック:** 変換のたびに、Wedge/Dash で描いたすべての不斉中心を 3D 構造と R/S で比較します。反転または消失した中心がある場合は **Chirality Check** ウィンドウが開き、該当する原子ごとに 2D で描いた配置と 3D での配置を一覧表示します。このウィンドウは常に手前に表示されますがメインウィンドウの操作は妨げず、開いている間は誤った中心を見つけやすいよう 3D ビューに不斉ラベルを表示します。閉じると `View` \> `Show Chiral Labels` の設定に戻ります。立体化学を確実には再現しない Direct モードで最も起こりやすい現象です。一覧の原子の Wedge/Dash を確認し、再度変換してください。このチェックは `Settings` \> `Settings...` \> **3D Labels** (Check Chirality After 3D Conversion) でオフにできます。
 
 ### 5.2. 3D 構造の最適化
 
@@ -443,9 +443,13 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
       * マウスの回転感度 (3D ビュー回転速度の倍率)
       * リアルタイム 3D ドラッグ (原子やグループのドラッグ中に構造を随時更新します。オフにするとマウスを離した時点で移動が適用されます)。300 原子を超える構造では、毎フレームの再描画がドラッグ自体より遅くなるため、常にマウスを離した時点での更新になります。
       * グループ回転: マウス追従 (オンの場合、右ドラッグによる回転はグループ内の原子上から開始する必要があり、その原子がカーソルに追従します。オフ (既定) の場合は画面上のどこで右ドラッグしてもグループが回転します)
-      * **3D ラベル:**
-          * ラベルの種類ごとの色: Index、Original ID、XYZ Index、Element Symbol、Coordinates (`View` \> `3D Atom Info Display` のラベル)、Chiral (R/S)、E/Z、およびすべてのラベルに共通の背景色
-          * Check Chirality After 3D Conversion (5.1 を参照、既定でオン)
+  * **3D Labels タブ:**
+      * **Label Colors and Sizes:** 3D ラベルの種類ごとの色とフォントサイズ (pt)。3 つのグループに分かれています:
+          * Atom Info — Index、Original ID、XYZ Index、Element Symbol、Coordinates (`View` \> `3D Atom Info Display` のラベル)
+          * Stereo — Chiral (R/S)、E/Z
+          * Tool — Selection (測定・整列・編集ダイアログで選択した原子)、Measurement、Constraint
+      * **Label Appearance:** すべてのラベルに共通の背景色と不透明度 (不透明度 0 で背景が透明になります)、フォント (Arial / Courier / Times)、太字 / 斜体
+      * **Chirality Check:** Check Chirality After 3D Conversion (5.1 を参照、既定でオン)
   * **各表示スタイル (Ball & Stick, CPK, Wireframe, Stick) タブ:**
       * 原子サイズ/半径のスケール
       * 結合半径
