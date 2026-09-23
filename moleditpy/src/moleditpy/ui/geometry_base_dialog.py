@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import QLineEdit, QSlider, QWidget
 from rdkit import Chem
 
 from .base_picking_dialog import BasePickingDialog
+from ..utils.finite_float import finite_float
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -92,7 +93,8 @@ class GeometryBaseDialog(BasePickingDialog):
     ) -> None:
         """Sync a numerical value from input text to the slider."""
         try:
-            f_val = float(val)
+            # finite_float: "inf" typed live would overflow int(round(...)).
+            f_val = finite_float(str(val))
             if wrap:
                 f_val = (f_val + 180) % 360 - 180
 

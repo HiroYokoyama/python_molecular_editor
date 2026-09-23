@@ -785,3 +785,16 @@ class TestEditsMadeElsewhereSurvive:
         dlg.apply_geometry_update(100.0)
         dlg.apply_geometry_update(120.0)
         assert np.array_equal(dlg._baseline_positions, baseline)
+
+
+@pytest.mark.parametrize("text", ["inf", "-inf", "1e400", "nan"])
+def test_live_slider_sync_ignores_non_finite_input(bond_dlg, text):
+    """Typing a non-finite value must not raise out of the textChanged slot.
+
+    float("inf") parsed fine, then int(round(inf * scale)) raised
+    OverflowError, which the handler did not catch.
+    """
+    dlg, *_ = bond_dlg
+    dlg.distance_slider.setValue(154)
+    dlg._sync_input_to_slider(text, dlg.distance_slider, 100.0)
+    assert dlg.distance_slider.value() == 154
