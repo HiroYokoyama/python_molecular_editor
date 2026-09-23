@@ -204,7 +204,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
   * **Add Hydrogens:** Select `Edit` \> `Add Hydrogens` from the menu to explicitly add hydrogen atoms based on the current bonding.
   * **Remove Hydrogens:** Select `Edit` \> `Remove Hydrogens` from the menu to remove all hydrogen atoms.
   * **Clear All:** To delete all atoms and bonds on the canvas, execute `Edit` \> `Clear All` (Ctrl+Shift+C) from the menu.
-  * **Show Chiral Labels:** Check `View` \> `Show Chiral Labels` from the menu to display R/S labels for chiral centers.
+  * **Show Chiral Labels:** Check `View` \> `Show Chiral Labels` from the menu to display R/S labels for chiral centers. Label colors are set in `Settings` \> `Settings...` \> **3D Scene**.
 
 -----
 
@@ -226,6 +226,8 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 *   **RDKit Mode**: Uses RDKit's ETKDGv2 (Experimental-Torsion Knowledge Distance Geometry) algorithm for conformer generation. If the initial embedding fails, it applies bounds matrix triangle smoothing with explicit stereochemistry constraints before trying again.
 *   **Open Babel Mode**: Uses Open Babel's `make3D()` coordinate generator run in a secure, isolated background subprocess to prevent application hangs or crashes.
 *   **Direct Mode**: Bypasses 3D conformer embedding to retain your exact 2D layout. Atoms are placed on the $Z = 0.0$ plane, with missing hydrogen atoms added geometrically. Stereochemistry is preserved by adding offset Z-coordinates ($Z = \pm 1.5$ Å) to wedge/dash atoms.
+
+**Chirality Check:** After each conversion, every stereocenter you drew with a wedge or hash is compared (as R/S) with the 3D result. If any of them comes out inverted or lost, a **Chirality Check** window lists each one with its drawn and 3D configuration. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral labels so the wrong centers are easy to find; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Check the wedges at the listed atoms and convert again. The check can be turned off in `Settings` \> `Settings...` \> **3D Scene** (Check Chirality After 3D Conversion).
 
 ### 5.2. 3D Structure Optimization
 
@@ -456,6 +458,9 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
     * Mouse rotation sensitivity (speed multiplier for 3D view rotation)
     * Real-time 3D Drag (update the structure continuously while dragging an atom or group; turn it off to only apply the move on mouse release). Structures larger than 300 atoms always use release-only updates, since redrawing them every frame would be slower than the drag itself.
     * Rotate Groups: Follow Mouse (when on, right-drag rotation must start on an atom of the group and that atom follows the cursor; when off — the default — right-dragging anywhere rotates the group)
+    * **3D Labels:**
+        * Label colors, one per type: Index, Original ID, XYZ Index, Coordinates / Symbol (the `View` \> `3D Atom Info Display` labels), Chiral (R/S) and E/Z, plus the label background shared by all of them
+        * Check Chirality After 3D Conversion (see 5.1; on by default)
 * **Display Style Tabs (Ball & Stick, CPK, Wireframe, Stick):**
     * Atom size/radius scale
     * Bond radius
@@ -558,7 +563,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 4.10
+  * **Version:** 4.11
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
