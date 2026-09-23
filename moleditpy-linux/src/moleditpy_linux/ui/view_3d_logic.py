@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 from ..utils.suppress_log import suppress_log
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from .custom_qt_interactor import CustomQtInteractor
@@ -33,7 +33,14 @@ from PyQt6.QtWidgets import QGraphicsView
 
 
 from ..utils.constants import CPK_COLORS_PV, VDW_DISPLAY_RADII, pt
+from ..utils.label_style import label_kwargs
+from ..core.stereo_check import actual_ez
 from .template_preview_item import TemplatePreviewItem
+
+
+# Fixed on purpose (not a setting): marks a stereocenter or double bond the
+# stereo check found wrong, against the normal chiral / E/Z label color.
+WRONG_CHIRAL_COLOR = "#FF0000"
 
 
 class View3DManager:
@@ -56,6 +63,11 @@ class View3DManager:
         self.atom_info_display_mode: Optional[str] = None
         self.atom_index_base: int = 0  # 0 = 0-based, 1 = 1-based
         self.show_chiral_labels: bool = False
+        # RDKit atom index -> R/S the 3D structure actually has, for centers
+        # the chirality check found wrong; drawn in WRONG_CHIRAL_COLOR.
+        self.chirality_mismatches: Dict[int, str] = {}
+        # Same for labelled double bonds: RDKit bond index -> actual E/Z.
+        self.ez_mismatches: Dict[int, str] = {}
         self.current_atom_info_labels: Optional[List[pv.Actor]] = None
         self.atom_label_legend_names: List[str] = []
         self._camera_initialized: bool = False
@@ -1048,45 +1060,54 @@ class View3DManager:
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logging.warning(f"Error rendering aromatic circles: {e}")
 
+    def _label_kwargs(self, kind: str) -> Dict[str, Any]:
+        """add_point_labels style arguments for one label kind, from settings."""
+        settings = getattr(getattr(self.host, "init_manager", None), "settings", None)
+        return label_kwargs(settings, kind)
+
     def _add_3d_labels(self, mol: Any, mol_to_draw: Any) -> None:
         """Render chiral and E/Z stereochemistry labels in the 3D scene."""
         if getattr(self, "show_chiral_labels", False):
             try:
                 # Calculate chiral centers from 3D coordinates
                 chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
-                if chiral_centers:
-                    pts, labels = [], []
-                    z_off = 0
-                    for idx, lbl in chiral_centers:
-                        if self.atom_positions_3d is None:
-                            logging.warning(
-                                "atom_positions_3d is None in _add_3d_labels"
-                            )
-                            continue
-                        coord = self.atom_positions_3d[idx].copy()
-                        coord[2] += z_off
-                        pts.append(coord)
-                        labels.append(lbl if lbl is not None else "?")
+                wrong = getattr(self, "chirality_mismatches", {}) or {}
+                for name in ("chiral_labels", "chiral_labels_wrong"):
                     try:
-                        self.plotter.remove_actor("chiral_labels")  # type: ignore[arg-type, union-attr]
+                        self.plotter.remove_actor(name)  # type: ignore[arg-type, union-attr]
                     except (AttributeError, RuntimeError, TypeError) as e:
-                        logging.debug(
-                            f"Suppressed exception: {e}"
-                        )  # Suppress non-critical 3D label update errors
-                    self.plotter.add_point_labels(  # type: ignore[union-attr]
-                        np.array(pts),
-                        labels,
-                        font_size=20,
-                        point_size=0,
-                        text_color="blue",
-                        name="chiral_labels",
-                        always_visible=True,
-                        shape="rect",
-                        shape_color="gray",
-                        shape_opacity=0.5,
-                        tolerance=0.01,
-                        show_points=False,
-                    )
+                        logging.debug("Suppressed exception: %s", e)
+                if chiral_centers and self.atom_positions_3d is not None:
+                    groups: Dict[bool, Tuple[List[Any], List[str]]] = {
+                        False: ([], []),
+                        True: ([], []),
+                    }
+                    for idx, lbl in chiral_centers:
+                        is_wrong = idx in wrong
+                        pts, labels = groups[is_wrong]
+                        pts.append(self.atom_positions_3d[idx].copy())
+                        # A wrong center shows the chirality check's own label
+                        # (new CIP rules), so it matches the warning dialog.
+                        labels.append(wrong[idx] if is_wrong else (lbl or "?"))
+                    for is_wrong, (pts, labels) in groups.items():
+                        if not pts:
+                            continue
+                        style = self._label_kwargs("chiral")
+                        if is_wrong:
+                            style["text_color"] = WRONG_CHIRAL_COLOR
+                        self.plotter.add_point_labels(  # type: ignore[union-attr]
+                            np.array(pts),
+                            labels,
+                            point_size=0,
+                            name="chiral_labels_wrong" if is_wrong else "chiral_labels",
+                            always_visible=True,
+                            shape="rect",
+                            tolerance=0.01,
+                            show_points=False,
+                            **style,
+                        )
+                elif chiral_centers:
+                    logging.warning("atom_positions_3d is None in _add_3d_labels")
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 self.host.statusBar().showMessage(f"3D chiral label drawing error: {e}")  # type: ignore[union-attr]
 
@@ -1094,7 +1115,7 @@ class View3DManager:
         if getattr(self, "show_chiral_labels", False):
             try:
                 # If we drew a kekulized molecule use it for E/Z detection so
-                # E/Z labels reflect Kekul�E�E�� rendering; pass mol_to_draw as the
+                # E/Z labels reflect Kekulé rendering; pass mol_to_draw as the
                 # molecule to scan for bond stereochemistry.
                 self.show_ez_labels_3d(mol)
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
@@ -1197,16 +1218,21 @@ class View3DManager:
             return
 
         # Remove existing E/Z labels
-        if (
-            hasattr(self.plotter, "renderer")
-            and "ez_labels" in self.plotter.renderer.actors  # type: ignore[union-attr]
-        ):
-            try:
-                self.plotter.remove_actor("ez_labels")  # type: ignore[arg-type, union-attr]
-            except (AttributeError, RuntimeError, TypeError) as e:
-                logging.warning(f"Failed to remove EZ labels: {e}")
+        for actor_name in ("ez_labels", "ez_labels_wrong"):
+            if (
+                hasattr(self.plotter, "renderer")
+                and actor_name in self.plotter.renderer.actors  # type: ignore[union-attr]
+            ):
+                try:
+                    self.plotter.remove_actor(actor_name)  # type: ignore[arg-type, union-attr]
+                except (AttributeError, RuntimeError, TypeError) as e:
+                    logging.warning("Failed to remove EZ labels: %s", e)
 
-        pts, labels = [], []
+        pts: List[Any] = []
+        labels: List[str] = []
+        wrong_pts: List[Any] = []
+        wrong_labels: List[str] = []
+        wrong = getattr(self, "ez_mismatches", {}) or {}
 
         # Check if 3D coordinates exist
         if mol.GetNumConformers() == 0:
@@ -1214,87 +1240,59 @@ class View3DManager:
 
         conf = mol.GetConformer()
 
-        # Display E/Z stereochemistry determined by RDKit for double bonds
-
+        # E/Z read from the 3D coordinates with the CIP labeller the stereo
+        # check uses, so every label shows the real 3D configuration (a bond
+        # that differs from the 2D label is shown in red, never as "?").
         try:
-            # Recalculate stereochemistry from 3D coordinates (on mol).
-            # This ensures determination is based on actual 3D positions regardless of 2D state.
-            Chem.AssignStereochemistry(
-                mol, cleanIt=True, force=True, flagPossibleStereoCenters=True
-            )
-        except (AttributeError, RuntimeError, TypeError, ValueError):
-            logging.warning("Caught exception in " + __file__, exc_info=True)
+            ez_3d = actual_ez(mol)
+        except (RuntimeError, ValueError):
+            logging.warning("E/Z perception from 3D failed", exc_info=True)
+            ez_3d = {}
 
         for bond in mol.GetBonds():
-            if bond.GetBondType() == Chem.BondType.DOUBLE:
-                new_stereo = bond.GetStereo()
+            idx = bond.GetIdx()
+            label = ez_3d.get(idx)
+            if label is None and idx not in wrong:
+                continue
+            p1 = conf.GetAtomPosition(bond.GetBeginAtomIdx())
+            p2 = conf.GetAtomPosition(bond.GetEndAtomIdx())
+            center_pos = (
+                np.array([p1.x, p1.y, p1.z]) + np.array([p2.x, p2.y, p2.z])
+            ) / 2
+            if idx in wrong:
+                # The check's actual 3D label; "?" only if E/Z was lost entirely.
+                wrong_pts.append(center_pos)
+                wrong_labels.append(label or wrong[idx])
+            elif label is not None:
+                pts.append(center_pos)
+                labels.append(label)
 
-                if new_stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
-                    # Calculate bond center coordinates
-                    # Explicitly extract x,y,z for cross-platform/version robustness
-                    p1 = conf.GetAtomPosition(bond.GetBeginAtomIdx())
-                    p2 = conf.GetAtomPosition(bond.GetEndAtomIdx())
-                    begin_pos = np.array([p1.x, p1.y, p1.z])
-                    end_pos = np.array([p2.x, p2.y, p2.z])
-                    center_pos = (begin_pos + end_pos) / 2
-
-                    # Determine 3D label
-                    label = "E" if new_stereo == Chem.BondStereo.STEREOE else "Z"
-
-                    # Check for discrepancy with 2D intent from self.host.state_manager.data
-                    try:
-                        # Get original atom IDs
-                        idx1 = bond.GetBeginAtom().GetIntProp("_original_atom_id")
-                        idx2 = bond.GetEndAtom().GetIntProp("_original_atom_id")
-
-                        # Find corresponding bond in 2D data
-                        bond_key = (min(idx1, idx2), max(idx1, idx2))
-                        two_d_bond = self.host.state_manager.data.bonds.get(bond_key)
-
-                        if two_d_bond:
-                            two_d_stereo = two_d_bond.get("stereo", 0)
-                            # 3 = Z, 4 = E
-                            if two_d_stereo in [3, 4]:
-                                expected_stereo = (
-                                    Chem.BondStereo.STEREOZ
-                                    if two_d_stereo == 3
-                                    else Chem.BondStereo.STEREOE
-                                )
-                                if expected_stereo != new_stereo:
-                                    label = "?"
-                    except (AttributeError, KeyError, ValueError, TypeError):
-                        # Fallback to the saved property if direct access fails
-                        try:
-                            old_stereo = bond.GetIntProp("_original_2d_stereo")
-                            if old_stereo in [
-                                Chem.BondStereo.STEREOE,
-                                Chem.BondStereo.STEREOZ,
-                            ]:
-                                if old_stereo != new_stereo:
-                                    label = "?"
-                        except (KeyError, RuntimeError, TypeError):
-                            # Safe defensive fallback catching KeyError, RuntimeError, TypeError
-                            logging.debug(
-                                "Suppressed non-critical error", exc_info=True
-                            )
-
-                    pts.append(center_pos)
-                    labels.append(label)
+        if wrong_pts:
+            style = self._label_kwargs("ez")
+            style["text_color"] = WRONG_CHIRAL_COLOR
+            self.plotter.add_point_labels(  # type: ignore[union-attr]
+                np.array(wrong_pts),
+                wrong_labels,
+                point_size=0,
+                name="ez_labels_wrong",
+                always_visible=True,
+                shape="rect",
+                tolerance=0.01,
+                show_points=False,
+                **style,
+            )
 
         if pts and labels:
             self.plotter.add_point_labels(  # type: ignore[union-attr]
                 np.array(pts),
                 labels,
-                font_size=18,
                 point_size=0,
-                text_color="darkgreen",  # Dark green color
                 name="ez_labels",
                 always_visible=True,
                 shape="rect",
-                shape_color="gray",
-                shape_opacity=0.5,
                 tolerance=0.01,
                 show_points=False,
+                **self._label_kwargs("ez"),
             )
 
     def toggle_chiral_labels_display(self, checked: bool) -> None:
@@ -1306,7 +1304,7 @@ class View3DManager:
 
         if checked:
             self.host.statusBar().showMessage(  # type: ignore[union-attr]
-                "Chiral labels: will be (re)computed after ConvertↁED."
+                "Chiral labels: will be (re)computed after Convert 2D to 3D."
             )
         else:
             self.host.statusBar().showMessage("Chiral labels disabled.")  # type: ignore[union-attr]
@@ -1591,11 +1589,13 @@ class View3DManager:
             else:
                 continue
 
-        # Color definitions (dark blue/green/red)
-        rdkit_color = "#003366"  # Dark blue
-        id_color = "#009000"  # Green
-        xyz_color = "#8B0000"  # Dark red
-        other_color = "black"
+        # Coordinates and element symbols share one label group (only one
+        # display mode is active at a time) but are styled separately.
+        other_kind = "coords" if self.atom_info_display_mode == "coords" else "symbol"
+        # The legend names each group in its label color.
+        rdkit_color = self._label_kwargs("index")["text_color"]
+        id_color = self._label_kwargs("original_id")["text_color"]
+        xyz_color = self._label_kwargs("xyz_index")["text_color"]
 
         # Add labels for each group and keep references in a list
         self.current_atom_info_labels = []
@@ -1605,15 +1605,12 @@ class View3DManager:
                     np.array(rdkit_positions),
                     rdkit_texts,
                     point_size=12,
-                    font_size=18,
-                    text_color=rdkit_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color="gray",
-                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_rdkit",
+                    **self._label_kwargs("index"),
                 )
                 self.current_atom_info_labels.append(a)
 
@@ -1622,15 +1619,12 @@ class View3DManager:
                     np.array(id_positions),
                     id_texts,
                     point_size=12,
-                    font_size=18,
-                    text_color=id_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color="gray",
-                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_id",
+                    **self._label_kwargs("original_id"),
                 )
                 self.current_atom_info_labels.append(a)
 
@@ -1639,15 +1633,12 @@ class View3DManager:
                     np.array(xyz_positions),
                     xyz_texts,
                     point_size=12,
-                    font_size=18,
-                    text_color=xyz_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color="gray",
-                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_xyz",
+                    **self._label_kwargs("xyz_index"),
                 )
                 self.current_atom_info_labels.append(a)
 
@@ -1656,15 +1647,12 @@ class View3DManager:
                     np.array(other_positions),
                     other_texts,
                     point_size=12,
-                    font_size=18,
-                    text_color=other_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color="gray",
-                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_other",
+                    **self._label_kwargs(other_kind),
                 )
                 self.current_atom_info_labels.append(a)
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:

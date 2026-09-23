@@ -25,10 +25,10 @@
 
 -----
 <p align="center">
-  <img src="img/icon.png" width="500" alt="MoleditPy Icon">
+  <img src="https://hiroyokoyama.github.io/python_molecular_editor/img/icon.png" width="500" alt="MoleditPy Icon">
 </p>
 
-![](img/screenshot.png)
+![MoleditPy screenshot](https://hiroyokoyama.github.io/python_molecular_editor/img/screenshot.png)
 
 
 ## Overview
@@ -142,7 +142,7 @@ moleditpy
 
 ## License & Disclaimer
 
-This project is licensed under the GNU General Public License v3.0 (GPLv3) - see the [LICENSE](LICENSE) file for details. As open-source software, it is provided 'as is' without warranty of any kind, and the author assumes no responsibility or liability for the results. Although outputs have been carefully verified, users are strongly encouraged to independently check and validate them for critical applications (such as publications). If you encounter any bugs, please open an issue.
+This project is licensed under the GNU General Public License v3.0 (GPLv3) - see the [LICENSE](https://github.com/HiroYokoyama/python_molecular_editor/blob/main/LICENSE) file for details. As open-source software, it is provided 'as is' without warranty of any kind, and the author assumes no responsibility or liability for the results. Although outputs have been carefully verified, users are strongly encouraged to independently check and validate them for critical applications (such as publications). If you encounter any bugs, please open an issue.
 
 ## Citation
 
@@ -278,7 +278,7 @@ moleditpy
 
 ## ライセンス & 免責事項
 
-このプロジェクトは GNU General Public License v3.0 (GPLv3) のもとでライセンスされています。詳細は [LICENSE](LICENSE) ファイルを参照してください。オープンソースソフトウェアとして、本ソフトウェアは「現状のまま」提供され、いかなる明示または黙示の保証も行いません。また、本ソフトウェアを使用した結果について、作者は一切の責任や義務を負いません。出力結果は慎重に検証されていますが、学術論文の作成など重要な用途においては、ユーザーご自身で結果を独立して確認および検証することを強くお勧めします。バグに遭遇した場合は、Issueを作成してください。
+このプロジェクトは GNU General Public License v3.0 (GPLv3) のもとでライセンスされています。詳細は [LICENSE](https://github.com/HiroYokoyama/python_molecular_editor/blob/main/LICENSE) ファイルを参照してください。オープンソースソフトウェアとして、本ソフトウェアは「現状のまま」提供され、いかなる明示または黙示の保証も行いません。また、本ソフトウェアを使用した結果について、作者は一切の責任や義務を負いません。出力結果は慎重に検証されていますが、学術論文の作成など重要な用途においては、ユーザーご自身で結果を独立して確認および検証することを強くお勧めします。バグに遭遇した場合は、Issueを作成してください。
 
 ## 引用
 

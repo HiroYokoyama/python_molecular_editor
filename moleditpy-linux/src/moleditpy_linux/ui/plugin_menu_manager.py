@@ -691,12 +691,3 @@ class PluginMenuManager:
                 )
                 a.setData(self._PLUGIN_ACTION_TAG)
                 analysis_menu.addAction(a)
-
-    def _clear_plugin_ui_elements(self, plugin_menu: QMenu) -> None:
-        """Remove only the legacy-tagged plugin actions from the plugin menu."""
-        for action in plugin_menu.actions():
-            if action.data() == "plugin_action":
-                plugin_menu.removeAction(action)
-
-        self._im.plugin_toolbar.clear()  # type: ignore[union-attr]
-        self._im.plugin_toolbar.hide()  # type: ignore[union-attr]

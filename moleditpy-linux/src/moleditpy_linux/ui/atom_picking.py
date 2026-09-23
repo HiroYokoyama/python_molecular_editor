@@ -177,23 +177,38 @@ def pick_atom_index_from_screen_vectorized(
     Vectorized atom picking using the camera's projection matrix.
     Eliminates the O(N) Python loop and VTK C++ boundary calls.
     """
+    _ran, best_idx = _pick_vectorized(
+        view_3d_manager, click_pos, mol, padding_px, min_radius_px, max_radius_px
+    )
+    return best_idx
+
+
+def _pick_vectorized(
+    view_3d_manager: Any,
+    click_pos: tuple[int, int],
+    mol: Optional[Any],
+    padding_px: float,
+    min_radius_px: float,
+    max_radius_px: float,
+) -> tuple[bool, Optional[int]]:
+    """Vectorized pick: (whether it could run, atom index or None for a miss)."""
     try:
         plotter = view_3d_manager.plotter
         renderer = plotter.renderer
         positions = view_3d_manager.atom_positions_3d
     except (AttributeError, RuntimeError, TypeError):
-        return None
+        return False, None
 
     if positions is None or len(positions) == 0:
-        return None
+        return True, None
 
     try:
         positions_array = np.asarray(positions, dtype=float)  # Shape: (N, 3)
     except (TypeError, ValueError):
-        return None
+        return False, None
 
     if positions_array.ndim != 2 or positions_array.shape[1] < 3:
-        return None
+        return False, None
 
     if mol is None:
         mol = getattr(view_3d_manager, "current_mol", None)
@@ -205,7 +220,7 @@ def pick_atom_index_from_screen_vectorized(
 
     active_atoms = min(atom_count, len(positions_array))
     if active_atoms == 0:
-        return None
+        return True, None
 
     positions_array = positions_array[:active_atoms]
 
@@ -222,7 +237,7 @@ def pick_atom_index_from_screen_vectorized(
             for j in range(4):
                 matrix[i, j] = vtk_matrix.GetElement(i, j)
     except (RuntimeError, TypeError, ValueError):
-        return None
+        return False, None
 
     # 2. Convert all N world coordinates to homogeneous coordinates (N, 4)
     homogeneous_coords = np.hstack([positions_array, np.ones((active_atoms, 1))])
@@ -240,7 +255,7 @@ def pick_atom_index_from_screen_vectorized(
     try:
         size = renderer.GetSize()  # (width, height)
     except (RuntimeError, TypeError, ValueError):
-        return None
+        return False, None
 
     # VTK display space coordinates: X: [0, W], Y: [0, H]
     display_coords = np.zeros((active_atoms, 2))
@@ -276,7 +291,7 @@ def pick_atom_index_from_screen_vectorized(
     # 7. Mask out atoms that are further than their hit radius
     valid_mask = distances <= hit_radii
     if not np.any(valid_mask):
-        return None
+        return True, None
 
     # 8. Score calculation and find the best index
     # Tie-breaking logic: (ratio) + (distances * 1e-8)
@@ -285,7 +300,7 @@ def pick_atom_index_from_screen_vectorized(
     scores[~valid_mask] = np.inf
     best_idx = int(np.argmin(scores))
 
-    return best_idx if scores[best_idx] != np.inf else None
+    return True, (best_idx if scores[best_idx] != np.inf else None)
 
 
 def pick_atom_index_from_screen(
@@ -296,12 +311,18 @@ def pick_atom_index_from_screen(
     min_radius_px: float = 14.0,
     max_radius_px: float = 96.0,
 ) -> Optional[int]:
-    """Return the atom nearest a screen click, trying vectorized first, falling back to sequential."""
+    """Return the atom nearest a screen click, trying vectorized first.
+
+    The per-atom sequential picker is only a fallback for when the vectorized
+    one cannot run. A vectorized miss is final: re-checking every atom with
+    VTK calls on each miss made hovering empty space in 3D edit mode O(N)
+    VTK round-trips per mouse move.
+    """
     try:
-        best_idx = pick_atom_index_from_screen_vectorized(
+        ran, best_idx = _pick_vectorized(
             view_3d_manager, click_pos, mol, padding_px, min_radius_px, max_radius_px
         )
-        if best_idx is not None:
+        if ran:
             return best_idx
     except (RuntimeError, TypeError, ValueError) as e:
         logging.debug("Vectorized picking failed, falling back to sequential: %s", e)

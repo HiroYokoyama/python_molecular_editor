@@ -26,6 +26,7 @@ from .settings_tabs.settings_2d_tab import Settings2DTab
 from .settings_tabs.settings_2d_cleanup_tab import Settings2DCleanupTab
 from .settings_tabs.settings_3d_tabs import Settings3DSceneTab, SettingsModelTab
 from .settings_tabs.settings_other_tab import SettingsOtherTab
+from .settings_tabs.settings_labels_tab import SettingsLabelsTab
 
 from ..utils.default_settings import DEFAULT_SETTINGS
 
@@ -64,6 +65,7 @@ class SettingsDialog(QDialog):
         self.tab_2d = Settings2DTab(self.default_settings, self)
         self.tab_2d_cleanup = Settings2DCleanupTab(self.default_settings, self)
         self.tab_scene = Settings3DSceneTab(self.default_settings, self)
+        self.tab_labels = SettingsLabelsTab(self.default_settings, self)
         self.tab_bs = SettingsModelTab(
             "ball_stick",
             "Ball & Stick model shows atoms as spheres and bonds as cylinders. (Defaults: Atom Size is 30% of CPK)",
@@ -94,6 +96,7 @@ class SettingsDialog(QDialog):
         self.tab_widget.addTab(self.tab_2d, "2D Settings")
         self.tab_widget.addTab(self.tab_2d_cleanup, "2D Cleanup")
         self.tab_widget.addTab(self.tab_scene, "3D Scene")
+        self.tab_widget.addTab(self.tab_labels, "3D Labels")
         self.tab_widget.addTab(self.tab_bs, "Ball & Stick")
         self.tab_widget.addTab(self.tab_cpk, "CPK (Space-filling)")
         self.tab_widget.addTab(self.tab_wf, "Wireframe")

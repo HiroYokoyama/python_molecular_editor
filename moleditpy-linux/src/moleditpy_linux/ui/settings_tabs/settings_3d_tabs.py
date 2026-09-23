@@ -39,6 +39,8 @@ class Settings3DSceneTab(SettingsTabBase):
         self.projection_combo: Any = None
         self.realtime_drag_checkbox: Any = None
         self.rotate_group_follow_mouse_checkbox: Any = None
+        self.stereo_check_conversion_checkbox: Any = None
+        self.stereo_check_optimization_checkbox: Any = None
         self.current_bg_color = default_settings["background_color"]
         self._setup_ui()
 
@@ -112,6 +114,25 @@ class Settings3DSceneTab(SettingsTabBase):
             "Rotate Groups: Follow Mouse:", self.rotate_group_follow_mouse_checkbox
         )
 
+        form_layout.addRow(self._create_separator())
+        form_layout.addRow(QLabel("<b>Stereo Check (R/S, E/Z)</b>"))
+        self.stereo_check_conversion_checkbox = QCheckBox()
+        self.stereo_check_conversion_checkbox.setToolTip(
+            "After Convert 2D to 3D, compare every stereocenter drawn with a\n"
+            "wedge or hash, and every E/Z-labelled double bond, against the 3D\n"
+            "result, and warn if any differs."
+        )
+        form_layout.addRow(
+            "Check After 3D Conversion:", self.stereo_check_conversion_checkbox
+        )
+        self.stereo_check_optimization_checkbox = QCheckBox()
+        self.stereo_check_optimization_checkbox.setToolTip(
+            "Run the same check after Optimize 3D. Off by default."
+        )
+        form_layout.addRow(
+            "Check After 3D Optimization:", self.stereo_check_optimization_checkbox
+        )
+
     def _select_color(self) -> None:
         """Open color dialog to pick 3D viewport background color."""
         color = QColorDialog.getColor(QColor(self.current_bg_color), self)
@@ -135,10 +156,10 @@ class Settings3DSceneTab(SettingsTabBase):
         self.light_checkbox.setChecked(settings_dict.get("lighting_enabled", True))
 
         int_val = settings_dict.get("light_intensity", 1.0)
-        self.intensity_slider.setValue(int(int_val * 100))
+        self.intensity_slider.setValue(int(round(int_val * 100)))
 
         spec_val = settings_dict.get("specular", 0.2)
-        self.specular_slider.setValue(int(spec_val * 100))
+        self.specular_slider.setValue(int(round(spec_val * 100)))
 
         pow_val = settings_dict.get("specular_power", 20)
         self.spec_power_slider.setValue(int(pow_val))
@@ -149,12 +170,18 @@ class Settings3DSceneTab(SettingsTabBase):
             self.projection_combo.setCurrentIndex(idx)
 
         sens_val = settings_dict.get("mouse_rotation_sensitivity", 1.0)
-        self.rotation_sens_slider.setValue(int(sens_val * 100))
+        self.rotation_sens_slider.setValue(int(round(sens_val * 100)))
         self.realtime_drag_checkbox.setChecked(
             settings_dict.get("realtime_3d_drag", True)
         )
         self.rotate_group_follow_mouse_checkbox.setChecked(
             settings_dict.get("rotate_group_follow_mouse", False)
+        )
+        self.stereo_check_conversion_checkbox.setChecked(
+            settings_dict.get("check_stereo_after_conversion", True)
+        )
+        self.stereo_check_optimization_checkbox.setChecked(
+            settings_dict.get("check_stereo_after_optimization", False)
         )
 
     def get_settings(self) -> dict[str, Any]:
@@ -170,6 +197,12 @@ class Settings3DSceneTab(SettingsTabBase):
             "mouse_rotation_sensitivity": self.rotation_sens_slider.value() / 100.0,
             "realtime_3d_drag": self.realtime_drag_checkbox.isChecked(),
             "rotate_group_follow_mouse": self.rotate_group_follow_mouse_checkbox.isChecked(),
+            "check_stereo_after_conversion": (
+                self.stereo_check_conversion_checkbox.isChecked()
+            ),
+            "check_stereo_after_optimization": (
+                self.stereo_check_optimization_checkbox.isChecked()
+            ),
         }
 
 
@@ -302,22 +335,38 @@ class SettingsModelTab(SettingsTabBase):
         p = self.prefix
         if p in ["ball_stick", "cpk"]:
             val = settings_dict.get(f"{p}_atom_scale", 1.0)
-            self.atom_scale_slider.setValue(int(val * 100))
+            self.atom_scale_slider.setValue(int(round(val * 100)))
         if p in ["ball_stick", "wireframe", "stick"]:
             val = settings_dict.get(f"{p}_bond_radius", 0.1)
-            self.bond_radius_slider.setValue(int(val * 100))
+            self.bond_radius_slider.setValue(int(round(val * 100)))
 
             self.db_offset_slider.setValue(
-                int(settings_dict.get(f"{p}_double_bond_offset_factor", 2.0) * 100)
+                int(
+                    round(
+                        settings_dict.get(f"{p}_double_bond_offset_factor", 2.0) * 100
+                    )
+                )
             )
             self.tr_offset_slider.setValue(
-                int(settings_dict.get(f"{p}_triple_bond_offset_factor", 2.0) * 100)
+                int(
+                    round(
+                        settings_dict.get(f"{p}_triple_bond_offset_factor", 2.0) * 100
+                    )
+                )
             )
             self.db_radius_slider.setValue(
-                int(settings_dict.get(f"{p}_double_bond_radius_factor", 0.8) * 100)
+                int(
+                    round(
+                        settings_dict.get(f"{p}_double_bond_radius_factor", 0.8) * 100
+                    )
+                )
             )
             self.tr_radius_slider.setValue(
-                int(settings_dict.get(f"{p}_triple_bond_radius_factor", 0.75) * 100)
+                int(
+                    round(
+                        settings_dict.get(f"{p}_triple_bond_radius_factor", 0.75) * 100
+                    )
+                )
             )
 
         self.res_slider.setValue(int(settings_dict.get(f"{p}_resolution", 16)))

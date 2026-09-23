@@ -387,6 +387,12 @@ class PluginManagerWindow(QDialog):
                         )
                     except OSError as e:
                         logging.exception("Failed to delete plugin: %s", e)
+                        # A locked or read-only file must not fail silently.
+                        QMessageBox.critical(
+                            self,
+                            "Error",
+                            f"Could not remove '{plugin.get('name', 'Unknown')}':\n{e}",
+                        )
             else:
                 QMessageBox.warning(
                     self, "Error", f"Plugin file not found:\n{filepath}"

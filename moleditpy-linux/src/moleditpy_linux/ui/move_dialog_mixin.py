@@ -18,6 +18,7 @@ import pyvista as pv
 from PyQt6.QtWidgets import QLabel, QLineEdit, QMessageBox
 
 from ..utils.constants import VDW_DISPLAY_RADII
+from ..utils.finite_float import finite_float
 
 
 class MoveDialogMixin:
@@ -171,9 +172,9 @@ class MoveDialogMixin:
             return
 
         try:
-            dx = float(self.x_trans_input.text())
-            dy = float(self.y_trans_input.text())
-            dz = float(self.z_trans_input.text())
+            dx = finite_float(self.x_trans_input.text())
+            dy = finite_float(self.y_trans_input.text())
+            dz = finite_float(self.z_trans_input.text())
         except ValueError:
             self._warn("Please enter valid translation values.")
             return
@@ -196,9 +197,9 @@ class MoveDialogMixin:
         try:
             rx_rad, ry_rad, rz_rad = np.radians(
                 [
-                    float(self.x_rot_input.text()),
-                    float(self.y_rot_input.text()),
-                    float(self.z_rot_input.text()),
+                    finite_float(self.x_rot_input.text()),
+                    finite_float(self.y_rot_input.text()),
+                    finite_float(self.z_rot_input.text()),
                 ]
             )
         except ValueError:

@@ -33,6 +33,7 @@ from rdkit import Chem
 from .geometry_base_dialog import GeometryBaseDialog
 from ..core.mol_geometry import calc_distance, get_connected_group
 from ..utils.suppress_log import suppress_log
+from ..utils.finite_float import finite_float
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -310,7 +311,7 @@ class BondLengthDialog(GeometryBaseDialog):
             return
 
         try:
-            new_distance = float(self.distance_input.text())
+            new_distance = finite_float(self.distance_input.text())
             if new_distance <= 0:
                 QMessageBox.warning(self, "Invalid Input", "Distance must be positive.")
                 return
@@ -331,6 +332,7 @@ class BondLengthDialog(GeometryBaseDialog):
 
     def apply_geometry_update(self, new_distance: float) -> None:  # pylint: disable=arguments-renamed
         """Adjust the bond length."""
+        self._drop_stale_positions()
         conf = self.mol.GetConformer()
 
         # Use snapshot if available (slider dragging) to keep base positions stable and accurate

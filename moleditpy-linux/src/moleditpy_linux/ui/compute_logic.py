@@ -38,6 +38,13 @@ from ..core.mol_geometry import (
     identify_valence_problems,
     inject_ez_stereo_to_mol_block,
 )
+from ..core.stereo_check import (
+    drawn_chirality,
+    drawn_ez,
+    find_chirality_mismatches,
+    find_ez_mismatches,
+)
+from .chirality_warning_dialog import ChiralityWarningDialog
 
 
 if TYPE_CHECKING:
@@ -60,6 +67,10 @@ class ComputeManager:
         # worker_id -> (method_key, plugin_entry) for a plugin optimizer to run
         # as a post-step once conversion's built-in pre-optimization completes.
         self._pending_plugin_opt: Dict[int, Tuple[str, Dict[str, Any]]] = {}
+        self._chirality_dialog: Optional[ChiralityWarningDialog] = None
+        # Worker ids of 2D->3D conversions; the stereo check runs only for these,
+        # not for Optimize 3D, which uses the same worker and finish handler.
+        self._conversion_run_ids: Set[int] = set()
 
     def reset_active_threads(self) -> None:
         """Reset active calculation threads list."""
@@ -258,6 +269,7 @@ class ComputeManager:
         run_id = self.next_conversion_id
         self.next_conversion_id = run_id + 1
         self.active_worker_ids.add(run_id)
+        self._conversion_run_ids.add(run_id)
 
         # The worker only runs built-in force fields. If the selected method is a
         # plugin optimizer, pre-optimize with MMFF (RDKit) in the worker (which
@@ -324,6 +336,7 @@ class ComputeManager:
             self.halt_ids.update(wids_to_halt)
         self.active_worker_ids.clear()
         self._pending_plugin_opt.clear()
+        getattr(self, "_conversion_run_ids", set()).clear()
 
         self._restore_button_ui()
         self.host.init_manager.cleanup_button.setEnabled(True)  # type: ignore[union-attr]
@@ -359,7 +372,10 @@ class ComputeManager:
         _reg = getattr(_plugin_mgr, "optimization_methods", None)
         plugin_entry = _reg.get(method) if isinstance(_reg, dict) else None
         if plugin_entry:
-            self._run_plugin_optimization(method, plugin_entry)
+            optimization_succeeded = self._run_plugin_optimization(method, plugin_entry)
+            # Plugin optimizers run in-process, not through the worker.
+            if optimization_succeeded:
+                self.check_chirality_against_2d(after_optimization=True)
             return
 
         self.host.statusBar().showMessage(f"Optimizing 3D structure ({method})...")  # type: ignore[union-attr]
@@ -395,7 +411,7 @@ class ComputeManager:
 
         self._start_calculation_worker(mol_block, options, run_id)
 
-    def _run_plugin_optimization(self, method: str, entry: Dict[str, Any]) -> None:
+    def _run_plugin_optimization(self, method: str, entry: Dict[str, Any]) -> bool:
         """Run a plugin-registered optimization callback synchronously.
 
         The callback receives the current RDKit mol, modifies it in place,
@@ -407,7 +423,7 @@ class ComputeManager:
             self.host.update_status_message(
                 f"Optimization with {label} needs a 3D structure."
             )
-            return
+            return False
         self.host.update_status_message(f"Optimizing 3D structure ({label})...")
         try:
             success = bool(entry["callback"](mol))
@@ -419,12 +435,12 @@ class ComputeManager:
             self.host.update_status_message(
                 f"Plugin optimization '{label}' failed (see log)."
             )
-            return
+            return False
 
         if not success:
             self._refresh_ui_state()
             self.host.update_status_message(f"Optimization with {label} failed.")
-            return
+            return False
 
         self.last_successful_optimization_method = label
         self.host.view_3d_manager.draw_molecule_3d(mol)
@@ -433,6 +449,7 @@ class ComputeManager:
         if self.host.view_3d_manager.plotter:
             self.host.view_3d_manager.plotter.reset_camera()  # type: ignore[call-arg]
         self.host.update_status_message(f"Process completed ({label}).")
+        return True
 
     def _prepare_rdkit_mol_for_conversion(self) -> Optional[Chem.Mol]:
         """Prepare and sanitize RDKit molecule for 3D conversion."""
@@ -498,8 +515,19 @@ class ComputeManager:
             # the layout is rebuilt from the stereo. These coordinates only seed
             # 3D generation; the 2D canvas keeps the user's own layout.
             planar = Chem.Mol(stereo_mol)
+            # A wedge only means something against the coordinates it was drawn
+            # on. Read it into a chiral tag first, then wedge afresh on the new
+            # layout; a wedge carried over as-is can invert the stereocenter.
+            Chem.AssignChiralTypesFromBondDirs(planar)
+            for bond in planar.GetBonds():
+                if bond.GetBondDir() in (
+                    Chem.BondDir.BEGINWEDGE,
+                    Chem.BondDir.BEGINDASH,
+                ):
+                    bond.SetBondDir(Chem.BondDir.NONE)
             planar.RemoveAllConformers()
             rdDepictor.Compute2DCoords(planar)
+            Chem.WedgeMolBonds(planar, planar.GetConformer())
             return str(Chem.MolToMolBlock(planar, includeStereo=True))
         except (RuntimeError, ValueError) as e:
             logging.warning("E/Z-consistent 2D layout failed: %s", e)
@@ -616,14 +644,76 @@ class ComputeManager:
             if worker_id is not None
             else None
         )
-        if pending and mol:
-            self._run_plugin_optimization(*pending)
+        plugin_succeeded = True
+        if pending:
+            plugin_succeeded = self._run_plugin_optimization(*pending)
+
+        conversions: Set[int] = getattr(self, "_conversion_run_ids", set())
+        # No worker id: a legacy/direct caller, which only conversions use.
+        is_conversion = worker_id is None or worker_id in conversions
+        conversions.discard(worker_id)  # type: ignore[arg-type]
+        if is_conversion and not plugin_succeeded:
+            self.check_chirality_against_2d(
+                after_optimization=False, report_status=False
+            )
+        elif plugin_succeeded:
+            self.check_chirality_against_2d(after_optimization=not is_conversion)
+
+    def check_chirality_against_2d(
+        self, after_optimization: bool = False, report_status: bool = True
+    ) -> None:
+        """Warn when the 3D result does not keep the stereo drawn in 2D.
+
+        Compares wedged/hashed stereocenters (R/S) and E/Z-labelled double
+        bonds with the 3D structure. Runs after a 2D->3D conversion when
+        check_stereo_after_conversion is on (default), and after Optimize 3D
+        only when check_stereo_after_optimization is on (default off).
+        """
+        dialog = getattr(self, "_chirality_dialog", None)
+        if dialog is not None:
+            # A new result replaces the warning about the previous one.
+            self._chirality_dialog = None
+            with suppress_log(RuntimeError):
+                dialog.close()
+
+        settings = getattr(self.host.init_manager, "settings", {}) or {}
+        key, default = (
+            ("check_stereo_after_optimization", False)
+            if after_optimization
+            else ("check_stereo_after_conversion", True)
+        )
+        if not settings.get(key, default):
+            return
+        mol = self.host.view_3d_manager.current_mol
+        data = self.host.state_manager.data
+        if mol is None or not data.atoms:
+            return
+
+        mismatches = find_chirality_mismatches(data, mol)
+        ez_mismatches = find_ez_mismatches(data, mol)
+        if not mismatches and not ez_mismatches:
+            return
+        self._chirality_dialog = ChiralityWarningDialog(
+            self.host,
+            mismatches,
+            len(drawn_chirality(data)),
+            parent=self.host,
+            ez_mismatches=ez_mismatches,
+            total_double_bonds=len(drawn_ez(data)),
+        )
+        self._chirality_dialog.show()
+        count = len(mismatches) + len(ez_mismatches)
+        if report_status:
+            self.host.update_status_message(
+                f"Warning: {count} stereo element(s) differ from the 2D drawing."
+            )
 
     def on_calculation_error(self, message: Union[str, Tuple[int, str]]) -> None:
         """Handle an error or halt signal from the background optimization worker."""
         # Accept either a string or (worker_id, message) tuple from the worker signal
         if isinstance(message, tuple) and len(message) == 2:
             worker_id, msg = message
+            getattr(self, "_conversion_run_ids", set()).discard(worker_id)
             if worker_id not in self.active_worker_ids:
                 # Still cleanup overlay/buttons even if stale
                 self._remove_calculating_text()

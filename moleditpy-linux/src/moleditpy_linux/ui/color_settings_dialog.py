@@ -26,7 +26,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..utils.constants import CPK_COLORS, DEFAULT_CPK_COLORS
+from ..utils.constants import (
+    CPK_COLORS,
+    DEFAULT_CPK_COLORS,
+    PERIODIC_TABLE_LAYOUT,
+)
+from .periodic_table_dialog import element_button_style
 
 
 class ColorSettingsDialog(QDialog):
@@ -51,128 +56,8 @@ class ColorSettingsDialog(QDialog):
         # Periodic table grid
         grid = QGridLayout()
         self.element_buttons = {}
-        elements = [
-            ("H", 1, 1),
-            ("He", 1, 18),
-            ("Li", 2, 1),
-            ("Be", 2, 2),
-            ("B", 2, 13),
-            ("C", 2, 14),
-            ("N", 2, 15),
-            ("O", 2, 16),
-            ("F", 2, 17),
-            ("Ne", 2, 18),
-            ("Na", 3, 1),
-            ("Mg", 3, 2),
-            ("Al", 3, 13),
-            ("Si", 3, 14),
-            ("P", 3, 15),
-            ("S", 3, 16),
-            ("Cl", 3, 17),
-            ("Ar", 3, 18),
-            ("K", 4, 1),
-            ("Ca", 4, 2),
-            ("Sc", 4, 3),
-            ("Ti", 4, 4),
-            ("V", 4, 5),
-            ("Cr", 4, 6),
-            ("Mn", 4, 7),
-            ("Fe", 4, 8),
-            ("Co", 4, 9),
-            ("Ni", 4, 10),
-            ("Cu", 4, 11),
-            ("Zn", 4, 12),
-            ("Ga", 4, 13),
-            ("Ge", 4, 14),
-            ("As", 4, 15),
-            ("Se", 4, 16),
-            ("Br", 4, 17),
-            ("Kr", 4, 18),
-            ("Rb", 5, 1),
-            ("Sr", 5, 2),
-            ("Y", 5, 3),
-            ("Zr", 5, 4),
-            ("Nb", 5, 5),
-            ("Mo", 5, 6),
-            ("Tc", 5, 7),
-            ("Ru", 5, 8),
-            ("Rh", 5, 9),
-            ("Pd", 5, 10),
-            ("Ag", 5, 11),
-            ("Cd", 5, 12),
-            ("In", 5, 13),
-            ("Sn", 5, 14),
-            ("Sb", 5, 15),
-            ("Te", 5, 16),
-            ("I", 5, 17),
-            ("Xe", 5, 18),
-            ("Cs", 6, 1),
-            ("Ba", 6, 2),
-            ("Hf", 6, 4),
-            ("Ta", 6, 5),
-            ("W", 6, 6),
-            ("Re", 6, 7),
-            ("Os", 6, 8),
-            ("Ir", 6, 9),
-            ("Pt", 6, 10),
-            ("Au", 6, 11),
-            ("Hg", 6, 12),
-            ("Tl", 6, 13),
-            ("Pb", 6, 14),
-            ("Bi", 6, 15),
-            ("Po", 6, 16),
-            ("At", 6, 17),
-            ("Rn", 6, 18),
-            ("Fr", 7, 1),
-            ("Ra", 7, 2),
-            ("Rf", 7, 4),
-            ("Db", 7, 5),
-            ("Sg", 7, 6),
-            ("Bh", 7, 7),
-            ("Hs", 7, 8),
-            ("Mt", 7, 9),
-            ("Ds", 7, 10),
-            ("Rg", 7, 11),
-            ("Cn", 7, 12),
-            ("Nh", 7, 13),
-            ("Fl", 7, 14),
-            ("Mc", 7, 15),
-            ("Lv", 7, 16),
-            ("Ts", 7, 17),
-            ("Og", 7, 18),
-            ("La", 8, 3),
-            ("Ce", 8, 4),
-            ("Pr", 8, 5),
-            ("Nd", 8, 6),
-            ("Pm", 8, 7),
-            ("Sm", 8, 8),
-            ("Eu", 8, 9),
-            ("Gd", 8, 10),
-            ("Tb", 8, 11),
-            ("Dy", 8, 12),
-            ("Ho", 8, 13),
-            ("Er", 8, 14),
-            ("Tm", 8, 15),
-            ("Yb", 8, 16),
-            ("Lu", 8, 17),
-            ("Ac", 9, 3),
-            ("Th", 9, 4),
-            ("Pa", 9, 5),
-            ("U", 9, 6),
-            ("Np", 9, 7),
-            ("Pu", 9, 8),
-            ("Am", 9, 9),
-            ("Cm", 9, 10),
-            ("Bk", 9, 11),
-            ("Cf", 9, 12),
-            ("Es", 9, 13),
-            ("Fm", 9, 14),
-            ("Md", 9, 15),
-            ("No", 9, 16),
-            ("Lr", 9, 17),
-        ]
 
-        for symbol, row, col in elements:
+        for symbol, row, col in PERIODIC_TABLE_LAYOUT:
             b = QPushButton(symbol)
             b.setFixedSize(40, 40)
             # Choose override color (if present) else default CPK color
@@ -182,13 +67,7 @@ class ColorSettingsDialog(QDialog):
             else:
                 q_color = CPK_COLORS.get(symbol, CPK_COLORS["DEFAULT"])
 
-            brightness = (
-                q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114
-            ) / 1000
-            text_color = "white" if brightness < 128 else "black"
-            b.setStyleSheet(
-                f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
-            )
+            b.setStyleSheet(element_button_style(q_color))
             b.clicked.connect(self.on_element_clicked)
             grid.addWidget(b, row, col)
             self.element_buttons[symbol] = b
@@ -251,13 +130,7 @@ class ColorSettingsDialog(QDialog):
         color = QColorDialog.getColor(QColor(cur), self)
         if color.isValid():
             self.changed_cpk[symbol] = color.name()
-            brightness = (
-                color.red() * 299 + color.green() * 587 + color.blue() * 114
-            ) / 1000
-            text_color = "white" if brightness < 128 else "black"
-            btn.setStyleSheet(  # type: ignore[union-attr]
-                f"background-color: {color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
-            )
+            btn.setStyleSheet(element_button_style(color))  # type: ignore[union-attr]
 
     def reset_all(self) -> None:
         """Revert all CPK and ball-and-stick colors to their defaults."""
@@ -267,13 +140,7 @@ class ColorSettingsDialog(QDialog):
         # Restore CPK button displays to defaults
         for s, btn in self.element_buttons.items():
             q_color = DEFAULT_CPK_COLORS.get(s, DEFAULT_CPK_COLORS["DEFAULT"])
-            brightness = (
-                q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114
-            ) / 1000
-            text_color = "white" if brightness < 128 else "black"
-            btn.setStyleSheet(
-                f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
-            )
+            btn.setStyleSheet(element_button_style(q_color))
 
         # Restore B&S bond color
         hexv = "#7F7F7F"
@@ -306,7 +173,8 @@ class ColorSettingsDialog(QDialog):
             cdict = settings.get("cpk_colors", {}).copy()
             cdict.update(self.changed_cpk)
             settings["cpk_colors"] = cdict
-            self.parent_window.settings_dirty = True
+            # init_manager owns the flag; save_settings() skips a clean one.
+            self.parent_window.init_manager.settings_dirty = True
 
             # Persist to disk immediately
             self.parent_window.init_manager.save_settings()
@@ -341,13 +209,7 @@ class ColorSettingsDialog(QDialog):
             q_color = QColor(
                 overrides.get(s, CPK_COLORS.get(s, CPK_COLORS["DEFAULT"]).name())
             )
-            brightness = (
-                q_color.red() * 299 + q_color.green() * 587 + q_color.blue() * 114
-            ) / 1000
-            text_color = "white" if brightness < 128 else "black"
-            btn.setStyleSheet(
-                f"background-color: {q_color.name()}; color: {text_color}; border: 1px solid #555; font-weight: bold;"
-            )
+            btn.setStyleSheet(element_button_style(q_color))
 
         # Refresh SettingsDialog
         from .settings_dialog import SettingsDialog

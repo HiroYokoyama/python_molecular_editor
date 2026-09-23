@@ -306,10 +306,14 @@ class MoleculeScene(
         self.template_context: Dict[str, Any] = {}
         self._deleted_items: List[QGraphicsItem] = []
 
+        # reinitialize_items runs on every clear; connect the purge only once.
+        if getattr(self, "_purge_connected", False):
+            return
         app = QApplication.instance()
         if app is not None and hasattr(app, "aboutToQuit"):
             try:
                 app.aboutToQuit.connect(self.purge_deleted_items)
+                self._purge_connected = True
             except (RuntimeError, ValueError, TypeError) as e:
                 # Non-fatal during setup; app instance may be invalid or signal already connected
                 logging.debug(f"Could not connect aboutToQuit in MoleculeScene: {e}")
@@ -393,9 +397,11 @@ class MoleculeScene(
                         # Clear E/Z label (revert to normal)
                         if hasattr(item, "stereo") and item.stereo in [3, 4]:
                             item.set_stereo(0)
-                            # Also update the data model
-                            for bond_key, bond_item_check in self.bond_items.items():
-                                if bond_item_check is item:
+                            # Also update the data model (E/Z bonds are
+                            # unordered, so accept either key direction)
+                            ids = (item.atom1.atom_id, item.atom2.atom_id)
+                            for bond_key in (ids, ids[::-1]):
+                                if bond_key in self.data.bonds:
                                     self.data.bonds[bond_key]["stereo"] = 0
                                     break
                             self.window.edit_actions_manager.push_undo_state()
@@ -691,7 +697,7 @@ class MoleculeScene(
                 )
                 # 3. Swap atom references and link to new data in BondItem
                 b.atom1, b.atom2 = b.atom2, b.atom1
-                self.bond_items[new_key] = b
+                self.rekey_bond_item(b, new_key)
                 # 4. Update visual state
                 b.update_position()
             else:
@@ -706,7 +712,7 @@ class MoleculeScene(
                 b.prepareGeometryChange()
                 b.order = self.bond_order
                 b.stereo = self.bond_stereo
-                self.bond_items[new_key] = b
+                self.rekey_bond_item(b, new_key)
                 b.update()
             self.clearSelection()
             self.data_changed_in_event = True

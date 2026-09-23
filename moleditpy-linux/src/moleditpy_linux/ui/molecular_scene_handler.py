@@ -907,6 +907,7 @@ class KeyboardMixin:
     key_to_symbol_map_shift: Any
     mode: Any
     reinitialize_items: Any
+    rekey_bond_item: Any
     update_all_items: Any
     update_bond_stereo: Any
     views: Any
@@ -952,8 +953,14 @@ class KeyboardMixin:
             new_pos_offset = QPointF(0, -bond_len)
 
         elif num_non_H_neighbors == 1:
-            # One bond: ~120/60 degree angle
-            bond = start_atom.bonds[0]
+            # One bond: ~120/60 degree angle. Use the bond to the heavy
+            # neighbor: bonds[0] may be an explicit H, which is ignored above.
+            bond = next(
+                b
+                for b in start_atom.bonds
+                if getattr(b.atom1 if b.atom2 is start_atom else b.atom2, "symbol", "")
+                != "H"
+            )
             other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
             existing_bond_vector = start_pos - other_atom.pos()
 
@@ -1272,6 +1279,7 @@ class KeyboardMixin:
                             bond_data = self.data.bonds.pop(current_key)
                             new_key = (current_key[1], current_key[0])
                             self.data.bonds[new_key] = bond_data
+                            self.rekey_bond_item(bond, new_key)
                             bond.atom1, bond.atom2 = bond.atom2, bond.atom1
                             bond.update_position()
                             any_bond_changed = True
@@ -1284,6 +1292,7 @@ class KeyboardMixin:
                             bond_data = self.data.bonds.pop(current_key)
                             new_key = (current_key[1], current_key[0])
                             self.data.bonds[new_key] = bond_data
+                            self.rekey_bond_item(bond, new_key)
                             bond.atom1, bond.atom2 = bond.atom2, bond.atom1
                             bond.update_position()
                             any_bond_changed = True
@@ -1321,6 +1330,7 @@ class KeyboardMixin:
 
                         new_key = (new_key_id1, new_key_id2)
                         self.data.bonds[new_key] = bond_data
+                        self.rekey_bond_item(bond, new_key)
 
                         bond.update()
 
@@ -1779,6 +1789,17 @@ class SceneQueryMixin:
                 if QLineF(it.pos(), pos).length() <= tol:
                     return it
         return None
+
+    def rekey_bond_item(self, bond_item: Any, new_key: Tuple[int, int]) -> None:
+        """File *bond_item* under *new_key* only, as data.bonds now does.
+
+        A bond re-created in the other direction or with a different stereo
+        gets a new data key; leaving the old key in bond_items made lookups
+        through it index data.bonds with a key that no longer exists.
+        """
+        for key in [k for k, item in self.bond_items.items() if item is bond_item]:
+            del self.bond_items[key]
+        self.bond_items[new_key] = bond_item
 
     def find_bond_between(self, atom1: Any, atom2: Any) -> Any:
         """Return the BondItem connecting two atoms, or None if none exists."""

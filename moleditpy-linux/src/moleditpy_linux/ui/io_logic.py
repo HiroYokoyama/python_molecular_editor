@@ -34,7 +34,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from io import BytesIO
 
 from rdkit import Chem
 from rdkit.Chem import (
@@ -46,12 +45,18 @@ from rdkit.Chem import (
     rdmolops,
 )
 
+from ..utils.sdf_records import read_sdf_records
+from .sdf_record_dialog import SdfRecordDialog
 from ..utils.constants import (
     COVALENT_RADII,
     DUMMY_XYZ_SYMBOLS,
     VALID_ELEMENT_SYMBOLS,
     VERSION,
 )
+
+
+class SdfSelectionCancelled(Exception):
+    """The user closed the SDF record selector without choosing a molecule."""
 
 
 class IOManager:
@@ -150,15 +155,24 @@ class IOManager:
         """Read the molecule from a .mol or .sdf file, whatever its encoding.
 
         The SDF goes through a stream, not a path, so both the encoding
-        fallbacks and the record's data fields survive.
+        fallbacks and the record's data fields survive. An SDF with more than
+        one record asks which to load; raises SdfSelectionCancelled if the
+        user declines.
         """
         if file_path.lower().endswith(".sdf"):
             raw = "".join(self._read_text_lines_flexible(file_path))
-            stream = BytesIO(self.fix_mol_block(raw).encode("utf-8"))
-            supplier = Chem.ForwardSDMolSupplier(stream, removeHs=False)
-            mol = next(supplier, None)
-            if mol is not None:
-                return mol
+            records = read_sdf_records(self.fix_mol_block(raw))
+            if len(records) > 1 and any(r.readable for r in records):
+                parent = self.host if isinstance(self.host, QWidget) else None
+                dialog = SdfRecordDialog(records, parent)
+                if dialog.exec() != QDialog.DialogCode.Accepted:
+                    raise SdfSelectionCancelled()
+                chosen = dialog.selected_record()
+                if chosen is None:
+                    raise SdfSelectionCancelled()
+                return chosen.mol
+            if records and records[0].mol is not None:
+                return records[0].mol
         return Chem.MolFromMolBlock(
             self._load_mol_block_text(file_path), sanitize=True, removeHs=False
         )
@@ -758,19 +772,24 @@ class IOManager:
             if not file_path:
                 return
 
-        if not self.host.edit_actions_manager.clear_all(skip_check=True):
-            return
-
         try:
+            # Read and validate before clearing, so a corrupt or foreign file
+            # leaves the current document in place.
             with open(file_path, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
 
-            if json_data.get("format") != "PME Project":
+            if (
+                not isinstance(json_data, dict)
+                or json_data.get("format") != "PME Project"
+            ):
                 QMessageBox.warning(
                     self.host,
                     "Invalid Format",
                     "This file is not a valid PME Project format.",
                 )
+                return
+
+            if not self.host.edit_actions_manager.clear_all(skip_check=True):
                 return
 
             file_version = json_data.get("version", "1.0")
@@ -959,6 +978,8 @@ class IOManager:
             self.host.init_manager.scene.update_all_items()
             self.host.edit_actions_manager.push_undo_state()
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
+        except SdfSelectionCancelled:
+            self.host.statusBar().showMessage("Import cancelled.")
         except (
             OSError,
             IOError,
@@ -1106,6 +1127,8 @@ class IOManager:
             self.host.set_current_file_path(file_path)
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
+        except SdfSelectionCancelled:
+            self.host.statusBar().showMessage("Open cancelled.")
         except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
             self._report_load_error("3D MOL Load Error", f"3D MOL Load failed: {e}")
 
@@ -1245,12 +1268,12 @@ class IOManager:
             self.host.update_status_message("Opening raw project file cancelled.")
             return
 
-        if not self.host.edit_actions_manager.clear_all(skip_check=True):
-            return
-
         try:
+            # Unpickle before clearing, so an unreadable file keeps the document.
             with open(file_path, "rb") as f:
                 loaded_data = pickle.load(f)
+            if not self.host.edit_actions_manager.clear_all(skip_check=True):
+                return
             self.host.ui_manager.restore_ui_for_editing()
             self.host.state_manager.set_state_from_data(loaded_data)
             self.host.state_manager.reset_undo_stack()

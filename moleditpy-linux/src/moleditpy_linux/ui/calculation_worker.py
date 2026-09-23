@@ -27,6 +27,7 @@ from rdkit.Chem import rdDistGeom, rdForceFieldHelpers, rdGeometry
 from rdkit.DistanceGeometry import DoTriangleSmoothing
 
 from ..utils.constants import DEFAULT_BOND_LENGTH_ANGSTROM
+from ..core.molecular_data import align_ez_to_cip
 
 from .. import OBABEL_AVAILABLE
 
@@ -335,6 +336,7 @@ def _apply_explicit_stereo(
     mol: Chem.Mol, explicit_stereo: Dict[int, Chem.BondStereo]
 ) -> None:
     """Apply explicit stereochemistry to the molecule."""
+    wanted: Dict[int, str] = {}
     for bond_idx, stereo_type in explicit_stereo.items():
         if bond_idx < mol.GetNumBonds():
             bond = mol.GetBondWithIdx(bond_idx)
@@ -369,6 +371,12 @@ def _apply_explicit_stereo(
 
                     bond.SetStereoAtoms(stereo_atom1, stereo_atom2)
                     bond.SetStereo(stereo_type)
+                    wanted[bond_idx] = (
+                        "Z" if stereo_type == Chem.BondStereo.STEREOZ else "E"
+                    )
+    # M  CFG carries CIP E/Z; the heavy neighbors picked above may not be the
+    # CIP-higher ones.
+    align_ez_to_cip(mol, wanted)
 
 
 # Typical X-H distances used when placing hydrogens the 2D sketch never had.

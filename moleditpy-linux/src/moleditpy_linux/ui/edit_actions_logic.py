@@ -397,11 +397,85 @@ class EditActionsManager:
             byte_array = mime_data.data(CLIPBOARD_MIME_TYPE)
             try:
                 fragment_data = json.loads(bytes(byte_array.data()).decode("utf-8"))
-            except (json.JSONDecodeError, UnicodeDecodeError, KeyError):
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     "Error: Invalid clipboard data format"
                 )
                 return
+
+            if not isinstance(fragment_data, dict):
+                raise TypeError("Clipboard fragment must be an object")
+            atoms_data = fragment_data["atoms"]
+            bonds_data = fragment_data["bonds"]
+            if not isinstance(atoms_data, list) or not isinstance(bonds_data, list):
+                raise TypeError("Clipboard atoms and bonds must be lists")
+
+            validated_atoms: List[Dict[str, Any]] = []
+            for atom_data in atoms_data:
+                if not isinstance(atom_data, dict):
+                    raise TypeError("Clipboard atom must be an object")
+                symbol = atom_data["symbol"]
+                rel_pos = atom_data["rel_pos"]
+                charge = atom_data.get("charge", 0)
+                radical = atom_data.get("radical", 0)
+                if not isinstance(symbol, str) or not symbol:
+                    raise ValueError("Clipboard atom symbol must be a string")
+                if not isinstance(rel_pos, list) or len(rel_pos) != 2:
+                    raise ValueError("Clipboard atom position must have two values")
+                rel_x, rel_y = float(rel_pos[0]), float(rel_pos[1])
+                if not math.isfinite(rel_x) or not math.isfinite(rel_y):
+                    raise ValueError("Clipboard atom position must be finite")
+                if (
+                    not isinstance(charge, int)
+                    or isinstance(charge, bool)
+                    or not isinstance(radical, int)
+                    or isinstance(radical, bool)
+                    or radical < 0
+                ):
+                    raise TypeError(
+                        "Clipboard atom charge and radical must be integers"
+                    )
+                validated_atoms.append(
+                    {
+                        "symbol": symbol,
+                        "rel_pos": (rel_x, rel_y),
+                        "charge": charge,
+                        "radical": radical,
+                    }
+                )
+
+            validated_bonds: List[Dict[str, Any]] = []
+            atom_count = len(validated_atoms)
+            for bond_data in bonds_data:
+                if not isinstance(bond_data, dict):
+                    raise TypeError("Clipboard bond must be an object")
+                idx1 = bond_data["idx1"]
+                idx2 = bond_data["idx2"]
+                order = bond_data.get("order", 1)
+                stereo = bond_data.get("stereo", 0)
+                if (
+                    not isinstance(idx1, int)
+                    or isinstance(idx1, bool)
+                    or not isinstance(idx2, int)
+                    or isinstance(idx2, bool)
+                    or idx1 == idx2
+                    or not 0 <= idx1 < atom_count
+                    or not 0 <= idx2 < atom_count
+                ):
+                    raise IndexError("Clipboard bond contains invalid atom indexes")
+                if (
+                    not isinstance(order, (int, float))
+                    or isinstance(order, bool)
+                    or not math.isfinite(order)
+                    or order not in (1, 1.5, 2, 3)
+                    or not isinstance(stereo, int)
+                    or isinstance(stereo, bool)
+                    or stereo not in (0, 1, 2, 3, 4)
+                ):
+                    raise ValueError("Clipboard bond properties are invalid")
+                validated_bonds.append(
+                    {"idx1": idx1, "idx2": idx2, "order": order, "stereo": stereo}
+                )
 
             paste_center_pos = self.host.init_manager.view_2d.mapToScene(
                 self.host.init_manager.view_2d.mapFromGlobal(QCursor.pos())
@@ -409,7 +483,7 @@ class EditActionsManager:
             self.host.init_manager.scene.clearSelection()
 
             new_atoms = []
-            for atom_data in fragment_data["atoms"]:
+            for atom_data in validated_atoms:
                 # rel_pos was serialized as [x, y]; reconstruct as QPointF offset.
                 rp = atom_data["rel_pos"]
                 pos = paste_center_pos + QPointF(float(rp[0]), float(rp[1]))
@@ -423,7 +497,7 @@ class EditActionsManager:
                 new_atoms.append(new_item)
                 new_item.setSelected(True)
 
-            for bond_data in fragment_data["bonds"]:
+            for bond_data in validated_bonds:
                 atom1 = new_atoms[bond_data["idx1"]]
                 atom2 = new_atoms[bond_data["idx2"]]
                 self.host.init_manager.scene.create_bond(
@@ -437,11 +511,21 @@ class EditActionsManager:
 
             self.host.edit_actions_manager.push_undo_state()
             self.host.statusBar().showMessage(  # type: ignore[union-attr]
-                f"Pasted {len(fragment_data['atoms'])} atoms and {len(fragment_data['bonds'])} bonds.",
+                f"Pasted {len(validated_atoms)} atoms and {len(validated_bonds)} bonds.",
                 2000,
             )
 
-        except (AttributeError, RuntimeError, ValueError, TypeError):
+        except (
+            AttributeError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            KeyError,
+            IndexError,
+            OverflowError,
+        ):
+            # KeyError/IndexError: well-formed JSON missing "atoms"/"bonds" or
+            # with a bond index outside the fragment.
             logging.exception("Error during paste operation")
             self.host.statusBar().showMessage("Error during paste operation.")  # type: ignore[union-attr]
         self.host.ui_manager.activate_select_mode()
