@@ -10,6 +10,7 @@ All notable changes to this project are recorded here. The format follows
 * **Opening a corrupt project wiped the open document**: Open Project cleared the canvas before reading the file, so picking a corrupt `.pmeprj`/`.pmeraw` or a non-project file left an empty, untitled document behind the error. The file is now read and validated first; the document is cleared only once it is known to load.
 * **Blank SMILES reported success**: Import SMILES with only spaces reported *Successfully loaded from SMILES.* and added an empty undo step, because RDKit parses an empty string as an empty molecule. It now reports that the string was empty.
 * **Plugins that failed to import disappeared**: a plugin with a syntax error or a missing dependency was left out of the Plugin Manager altogether, so nothing showed why it was missing, and the Plugin Installer listed it as not installed. It is now listed with the status *Error (Load): …* (in red) and its metadata, and its half-imported module is removed from `sys.modules`.
+* **Export to an unwritable location**: SVG export said *2D view exported to …* even when the file could not be created (the painter failed silently), and a permission or disk error during STL, color STL or 3D PNG export escaped as an unhandled exception. Both are now reported in the status bar.
 
 ---
 

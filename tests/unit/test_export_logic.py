@@ -1054,3 +1054,51 @@ def test_export_obj_mtl_reports_write_failure(mock_parser_host, tmp_path):
         "Error exporting OBJ/MTL" in str(args)
         for args, _ in exporter.statusBar().showMessage.call_args_list
     )
+
+
+def test_export_stl_permission_error_reported(mock_parser_host, tmp_path):
+    """A write refused by the OS is reported, not raised out of the slot."""
+    exporter = DummyExport(mock_parser_host)
+    mesh = MagicMock()
+    mesh.n_points = 10
+    mesh.save.side_effect = PermissionError("read-only")
+    exporter.export_from_3d_view_no_color = MagicMock(return_value=mesh)
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(tmp_path / "out.stl"), ""),
+    ):
+        exporter.export_stl()
+    assert any(
+        "Error exporting STL: read-only" in m for m in _status_messages(mock_parser_host)
+    )
+
+
+def test_export_2d_svg_unwritable_path_is_not_reported_as_exported(
+    mock_parser_host, tmp_path
+):
+    """QPainter.begin() fails silently on an unopenable file; say so."""
+    exporter = DummyExport(mock_parser_host)
+    exporter.data.add_atom("C", QPointF(0, 0))
+    mol_item = MagicMock(spec=AtomItem)
+    mol_item.__class__ = AtomItem
+    mol_item.isVisible.return_value = True
+    mol_item.sceneBoundingRect.return_value = QRectF(0, 0, 80, 60)
+    exporter.scene.items.return_value = [mol_item]
+
+    target = tmp_path / "no_such_dir" / "out.svg"
+    with (
+        patch(
+            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(str(target), ""),
+        ),
+        patch(
+            "PyQt6.QtWidgets.QMessageBox.question",
+            return_value=QMessageBox.StandardButton.No,
+        ),
+    ):
+        exporter.export_2d_svg()
+
+    messages = _status_messages(mock_parser_host)
+    assert not any("exported to" in m for m in messages)
+    assert any("Failed to save SVG" in m for m in messages)
+    exporter.scene.render.assert_not_called()
