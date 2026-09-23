@@ -60,6 +60,22 @@ def test_placement_1_neighbor(scene):
     assert offset.y() == pytest.approx(17.32, abs=0.01)
 
 
+def test_placement_1_heavy_neighbor_ignores_explicit_h(scene):
+    """With an explicit H listed first, place relative to the heavy neighbor.
+
+    bonds[0] was used unconditionally, so the H's direction set the angle.
+    """
+    start_atom = MockAtom(QPointF(100, 100))
+    hydrogen = MockAtom(QPointF(100, 80), symbol="H")
+    carbon = MockAtom(QPointF(80, 100))
+    start_atom.bonds = [MockBond(start_atom, hydrogen), MockBond(start_atom, carbon)]
+
+    offset = scene._calculate_new_atom_position(start_atom, L)
+    # Same geometry as test_placement_1_neighbor: vector from the carbon.
+    assert offset.x() == pytest.approx(10.0)
+    assert offset.y() == pytest.approx(17.32, abs=0.01)
+
+
 def test_placement_3_neighbors_balanced(scene):
     """Three balanced neighbors: sum is near zero, should use fallback (45 deg offset)."""
     start_atom = MockAtom(QPointF(0, 0))

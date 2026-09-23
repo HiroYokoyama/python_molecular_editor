@@ -952,8 +952,14 @@ class KeyboardMixin:
             new_pos_offset = QPointF(0, -bond_len)
 
         elif num_non_H_neighbors == 1:
-            # One bond: ~120/60 degree angle
-            bond = start_atom.bonds[0]
+            # One bond: ~120/60 degree angle. Use the bond to the heavy
+            # neighbor: bonds[0] may be an explicit H, which is ignored above.
+            bond = next(
+                b
+                for b in start_atom.bonds
+                if getattr(b.atom1 if b.atom2 is start_atom else b.atom2, "symbol", "")
+                != "H"
+            )
             other_atom = bond.atom1 if bond.atom2 is start_atom else bond.atom2
             existing_bond_vector = start_pos - other_atom.pos()
 
