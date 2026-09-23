@@ -15,7 +15,6 @@ from typing import Any, Dict, Optional
 
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QColorDialog,
     QComboBox,
     QHBoxLayout,
@@ -51,13 +50,11 @@ class SettingsLabelsTab(SettingsTabBase):
         super().__init__(default_settings, parent)
         self.colors: Dict[str, str] = {}
         self.color_buttons: Dict[str, QPushButton] = {}
-        self.chirality_check_checkbox: Any = None
-        self.opt_check_checkbox: Any = None
         self._setup_ui()
         self.update_ui(default_settings)
 
     def _setup_ui(self) -> None:
-        """Construct the color rows, appearance sliders and chirality option."""
+        """Construct the color rows and the shared appearance controls."""
         form_layout = self._create_form_layout()
 
         form_layout.addRow(QLabel("<b>Label Colors</b>"))
@@ -107,21 +104,6 @@ class SettingsLabelsTab(SettingsTabBase):
         style_widget = QWidget()
         style_widget.setLayout(style_row)
         form_layout.addRow("Label Font Style:", style_widget)
-
-        form_layout.addRow(self._create_separator())
-        form_layout.addRow(QLabel("<b>Stereo Check (R/S, E/Z)</b>"))
-        self.chirality_check_checkbox = QCheckBox()
-        self.chirality_check_checkbox.setToolTip(
-            "After Convert 2D to 3D, compare every stereocenter drawn with a\n"
-            "wedge or hash, and every E/Z-labelled double bond, against the 3D\n"
-            "result, and warn if any differs."
-        )
-        form_layout.addRow("Check After 3D Conversion:", self.chirality_check_checkbox)
-        self.opt_check_checkbox = QCheckBox()
-        self.opt_check_checkbox.setToolTip(
-            "Run the same check after Optimize 3D. Off by default."
-        )
-        form_layout.addRow("Check After 3D Optimization:", self.opt_check_checkbox)
 
     @staticmethod
     def _make_style_button(
@@ -173,12 +155,6 @@ class SettingsLabelsTab(SettingsTabBase):
         self.font_family_combo.setCurrentIndex(max(index, 0))
         self.font_bold_btn.setChecked(shared["bold"])
         self.font_italic_btn.setChecked(shared["italic"])
-        self.chirality_check_checkbox.setChecked(
-            settings_dict.get("check_stereo_after_conversion", True)
-        )
-        self.opt_check_checkbox.setChecked(
-            settings_dict.get("check_stereo_after_optimization", False)
-        )
 
     def get_settings(self) -> dict[str, Any]:
         """Collect the label settings into a dictionary."""
@@ -189,6 +165,4 @@ class SettingsLabelsTab(SettingsTabBase):
             FONT_FAMILY_KEY: self.font_family_combo.currentData(),
             FONT_BOLD_KEY: self.font_bold_btn.isChecked(),
             FONT_ITALIC_KEY: self.font_italic_btn.isChecked(),
-            "check_stereo_after_conversion": self.chirality_check_checkbox.isChecked(),
-            "check_stereo_after_optimization": self.opt_check_checkbox.isChecked(),
         }

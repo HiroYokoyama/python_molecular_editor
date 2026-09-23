@@ -227,7 +227,7 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 *   **Open Babel Mode**: Uses Open Babel's `make3D()` coordinate generator run in a secure, isolated background subprocess to prevent application hangs or crashes.
 *   **Direct Mode**: Bypasses 3D conformer embedding to retain your exact 2D layout. Atoms are placed on the $Z = 0.0$ plane, with missing hydrogen atoms added geometrically. Stereochemistry is preserved by adding offset Z-coordinates ($Z = \pm 1.5$ Å) to wedge/dash atoms.
 
-**Stereo Check:** After each conversion, every stereocenter you drew with a wedge or hash (R/S) and every double bond you labelled E or Z is compared with the 3D result. If any of them comes out inverted or lost, a **Stereochemistry Check** window lists each one with its drawn and 3D configuration. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral and E/Z labels, with the wrong ones in red and the correct ones in the usual color; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Flip the listed stereocenters and double bonds manually in the 3D structure. The check can be turned off in `Settings` \> `Settings...` \> **3D Labels** (Check After 3D Conversion). It can also be run after `Optimize 3D` (Check After 3D Optimization, off by default).
+**Stereo Check:** After each conversion, every stereocenter you drew with a wedge or hash (R/S) and every double bond you labelled E or Z is compared with the 3D result. If any of them comes out inverted or lost, a **Stereochemistry Check** window lists each one with its drawn and 3D configuration. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral and E/Z labels, with the wrong ones in red and the correct ones in the usual color; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Flip the listed stereocenters and double bonds manually in the 3D structure. The check can be turned off in `Settings` \> `Settings...` \> **3D Scene** (Check After 3D Conversion). It can also be run after `Optimize 3D` (Check After 3D Optimization, off by default).
 
 ### 5.2. 3D Structure Optimization
 
@@ -458,13 +458,13 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
     * Mouse rotation sensitivity (speed multiplier for 3D view rotation)
     * Real-time 3D Drag (update the structure continuously while dragging an atom or group; turn it off to only apply the move on mouse release). Structures larger than 300 atoms always use release-only updates, since redrawing them every frame would be slower than the drag itself.
     * Rotate Groups: Follow Mouse (when on, right-drag rotation must start on an atom of the group and that atom follows the cursor; when off — the default — right-dragging anywhere rotates the group)
+    * **Stereo Check (R/S, E/Z):** Check After 3D Conversion (see 5.1; on by default) and Check After 3D Optimization (off by default)
 * **3D Labels Tab:**
     * **Label Colors:** a color for each kind of 3D label, in three groups:
         * Atom Info — Index, Original ID, XYZ Index, Element Symbol, Coordinates (the `View` \> `3D Atom Info Display` labels)
         * Stereo — Chiral (R/S), E/Z
         * Tool — Selection (atoms picked in the measurement, alignment and editing dialogs), Measurement, Constraint
     * **Label Appearance** (shared by all labels): background color and opacity (opacity 0 makes the background transparent), font family (Arial / Courier / Times), font size (default 18 pt) and bold / italic
-    * **Stereo Check (R/S, E/Z):** Check After 3D Conversion (see 5.1; on by default) and Check After 3D Optimization (off by default)
 * **Display Style Tabs (Ball & Stick, CPK, Wireframe, Stick):**
     * Atom size/radius scale
     * Bond radius

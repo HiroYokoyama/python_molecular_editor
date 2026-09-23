@@ -224,7 +224,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 *   **Open Babel モード**: Open Babel の `make3D()` 座標ジェネレーターを使用します。プログラムのハングアップやクラッシュを防ぐため、バックグラウンドの分離されたサブプロセスで安全に実行されます。
 *   **Direct モード**: 3Dコンフォーマー生成を行わず、2Dキャンバスの配置をそのまま保持します。重原子は $Z = 0.0$ 平面に配置され、不足している水素原子が幾何学的に追加されます。立体化学は、Wedge/Dash結合を持つ原子にZ座標のオフセット ($Z = \pm 1.5$ Å) を加えることで再現されます。
 
-**立体化学チェック:** 変換のたびに、Wedge/Dash で描いたすべての不斉中心 (R/S) と E/Z ラベルを付けたすべての二重結合を 3D 構造と比較します。反転または消失したものがある場合は **Stereochemistry Check** ウィンドウが開き、それぞれについて 2D で描いた配置と 3D での配置を一覧表示します。このウィンドウは常に手前に表示されますがメインウィンドウの操作は妨げず、開いている間は 3D ビューに不斉ラベルと E/Z ラベルを表示し、誤ったものを赤、正しいものを通常の色で示します。閉じると `View` \> `Show Chiral Labels` の設定に戻ります。立体化学を確実には再現しない Direct モードで最も起こりやすい現象です。一覧の不斉中心と二重結合は 3D 構造上で手動で反転してください。このチェックは `Settings` \> `Settings...` \> **3D Labels** (Check After 3D Conversion) でオフにできます。`Optimize 3D` の後にも実行できます (Check After 3D Optimization、既定でオフ)。
+**立体化学チェック:** 変換のたびに、Wedge/Dash で描いたすべての不斉中心 (R/S) と E/Z ラベルを付けたすべての二重結合を 3D 構造と比較します。反転または消失したものがある場合は **Stereochemistry Check** ウィンドウが開き、それぞれについて 2D で描いた配置と 3D での配置を一覧表示します。このウィンドウは常に手前に表示されますがメインウィンドウの操作は妨げず、開いている間は 3D ビューに不斉ラベルと E/Z ラベルを表示し、誤ったものを赤、正しいものを通常の色で示します。閉じると `View` \> `Show Chiral Labels` の設定に戻ります。立体化学を確実には再現しない Direct モードで最も起こりやすい現象です。一覧の不斉中心と二重結合は 3D 構造上で手動で反転してください。このチェックは `Settings` \> `Settings...` \> **3D Scene** (Check After 3D Conversion) でオフにできます。`Optimize 3D` の後にも実行できます (Check After 3D Optimization、既定でオフ)。
 
 ### 5.2. 3D 構造の最適化
 
@@ -443,13 +443,13 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
       * マウスの回転感度 (3D ビュー回転速度の倍率)
       * リアルタイム 3D ドラッグ (原子やグループのドラッグ中に構造を随時更新します。オフにするとマウスを離した時点で移動が適用されます)。300 原子を超える構造では、毎フレームの再描画がドラッグ自体より遅くなるため、常にマウスを離した時点での更新になります。
       * グループ回転: マウス追従 (オンの場合、右ドラッグによる回転はグループ内の原子上から開始する必要があり、その原子がカーソルに追従します。オフ (既定) の場合は画面上のどこで右ドラッグしてもグループが回転します)
+      * **Stereo Check (R/S, E/Z):** Check After 3D Conversion (5.1 を参照、既定でオン)、Check After 3D Optimization (既定でオフ)
   * **3D Labels タブ:**
       * **Label Colors:** 3D ラベルの種類ごとの色。3 つのグループに分かれています:
           * Atom Info — Index、Original ID、XYZ Index、Element Symbol、Coordinates (`View` \> `3D Atom Info Display` のラベル)
           * Stereo — Chiral (R/S)、E/Z
           * Tool — Selection (測定・整列・編集ダイアログで選択した原子)、Measurement、Constraint
       * **Label Appearance** (すべてのラベルに共通): 背景色と不透明度 (不透明度 0 で背景が透明になります)、フォント (Arial / Courier / Times)、フォントサイズ (既定 18 pt)、太字 / 斜体
-      * **Stereo Check (R/S, E/Z):** Check After 3D Conversion (5.1 を参照、既定でオン)、Check After 3D Optimization (既定でオフ)
   * **各表示スタイル (Ball & Stick, CPK, Wireframe, Stick) タブ:**
       * 原子サイズ/半径のスケール
       * 結合半径

@@ -39,6 +39,8 @@ class Settings3DSceneTab(SettingsTabBase):
         self.projection_combo: Any = None
         self.realtime_drag_checkbox: Any = None
         self.rotate_group_follow_mouse_checkbox: Any = None
+        self.stereo_check_conversion_checkbox: Any = None
+        self.stereo_check_optimization_checkbox: Any = None
         self.current_bg_color = default_settings["background_color"]
         self._setup_ui()
 
@@ -112,6 +114,25 @@ class Settings3DSceneTab(SettingsTabBase):
             "Rotate Groups: Follow Mouse:", self.rotate_group_follow_mouse_checkbox
         )
 
+        form_layout.addRow(self._create_separator())
+        form_layout.addRow(QLabel("<b>Stereo Check (R/S, E/Z)</b>"))
+        self.stereo_check_conversion_checkbox = QCheckBox()
+        self.stereo_check_conversion_checkbox.setToolTip(
+            "After Convert 2D to 3D, compare every stereocenter drawn with a\n"
+            "wedge or hash, and every E/Z-labelled double bond, against the 3D\n"
+            "result, and warn if any differs."
+        )
+        form_layout.addRow(
+            "Check After 3D Conversion:", self.stereo_check_conversion_checkbox
+        )
+        self.stereo_check_optimization_checkbox = QCheckBox()
+        self.stereo_check_optimization_checkbox.setToolTip(
+            "Run the same check after Optimize 3D. Off by default."
+        )
+        form_layout.addRow(
+            "Check After 3D Optimization:", self.stereo_check_optimization_checkbox
+        )
+
     def _select_color(self) -> None:
         """Open color dialog to pick 3D viewport background color."""
         color = QColorDialog.getColor(QColor(self.current_bg_color), self)
@@ -156,6 +177,12 @@ class Settings3DSceneTab(SettingsTabBase):
         self.rotate_group_follow_mouse_checkbox.setChecked(
             settings_dict.get("rotate_group_follow_mouse", False)
         )
+        self.stereo_check_conversion_checkbox.setChecked(
+            settings_dict.get("check_stereo_after_conversion", True)
+        )
+        self.stereo_check_optimization_checkbox.setChecked(
+            settings_dict.get("check_stereo_after_optimization", False)
+        )
 
     def get_settings(self) -> dict[str, Any]:
         """Collect current 3D scene options as a dictionary."""
@@ -170,6 +197,12 @@ class Settings3DSceneTab(SettingsTabBase):
             "mouse_rotation_sensitivity": self.rotation_sens_slider.value() / 100.0,
             "realtime_3d_drag": self.realtime_drag_checkbox.isChecked(),
             "rotate_group_follow_mouse": self.rotate_group_follow_mouse_checkbox.isChecked(),
+            "check_stereo_after_conversion": (
+                self.stereo_check_conversion_checkbox.isChecked()
+            ),
+            "check_stereo_after_optimization": (
+                self.stereo_check_optimization_checkbox.isChecked()
+            ),
         }
 
 
