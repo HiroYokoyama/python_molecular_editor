@@ -1094,7 +1094,7 @@ class View3DManager:
         if getattr(self, "show_chiral_labels", False):
             try:
                 # If we drew a kekulized molecule use it for E/Z detection so
-                # E/Z labels reflect Kekul�E�E�� rendering; pass mol_to_draw as the
+                # E/Z labels reflect Kekulé rendering; pass mol_to_draw as the
                 # molecule to scan for bond stereochemistry.
                 self.show_ez_labels_3d(mol)
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
@@ -1306,7 +1306,7 @@ class View3DManager:
 
         if checked:
             self.host.statusBar().showMessage(  # type: ignore[union-attr]
-                "Chiral labels: will be (re)computed after ConvertↁED."
+                "Chiral labels: will be (re)computed after Convert 2D to 3D."
             )
         else:
             self.host.statusBar().showMessage("Chiral labels disabled.")  # type: ignore[union-attr]
