@@ -106,6 +106,40 @@ class TestLoadUserTemplates:
         dlg, _mw = make_dialog()
         assert [t["name"] for t in dlg.user_templates] == ["Good"]
 
+    def test_undecodable_file_does_not_hide_later_templates(
+        self, make_dialog, tmp_path
+    ):
+        """A non-UTF-8 file used to abort the scan, dropping every later file."""
+        (tmp_path / "user-templates").mkdir()
+        (tmp_path / "user-templates" / "a_bad.pmetmplt").write_bytes(bytes([0xFF, 0xFE, 0x7B]))
+        (tmp_path / "user-templates" / "b_list.pmetmplt").write_text("[1, 2]")
+        _write_template(tmp_path, "Zed")
+        dlg, _mw = make_dialog()
+        assert [t["name"] for t in dlg.user_templates] == ["Zed"]
+
+    def test_templates_listed_in_file_name_order(self, make_dialog, tmp_path):
+        for name in ("Charlie", "Alpha", "Bravo"):
+            _write_template(tmp_path, name)
+        dlg, _mw = make_dialog()
+        assert [t["name"] for t in dlg.user_templates] == ["Alpha", "Bravo", "Charlie"]
+
+
+@pytest.mark.parametrize(
+    "name,stem",
+    [
+        ("My Frag", "My_Frag"),
+        ("Ring/Chain", "Ring_Chain"),
+        ("../escape", "_escape"),
+        (r"C:\evil", "C__evil"),
+        ('a*b?c"d<e>f|g', "a_b_c_d_e_f_g"),
+        ("...", "template"),
+    ],
+)
+def test_template_file_stem_stays_inside_folder(name, stem):
+    from moleditpy.ui.user_template_dialog import template_file_stem
+
+    assert template_file_stem(name) == stem
+
 
 class TestConvertStructureToTemplate:
     def test_converts_atoms_and_bonds(self, make_dialog):
