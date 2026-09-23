@@ -8,6 +8,9 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 * **An E/Z label inverted a wedged stereocenter in 3D**: When any double bond carried an explicit E/Z label, the 2D layout sent to 3D generation was rebuilt from scratch, but the wedge and hash bonds were carried over unchanged onto the new coordinates, where they could encode the opposite configuration. The same drawing converted to one enantiomer without the label and the other with it. Wedges are now read into chiral tags first and re-drawn on the new layout.
+### Changed
+* **Plugin API type hints** (annotation only, no behavior change for plugins): `PluginContext.current_mol` / `current_molecule`, `draw_molecule_3d`, `show_xyz_data` and the `register_optimization_method` / `register_3d_style` callback signatures now name `rdkit.Chem.Mol` instead of `Any`. RDKit is imported for type checking only, so importing `plugin_interface` still does not require it.
+* **Narrower exception handling in `PluginContext`**: `mark_project_modified` and `to_xyz_block` caught every `Exception`, which also hid programming errors inside the host; they now catch only the attribute/runtime/value errors those calls can raise.
 
 ---
 

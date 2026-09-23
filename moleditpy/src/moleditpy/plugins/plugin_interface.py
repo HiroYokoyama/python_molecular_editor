@@ -10,8 +10,14 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    # Annotation-only: plugin test suites import this module without RDKit.
+    from rdkit import Chem
 
 
 class PluginContext:
@@ -196,7 +202,7 @@ class PluginContext:
         self.enter_3d_viewer_mode()
 
     @property
-    def current_mol(self) -> Any:
+    def current_mol(self) -> Optional[Chem.Mol]:
         """
         Get or set the current molecule (RDKit Mol object). Shortcut for current_molecule.
         """
@@ -206,7 +212,7 @@ class PluginContext:
         return None
 
     @current_mol.setter
-    def current_mol(self, mol: Any) -> None:
+    def current_mol(self, mol: Optional[Chem.Mol]) -> None:
         """Set active RDKit molecule and redraw 3D view."""
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
@@ -214,12 +220,12 @@ class PluginContext:
             mw.view_3d_manager.draw_molecule_3d(mol)
 
     @property
-    def current_molecule(self) -> Any:
+    def current_molecule(self) -> Optional[Chem.Mol]:
         """Alias for current_mol for backward compatibility."""
         return self.current_mol
 
     @current_molecule.setter
-    def current_molecule(self, mol: Any) -> None:
+    def current_molecule(self, mol: Optional[Chem.Mol]) -> None:
         """Set active molecule via current_mol setter."""
         self.current_mol = mol
 
@@ -243,7 +249,7 @@ class PluginContext:
         mw = self.get_main_window()
         return mw.init_manager.scene if mw and hasattr(mw, "init_manager") else None
 
-    def draw_molecule_3d(self, mol: Any) -> None:
+    def draw_molecule_3d(self, mol: Chem.Mol) -> None:
         """Draw a molecule in the 3D scene (Direct manager call)."""
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
@@ -276,7 +282,7 @@ class PluginContext:
         self._manager.register_export_action(self._plugin_name, label, callback)
 
     def register_optimization_method(
-        self, method_name: str, callback: Callable[[Any], bool]
+        self, method_name: str, callback: Callable[[Chem.Mol], bool]
     ) -> None:
         """
         Register a custom 3D optimization method.
@@ -347,7 +353,7 @@ class PluginContext:
         )
 
     def register_3d_style(
-        self, style_name: str, callback: Callable[[Any, Any], None]
+        self, style_name: str, callback: Callable[[Any, Chem.Mol], None]
     ) -> None:
         """
         Register a custom 3D rendering style.
@@ -470,7 +476,7 @@ class PluginContext:
                 fn = getattr(mw.state_manager, "update_window_title", None)
                 if fn:
                     fn()
-            except Exception:
+            except (AttributeError, RuntimeError):
                 logging.debug("mark_project_modified failed", exc_info=True)
 
     def refresh_ui(self) -> None:
@@ -573,7 +579,7 @@ class PluginContext:
 
     def show_xyz_data(
         self, xyz_text: str, source_name: str = "XYZ data"
-    ) -> Optional[Any]:
+    ) -> Optional[Chem.Mol]:
         """Display XYZ text in the 3D viewer and return the loaded RDKit Mol."""
         mw = self.get_main_window()
         if mw and hasattr(mw, "io_manager"):
@@ -601,7 +607,7 @@ class PluginContext:
                 )
 
             return "\n".join(xyz_lines)
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError):
             logging.debug("to_xyz_block failed", exc_info=True)
             return None
 
