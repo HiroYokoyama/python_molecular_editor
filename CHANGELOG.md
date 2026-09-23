@@ -6,7 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
-
+### Fixed
+* **An E/Z label inverted a wedged stereocenter in 3D**: When any double bond carried an explicit E/Z label, the 2D layout sent to 3D generation was rebuilt from scratch, but the wedge and hash bonds were carried over unchanged onto the new coordinates, where they could encode the opposite configuration. The same drawing converted to one enantiomer without the label and the other with it. Wedges are now read into chiral tags first and re-drawn on the new layout.
 
 ---
 

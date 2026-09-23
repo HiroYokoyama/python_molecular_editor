@@ -498,8 +498,19 @@ class ComputeManager:
             # the layout is rebuilt from the stereo. These coordinates only seed
             # 3D generation; the 2D canvas keeps the user's own layout.
             planar = Chem.Mol(stereo_mol)
+            # A wedge only means something against the coordinates it was drawn
+            # on. Read it into a chiral tag first, then wedge afresh on the new
+            # layout; a wedge carried over as-is can invert the stereocenter.
+            Chem.AssignChiralTypesFromBondDirs(planar)
+            for bond in planar.GetBonds():
+                if bond.GetBondDir() in (
+                    Chem.BondDir.BEGINWEDGE,
+                    Chem.BondDir.BEGINDASH,
+                ):
+                    bond.SetBondDir(Chem.BondDir.NONE)
             planar.RemoveAllConformers()
             rdDepictor.Compute2DCoords(planar)
+            Chem.WedgeMolBonds(planar, planar.GetConformer())
             return str(Chem.MolToMolBlock(planar, includeStereo=True))
         except (RuntimeError, ValueError) as e:
             logging.warning("E/Z-consistent 2D layout failed: %s", e)
