@@ -444,11 +444,11 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
       * リアルタイム 3D ドラッグ (原子やグループのドラッグ中に構造を随時更新します。オフにするとマウスを離した時点で移動が適用されます)。300 原子を超える構造では、毎フレームの再描画がドラッグ自体より遅くなるため、常にマウスを離した時点での更新になります。
       * グループ回転: マウス追従 (オンの場合、右ドラッグによる回転はグループ内の原子上から開始する必要があり、その原子がカーソルに追従します。オフ (既定) の場合は画面上のどこで右ドラッグしてもグループが回転します)
   * **3D Labels タブ:**
-      * **Label Colors and Sizes:** 3D ラベルの種類ごとの色とフォントサイズ (pt)。3 つのグループに分かれています:
+      * **Label Colors:** 3D ラベルの種類ごとの色。3 つのグループに分かれています:
           * Atom Info — Index、Original ID、XYZ Index、Element Symbol、Coordinates (`View` \> `3D Atom Info Display` のラベル)
           * Stereo — Chiral (R/S)、E/Z
           * Tool — Selection (測定・整列・編集ダイアログで選択した原子)、Measurement、Constraint
-      * **Label Appearance:** すべてのラベルに共通の背景色と不透明度 (不透明度 0 で背景が透明になります)、フォント (Arial / Courier / Times)、太字 / 斜体
+      * **Label Appearance** (すべてのラベルに共通): 背景色と不透明度 (不透明度 0 で背景が透明になります)、フォント (Arial / Courier / Times)、フォントサイズ (既定 18 pt)、太字 / 斜体
       * **Chirality Check:** Check Chirality After 3D Conversion (5.1 を参照、既定でオン)
   * **各表示スタイル (Ball & Stick, CPK, Wireframe, Stick) タブ:**
       * 原子サイズ/半径のスケール

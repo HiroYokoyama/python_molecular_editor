@@ -459,11 +459,11 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
     * Real-time 3D Drag (update the structure continuously while dragging an atom or group; turn it off to only apply the move on mouse release). Structures larger than 300 atoms always use release-only updates, since redrawing them every frame would be slower than the drag itself.
     * Rotate Groups: Follow Mouse (when on, right-drag rotation must start on an atom of the group and that atom follows the cursor; when off — the default — right-dragging anywhere rotates the group)
 * **3D Labels Tab:**
-    * **Label Colors and Sizes:** a color and font size (pt) for each kind of 3D label, in three groups:
+    * **Label Colors:** a color for each kind of 3D label, in three groups:
         * Atom Info — Index, Original ID, XYZ Index, Element Symbol, Coordinates (the `View` \> `3D Atom Info Display` labels)
         * Stereo — Chiral (R/S), E/Z
         * Tool — Selection (atoms picked in the measurement, alignment and editing dialogs), Measurement, Constraint
-    * **Label Appearance:** background color and opacity shared by all labels (opacity 0 makes the background transparent), font family (Arial / Courier / Times) and bold / italic
+    * **Label Appearance** (shared by all labels): background color and opacity (opacity 0 makes the background transparent), font family (Arial / Courier / Times), font size (default 18 pt) and bold / italic
     * **Chirality Check:** Check Chirality After 3D Conversion (see 5.1; on by default)
 * **Display Style Tabs (Ball & Stick, CPK, Wireframe, Stick):**
     * Atom size/radius scale
