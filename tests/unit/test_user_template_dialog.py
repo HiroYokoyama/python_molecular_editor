@@ -111,7 +111,9 @@ class TestLoadUserTemplates:
     ):
         """A non-UTF-8 file used to abort the scan, dropping every later file."""
         (tmp_path / "user-templates").mkdir()
-        (tmp_path / "user-templates" / "a_bad.pmetmplt").write_bytes(bytes([0xFF, 0xFE, 0x7B]))
+        (tmp_path / "user-templates" / "a_bad.pmetmplt").write_bytes(
+            bytes([0xFF, 0xFE, 0x7B])
+        )
         (tmp_path / "user-templates" / "b_list.pmetmplt").write_text("[1, 2]")
         _write_template(tmp_path, "Zed")
         dlg, _mw = make_dialog()
