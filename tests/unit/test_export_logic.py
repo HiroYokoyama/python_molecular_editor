@@ -1069,7 +1069,8 @@ def test_export_stl_permission_error_reported(mock_parser_host, tmp_path):
     ):
         exporter.export_stl()
     assert any(
-        "Error exporting STL: read-only" in m for m in _status_messages(mock_parser_host)
+        "Error exporting STL: read-only" in m
+        for m in _status_messages(mock_parser_host)
     )
 
 
