@@ -1228,7 +1228,8 @@ class View3DManager:
                 except (AttributeError, RuntimeError, TypeError) as e:
                     logging.warning("Failed to remove EZ labels: %s", e)
 
-        pts, labels = [], []
+        pts: List[Any] = []
+        labels: List[str] = []
         wrong_pts: List[Any] = []
         wrong_labels: List[str] = []
         wrong = getattr(self, "ez_mismatches", {}) or {}
@@ -1262,7 +1263,7 @@ class View3DManager:
                 # The check's actual 3D label; "?" only if E/Z was lost entirely.
                 wrong_pts.append(center_pos)
                 wrong_labels.append(label or wrong[idx])
-            else:
+            elif label is not None:
                 pts.append(center_pos)
                 labels.append(label)
 

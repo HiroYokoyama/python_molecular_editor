@@ -907,6 +907,7 @@ class KeyboardMixin:
     key_to_symbol_map_shift: Any
     mode: Any
     reinitialize_items: Any
+    rekey_bond_item: Any
     update_all_items: Any
     update_bond_stereo: Any
     views: Any
