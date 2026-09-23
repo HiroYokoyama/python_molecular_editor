@@ -397,3 +397,46 @@ def test_purge_on_quit_is_connected_once(mock_parser_host):
         scene.reinitialize_items()
         scene.reinitialize_items()
     assert signal.connect.call_count == 1
+
+
+def test_keyboard_hash_flip_keeps_bond_items_keyed_like_the_data(mock_parser_host):
+    """D on a hash flips it, as W does for a wedge; keys stay in sync."""
+    scene = setup_scene_with_view(mock_parser_host)
+    a = scene.atom_items[scene.create_atom("C", QPointF(0, 0))]
+    b = scene.atom_items[scene.create_atom("C", QPointF(50, 0))]
+    scene.create_bond(a, b, bond_order=1, bond_stereo=2)
+    bond = scene.find_bond_between(a, b)
+
+    event = MagicMock()
+    event.key.return_value = Qt.Key.Key_D
+    event.modifiers.return_value = Qt.KeyboardModifier.NoModifier
+    with (
+        patch.object(MoleculeScene, "find_atom_near", return_value=None),
+        patch.object(MoleculeScene, "itemAt", return_value=bond),
+    ):
+        scene.keyPressEvent(event)
+    assert (b.atom_id, a.atom_id) in scene.data.bonds
+    assert _keys_in_sync(scene)
+
+
+@patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
+@patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
+@patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
+def test_clicking_a_bond_with_another_order_keeps_keys_in_sync(
+    mock_drag, mock_release, mock_press, mock_parser_host
+):
+    """Clicking a single bond in double-bond mode re-creates it as double."""
+    scene = setup_scene_with_view(mock_parser_host)
+    a = scene.atom_items[scene.create_atom("C", QPointF(0, 0))]
+    b = scene.atom_items[scene.create_atom("C", QPointF(50, 0))]
+    scene.create_bond(a, b, bond_order=1, bond_stereo=0)
+    bond = scene.find_bond_between(a, b)
+    scene.mode, scene.bond_order, scene.bond_stereo = "bond_2_0", 2, 0
+
+    with patch.object(MoleculeScene, "itemAt", return_value=bond):
+        event = create_mock_event(QPointF(25, 0))
+        scene.mousePressEvent(event)
+        scene.mouseReleaseEvent(event)
+
+    assert bond.order == 2
+    assert _keys_in_sync(scene)

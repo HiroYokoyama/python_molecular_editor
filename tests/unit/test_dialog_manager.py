@@ -697,3 +697,18 @@ class TestOpenConstrainedOptimizationDialog:
         dm.host.edit_3d_manager.remove_dialog_from_list.assert_called_once_with(
             instance
         )
+
+
+def test_open_move_selected_atoms_dialog(qapp):
+    """Move Selected Atoms opens modeless with its own accepted message."""
+    host = DummyHost()
+    dlgm = DialogManager(host)
+    with patch("moleditpy.ui.dialog_logic.MoveSelectedAtomsDialog") as MockDlg:
+        instance = MagicMock()
+        MockDlg.return_value = instance
+        cbs = []
+        instance.accepted.connect.side_effect = cbs.append
+        dlgm.open_move_selected_atoms_dialog()
+    instance.show.assert_called_once()
+    cbs[0]()
+    assert "Selected atoms" in host.statusBar_mock.showMessage.call_args[0][0]

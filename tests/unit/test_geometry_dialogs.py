@@ -798,3 +798,38 @@ def test_live_slider_sync_ignores_non_finite_input(bond_dlg, text):
     dlg.distance_slider.setValue(154)
     dlg._sync_input_to_slider(text, dlg.distance_slider, 100.0)
     assert dlg.distance_slider.value() == 154
+
+
+class TestStalePositionGuards:
+    """_drop_stale_positions / _update_molecule_geometry on unreadable conformers."""
+
+    def test_unreadable_conformer_is_left_alone(self, angle_dlg):
+        dlg, mol, _mw = angle_dlg
+        for idx in (2, 0, 1):
+            dlg.on_atom_picked(idx)
+        baseline = dlg._baseline_positions.copy()
+        with patch.object(dlg, "mol") as broken:
+            broken.GetConformer.side_effect = RuntimeError("no conformer")
+            dlg._drop_stale_positions()
+        assert np.array_equal(dlg._baseline_positions, baseline)
+
+    def test_non_2d_positions_are_ignored(self, angle_dlg):
+        dlg, _mol, _mw = angle_dlg
+        dlg._snapshot_positions = np.zeros((3, 3))
+        with patch.object(dlg, "mol") as odd:
+            odd.GetConformer.return_value.GetPositions.return_value = np.zeros(3)
+            dlg._drop_stale_positions()
+        assert np.array_equal(dlg._snapshot_positions, np.zeros((3, 3)))
+
+    def test_write_without_readable_conformer_forgets_last_write(self, angle_dlg):
+        dlg, _mol, _mw = angle_dlg
+        dlg._last_written_positions = np.zeros((1, 3))
+        with (
+            patch(
+                "moleditpy.ui.base_picking_dialog.BasePickingDialog._update_molecule_geometry"
+            ),
+            patch.object(dlg, "mol") as broken,
+        ):
+            broken.GetConformer.side_effect = RuntimeError("no conformer")
+            dlg._update_molecule_geometry(np.zeros((1, 3)))
+        assert dlg._last_written_positions is None

@@ -473,3 +473,19 @@ class TestEnterKey:
             dlg.apply_button.clicked.connect(delta)
             dlg.keyPressEvent(self._enter())
         delta.assert_called_once()
+
+
+def test_non_enter_key_is_passed_on(make_dialog):
+    """Only Enter is intercepted; other keys reach the base handler."""
+    from unittest.mock import MagicMock
+
+    from PyQt6.QtCore import Qt
+
+    from moleditpy.ui.base_picking_dialog import BasePickingDialog
+
+    dlg, _mol, _mw = make_dialog(preselected_atoms=[0])
+    ev = MagicMock()
+    ev.key.return_value = Qt.Key.Key_A
+    with patch.object(BasePickingDialog, "keyPressEvent") as base:
+        dlg.keyPressEvent(ev)
+    base.assert_called_once_with(ev)

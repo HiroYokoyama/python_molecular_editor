@@ -41,3 +41,17 @@ def test_label_flip_skips_missing_partner(app):
     atom = _atom(h=1, partner_dx=[-30])
     atom.bonds.append(SimpleNamespace(atom1=atom, atom2=None))
     assert atom._label_flipped("H") is False
+
+
+def test_label_flip_skips_partner_without_position(app):
+    """A partner whose pos() is None, or whose wrapper raises, is ignored."""
+    atom = _atom(h=1, partner_dx=[-30])
+    no_pos = SimpleNamespace(pos=lambda: None)
+    atom.bonds.append(SimpleNamespace(atom1=atom, atom2=no_pos))
+
+    def _gone():
+        raise RuntimeError("wrapped C/C++ object has been deleted")
+
+    atom.bonds.append(SimpleNamespace(atom1=atom, atom2=SimpleNamespace(pos=_gone)))
+    # Only the real partner, on the left, counts: no flip.
+    assert atom._label_flipped("H") is False
