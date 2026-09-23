@@ -7,6 +7,7 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Fixed
+* **`nan`/`inf` accepted as geometry values**: the 3D edit dialogs (Translation, Move Group, Move Selected Atoms, Bond Length, Angle, Dihedral, Constrained Optimization force constant) parsed input with `float()`, which accepts `nan` and `inf`, so typing one moved atoms to NaN or infinite coordinates. Such input is now rejected with the dialog's invalid-number message.
 * **Clearing an E/Z label could fail after a wedge flip**: flipping a wedge or hash (clicking it again, or pressing W/D) or changing a stereo bond's order re-keyed the bond in the data model but left the old key in the scene's bond index; right-clicking to clear an E/Z label could then look the bond up by the stale key and fail. The scene index now follows every re-key, and the E/Z clear looks the bond up in the data model directly.
 * **3D E/Z labels showed `?`**: a double bond whose 3D configuration differed from its 2D E/Z label was labelled `?` instead of its real configuration. E/Z labels are now read from the 3D coordinates with the same CIP labeller as the stereo check, so each shows the actual 3D E or Z (in red when it differs from the drawing); `?` remains only for a bond whose E/Z is lost entirely in 3D.
 * **Plugin optimization failure ran the stereo check**: plugin optimizers now report success explicitly, and failed callbacks keep their failure status instead of immediately running the post-optimization stereochemistry check.

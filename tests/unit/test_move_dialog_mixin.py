@@ -252,14 +252,16 @@ class TestApplyTranslation:
         assert msg_box.warning.call_args[0][2] == cls.EMPTY_SELECTION_WARNING
 
     @pytest.mark.parametrize("cls", _dialog_classes())
+    @pytest.mark.parametrize("text", ["not a number", "nan", "inf", "-inf"])
     def test_unparsable_input_warns_and_leaves_the_geometry_alone(
-        self, cls, make_dialog
+        self, cls, make_dialog, text
     ):
+        # float() accepts "nan"/"inf", which used to move atoms to NaN/inf.
         dlg, mol, _mw = make_dialog(cls)
         before = np.array(mol.GetConformer().GetPositions(), dtype=float)
         dlg.group_atoms.clear()
         dlg.group_atoms.update({0})
-        dlg.x_trans_input.setText("not a number")
+        dlg.x_trans_input.setText(text)
 
         with patch(f"{_MIXIN}.QMessageBox") as msg_box:
             dlg.apply_translation()

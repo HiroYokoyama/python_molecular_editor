@@ -36,6 +36,7 @@ from ..core.mol_geometry import (
     get_connected_group,
 )
 from ..utils.suppress_log import suppress_log
+from ..utils.finite_float import finite_float
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -365,7 +366,7 @@ class AngleDialog(GeometryBaseDialog):
             return
 
         try:
-            raw_angle = float(self.angle_input.text())
+            raw_angle = finite_float(self.angle_input.text())
             # Automatic Range Wrapping
             new_angle = (raw_angle + 180) % 360 - 180
 

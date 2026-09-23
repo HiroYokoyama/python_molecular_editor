@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import (
 from rdkit.Chem import rdForceFieldHelpers, rdMolTransforms
 
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
+from ..utils.finite_float import finite_float
 
 
 class ConstrainedOptimizationThread(QThread):
@@ -308,7 +309,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         # Retrieve Force Constant
         try:
-            force_const = float(self.force_const_input.text())
+            force_const = finite_float(self.force_const_input.text())
         except ValueError:
             QMessageBox.warning(
                 self, "Warning", "Invalid Force Constant. Using default 1.0e5."

@@ -36,6 +36,7 @@ from ..core.mol_geometry import (
     get_connected_group,
 )
 from ..utils.suppress_log import suppress_log
+from ..utils.finite_float import finite_float
 
 if TYPE_CHECKING:
     from .main_window import MainWindow
@@ -378,7 +379,7 @@ class DihedralDialog(GeometryBaseDialog):
             return
 
         try:
-            raw_dihedral = float(self.dihedral_input.text())
+            raw_dihedral = finite_float(self.dihedral_input.text())
             # Automatic Range Wrapping
             new_dihedral = (raw_dihedral + 180) % 360 - 180
 
