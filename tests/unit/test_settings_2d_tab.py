@@ -264,3 +264,28 @@ def test_template_fusing_checkbox_disables_slider(app):
     tab.template_fusing_enabled_2d_checkbox.setChecked(False)
     assert tab.template_fusing_distance_2d_slider.isEnabled() is False
     assert tab.template_fusing_distance_2d_label.isEnabled() is False
+
+
+def test_missing_font_is_not_rewritten_on_save(app):
+    """An uninstalled stored font must survive open + OK unchanged.
+
+    The combo shows a substitute for it; saving the substitute rewrote the
+    setting although the user changed nothing.
+    """
+    from PyQt6.QtGui import QFont
+
+    tab = Settings2DTab(DEFAULT_SETTINGS)
+    settings = dict(DEFAULT_SETTINGS)
+    settings["atom_font_family_2d"] = "No Such Font Family XYZ"
+    tab.update_ui(settings)
+    assert tab.get_settings()["atom_font_family_2d"] == "No Such Font Family XYZ"
+
+    # A font the user actually picks is saved.
+    families = [
+        f
+        for f in (tab.atom_font_family_2d_combo.itemText(i) for i in range(5))
+        if f and f != tab.atom_font_family_2d_combo.currentFont().family()
+    ]
+    if families:
+        tab.atom_font_family_2d_combo.setCurrentFont(QFont(families[0]))
+        assert tab.get_settings()["atom_font_family_2d"] == families[0]
