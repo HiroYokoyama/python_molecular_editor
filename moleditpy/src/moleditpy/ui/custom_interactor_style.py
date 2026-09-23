@@ -1421,11 +1421,27 @@ class CustomInteractorStyle(vtkInteractorStyleTrackballCamera):
                         _rot_dlg = move_group_dialog
 
                         def _deferred_rotation_redraw() -> None:
-                            """Redraw the rotated group and record it for undo."""
-                            mw.view_3d_manager.draw_molecule_3d(_rot_mol)
-                            mw.view_3d_manager.update_chiral_labels()
-                            _rot_dlg.show_atom_labels()
-                            mw.edit_actions_manager.push_undo_state()
+                            """Redraw the rotated group and record it for undo.
+
+                            Runs after the event returns, when the dialog may
+                            already be closed; a failed redraw must not escape
+                            into Qt or skip the undo push.
+                            """
+                            try:
+                                mw.view_3d_manager.draw_molecule_3d(_rot_mol)
+                                mw.view_3d_manager.update_chiral_labels()
+                                _rot_dlg.show_atom_labels()
+                            except (
+                                AttributeError,
+                                RuntimeError,
+                                TypeError,
+                                ValueError,
+                            ):
+                                logging.warning(
+                                    "Error redrawing rotated group", exc_info=True
+                                )
+                            finally:
+                                mw.edit_actions_manager.push_undo_state()
 
                         QTimer.singleShot(0, _deferred_rotation_redraw)
                 except (AttributeError, RuntimeError, TypeError, ValueError):

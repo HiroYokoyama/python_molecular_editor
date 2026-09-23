@@ -386,6 +386,9 @@ def test_custom_interactor_style_right_click_rotation(app, mock_parser_host):
         assert mock_dialog.rotation_start_pos is None
         mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
         assert len(deferred) == 1
+        # The deferred redraw runs after the event; if the dialog has closed
+        # by then, the failure must stay inside and the undo push still run.
+        mock_dialog.show_atom_labels.side_effect = RuntimeError("deleted")
         deferred[0]()
         mock_parser_host.view_3d_manager.draw_molecule_3d.assert_called_once()
         mock_parser_host.edit_actions_manager.push_undo_state.assert_called()
