@@ -208,3 +208,94 @@ def test_core_has_no_ui_dependency(filename):
                 f"{filename}: {name}"
             )
             assert not name.startswith("..ui"), f"{filename}: {name}"
+
+
+# --- E/Z labels are CIP E/Z ------------------------------------------------
+
+
+def _labelled_alkene(smiles, label):
+    """Draw *smiles* without stereo and put E/Z label *label* (3=Z, 4=E) on C=C."""
+    flat = Chem.MolToSmiles(Chem.MolFromSmiles(smiles), isomericSmiles=False)
+    data = _draw(flat)
+    double = next(k for k, b in data.bonds.items() if b["order"] == 2)
+    data.bonds[double]["stereo"] = label
+    return data, double
+
+
+def _cip_ez(mol, atom_ids):
+    """CIP E/Z the 3D structure has at the bond between two editor atom IDs."""
+    from rdkit.Chem import rdCIPLabeler
+
+    probe = Chem.Mol(mol)
+    Chem.AssignStereochemistryFrom3D(probe)
+    rdCIPLabeler.AssignCIPLabels(probe)
+    for bond in probe.GetBonds():
+        ids = {
+            bond.GetBeginAtom().GetIntProp("_original_atom_id"),
+            bond.GetEndAtom().GetIntProp("_original_atom_id"),
+        }
+        if ids == set(atom_ids) and bond.HasProp("_CIPCode"):
+            return bond.GetProp("_CIPCode")
+    return None
+
+
+@pytest.mark.parametrize(
+    "smiles",
+    [
+        "CC=CC",  # first heavy neighbor is the CIP-higher one
+        "CC(Cl)=CC",  # methyl picked over Cl: used to come out inverted
+        "ClC(Br)=C(C)CC",  # both ends need the CIP order, not the first neighbor
+        "OC(C)=C(N)C",
+    ],
+)
+@pytest.mark.parametrize("label,expected", [(3, "Z"), (4, "E")])
+def test_ez_label_reaches_3d_as_cip_descriptor(app, smiles, label, expected):
+    """A Z/E label means CIP Z/E in 3D, whichever neighbor is listed first."""
+    data, double = _labelled_alkene(smiles, label)
+    assert _cip_ez(_convert(data), double) == expected
+
+
+def test_align_ez_to_cip_flips_only_wrong_bonds():
+    """align_ez_to_cip flips a bond that reads the other way and leaves the rest."""
+    from moleditpy.core.molecular_data import align_ez_to_cip
+    from rdkit.Chem import rdCIPLabeler
+
+    mol = Chem.MolFromSmiles("C/C(Cl)=C/C")  # trans methyls: CIP Z (Cl > CH3)
+    bond = next(b for b in mol.GetBonds() if b.GetBondType() == Chem.BondType.DOUBLE)
+    before = bond.GetStereo()
+
+    align_ez_to_cip(mol, {bond.GetIdx(): "Z"})
+    assert bond.GetStereo() == before  # already Z: untouched
+
+    align_ez_to_cip(mol, {bond.GetIdx(): "E"})
+    probe = Chem.Mol(mol)
+    rdCIPLabeler.AssignCIPLabels(probe)
+    assert probe.GetBondWithIdx(bond.GetIdx()).GetProp("_CIPCode") == "E"
+
+
+def test_align_ez_to_cip_ignores_bonds_without_cip_ez():
+    """Two identical substituents on one end: no CIP E/Z, nothing to align."""
+    from moleditpy.core.molecular_data import align_ez_to_cip
+
+    mol = Chem.MolFromSmiles("CC(C)=CC")
+    bond = next(b for b in mol.GetBonds() if b.GetBondType() == Chem.BondType.DOUBLE)
+    before = bond.GetStereo()
+    align_ez_to_cip(mol, {bond.GetIdx(): "Z"})
+    assert bond.GetStereo() == before
+
+
+@pytest.mark.parametrize("stereo,expected", [("Z", "Z"), ("E", "E")])
+def test_worker_explicit_stereo_uses_cip(stereo, expected):
+    """The worker's M CFG fallback applies E/Z by CIP rank too."""
+    from rdkit.Chem import AllChem, rdCIPLabeler
+
+    from moleditpy.ui.calculation_worker import _apply_explicit_stereo
+
+    mol = Chem.AddHs(Chem.MolFromSmiles("CC(Cl)=CC"))
+    bond = next(b for b in mol.GetBonds() if b.GetBondType() == Chem.BondType.DOUBLE)
+    wanted = Chem.BondStereo.STEREOZ if stereo == "Z" else Chem.BondStereo.STEREOE
+    _apply_explicit_stereo(mol, {bond.GetIdx(): wanted})
+    AllChem.EmbedMolecule(mol, randomSeed=3)
+    Chem.AssignStereochemistryFrom3D(mol)
+    rdCIPLabeler.AssignCIPLabels(mol)
+    assert mol.GetBondWithIdx(bond.GetIdx()).GetProp("_CIPCode") == expected
