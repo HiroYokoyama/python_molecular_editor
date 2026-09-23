@@ -81,28 +81,14 @@ class AnalysisWindow(QDialog):
                     if symbol != "H":  # Non-hydrogen
                         num_heavy_atoms += 1
 
-                # Construct molecular formula manually (following Hill system)
-                element_order = ["C", "H", "N", "O", "P", "S", "F", "Cl", "Br", "I"]
-                formula_parts = []
-
-                # Add elements in defined order
-                remaining_counts = atom_counts.copy()
-                for element in element_order:
-                    if element in remaining_counts:
-                        count = remaining_counts[element]
-                        if count == 1:
-                            formula_parts.append(element)
-                        else:
-                            formula_parts.append(f"{element}{count}")
-                        del remaining_counts[element]
-
-                # Add remaining elements alphabetically
-                for element in sorted(remaining_counts.keys()):
-                    count = remaining_counts[element]
-                    if count == 1:
-                        formula_parts.append(element)
-                    else:
-                        formula_parts.append(f"{element}{count}")
+                # RDKit's CalcMolFormula order, so XYZ and MOL sources agree:
+                # C, then H, then the rest alphabetically.
+                ordered = [e for e in ("C", "H") if e in atom_counts]
+                ordered += sorted(e for e in atom_counts if e not in ("C", "H"))
+                formula_parts = [
+                    e if atom_counts[e] == 1 else f"{e}{atom_counts[e]}"
+                    for e in ordered
+                ]
 
                 mol_formula = "".join(formula_parts)
 

@@ -81,3 +81,40 @@ def test_analysis_window_xyz_derived(qtbot):
 
     assert "C2HO" in formula_val
     assert not smiles_present  # SMILES should be withheld for XYZ
+
+
+def _formula_shown(window):
+    for i in range(window.layout().count()):
+        item = window.layout().itemAt(i)
+        grid = item.layout() if hasattr(item, "layout") else None
+        if not grid:
+            continue
+        for r in range(grid.rowCount()):
+            label_item = grid.itemAtPosition(r, 0)
+            if label_item and "Formula" in label_item.widget().text():
+                return grid.itemAtPosition(r, 1).widget().text()
+    return ""
+
+
+import pytest  # noqa: E402
+from rdkit.Chem import rdMolDescriptors  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "smiles",
+    ["ClCC#N", "OS(=O)(=O)O", "Cl", "N", "C[Si](C)(C)Br", "c1ccncc1"],
+)
+def test_xyz_formula_matches_rdkit_order(qtbot, smiles):
+    """An XYZ-loaded molecule shows the same formula as the MOL-loaded one.
+
+    The XYZ path used a fixed C, H, N, O, P, S, F, Cl, Br, I order, so
+    chloroacetonitrile read C2H2NCl here but C2H2ClN from a MOL file.
+    """
+    mol = Chem.AddHs(Chem.MolFromSmiles(smiles))
+    mol.xyz_atom_data = [(a.GetSymbol(), 0.0, 0.0, 0.0) for a in mol.GetAtoms()]
+
+    parent = QWidget()  # kept alive: the window dies with its parent
+    qtbot.addWidget(parent)
+    window = AnalysisWindow(mol, parent=parent, is_xyz_derived=True)
+
+    assert _formula_shown(window) == rdMolDescriptors.CalcMolFormula(mol)
