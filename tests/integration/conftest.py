@@ -399,6 +399,12 @@ def window(app, qtbot, monkeypatch, tmp_path):
 
         mol = self_compute.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
         if mol and mol.GetNumAtoms() > 0:
+            # Honor the drawn wedges as the real worker does (it parses them
+            # from the MOL block). Without this the embedding picks an
+            # enantiomer at random and the post-conversion chirality check
+            # rightly reports the result as wrong. Before AddHs, which puts the
+            # new atoms at the origin.
+            Chem.AssignChiralTypesFromBondDirs(mol)
             mol = Chem.AddHs(mol)
             params = AllChem.ETKDG()
             params.randomSeed = 42

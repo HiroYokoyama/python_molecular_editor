@@ -38,6 +38,8 @@ from ..core.mol_geometry import (
     identify_valence_problems,
     inject_ez_stereo_to_mol_block,
 )
+from ..core.stereo_check import drawn_chirality, find_chirality_mismatches
+from .chirality_warning_dialog import ChiralityWarningDialog
 
 
 if TYPE_CHECKING:
@@ -60,6 +62,7 @@ class ComputeManager:
         # worker_id -> (method_key, plugin_entry) for a plugin optimizer to run
         # as a post-step once conversion's built-in pre-optimization completes.
         self._pending_plugin_opt: Dict[int, Tuple[str, Dict[str, Any]]] = {}
+        self._chirality_dialog: Optional[ChiralityWarningDialog] = None
 
     def reset_active_threads(self) -> None:
         """Reset active calculation threads list."""
@@ -629,6 +632,36 @@ class ComputeManager:
         )
         if pending and mol:
             self._run_plugin_optimization(*pending)
+
+        self.check_chirality_against_2d()
+
+    def check_chirality_against_2d(self) -> None:
+        """Warn when the 3D result does not keep a stereocenter drawn in 2D."""
+        dialog = getattr(self, "_chirality_dialog", None)
+        if dialog is not None:
+            # A new result replaces the warning about the previous one.
+            self._chirality_dialog = None
+            with suppress_log(RuntimeError):
+                dialog.close()
+
+        settings = getattr(self.host.init_manager, "settings", {}) or {}
+        if not settings.get("check_chirality_after_conversion", True):
+            return
+        mol = self.host.view_3d_manager.current_mol
+        data = self.host.state_manager.data
+        if mol is None or not data.atoms:
+            return
+
+        mismatches = find_chirality_mismatches(data, mol)
+        if not mismatches:
+            return
+        self._chirality_dialog = ChiralityWarningDialog(
+            self.host, mismatches, len(drawn_chirality(data)), parent=self.host
+        )
+        self._chirality_dialog.show()
+        self.host.update_status_message(
+            f"Warning: {len(mismatches)} stereocenter(s) differ from the 2D drawing."
+        )
 
     def on_calculation_error(self, message: Union[str, Tuple[int, str]]) -> None:
         """Handle an error or halt signal from the background optimization worker."""

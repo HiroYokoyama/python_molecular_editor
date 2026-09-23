@@ -7,6 +7,7 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+* **Chirality check after 3D conversion** (on by default; Settings → 3D Scene → 3D Labels): every stereocenter drawn with a wedge or hash is compared with the 3D result. If any comes out inverted or lost, a non-modal, always-on-top warning lists each one (drawn vs 3D configuration) and shows chiral labels in the 3D view for as long as it stays open. The comparison is CIP-based, lives in the UI-free `core/stereo_check.py`, and takes about 0.5 ms for tetrodotoxin (9 centers).
 * **3D label colors** (Settings → 3D Scene → 3D Labels): the atom info label color (Auto keeps each mode's own color), the chiral label color, and the background color shared by the atom info, chiral and E/Z labels.
 
 ### Fixed
