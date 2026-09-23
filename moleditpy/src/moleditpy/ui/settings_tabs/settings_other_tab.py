@@ -168,7 +168,7 @@ class SettingsOtherTab(SettingsTabBase):
         self.kekule_3d_checkbox.setEnabled(not display_aromatic)
 
         thick = settings_dict.get("aromatic_torus_thickness_factor", 0.6)
-        self.aromatic_torus_thickness_slider.setValue(int(thick * 100))
+        self.aromatic_torus_thickness_slider.setValue(int(round(thick * 100)))
 
         self.log_to_file_checkbox.setChecked(settings_dict.get("log_to_file", False))
         self.log_level_debug_checkbox.setChecked(
