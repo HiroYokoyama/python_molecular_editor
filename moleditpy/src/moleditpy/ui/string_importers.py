@@ -132,10 +132,11 @@ class StringImporterManager:
         cleaned_smiles = smiles_string.strip()
 
         try:
+            # RDKit parses "" as an empty molecule, not None.
+            if not cleaned_smiles:
+                raise ValueError("SMILES string was empty.")
             mol = Chem.MolFromSmiles(cleaned_smiles)
             if mol is None:
-                if not cleaned_smiles:
-                    raise ValueError("SMILES string was empty.")
                 raise ValueError("Invalid SMILES string.")
 
             rdDepictor.Compute2DCoords(mol)

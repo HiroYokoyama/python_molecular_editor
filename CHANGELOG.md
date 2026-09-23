@@ -8,6 +8,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 * **Opening a corrupt project wiped the open document**: Open Project cleared the canvas before reading the file, so picking a corrupt `.pmeprj`/`.pmeraw` or a non-project file left an empty, untitled document behind the error. The file is now read and validated first; the document is cleared only once it is known to load.
+* **Blank SMILES reported success**: Import SMILES with only spaces reported *Successfully loaded from SMILES.* and added an empty undo step, because RDKit parses an empty string as an empty molecule. It now reports that the string was empty.
 
 ---
 
