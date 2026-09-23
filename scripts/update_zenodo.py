@@ -6,11 +6,13 @@ using the new InvenioRDM REST API (/api/records).
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import re
 import urllib.request
 import urllib.error
+from typing import Any
 
 
 def parse_pyproject_version(filepath="moleditpy/pyproject.toml"):
@@ -23,6 +25,42 @@ def parse_pyproject_version(filepath="moleditpy/pyproject.toml"):
     if match:
         return match.group(1)
     return None
+
+
+def file_md5(path: str) -> str:
+    digest = hashlib.md5()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def plan_file_uploads(
+    existing_entries: list[dict[str, Any]], paths: list[str]
+) -> tuple[list[str], list[str]]:
+    """Which local files still need uploading to a draft, and which draft
+    entries are stale and must be deleted first.
+
+    existing_entries: the draft's file entries ({"key", "checksum":
+    "md5:<hex>", "status"}). A file already committed with the same MD5 is
+    skipped; an entry under the same name that differs or never finished
+    uploading is stale.
+    """
+    by_key = {e.get("key"): e for e in existing_entries}
+    to_upload, stale = [], []
+    for path in paths:
+        entry = by_key.get(os.path.basename(path))
+        if entry is None:
+            to_upload.append(path)
+        elif (
+            entry.get("status") == "completed"
+            and entry.get("checksum") == f"md5:{file_md5(path)}"
+        ):
+            continue
+        else:
+            stale.append(entry["key"])
+            to_upload.append(path)
+    return to_upload, stale
 
 
 def make_request(url, data=None, headers=None, method="GET", json_response=True):
@@ -173,15 +211,37 @@ def main():
 
     # 3. Register files to the draft
     if args.files:
-        print(f"\n[3/6] Registering {len(args.files)} files to upload...")
-        register_payload = [{"key": os.path.basename(fpath)} for fpath in args.files]
-        make_request(
-            draft_files_url, data=register_payload, headers=headers, method="POST"
-        )
+        for fpath in args.files:
+            if not os.path.exists(fpath):
+                raise FileNotFoundError(f"File not found: {fpath}")
+        # Zenodo hands back an unpublished new-version draft left by an
+        # earlier run that died later (e.g. a 500 on publish). Files that
+        # draft already holds must not be registered again ("already
+        # exists"); a stale or half-uploaded one is replaced.
+        existing = make_request(draft_files_url, headers=headers, method="GET")
+        to_upload, stale = plan_file_uploads(existing.get("entries", []), args.files)
+        for key in stale:
+            print(f"Removing stale draft file: {key}")
+            make_request(
+                f"{draft_files_url}/{key}",
+                headers=headers,
+                method="DELETE",
+                json_response=False,
+            )
+        for fpath in args.files:
+            if fpath not in to_upload:
+                print(f"Already in the draft, unchanged: {os.path.basename(fpath)}")
+
+        print(f"\n[3/6] Registering {len(to_upload)} files to upload...")
+        if to_upload:
+            register_payload = [{"key": os.path.basename(f)} for f in to_upload]
+            make_request(
+                draft_files_url, data=register_payload, headers=headers, method="POST"
+            )
 
         # 4. Upload and commit file contents
         print("\n[4/6] Uploading and committing file contents...")
-        for fpath in args.files:
+        for fpath in to_upload:
             if not os.path.exists(fpath):
                 raise FileNotFoundError(f"File not found: {fpath}")
             filename = os.path.basename(fpath)
@@ -264,13 +324,17 @@ def main():
             new_dates = []
             for d in dates:
                 if isinstance(d, dict):
-                    d_val = d.get("date") or today_str
+                    # Copy only a date that carries a value. The API view of
+                    # these records drops the "updated" date's value, and a
+                    # draft sent one filled in with today is rejected at
+                    # publish with an HTTP 500 (seen from 2026-09-23).
+                    d_val = d.get("date")
                     d_type = d.get("type")
                     if isinstance(d_type, dict):
                         t_id = d_type.get("id")
                     else:
                         t_id = d_type
-                    if t_id:
+                    if t_id and d_val:
                         new_dates.append({"date": d_val, "type": {"id": t_id.lower()}})
             if new_dates:
                 metadata["dates"] = new_dates
