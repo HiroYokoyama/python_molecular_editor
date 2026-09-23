@@ -777,6 +777,23 @@ def test_paste_invalid_json_reports_error(mock_parser_host):
     )
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"atoms": [{"symbol": "C", "rel_pos": [0.0, 0.0]}]},  # no "bonds"
+        {"atoms": [], "bonds": [{"idx1": 0, "idx2": 1}]},  # index out of range
+    ],
+)
+def test_paste_malformed_fragment_reports_error(mock_parser_host, payload):
+    """Valid JSON with a broken fragment is reported, not raised."""
+    _paste_with(mock_parser_host, _FakeMime(_json.dumps(payload).encode("utf-8")))
+    assert any(
+        "Error during paste operation." in str(c.args[0])
+        for c in mock_parser_host.statusBar().showMessage.call_args_list
+    )
+    mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
+
+
 def test_paste_foreign_clipboard_format_ignored(mock_parser_host):
     editor = _paste_with(mock_parser_host, _FakeMime(b"", has_format=False))
     assert len(editor.data.atoms) == 0

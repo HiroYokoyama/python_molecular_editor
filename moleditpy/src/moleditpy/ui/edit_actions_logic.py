@@ -397,7 +397,7 @@ class EditActionsManager:
             byte_array = mime_data.data(CLIPBOARD_MIME_TYPE)
             try:
                 fragment_data = json.loads(bytes(byte_array.data()).decode("utf-8"))
-            except (json.JSONDecodeError, UnicodeDecodeError, KeyError):
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 self.host.statusBar().showMessage(  # type: ignore[union-attr]
                     "Error: Invalid clipboard data format"
                 )
@@ -441,7 +441,16 @@ class EditActionsManager:
                 2000,
             )
 
-        except (AttributeError, RuntimeError, ValueError, TypeError):
+        except (
+            AttributeError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+            KeyError,
+            IndexError,
+        ):
+            # KeyError/IndexError: well-formed JSON missing "atoms"/"bonds" or
+            # with a bond index outside the fragment.
             logging.exception("Error during paste operation")
             self.host.statusBar().showMessage("Error during paste operation.")  # type: ignore[union-attr]
         self.host.ui_manager.activate_select_mode()
