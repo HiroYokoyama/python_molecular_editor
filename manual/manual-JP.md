@@ -224,7 +224,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 *   **Open Babel モード**: Open Babel の `make3D()` 座標ジェネレーターを使用します。プログラムのハングアップやクラッシュを防ぐため、バックグラウンドの分離されたサブプロセスで安全に実行されます。
 *   **Direct モード**: 3Dコンフォーマー生成を行わず、2Dキャンバスの配置をそのまま保持します。重原子は $Z = 0.0$ 平面に配置され、不足している水素原子が幾何学的に追加されます。立体化学は、Wedge/Dash結合を持つ原子にZ座標のオフセット ($Z = \pm 1.5$ Å) を加えることで再現されます。
 
-**キラリティーチェック:** 変換のたびに、Wedge/Dash で描いたすべての不斉中心を 3D 構造と R/S で比較します。反転または消失した中心がある場合は **Chirality Check** ウィンドウが開き、該当する原子ごとに 2D で描いた配置と 3D での配置を一覧表示します。このウィンドウは常に手前に表示されますがメインウィンドウの操作は妨げず、開いている間は 3D ビューに不斉ラベルを表示し、誤った中心を赤、正しい中心を通常の色で示します。閉じると `View` \> `Show Chiral Labels` の設定に戻ります。立体化学を確実には再現しない Direct モードで最も起こりやすい現象です。一覧の不斉中心は 3D 構造上で手動で反転してください。このチェックは `Settings` \> `Settings...` \> **3D Labels** (Check Chirality After 3D Conversion) でオフにできます。
+**立体化学チェック:** 変換のたびに、Wedge/Dash で描いたすべての不斉中心 (R/S) と E/Z ラベルを付けたすべての二重結合を 3D 構造と比較します。反転または消失したものがある場合は **Stereochemistry Check** ウィンドウが開き、それぞれについて 2D で描いた配置と 3D での配置を一覧表示します。このウィンドウは常に手前に表示されますがメインウィンドウの操作は妨げず、開いている間は 3D ビューに不斉ラベルと E/Z ラベルを表示し、誤ったものを赤、正しいものを通常の色で示します。閉じると `View` \> `Show Chiral Labels` の設定に戻ります。立体化学を確実には再現しない Direct モードで最も起こりやすい現象です。一覧の不斉中心と二重結合は 3D 構造上で手動で反転してください。このチェックは `Settings` \> `Settings...` \> **3D Labels** (Check After 3D Conversion) でオフにできます。`Optimize 3D` の後にも実行できます (Check After 3D Optimization、既定でオフ)。
 
 ### 5.2. 3D 構造の最適化
 
@@ -449,7 +449,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
           * Stereo — Chiral (R/S)、E/Z
           * Tool — Selection (測定・整列・編集ダイアログで選択した原子)、Measurement、Constraint
       * **Label Appearance** (すべてのラベルに共通): 背景色と不透明度 (不透明度 0 で背景が透明になります)、フォント (Arial / Courier / Times)、フォントサイズ (既定 18 pt)、太字 / 斜体
-      * **Chirality Check:** Check Chirality After 3D Conversion (5.1 を参照、既定でオン)
+      * **Stereo Check (R/S, E/Z):** Check After 3D Conversion (5.1 を参照、既定でオン)、Check After 3D Optimization (既定でオフ)
   * **各表示スタイル (Ball & Stick, CPK, Wireframe, Stick) タブ:**
       * 原子サイズ/半径のスケール
       * 結合半径

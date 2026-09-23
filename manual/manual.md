@@ -227,7 +227,7 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 *   **Open Babel Mode**: Uses Open Babel's `make3D()` coordinate generator run in a secure, isolated background subprocess to prevent application hangs or crashes.
 *   **Direct Mode**: Bypasses 3D conformer embedding to retain your exact 2D layout. Atoms are placed on the $Z = 0.0$ plane, with missing hydrogen atoms added geometrically. Stereochemistry is preserved by adding offset Z-coordinates ($Z = \pm 1.5$ Å) to wedge/dash atoms.
 
-**Chirality Check:** After each conversion, every stereocenter you drew with a wedge or hash is compared (as R/S) with the 3D result. If any of them comes out inverted or lost, a **Chirality Check** window lists each one with its drawn and 3D configuration. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral labels, with the wrong centers in red and the correct ones in the usual color; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Flip the listed stereocenters manually in the 3D structure. The check can be turned off in `Settings` \> `Settings...` \> **3D Labels** (Check Chirality After 3D Conversion).
+**Stereo Check:** After each conversion, every stereocenter you drew with a wedge or hash (R/S) and every double bond you labelled E or Z is compared with the 3D result. If any of them comes out inverted or lost, a **Stereochemistry Check** window lists each one with its drawn and 3D configuration. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral and E/Z labels, with the wrong ones in red and the correct ones in the usual color; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Flip the listed stereocenters and double bonds manually in the 3D structure. The check can be turned off in `Settings` \> `Settings...` \> **3D Labels** (Check After 3D Conversion). It can also be run after `Optimize 3D` (Check After 3D Optimization, off by default).
 
 ### 5.2. 3D Structure Optimization
 
@@ -464,7 +464,7 @@ You can configure various 2D and 3D display settings via `Settings` > `Settings.
         * Stereo — Chiral (R/S), E/Z
         * Tool — Selection (atoms picked in the measurement, alignment and editing dialogs), Measurement, Constraint
     * **Label Appearance** (shared by all labels): background color and opacity (opacity 0 makes the background transparent), font family (Arial / Courier / Times), font size (default 18 pt) and bold / italic
-    * **Chirality Check:** Check Chirality After 3D Conversion (see 5.1; on by default)
+    * **Stereo Check (R/S, E/Z):** Check After 3D Conversion (see 5.1; on by default) and Check After 3D Optimization (off by default)
 * **Display Style Tabs (Ball & Stick, CPK, Wireframe, Stick):**
     * Atom size/radius scale
     * Bond radius
