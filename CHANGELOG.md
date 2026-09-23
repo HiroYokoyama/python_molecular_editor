@@ -6,8 +6,7 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
-### Documentation
-* **README images broke off GitHub**: The icon, the screenshot and the LICENSE link were relative paths, which resolve only on GitHub itself — on PyPI, which renders the same README, they showed as broken images and a dead link. They now point at the GitHub Pages copies and the repository's LICENSE.
+
 
 ---
 
