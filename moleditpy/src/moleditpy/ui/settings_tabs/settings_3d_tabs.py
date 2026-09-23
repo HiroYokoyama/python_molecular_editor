@@ -131,8 +131,8 @@ class Settings3DSceneTab(SettingsTabBase):
 
         atom_row = QHBoxLayout()
         atom_row.addWidget(self._make_label_color_button("atom_label_color_3d"))
-        auto_button = QPushButton("Auto")
-        auto_button.setToolTip("Use each atom info mode's own color")
+        auto_button = QPushButton("Reset")
+        auto_button.setToolTip("Back to Auto: each atom info mode uses its own color")
         auto_button.clicked.connect(
             lambda: self._set_label_color("atom_label_color_3d", "")
         )
