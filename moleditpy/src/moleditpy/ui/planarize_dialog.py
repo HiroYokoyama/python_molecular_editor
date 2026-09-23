@@ -155,7 +155,7 @@ class PlanarizeDialog(BasePickingDialog):
         if self.selected_atoms:
             sorted_atoms = sorted(self.selected_atoms)
             pairs = [(idx, f"#{i + 1}") for i, idx in enumerate(sorted_atoms)]
-            self.show_atom_labels_for(pairs, color="cyan")
+            self.show_atom_labels_for(pairs)
         else:
             self.clear_atom_labels()
 

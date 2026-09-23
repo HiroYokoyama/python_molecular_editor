@@ -33,7 +33,7 @@ from PyQt6.QtWidgets import QGraphicsView
 
 
 from ..utils.constants import CPK_COLORS_PV, VDW_DISPLAY_RADII, pt
-from ..utils.default_settings import DEFAULT_SETTINGS
+from ..utils.label_style import label_kwargs
 from .template_preview_item import TemplatePreviewItem
 
 
@@ -1049,11 +1049,10 @@ class View3DManager:
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logging.warning(f"Error rendering aromatic circles: {e}")
 
-    def _label_setting(self, key: str) -> str:
-        """Return a 3D label color setting, falling back to its default."""
-        settings = getattr(getattr(self.host, "init_manager", None), "settings", {})
-        value = settings.get(key) or DEFAULT_SETTINGS[key]
-        return str(value)
+    def _label_kwargs(self, kind: str) -> Dict[str, Any]:
+        """add_point_labels style arguments for one label kind, from settings."""
+        settings = getattr(getattr(self.host, "init_manager", None), "settings", None)
+        return label_kwargs(settings, kind)
 
     def _add_3d_labels(self, mol: Any, mol_to_draw: Any) -> None:
         """Render chiral and E/Z stereochemistry labels in the 3D scene."""
@@ -1083,16 +1082,13 @@ class View3DManager:
                     self.plotter.add_point_labels(  # type: ignore[union-attr]
                         np.array(pts),
                         labels,
-                        font_size=20,
                         point_size=0,
-                        text_color=self._label_setting("chiral_label_color_3d"),
                         name="chiral_labels",
                         always_visible=True,
                         shape="rect",
-                        shape_color=self._label_setting("label_background_color_3d"),
-                        shape_opacity=0.5,
                         tolerance=0.01,
                         show_points=False,
+                        **self._label_kwargs("chiral"),
                     )
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 self.host.statusBar().showMessage(f"3D chiral label drawing error: {e}")  # type: ignore[union-attr]
@@ -1292,16 +1288,13 @@ class View3DManager:
             self.plotter.add_point_labels(  # type: ignore[union-attr]
                 np.array(pts),
                 labels,
-                font_size=18,
                 point_size=0,
-                text_color=self._label_setting("ez_label_color_3d"),
                 name="ez_labels",
                 always_visible=True,
                 shape="rect",
-                shape_color=self._label_setting("label_background_color_3d"),
-                shape_opacity=0.5,
                 tolerance=0.01,
                 show_points=False,
+                **self._label_kwargs("ez"),
             )
 
     def toggle_chiral_labels_display(self, checked: bool) -> None:
@@ -1598,16 +1591,13 @@ class View3DManager:
             else:
                 continue
 
-        rdkit_color = self._label_setting("index_label_color_3d")
-        id_color = self._label_setting("original_id_label_color_3d")
-        xyz_color = self._label_setting("xyz_index_label_color_3d")
         # Coordinates and element symbols share one label group (only one
-        # display mode is active at a time) but have separate color settings.
-        other_color = self._label_setting(
-            "coords_label_color_3d"
-            if self.atom_info_display_mode == "coords"
-            else "symbol_label_color_3d"
-        )
+        # display mode is active at a time) but are styled separately.
+        other_kind = "coords" if self.atom_info_display_mode == "coords" else "symbol"
+        # The legend names each group in its label color.
+        rdkit_color = self._label_kwargs("index")["text_color"]
+        id_color = self._label_kwargs("original_id")["text_color"]
+        xyz_color = self._label_kwargs("xyz_index")["text_color"]
 
         # Add labels for each group and keep references in a list
         self.current_atom_info_labels = []
@@ -1617,15 +1607,12 @@ class View3DManager:
                     np.array(rdkit_positions),
                     rdkit_texts,
                     point_size=12,
-                    font_size=18,
-                    text_color=rdkit_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color=self._label_setting("label_background_color_3d"),
-                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_rdkit",
+                    **self._label_kwargs("index"),
                 )
                 self.current_atom_info_labels.append(a)
 
@@ -1634,15 +1621,12 @@ class View3DManager:
                     np.array(id_positions),
                     id_texts,
                     point_size=12,
-                    font_size=18,
-                    text_color=id_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color=self._label_setting("label_background_color_3d"),
-                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_id",
+                    **self._label_kwargs("original_id"),
                 )
                 self.current_atom_info_labels.append(a)
 
@@ -1651,15 +1635,12 @@ class View3DManager:
                     np.array(xyz_positions),
                     xyz_texts,
                     point_size=12,
-                    font_size=18,
-                    text_color=xyz_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color=self._label_setting("label_background_color_3d"),
-                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_xyz",
+                    **self._label_kwargs("xyz_index"),
                 )
                 self.current_atom_info_labels.append(a)
 
@@ -1668,15 +1649,12 @@ class View3DManager:
                     np.array(other_positions),
                     other_texts,
                     point_size=12,
-                    font_size=18,
-                    text_color=other_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color=self._label_setting("label_background_color_3d"),
-                    shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
                     name="atom_labels_other",
+                    **self._label_kwargs(other_kind),
                 )
                 self.current_atom_info_labels.append(a)
         except (AttributeError, RuntimeError, TypeError, ValueError) as e:

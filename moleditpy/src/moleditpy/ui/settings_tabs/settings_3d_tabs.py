@@ -40,26 +40,7 @@ class Settings3DSceneTab(SettingsTabBase):
         self.realtime_drag_checkbox: Any = None
         self.rotate_group_follow_mouse_checkbox: Any = None
         self.current_bg_color = default_settings["background_color"]
-        self.chirality_check_checkbox: Any = None
-        # Label colors, keyed by setting name.
-        self.label_colors: dict[str, str] = {
-            key: default_settings[key] for key in self._LABEL_COLOR_KEYS
-        }
-        self.label_color_buttons: dict[str, QPushButton] = {}
         self._setup_ui()
-
-    # (setting key, row label), in display order.
-    _LABEL_COLOR_ROWS = (
-        ("index_label_color_3d", "Index Label Color:"),
-        ("original_id_label_color_3d", "Original ID Label Color:"),
-        ("xyz_index_label_color_3d", "XYZ Index Label Color:"),
-        ("symbol_label_color_3d", "Element Symbol Label Color:"),
-        ("coords_label_color_3d", "Coordinates Label Color:"),
-        ("chiral_label_color_3d", "Chiral (R/S) Label Color:"),
-        ("ez_label_color_3d", "E/Z Label Color:"),
-        ("label_background_color_3d", "Label Background Color:"),
-    )
-    _LABEL_COLOR_KEYS = tuple(key for key, _ in _LABEL_COLOR_ROWS)
 
     def _setup_ui(self) -> None:
         """Construct controls and form layout for 3D scene settings."""
@@ -131,51 +112,6 @@ class Settings3DSceneTab(SettingsTabBase):
             "Rotate Groups: Follow Mouse:", self.rotate_group_follow_mouse_checkbox
         )
 
-        form_layout.addRow(self._create_separator())
-        form_layout.addRow(QLabel("<b>3D Labels</b>"))
-
-        for key, label in self._LABEL_COLOR_ROWS:
-            form_layout.addRow(label, self._make_label_color_button(key))
-
-        self.chirality_check_checkbox = QCheckBox()
-        self.chirality_check_checkbox.setToolTip(
-            "After Convert 2D to 3D, compare every stereocenter drawn with a\n"
-            "wedge or hash against the 3D result, and warn if any differs."
-        )
-        form_layout.addRow(
-            "Check Chirality After 3D Conversion:", self.chirality_check_checkbox
-        )
-
-    def _make_label_color_button(self, key: str) -> QPushButton:
-        """Create a swatch button that picks the color stored under *key*."""
-        button = QPushButton()
-        button.setFixedSize(60, 24)
-        button.setToolTip("Click to select a color")
-        button.clicked.connect(lambda: self._pick_label_color(key))
-        self.label_color_buttons[key] = button
-        self._update_label_color_button(key)
-        return button
-
-    def _pick_label_color(self, key: str) -> None:
-        """Open a color dialog for the label color stored under *key*."""
-        color = QColorDialog.getColor(QColor(self.label_colors[key]), self)
-        if color.isValid():
-            self._set_label_color(key, color.name())
-
-    def _set_label_color(self, key: str, value: str) -> None:
-        """Store a label color and refresh its swatch."""
-        self.label_colors[key] = value
-        self._update_label_color_button(key)
-
-    def _update_label_color_button(self, key: str) -> None:
-        """Show the stored label color on its swatch."""
-        button = self.label_color_buttons.get(key)
-        if button is None:
-            return
-        button.setStyleSheet(
-            f"background-color: {self.label_colors[key]}; border: 1px solid #888;"
-        )
-
     def _select_color(self) -> None:
         """Open color dialog to pick 3D viewport background color."""
         color = QColorDialog.getColor(QColor(self.current_bg_color), self)
@@ -220,13 +156,6 @@ class Settings3DSceneTab(SettingsTabBase):
         self.rotate_group_follow_mouse_checkbox.setChecked(
             settings_dict.get("rotate_group_follow_mouse", False)
         )
-        for key in self._LABEL_COLOR_KEYS:
-            self._set_label_color(
-                key, str(settings_dict.get(key, self.default_settings[key]))
-            )
-        self.chirality_check_checkbox.setChecked(
-            settings_dict.get("check_chirality_after_conversion", True)
-        )
 
     def get_settings(self) -> dict[str, Any]:
         """Collect current 3D scene options as a dictionary."""
@@ -241,8 +170,6 @@ class Settings3DSceneTab(SettingsTabBase):
             "mouse_rotation_sensitivity": self.rotation_sens_slider.value() / 100.0,
             "realtime_3d_drag": self.realtime_drag_checkbox.isChecked(),
             "rotate_group_follow_mouse": self.rotate_group_follow_mouse_checkbox.isChecked(),
-            **self.label_colors,
-            "check_chirality_after_conversion": self.chirality_check_checkbox.isChecked(),
         }
 
 

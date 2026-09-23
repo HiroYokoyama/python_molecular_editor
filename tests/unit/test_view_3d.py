@@ -1206,41 +1206,49 @@ def _atom_info_view(mock_parser_host, settings):
 
 
 @pytest.mark.parametrize(
-    "mode,settings,text_color,shape_color",
+    "mode,kind",
     [
-        ("rdkit_index", {}, "#003366", "#808080"),
-        (
-            "rdkit_index",
-            {"index_label_color_3d": "#112233", "label_background_color_3d": "#ffffff"},
-            "#112233",
-            "#ffffff",
-        ),
-        ("symbol", {"symbol_label_color_3d": "#445566"}, "#445566", "#808080"),
-        ("coords", {"coords_label_color_3d": "#778899"}, "#778899", "#808080"),
-        # Each of the two shares the label group but not the other's color.
-        ("coords", {"symbol_label_color_3d": "#445566"}, "#000000", "#808080"),
-        ("symbol", {"coords_label_color_3d": "#778899"}, "#000000", "#808080"),
-        # An empty value (hand-edited settings file) falls back to the default.
-        ("rdkit_index", {"index_label_color_3d": ""}, "#003366", "#808080"),
+        ("rdkit_index", "index"),
+        ("symbol", "symbol"),
+        ("coords", "coords"),
     ],
 )
-def test_atom_info_labels_use_label_color_settings(
-    mock_parser_host, mode, settings, text_color, shape_color
-):
-    """Each atom info mode uses its own label color setting and the background."""
+def test_atom_info_labels_use_their_kind_style(mock_parser_host, mode, kind):
+    """Each atom info mode is drawn with its own label color and the shared style."""
+    settings = {
+        f"label_color_{kind}_3d": "#123456",
+        "label_background_color_3d": "#ffffff",
+        "label_background_opacity_3d": 0.0,
+        f"label_font_size_{kind}_3d": 36,
+        "label_font_family_3d": "courier",
+        "label_font_italic_3d": True,
+    }
     view3d = _atom_info_view(mock_parser_host, settings)
     view3d.atom_info_display_mode = mode
     view3d.show_all_atom_info()
+
     kwargs = view3d.plotter.add_point_labels.call_args.kwargs
-    assert kwargs["text_color"] == text_color
-    assert kwargs["shape_color"] == shape_color
+    assert kwargs["text_color"] == "#123456"
+    assert kwargs["shape_color"] == "#ffffff"
+    assert kwargs["shape_opacity"] == 0.0
+    assert kwargs["font_size"] == 36
+    assert kwargs["font_family"] == "courier"
+    assert kwargs["italic"] is True
 
 
-def test_chiral_labels_use_label_color_settings(mock_parser_host):
-    """3D R/S labels use the chiral label and background color settings."""
+def test_coords_and_symbol_colors_are_independent(mock_parser_host):
+    """Coordinates and symbols share a label group but not a color."""
+    view3d = _atom_info_view(mock_parser_host, {"label_color_symbol_3d": "#445566"})
+    view3d.atom_info_display_mode = "coords"
+    view3d.show_all_atom_info()
+    assert view3d.plotter.add_point_labels.call_args.kwargs["text_color"] == "#000000"
+
+
+def test_chiral_labels_use_label_style(mock_parser_host):
+    """3D R/S labels use the chiral label color and the shared style."""
     view3d = _make_view3d(mock_parser_host)
     mock_parser_host.init_manager.settings = {
-        "chiral_label_color_3d": "#ff0000",
+        "label_color_chiral_3d": "#ff0000",
         "label_background_color_3d": "#00ff00",
     }
     view3d.show_chiral_labels = True
@@ -1256,13 +1264,14 @@ def test_chiral_labels_use_label_color_settings(mock_parser_host):
     assert kwargs["name"] == "chiral_labels"
     assert kwargs["text_color"] == "#ff0000"
     assert kwargs["shape_color"] == "#00ff00"
+    assert kwargs["font_size"] == 20
 
 
-def test_ez_labels_use_label_color_settings(mock_parser_host):
-    """3D E/Z labels use the E/Z label and background color settings."""
+def test_ez_labels_use_label_style(mock_parser_host):
+    """3D E/Z labels use the E/Z label color and the shared style."""
     view3d = _make_view3d(mock_parser_host)
     mock_parser_host.init_manager.settings = {
-        "ez_label_color_3d": "#aa00aa",
+        "label_color_ez_3d": "#aa00aa",
         "label_background_color_3d": "#00ffff",
     }
     mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C"))
@@ -1273,3 +1282,45 @@ def test_ez_labels_use_label_color_settings(mock_parser_host):
     assert kwargs["name"] == "ez_labels"
     assert kwargs["text_color"] == "#aa00aa"
     assert kwargs["shape_color"] == "#00ffff"
+
+
+def test_labels_keep_previous_look_by_default(mock_parser_host):
+    """With no label settings the index labels look exactly as before."""
+    view3d = _atom_info_view(mock_parser_host, {})
+    view3d.show_all_atom_info()
+    kwargs = view3d.plotter.add_point_labels.call_args.kwargs
+    assert kwargs["text_color"] == "#003366"
+    assert kwargs["shape_color"] == "#808080"
+    assert kwargs["shape_opacity"] == 0.5
+    assert kwargs["font_size"] == 18
+    assert kwargs["font_family"] == "arial"
+    assert kwargs["bold"] is True
+    assert kwargs["italic"] is False
+
+
+def test_tool_labels_use_their_kind_style():
+    """Selection, measurement and constraint labels each read their own style."""
+    from types import SimpleNamespace
+
+    from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
+    from moleditpy.ui.edit_3d_logic import Edit3DManager
+
+    settings = {
+        "label_color_selection_3d": "#111111",
+        "label_color_measurement_3d": "#222222",
+        "label_font_size_measurement_3d": 30,
+    }
+    host = SimpleNamespace(init_manager=SimpleNamespace(settings=settings))
+
+    picker = Dialog3DPickingMixin.__new__(Dialog3DPickingMixin)
+    picker.main_window = host
+    assert picker._selection_label_kwargs(None)["text_color"] == "#111111"
+    # An explicit color from a caller still wins over the setting.
+    assert picker._selection_label_kwargs("#abcdef")["text_color"] == "#abcdef"
+
+    edit = Edit3DManager.__new__(Edit3DManager)
+    edit.host = host
+    measurement = edit._label_kwargs("measurement")
+    assert measurement["text_color"] == "#222222"
+    assert measurement["font_size"] == 30
+    assert picker._label_kwargs("constraint")["text_color"] == "#00FFFF"

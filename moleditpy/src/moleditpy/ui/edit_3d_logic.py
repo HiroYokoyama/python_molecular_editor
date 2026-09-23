@@ -16,7 +16,7 @@ import logging
 # main_window_edit_3d.py
 # Mixin class separated from main_window.py
 
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pyvista as pv
@@ -32,6 +32,7 @@ from ..core.mol_geometry import (
 )
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 from ..utils.constants import VDW_DISPLAY_RADII
+from ..utils.label_style import label_kwargs
 
 
 # --- Classes ---
@@ -52,6 +53,11 @@ class Edit3DManager:
         self.is_3d_edit_mode = False
         self.dragged_atom_info = None
         self.constraints_3d: list[Any] = []
+
+    def _label_kwargs(self, kind: str) -> Dict[str, Any]:
+        """add_point_labels style arguments for one label kind, from settings."""
+        settings = getattr(getattr(self.host, "init_manager", None), "settings", None)
+        return label_kwargs(settings, kind)
 
     def toggle_measurement_mode(self, checked: bool) -> None:
         """Toggle measurement mode on/off."""
@@ -155,16 +161,13 @@ class Edit3DManager:
             self.host.view_3d_manager.plotter.add_point_labels(
                 np.array(positions),
                 texts,
-                font_size=16,
                 point_size=0,
-                text_color="red",  # Always red for measurement
                 name="measurement_labels",
                 always_visible=True,
                 shape="rect",
-                shape_color="gray",
-                shape_opacity=0.5,
                 tolerance=0.01,
                 show_points=False,
+                **self._label_kwargs("measurement"),
             )
 
     def clear_measurement_selection(self) -> None:
