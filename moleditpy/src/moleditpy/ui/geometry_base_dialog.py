@@ -11,8 +11,9 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
+import numpy as np
 from PyQt6.QtWidgets import QLineEdit, QSlider, QWidget
 from rdkit import Chem
 
@@ -38,6 +39,49 @@ class GeometryBaseDialog(BasePickingDialog):
         super().__init__(mol, main_window, parent)
         self._slider_dragging = False
         self._snapshot_positions = None
+        # Positions this dialog last wrote, to recognise edits made elsewhere.
+        self._last_written_positions: Any = None
+
+    def _update_molecule_geometry(
+        self, positions: Union[np.ndarray, dict[int, np.ndarray]]
+    ) -> None:
+        """Write *positions* and remember them as this dialog's own edit."""
+        super()._update_molecule_geometry(positions)
+        try:
+            self._last_written_positions = np.asarray(
+                self.mol.GetConformer().GetPositions(), dtype=float
+            ).copy()
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            self._last_written_positions = None
+
+    def _drop_stale_positions(self) -> None:
+        """Re-capture saved positions when the molecule was moved elsewhere.
+
+        The dialogs build each update from saved positions (the slider
+        snapshot, and for angles and dihedrals the selection baseline) so the
+        rotation axis stays stable. The dialog is modeless, though: after an
+        optimization, an undo or another geometry dialog moves atoms, applying
+        from the old copy would silently revert every one of those moves.
+        """
+        try:
+            current = np.asarray(self.mol.GetConformer().GetPositions(), dtype=float)
+        except (AttributeError, RuntimeError, TypeError, ValueError):
+            return
+        if current.ndim != 2:
+            return
+        baseline = getattr(self, "_baseline_positions", None)
+        for known in (self._last_written_positions, self._snapshot_positions, baseline):
+            if (
+                isinstance(known, np.ndarray)
+                and known.shape == current.shape
+                and np.allclose(known, current, atol=1e-6)
+            ):
+                return
+        if self._snapshot_positions is not None:
+            self._snapshot_positions = current.copy()
+        if baseline is not None:
+            self._baseline_positions = current.copy()
+        self._last_written_positions = None
 
     def _sync_input_to_slider(
         self,

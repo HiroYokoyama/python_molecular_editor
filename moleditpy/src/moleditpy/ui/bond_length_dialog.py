@@ -332,6 +332,7 @@ class BondLengthDialog(GeometryBaseDialog):
 
     def apply_geometry_update(self, new_distance: float) -> None:  # pylint: disable=arguments-renamed
         """Adjust the bond length."""
+        self._drop_stale_positions()
         conf = self.mol.GetConformer()
 
         # Use snapshot if available (slider dragging) to keep base positions stable and accurate

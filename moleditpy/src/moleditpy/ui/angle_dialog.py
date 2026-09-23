@@ -395,6 +395,7 @@ class AngleDialog(GeometryBaseDialog):
 
     def apply_geometry_update(self, new_angle_deg: float) -> None:  # pylint: disable=arguments-renamed
         """Adjust the bond angle."""
+        self._drop_stale_positions()
         conf = self.mol.GetConformer()
 
         # Use baseline positions (fixed for dialog session) to keep the rotation axis stable.

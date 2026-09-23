@@ -400,6 +400,7 @@ class DihedralDialog(GeometryBaseDialog):
 
     def apply_geometry_update(self, new_dihedral_deg: float) -> None:  # pylint: disable=arguments-renamed
         """Adjust the dihedral angle."""
+        self._drop_stale_positions()
         if not self._is_selection_complete():
             return
 
