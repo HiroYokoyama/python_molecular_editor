@@ -1324,3 +1324,32 @@ def test_tool_labels_use_their_kind_style():
     assert measurement["text_color"] == "#222222"
     assert measurement["font_size"] == 30
     assert picker._label_kwargs("constraint")["text_color"] == "#00FFFF"
+
+
+@pytest.mark.parametrize(
+    "mode,kind,legend,prop",
+    [
+        ("rdkit_index", "index", "legend_rdkit", None),
+        ("original_id", "original_id", "legend_id", "_original_atom_id"),
+        ("xyz_index", "xyz_index", "legend_xyz", "xyz_unique_id"),
+    ],
+)
+def test_legend_uses_label_color_setting(mock_parser_host, mode, kind, legend, prop):
+    """The 3D legend entry is drawn in the same color as its labels."""
+    view3d = _atom_info_view(mock_parser_host, {f"label_color_{kind}_3d": "#123456"})
+    view3d.atom_info_display_mode = mode
+    if prop:
+        mol = Chem.RWMol(Chem.MolFromSmiles("C"))
+        mol.GetAtomWithIdx(0).SetIntProp(prop, 0)
+        view3d.current_mol = mol
+    view3d.show_all_atom_info()
+
+    calls = [
+        c
+        for c in view3d.plotter.add_text.call_args_list
+        if c.kwargs.get("name") == legend
+    ]
+    assert calls, legend
+    assert calls[0].kwargs["color"] == "#123456"
+    labels = view3d.plotter.add_point_labels.call_args.kwargs
+    assert labels["text_color"] == "#123456"
