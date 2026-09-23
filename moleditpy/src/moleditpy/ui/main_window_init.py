@@ -575,7 +575,7 @@ class MainInitManager:
                 json.dump(self.settings, f, indent=4)
             self.settings_dirty = False
             self.host.initial_settings = self.settings.copy()
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError, TypeError, OSError) as e:
             logging.warning(f"Error saving settings: {e}")
 
     # --- UI Initialization Helpers ---
