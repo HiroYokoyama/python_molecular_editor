@@ -772,19 +772,24 @@ class IOManager:
             if not file_path:
                 return
 
-        if not self.host.edit_actions_manager.clear_all(skip_check=True):
-            return
-
         try:
+            # Read and validate before clearing, so a corrupt or foreign file
+            # leaves the current document in place.
             with open(file_path, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
 
-            if json_data.get("format") != "PME Project":
+            if (
+                not isinstance(json_data, dict)
+                or json_data.get("format") != "PME Project"
+            ):
                 QMessageBox.warning(
                     self.host,
                     "Invalid Format",
                     "This file is not a valid PME Project format.",
                 )
+                return
+
+            if not self.host.edit_actions_manager.clear_all(skip_check=True):
                 return
 
             file_version = json_data.get("version", "1.0")
@@ -1263,12 +1268,12 @@ class IOManager:
             self.host.update_status_message("Opening raw project file cancelled.")
             return
 
-        if not self.host.edit_actions_manager.clear_all(skip_check=True):
-            return
-
         try:
+            # Unpickle before clearing, so an unreadable file keeps the document.
             with open(file_path, "rb") as f:
                 loaded_data = pickle.load(f)
+            if not self.host.edit_actions_manager.clear_all(skip_check=True):
+                return
             self.host.ui_manager.restore_ui_for_editing()
             self.host.state_manager.set_state_from_data(loaded_data)
             self.host.state_manager.reset_undo_stack()

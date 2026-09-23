@@ -6,7 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
-
+### Fixed
+* **Opening a corrupt project wiped the open document**: Open Project cleared the canvas before reading the file, so picking a corrupt `.pmeprj`/`.pmeraw` or a non-project file left an empty, untitled document behind the error. The file is now read and validated first; the document is cleared only once it is known to load.
 
 ---
 
