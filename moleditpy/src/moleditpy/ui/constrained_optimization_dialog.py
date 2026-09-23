@@ -807,7 +807,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         try:
             new_value_str = item.text()
-            new_value = float(new_value_str)
+            # Non-finite input is rejected and restored like non-numeric text.
+            new_value = finite_float(new_value_str)
 
             # Update internal constraints list
             old_constraint = self.constraints[row]

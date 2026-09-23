@@ -377,6 +377,23 @@ class TestCellChanged:
         # Internal value must be unchanged
         assert dlg.constraints[0][2] == pytest.approx(original_val)
 
+    @pytest.mark.parametrize("col", [2, 3])
+    @pytest.mark.parametrize("text", ["nan", "inf", "-inf"])
+    def test_non_finite_cell_value_reverts(self, make_dialog, col, text):
+        """nan/inf typed into the table are rejected like non-numeric text.
+
+        float() accepted them and fed a NaN or infinite target or force
+        constant straight to the optimizer.
+        """
+        dlg = self._setup_one_constraint(make_dialog)
+        original = dlg.constraints[0][col]
+
+        self._set_cell_text(dlg, 0, col, text)
+        with patch("moleditpy.ui.constrained_optimization_dialog.QMessageBox"):
+            dlg.on_cell_changed(0, col)
+
+        assert dlg.constraints[0][col] == pytest.approx(original)
+
     def test_non_value_column_ignored(self, make_dialog):
         """on_cell_changed does nothing when a non-editable column is touched."""
         dlg = self._setup_one_constraint(make_dialog)
