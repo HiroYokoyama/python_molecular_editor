@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -83,7 +83,7 @@ class AnalysisWindow(QDialog):
 
                 # RDKit's CalcMolFormula order, so XYZ and MOL sources agree:
                 # C, then H, then the rest alphabetically.
-                ordered = [e for e in ("C", "H") if e in atom_counts]
+                ordered: List[str] = [e for e in ("C", "H") if e in atom_counts]
                 ordered += sorted(e for e in atom_counts if e not in ("C", "H"))
                 formula_parts = [
                     e if atom_counts[e] == 1 else f"{e}{atom_counts[e]}"
