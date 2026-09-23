@@ -376,6 +376,41 @@ class TestSave2DAsTemplate:
             dm.save_2d_as_template()
         assert json.loads(f.read_text()) == {"original": True}
 
+    def test_unsafe_name_stays_inside_templates_folder(self, dm, tmp_path):
+        """'Ring/../Chain' is saved as one file inside user-templates.
+
+        The name used to go into the path with only spaces replaced, so a
+        separator failed the save and '..' could leave the folder.
+        """
+        dm.host.init_manager.settings_dir = str(tmp_path)
+        dm.host.state_manager.data.to_template_dict.return_value = {"atoms": []}
+        with (
+            patch(
+                "moleditpy.ui.dialog_logic.QInputDialog.getText",
+                return_value=("Ring/../Chain", True),
+            ),
+            patch("moleditpy.ui.dialog_logic.QMessageBox.information"),
+        ):
+            dm.save_2d_as_template()
+        saved = list((tmp_path / "user-templates").iterdir())
+        assert [p.name for p in saved] == ["Ring_.._Chain.pmetmplt"]
+        assert list(tmp_path.glob("*.pmetmplt")) == []
+
+    def test_write_error_is_reported(self, dm, tmp_path):
+        """An OSError while writing the file is shown, not raised."""
+        dm.host.init_manager.settings_dir = str(tmp_path)
+        dm.host.state_manager.data.to_template_dict.return_value = {"atoms": []}
+        with (
+            patch(
+                "moleditpy.ui.dialog_logic.QInputDialog.getText",
+                return_value=("t", True),
+            ),
+            patch("builtins.open", side_effect=PermissionError("denied")),
+            patch("moleditpy.ui.dialog_logic.QMessageBox.critical") as critical,
+        ):
+            dm.save_2d_as_template()
+        critical.assert_called_once()
+
     def test_shows_error_on_exception(self, dm, caplog):
         """save_2d_as_template logs the error when serialisation raises."""
         dm.host.state_manager.data.to_template_dict.side_effect = AttributeError("boom")

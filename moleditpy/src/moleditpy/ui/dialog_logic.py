@@ -39,7 +39,7 @@ from .planarize_dialog import PlanarizeDialog
 from .settings_dialog import SettingsDialog
 from .color_settings_dialog import ColorSettingsDialog
 from .translation_dialog import TranslationDialog
-from .user_template_dialog import UserTemplateDialog
+from .user_template_dialog import UserTemplateDialog, template_file_stem
 
 # Import VERSION from constants
 from ..utils.constants import VERSION
@@ -150,7 +150,7 @@ class DialogManager:
             )
 
             # Save to file
-            filename = f"{name.replace(' ', '_')}.pmetmplt"
+            filename = f"{template_file_stem(name)}.pmetmplt"
             filepath = os.path.join(template_dir, filename)
 
             if os.path.exists(filepath):
@@ -170,6 +170,11 @@ class DialogManager:
                 self.host, "Success", f"Template '{name}' saved successfully."
             )
 
+        except OSError as e:
+            logging.warning("Failed to save template: %s", e)
+            QMessageBox.critical(
+                self.host, "Error", "Failed to save template: " + str(e)
+            )
         except (AttributeError, RuntimeError, ValueError) as e:
             logging.exception("Failed to save template: %s", e)
 
