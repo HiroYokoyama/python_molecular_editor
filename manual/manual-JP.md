@@ -444,7 +444,7 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
       * リアルタイム 3D ドラッグ (原子やグループのドラッグ中に構造を随時更新します。オフにするとマウスを離した時点で移動が適用されます)。300 原子を超える構造では、毎フレームの再描画がドラッグ自体より遅くなるため、常にマウスを離した時点での更新になります。
       * グループ回転: マウス追従 (オンの場合、右ドラッグによる回転はグループ内の原子上から開始する必要があり、その原子がカーソルに追従します。オフ (既定) の場合は画面上のどこで右ドラッグしてもグループが回転します)
       * **3D ラベル:**
-          * ラベルの種類ごとの色: Index、Original ID、XYZ Index、Coordinates / Symbol (`View` \> `3D Atom Info Display` のラベル)、Chiral (R/S)、E/Z、およびすべてのラベルに共通の背景色
+          * ラベルの種類ごとの色: Index、Original ID、XYZ Index、Element Symbol、Coordinates (`View` \> `3D Atom Info Display` のラベル)、Chiral (R/S)、E/Z、およびすべてのラベルに共通の背景色
           * Check Chirality After 3D Conversion (5.1 を参照、既定でオン)
   * **各表示スタイル (Ball & Stick, CPK, Wireframe, Stick) タブ:**
       * 原子サイズ/半径のスケール
