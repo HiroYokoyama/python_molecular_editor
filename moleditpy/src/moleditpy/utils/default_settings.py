@@ -24,9 +24,12 @@ DEFAULT_SETTINGS = {
     "realtime_3d_drag": True,
     "rotate_group_follow_mouse": False,
     # --- 3D Labels ---
-    # Empty string = each atom info mode keeps its own color (index, ID, ...).
-    "atom_label_color_3d": "",
+    "index_label_color_3d": "#003366",
+    "original_id_label_color_3d": "#009000",
+    "xyz_index_label_color_3d": "#8B0000",
+    "atom_info_label_color_3d": "#000000",
     "chiral_label_color_3d": "#0000FF",
+    "ez_label_color_3d": "#006400",
     "label_background_color_3d": "#808080",
     "check_chirality_after_conversion": True,
     # --- 3D Model Parameters (Ball and Stick) ---

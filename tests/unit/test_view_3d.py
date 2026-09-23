@@ -1206,22 +1206,27 @@ def _atom_info_view(mock_parser_host, settings):
 
 
 @pytest.mark.parametrize(
-    "settings,text_color,shape_color",
+    "mode,settings,text_color,shape_color",
     [
-        ({}, "#003366", "#808080"),
+        ("rdkit_index", {}, "#003366", "#808080"),
         (
-            {"atom_label_color_3d": "#112233", "label_background_color_3d": "#ffffff"},
+            "rdkit_index",
+            {"index_label_color_3d": "#112233", "label_background_color_3d": "#ffffff"},
             "#112233",
             "#ffffff",
         ),
-        ({"atom_label_color_3d": ""}, "#003366", "#808080"),
+        ("symbol", {"atom_info_label_color_3d": "#445566"}, "#445566", "#808080"),
+        ("coords", {}, "#000000", "#808080"),
+        # An empty value (hand-edited settings file) falls back to the default.
+        ("rdkit_index", {"index_label_color_3d": ""}, "#003366", "#808080"),
     ],
 )
 def test_atom_info_labels_use_label_color_settings(
-    mock_parser_host, settings, text_color, shape_color
+    mock_parser_host, mode, settings, text_color, shape_color
 ):
-    """Atom info labels follow the label color settings; empty keeps the mode color."""
+    """Each atom info mode uses its own label color setting and the background."""
     view3d = _atom_info_view(mock_parser_host, settings)
+    view3d.atom_info_display_mode = mode
     view3d.show_all_atom_info()
     kwargs = view3d.plotter.add_point_labels.call_args.kwargs
     assert kwargs["text_color"] == text_color
@@ -1248,3 +1253,20 @@ def test_chiral_labels_use_label_color_settings(mock_parser_host):
     assert kwargs["name"] == "chiral_labels"
     assert kwargs["text_color"] == "#ff0000"
     assert kwargs["shape_color"] == "#00ff00"
+
+
+def test_ez_labels_use_label_color_settings(mock_parser_host):
+    """3D E/Z labels use the E/Z label and background color settings."""
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.settings = {
+        "ez_label_color_3d": "#aa00aa",
+        "label_background_color_3d": "#00ffff",
+    }
+    mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C"))
+    AllChem.EmbedMolecule(mol, randomSeed=5)
+    view3d.show_ez_labels_3d(mol)
+
+    kwargs = view3d.plotter.add_point_labels.call_args.kwargs
+    assert kwargs["name"] == "ez_labels"
+    assert kwargs["text_color"] == "#aa00aa"
+    assert kwargs["shape_color"] == "#00ffff"

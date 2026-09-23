@@ -1052,8 +1052,8 @@ class View3DManager:
     def _label_setting(self, key: str) -> str:
         """Return a 3D label color setting, falling back to its default."""
         settings = getattr(getattr(self.host, "init_manager", None), "settings", {})
-        value = settings.get(key, DEFAULT_SETTINGS[key])
-        return str(value) if value is not None else ""
+        value = settings.get(key) or DEFAULT_SETTINGS[key]
+        return str(value)
 
     def _add_3d_labels(self, mol: Any, mol_to_draw: Any) -> None:
         """Render chiral and E/Z stereochemistry labels in the 3D scene."""
@@ -1294,7 +1294,7 @@ class View3DManager:
                 labels,
                 font_size=18,
                 point_size=0,
-                text_color="darkgreen",  # Dark green color
+                text_color=self._label_setting("ez_label_color_3d"),
                 name="ez_labels",
                 always_visible=True,
                 shape="rect",
@@ -1598,12 +1598,10 @@ class View3DManager:
             else:
                 continue
 
-        # Each mode has its own color unless the user set one for all of them.
-        override = self._label_setting("atom_label_color_3d")
-        rdkit_color = override or "#003366"  # Dark blue
-        id_color = override or "#009000"  # Green
-        xyz_color = override or "#8B0000"  # Dark red
-        other_color = override or "black"
+        rdkit_color = self._label_setting("index_label_color_3d")
+        id_color = self._label_setting("original_id_label_color_3d")
+        xyz_color = self._label_setting("xyz_index_label_color_3d")
+        other_color = self._label_setting("atom_info_label_color_3d")
 
         # Add labels for each group and keep references in a list
         self.current_atom_info_labels = []

@@ -18,7 +18,6 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QColorDialog,
     QComboBox,
-    QHBoxLayout,
     QLabel,
     QPushButton,
     QWidget,
@@ -42,19 +41,24 @@ class Settings3DSceneTab(SettingsTabBase):
         self.rotate_group_follow_mouse_checkbox: Any = None
         self.current_bg_color = default_settings["background_color"]
         self.chirality_check_checkbox: Any = None
-        # Label colors, keyed by setting name. An empty atom label color means
-        # "Auto": each atom info mode keeps its own built-in color.
+        # Label colors, keyed by setting name.
         self.label_colors: dict[str, str] = {
             key: default_settings[key] for key in self._LABEL_COLOR_KEYS
         }
         self.label_color_buttons: dict[str, QPushButton] = {}
         self._setup_ui()
 
-    _LABEL_COLOR_KEYS = (
-        "atom_label_color_3d",
-        "chiral_label_color_3d",
-        "label_background_color_3d",
+    # (setting key, row label), in display order.
+    _LABEL_COLOR_ROWS = (
+        ("index_label_color_3d", "Index Label Color:"),
+        ("original_id_label_color_3d", "Original ID Label Color:"),
+        ("xyz_index_label_color_3d", "XYZ Index Label Color:"),
+        ("atom_info_label_color_3d", "Coordinates / Symbol Label Color:"),
+        ("chiral_label_color_3d", "Chiral (R/S) Label Color:"),
+        ("ez_label_color_3d", "E/Z Label Color:"),
+        ("label_background_color_3d", "Label Background Color:"),
     )
+    _LABEL_COLOR_KEYS = tuple(key for key, _ in _LABEL_COLOR_ROWS)
 
     def _setup_ui(self) -> None:
         """Construct controls and form layout for 3D scene settings."""
@@ -129,25 +133,8 @@ class Settings3DSceneTab(SettingsTabBase):
         form_layout.addRow(self._create_separator())
         form_layout.addRow(QLabel("<b>3D Labels</b>"))
 
-        atom_row = QHBoxLayout()
-        atom_row.addWidget(self._make_label_color_button("atom_label_color_3d"))
-        auto_button = QPushButton("Reset")
-        auto_button.setToolTip("Back to Auto: each atom info mode uses its own color")
-        auto_button.clicked.connect(
-            lambda: self._set_label_color("atom_label_color_3d", "")
-        )
-        atom_row.addWidget(auto_button)
-        atom_row.addStretch(1)
-        form_layout.addRow("Atom Info Label Color:", atom_row)
-
-        form_layout.addRow(
-            "Chiral Label Color:",
-            self._make_label_color_button("chiral_label_color_3d"),
-        )
-        form_layout.addRow(
-            "Label Background Color:",
-            self._make_label_color_button("label_background_color_3d"),
-        )
+        for key, label in self._LABEL_COLOR_ROWS:
+            form_layout.addRow(label, self._make_label_color_button(key))
 
         self.chirality_check_checkbox = QCheckBox()
         self.chirality_check_checkbox.setToolTip(
@@ -170,8 +157,7 @@ class Settings3DSceneTab(SettingsTabBase):
 
     def _pick_label_color(self, key: str) -> None:
         """Open a color dialog for the label color stored under *key*."""
-        start = self.label_colors[key] or "#000000"
-        color = QColorDialog.getColor(QColor(start), self)
+        color = QColorDialog.getColor(QColor(self.label_colors[key]), self)
         if color.isValid():
             self._set_label_color(key, color.name())
 
@@ -181,17 +167,13 @@ class Settings3DSceneTab(SettingsTabBase):
         self._update_label_color_button(key)
 
     def _update_label_color_button(self, key: str) -> None:
-        """Show the stored label color on its swatch, or "Auto" when unset."""
+        """Show the stored label color on its swatch."""
         button = self.label_color_buttons.get(key)
         if button is None:
             return
-        value = self.label_colors[key]
-        if value:
-            button.setText("")
-            button.setStyleSheet(f"background-color: {value}; border: 1px solid #888;")
-        else:
-            button.setText("Auto")
-            button.setStyleSheet("")
+        button.setStyleSheet(
+            f"background-color: {self.label_colors[key]}; border: 1px solid #888;"
+        )
 
     def _select_color(self) -> None:
         """Open color dialog to pick 3D viewport background color."""

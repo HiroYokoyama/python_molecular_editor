@@ -56,8 +56,12 @@ def test_scene_tab_get_settings_keys(app):
         "realtime_3d_drag",
         "rotate_group_follow_mouse",
         # 3D Labels section
-        "atom_label_color_3d",
+        "index_label_color_3d",
+        "original_id_label_color_3d",
+        "xyz_index_label_color_3d",
+        "atom_info_label_color_3d",
         "chiral_label_color_3d",
+        "ez_label_color_3d",
         "label_background_color_3d",
         "check_chirality_after_conversion",
     }
@@ -318,30 +322,29 @@ def test_scene_tab_label_colors_round_trip(app):
     """Label colors and the chirality check survive update_ui -> get_settings."""
     tab = Settings3DSceneTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)
-    settings.update(
-        {
-            "atom_label_color_3d": "#112233",
-            "chiral_label_color_3d": "#445566",
-            "label_background_color_3d": "#778899",
-            "check_chirality_after_conversion": False,
-        }
-    )
+    colors = {
+        key: f"#{i:02x}{i:02x}{i:02x}"
+        for i, key in enumerate(Settings3DSceneTab._LABEL_COLOR_KEYS, start=1)
+    }
+    settings.update(colors, check_chirality_after_conversion=False)
     tab.update_ui(settings)
     out = tab.get_settings()
-    assert out["atom_label_color_3d"] == "#112233"
-    assert out["chiral_label_color_3d"] == "#445566"
-    assert out["label_background_color_3d"] == "#778899"
+    for key, value in colors.items():
+        assert out[key] == value
+        assert value in tab.label_color_buttons[key].styleSheet()
     assert out["check_chirality_after_conversion"] is False
 
 
-def test_scene_tab_atom_label_color_auto(app):
-    """An empty atom label color shows "Auto" and is stored as empty."""
-    tab = Settings3DSceneTab(DEFAULT_SETTINGS)
-    tab._set_label_color("atom_label_color_3d", "#112233")
-    assert tab.label_color_buttons["atom_label_color_3d"].text() == ""
-    tab._set_label_color("atom_label_color_3d", "")
-    assert tab.label_color_buttons["atom_label_color_3d"].text() == "Auto"
-    assert tab.get_settings()["atom_label_color_3d"] == ""
+def test_scene_tab_label_defaults_match_previous_colors(app):
+    """Defaults reproduce the colors the labels had before they were settings."""
+    out = Settings3DSceneTab(DEFAULT_SETTINGS).get_settings()
+    assert out["index_label_color_3d"] == "#003366"
+    assert out["original_id_label_color_3d"] == "#009000"
+    assert out["xyz_index_label_color_3d"] == "#8B0000"
+    assert out["atom_info_label_color_3d"] == "#000000"
+    assert out["chiral_label_color_3d"] == "#0000FF"
+    assert out["ez_label_color_3d"] == "#006400"
+    assert out["label_background_color_3d"] == "#808080"
 
 
 def test_scene_tab_pick_label_color(app):
