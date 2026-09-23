@@ -159,6 +159,24 @@ def drawn_ez(data: MolecularData) -> Dict[Tuple[int, int], str]:
     }
 
 
+def actual_ez(mol_3d: Chem.Mol) -> Dict[int, str]:
+    """CIP E/Z ("E"/"Z") of every stereo double bond in a 3D structure.
+
+    Keyed by RDKit bond index and read from the coordinates, with the same
+    labeller as find_ez_mismatches, so a label and the check always agree.
+    """
+    if mol_3d.GetNumConformers() == 0:
+        return {}
+    probe = Chem.Mol(mol_3d)
+    Chem.AssignStereochemistryFrom3D(probe)
+    rdCIPLabeler.AssignCIPLabels(probe)
+    return {
+        bond.GetIdx(): bond.GetProp("_CIPCode")
+        for bond in probe.GetBonds()
+        if bond.HasProp("_CIPCode") and bond.GetProp("_CIPCode") in ("E", "Z")
+    }
+
+
 def find_ez_mismatches(data: MolecularData, mol_3d: Chem.Mol) -> List[EZMismatch]:
     """Double bonds labelled E or Z in 2D whose 3D configuration differs.
 

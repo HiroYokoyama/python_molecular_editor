@@ -357,10 +357,12 @@ def test_show_ez_labels_3d(app, mock_parser_host):
     for i, atom in enumerate(mol.GetAtoms()):
         atom.SetIntProp("_original_atom_id", i)
 
+    # A 2D label that disagrees used to turn the 3D label into "?"; the label
+    # now always shows the real 3D configuration.
     view3d.plotter.add_point_labels.reset_mock()
     view3d.show_ez_labels_3d(mol)
     args, kwargs = view3d.plotter.add_point_labels.call_args
-    assert "?" in args[1]
+    assert args[1] == ["E"]
 
 
 def test_chiral_labels_logic(app, mock_parser_host, mock_pv):
@@ -1402,7 +1404,8 @@ def test_wrong_ez_labels_are_drawn_in_red(mock_parser_host):
     mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C.C/C=C\C"))
     AllChem.EmbedMolecule(mol, randomSeed=5)
     doubles = [b.GetIdx() for b in mol.GetBonds() if b.GetBondTypeAsDouble() == 2]
-    view3d.ez_mismatches = {doubles[0]: "Z"}
+    # The first bond is E in 3D (drawn Z, say); the red label is its 3D E/Z.
+    view3d.ez_mismatches = {doubles[0]: "E"}
 
     view3d.show_ez_labels_3d(mol)
 
@@ -1410,6 +1413,23 @@ def test_wrong_ez_labels_are_drawn_in_red(mock_parser_host):
         c.kwargs["name"]: c for c in view3d.plotter.add_point_labels.call_args_list
     }
     assert calls["ez_labels_wrong"].kwargs["text_color"] == "#FF0000"
-    assert calls["ez_labels_wrong"].args[1] == ["Z"]
+    assert calls["ez_labels_wrong"].args[1] == ["E"]
     assert calls["ez_labels"].kwargs["text_color"] == "#006400"
     assert len(calls["ez_labels"].args[1]) == 1
+
+
+def test_ez_label_lost_in_3d_uses_check_marker(mock_parser_host):
+    """A labelled bond with no E/Z left in 3D is still marked, with "?"."""
+    view3d = _make_view3d(mock_parser_host)
+    mol = Chem.AddHs(Chem.MolFromSmiles("C=C"))  # no E/Z possible
+    AllChem.EmbedMolecule(mol, randomSeed=5)
+    double = next(b.GetIdx() for b in mol.GetBonds() if b.GetBondTypeAsDouble() == 2)
+    view3d.ez_mismatches = {double: "?"}
+
+    view3d.show_ez_labels_3d(mol)
+
+    calls = {
+        c.kwargs["name"]: c for c in view3d.plotter.add_point_labels.call_args_list
+    }
+    assert calls["ez_labels_wrong"].args[1] == ["?"]
+    assert "ez_labels" not in calls

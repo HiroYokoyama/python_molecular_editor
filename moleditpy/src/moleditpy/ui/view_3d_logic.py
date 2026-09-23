@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import QGraphicsView
 
 from ..utils.constants import CPK_COLORS_PV, VDW_DISPLAY_RADII, pt
 from ..utils.label_style import label_kwargs
+from ..core.stereo_check import actual_ez
 from .template_preview_item import TemplatePreviewItem
 
 
@@ -1238,86 +1239,32 @@ class View3DManager:
 
         conf = mol.GetConformer()
 
-        # Display E/Z stereochemistry determined by RDKit for double bonds
-
+        # E/Z read from the 3D coordinates with the CIP labeller the stereo
+        # check uses, so every label shows the real 3D configuration (a bond
+        # that differs from the 2D label is shown in red, never as "?").
         try:
-            # Recalculate stereochemistry from 3D coordinates (on mol).
-            # This ensures determination is based on actual 3D positions regardless of 2D state.
-            Chem.AssignStereochemistry(
-                mol, cleanIt=True, force=True, flagPossibleStereoCenters=True
-            )
-        except (AttributeError, RuntimeError, TypeError, ValueError):
-            logging.warning("Caught exception in " + __file__, exc_info=True)
+            ez_3d = actual_ez(mol)
+        except (RuntimeError, ValueError):
+            logging.warning("E/Z perception from 3D failed", exc_info=True)
+            ez_3d = {}
 
         for bond in mol.GetBonds():
-            if bond.GetBondType() == Chem.BondType.DOUBLE:
-                new_stereo = bond.GetStereo()
-
-                if new_stereo in [Chem.BondStereo.STEREOE, Chem.BondStereo.STEREOZ]:
-                    # Calculate bond center coordinates
-                    # Explicitly extract x,y,z for cross-platform/version robustness
-                    p1 = conf.GetAtomPosition(bond.GetBeginAtomIdx())
-                    p2 = conf.GetAtomPosition(bond.GetEndAtomIdx())
-                    begin_pos = np.array([p1.x, p1.y, p1.z])
-                    end_pos = np.array([p2.x, p2.y, p2.z])
-                    center_pos = (begin_pos + end_pos) / 2
-
-                    # Determine 3D label
-                    label = "E" if new_stereo == Chem.BondStereo.STEREOE else "Z"
-
-                    # Check for discrepancy with 2D intent from self.host.state_manager.data
-                    try:
-                        # Get original atom IDs
-                        idx1 = bond.GetBeginAtom().GetIntProp("_original_atom_id")
-                        idx2 = bond.GetEndAtom().GetIntProp("_original_atom_id")
-
-                        # Find corresponding bond in 2D data
-                        bond_key = (min(idx1, idx2), max(idx1, idx2))
-                        two_d_bond = self.host.state_manager.data.bonds.get(bond_key)
-
-                        if two_d_bond:
-                            two_d_stereo = two_d_bond.get("stereo", 0)
-                            # 3 = Z, 4 = E
-                            if two_d_stereo in [3, 4]:
-                                expected_stereo = (
-                                    Chem.BondStereo.STEREOZ
-                                    if two_d_stereo == 3
-                                    else Chem.BondStereo.STEREOE
-                                )
-                                if expected_stereo != new_stereo:
-                                    label = "?"
-                    except (AttributeError, KeyError, ValueError, TypeError):
-                        # Fallback to the saved property if direct access fails
-                        try:
-                            old_stereo = bond.GetIntProp("_original_2d_stereo")
-                            if old_stereo in [
-                                Chem.BondStereo.STEREOE,
-                                Chem.BondStereo.STEREOZ,
-                            ]:
-                                if old_stereo != new_stereo:
-                                    label = "?"
-                        except (KeyError, RuntimeError, TypeError):
-                            # Safe defensive fallback catching KeyError, RuntimeError, TypeError
-                            logging.debug(
-                                "Suppressed non-critical error", exc_info=True
-                            )
-
-                    if bond.GetIdx() in wrong:
-                        # The check's own CIP descriptor, matching the dialog.
-                        wrong_pts.append(center_pos)
-                        wrong_labels.append(wrong[bond.GetIdx()])
-                    else:
-                        pts.append(center_pos)
-                        labels.append(label)
-                elif bond.GetIdx() in wrong:
-                    # The label's configuration was lost entirely in 3D.
-                    p1 = conf.GetAtomPosition(bond.GetBeginAtomIdx())
-                    p2 = conf.GetAtomPosition(bond.GetEndAtomIdx())
-                    wrong_pts.append(
-                        (np.array([p1.x, p1.y, p1.z]) + np.array([p2.x, p2.y, p2.z]))
-                        / 2
-                    )
-                    wrong_labels.append(wrong[bond.GetIdx()])
+            idx = bond.GetIdx()
+            label = ez_3d.get(idx)
+            if label is None and idx not in wrong:
+                continue
+            p1 = conf.GetAtomPosition(bond.GetBeginAtomIdx())
+            p2 = conf.GetAtomPosition(bond.GetEndAtomIdx())
+            center_pos = (
+                np.array([p1.x, p1.y, p1.z]) + np.array([p2.x, p2.y, p2.z])
+            ) / 2
+            if idx in wrong:
+                # The check's actual 3D label; "?" only if E/Z was lost entirely.
+                wrong_pts.append(center_pos)
+                wrong_labels.append(label or wrong[idx])
+            else:
+                pts.append(center_pos)
+                labels.append(label)
 
         if wrong_pts:
             style = self._label_kwargs("ez")

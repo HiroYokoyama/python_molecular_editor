@@ -354,3 +354,20 @@ def test_ez_check_without_conformer_is_skipped():
 
     data, _ = _labelled_alkene("CC(Cl)=CC", 3)
     assert find_ez_mismatches(data, data.to_rdkit_mol()) == []
+
+
+def test_actual_ez_reads_cip_from_3d():
+    """actual_ez labels each stereo double bond from the 3D coordinates."""
+    from rdkit.Chem import AllChem
+    from moleditpy.core.stereo_check import actual_ez
+
+    for smiles, want in (("C/C=C/C", "E"), ("C/C=C\C", "Z")):
+        mol = Chem.AddHs(Chem.MolFromSmiles(smiles))
+        AllChem.EmbedMolecule(mol, randomSeed=7)
+        double = next(
+            b.GetIdx() for b in mol.GetBonds() if b.GetBondTypeAsDouble() == 2
+        )
+        assert actual_ez(mol) == {double: want}
+
+    flat = Chem.MolFromSmiles("C/C=C/C")  # no conformer
+    assert actual_ez(flat) == {}
