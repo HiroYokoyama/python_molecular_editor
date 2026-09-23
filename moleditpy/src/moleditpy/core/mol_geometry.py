@@ -720,7 +720,7 @@ def resolve_2d_overlaps(
         return []
 
     # Union-Find for overlap groups
-    parent = {aid: aid for aid in atom_ids}
+    parent = {aid: aid for aid in ids_list}
 
     def find_set(aid: int) -> int:
         """Find representative root for an element in disjoint-set."""
@@ -743,7 +743,7 @@ def resolve_2d_overlaps(
         unite_sets(id1, id2)
 
     groups_by_root: Dict[int, List[int]] = {}
-    for aid in atom_ids:
+    for aid in ids_list:
         root = find_set(aid)
         groups_by_root.setdefault(root, []).append(aid)
 

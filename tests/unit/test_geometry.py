@@ -820,6 +820,15 @@ def test_resolve_2d_overlaps_moves_unbonded_fragment():
     assert vector == (-20, 20)
 
 
+def test_resolve_2d_overlaps_accepts_one_shot_iterable():
+    """atom_ids is typed Iterable, so a generator must work, not raise KeyError."""
+    from moleditpy.core.mol_geometry import resolve_2d_overlaps
+
+    positions = {1: (0.0, 0.0), 2: (0.1, 0.0), 3: (50.0, 50.0)}
+    result = resolve_2d_overlaps(iter([1, 2, 3]), positions, {})
+    assert result == [({2}, (-20, 20))]
+
+
 def test_get_connected_group_revisits_ring_atoms():
     from moleditpy.core.mol_geometry import get_connected_group
 
