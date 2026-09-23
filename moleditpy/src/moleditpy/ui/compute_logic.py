@@ -372,9 +372,10 @@ class ComputeManager:
         _reg = getattr(_plugin_mgr, "optimization_methods", None)
         plugin_entry = _reg.get(method) if isinstance(_reg, dict) else None
         if plugin_entry:
-            self._run_plugin_optimization(method, plugin_entry)
+            optimization_succeeded = self._run_plugin_optimization(method, plugin_entry)
             # Plugin optimizers run in-process, not through the worker.
-            self.check_chirality_against_2d(after_optimization=True)
+            if optimization_succeeded:
+                self.check_chirality_against_2d(after_optimization=True)
             return
 
         self.host.statusBar().showMessage(f"Optimizing 3D structure ({method})...")  # type: ignore[union-attr]
@@ -410,7 +411,7 @@ class ComputeManager:
 
         self._start_calculation_worker(mol_block, options, run_id)
 
-    def _run_plugin_optimization(self, method: str, entry: Dict[str, Any]) -> None:
+    def _run_plugin_optimization(self, method: str, entry: Dict[str, Any]) -> bool:
         """Run a plugin-registered optimization callback synchronously.
 
         The callback receives the current RDKit mol, modifies it in place,
@@ -422,7 +423,7 @@ class ComputeManager:
             self.host.update_status_message(
                 f"Optimization with {label} needs a 3D structure."
             )
-            return
+            return False
         self.host.update_status_message(f"Optimizing 3D structure ({label})...")
         try:
             success = bool(entry["callback"](mol))
@@ -434,12 +435,12 @@ class ComputeManager:
             self.host.update_status_message(
                 f"Plugin optimization '{label}' failed (see log)."
             )
-            return
+            return False
 
         if not success:
             self._refresh_ui_state()
             self.host.update_status_message(f"Optimization with {label} failed.")
-            return
+            return False
 
         self.last_successful_optimization_method = label
         self.host.view_3d_manager.draw_molecule_3d(mol)
@@ -448,6 +449,7 @@ class ComputeManager:
         if self.host.view_3d_manager.plotter:
             self.host.view_3d_manager.plotter.reset_camera()  # type: ignore[call-arg]
         self.host.update_status_message(f"Process completed ({label}).")
+        return True
 
     def _prepare_rdkit_mol_for_conversion(self) -> Optional[Chem.Mol]:
         """Prepare and sanitize RDKit molecule for 3D conversion."""
@@ -642,16 +644,24 @@ class ComputeManager:
             if worker_id is not None
             else None
         )
-        if pending and mol:
-            self._run_plugin_optimization(*pending)
+        plugin_succeeded = True
+        if pending:
+            plugin_succeeded = self._run_plugin_optimization(*pending)
 
         conversions: Set[int] = getattr(self, "_conversion_run_ids", set())
         # No worker id: a legacy/direct caller, which only conversions use.
         is_conversion = worker_id is None or worker_id in conversions
         conversions.discard(worker_id)  # type: ignore[arg-type]
-        self.check_chirality_against_2d(after_optimization=not is_conversion)
+        if is_conversion and not plugin_succeeded:
+            self.check_chirality_against_2d(
+                after_optimization=False, report_status=False
+            )
+        elif plugin_succeeded:
+            self.check_chirality_against_2d(after_optimization=not is_conversion)
 
-    def check_chirality_against_2d(self, after_optimization: bool = False) -> None:
+    def check_chirality_against_2d(
+        self, after_optimization: bool = False, report_status: bool = True
+    ) -> None:
         """Warn when the 3D result does not keep the stereo drawn in 2D.
 
         Compares wedged/hashed stereocenters (R/S) and E/Z-labelled double
@@ -693,9 +703,10 @@ class ComputeManager:
         )
         self._chirality_dialog.show()
         count = len(mismatches) + len(ez_mismatches)
-        self.host.update_status_message(
-            f"Warning: {count} stereo element(s) differ from the 2D drawing."
-        )
+        if report_status:
+            self.host.update_status_message(
+                f"Warning: {count} stereo element(s) differ from the 2D drawing."
+            )
 
     def on_calculation_error(self, message: Union[str, Tuple[int, str]]) -> None:
         """Handle an error or halt signal from the background optimization worker."""

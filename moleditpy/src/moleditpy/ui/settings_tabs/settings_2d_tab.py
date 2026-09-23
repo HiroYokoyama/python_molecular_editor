@@ -140,6 +140,7 @@ class Settings2DTab(SettingsTabBase):
         self.atom_font_family_2d_combo.setFontFilters(
             QFontComboBox.FontFilter.ScalableFonts
         )
+        self.atom_font_family_2d_combo.activated.connect(self._on_font_family_activated)
         form_layout.addRow("Atom Label Font Family:", self.atom_font_family_2d_combo)
 
         self.atom_font_size_2d_slider, self.atom_font_size_2d_label = (
@@ -369,6 +370,10 @@ class Settings2DTab(SettingsTabBase):
         self.template_snapping_distance_2d_slider.setValue(
             int(settings_dict.get("template_snapping_distance_2d", 14.0))
         )
+
+    def _on_font_family_activated(self, _index: int) -> None:
+        """Mark the displayed font as the user's explicit selection."""
+        self._loaded_font_family = None
 
     def _font_family_setting(self) -> str:
         """The atom font family to save.

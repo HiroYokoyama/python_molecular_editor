@@ -781,7 +781,21 @@ def test_paste_invalid_json_reports_error(mock_parser_host):
     "payload",
     [
         {"atoms": [{"symbol": "C", "rel_pos": [0.0, 0.0]}]},  # no "bonds"
-        {"atoms": [], "bonds": [{"idx1": 0, "idx2": 1}]},  # index out of range
+        {
+            "atoms": [
+                {"symbol": "C", "rel_pos": [0.0, 0.0]},
+                {"symbol": "O"},
+            ],
+            "bonds": [],
+        },  # missing atom field
+        {
+            "atoms": [{"symbol": "C", "rel_pos": [0.0, 0.0]}],
+            "bonds": [{"idx1": 0}],
+        },  # missing bond field
+        {
+            "atoms": [{"symbol": "C", "rel_pos": [0.0, 0.0]}],
+            "bonds": [{"idx1": 0, "idx2": 1}],
+        },  # index out of range
     ],
 )
 def test_paste_malformed_fragment_reports_error(mock_parser_host, payload):
@@ -791,6 +805,9 @@ def test_paste_malformed_fragment_reports_error(mock_parser_host, payload):
         "Error during paste operation." in str(c.args[0])
         for c in mock_parser_host.statusBar().showMessage.call_args_list
     )
+    assert len(mock_parser_host.state_manager.data.atoms) == 0
+    assert len(mock_parser_host.state_manager.data.bonds) == 0
+    mock_parser_host.init_manager.scene.create_atom.assert_not_called()
     mock_parser_host.edit_actions_manager.push_undo_state.assert_not_called()
 
 

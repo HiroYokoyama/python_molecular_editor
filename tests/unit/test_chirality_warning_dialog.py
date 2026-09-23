@@ -146,6 +146,21 @@ def test_check_shows_dialog_on_mismatch(app):
     assert "3 stereo element(s)" in compute.host.update_status_message.call_args.args[0]
 
 
+def test_check_can_preserve_an_existing_status_on_mismatch(app):
+    """A mismatch dialog can open without replacing a plugin failure status."""
+    compute, patcher = _compute({}, MISMATCHES)
+    with (
+        patcher,
+        patch("moleditpy.ui.compute_logic.drawn_chirality", return_value={1: "R"}),
+        patch("moleditpy.ui.compute_logic.ChiralityWarningDialog") as dialog_cls,
+    ):
+        compute.check_chirality_against_2d(report_status=False)
+
+    dialog_cls.assert_called_once()
+    dialog_cls.return_value.show.assert_called_once()
+    compute.host.update_status_message.assert_not_called()
+
+
 def test_ez_mismatch_alone_opens_the_warning(app):
     """A wrong double bond with every stereocenter right still warns."""
     compute, patcher = _compute({}, [], EZ)
@@ -245,13 +260,90 @@ def test_plugin_optimizer_runs_the_optimization_check(app, mock_parser_host):
     mock_parser_host.init_manager.optimization_method = "MY_OPT"
     mock_parser_host.init_manager.opt3d_method_labels = {}
     mock_parser_host.plugin_manager.optimization_methods = {"MY_OPT": {"label": "x"}}
-    compute._run_plugin_optimization = MagicMock()
+    compute._run_plugin_optimization = MagicMock(return_value=True)
     compute.check_chirality_against_2d = MagicMock()
 
     compute.optimize_3d_structure()
 
     compute._run_plugin_optimization.assert_called_once()
     compute.check_chirality_against_2d.assert_called_once_with(after_optimization=True)
+
+
+def test_failed_plugin_optimizer_skips_the_optimization_check(app, mock_parser_host):
+    """A failed plugin keeps its status instead of running the stereo check."""
+    compute = ComputeManager(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = MagicMock()
+    mock_parser_host.init_manager.optimization_method = "MY_OPT"
+    mock_parser_host.init_manager.opt3d_method_labels = {}
+    mock_parser_host.plugin_manager.optimization_methods = {"MY_OPT": {"label": "x"}}
+    compute._run_plugin_optimization = MagicMock(return_value=False)
+    compute.check_chirality_against_2d = MagicMock()
+
+    compute.optimize_3d_structure()
+
+    compute._run_plugin_optimization.assert_called_once()
+    compute.check_chirality_against_2d.assert_not_called()
+
+
+def test_conversion_plugin_failure_checks_stereo_without_replacing_status(
+    app, mock_parser_host
+):
+    """A conversion still checks stereo while preserving plugin failure status."""
+    compute = ComputeManager(mock_parser_host)
+    compute.active_worker_ids.add(7)
+    compute._conversion_run_ids.add(7)
+    compute._pending_plugin_opt[7] = ("MY_OPT", {"label": "x"})
+    compute._run_plugin_optimization = MagicMock(return_value=False)
+    compute.check_chirality_against_2d = MagicMock()
+
+    compute.on_calculation_finished((7, MagicMock()))
+
+    compute._run_plugin_optimization.assert_called_once_with("MY_OPT", {"label": "x"})
+    compute.check_chirality_against_2d.assert_called_once_with(
+        after_optimization=False, report_status=False
+    )
+
+
+@pytest.mark.parametrize("callback_result", [False, None])
+def test_plugin_optimizer_returns_false_for_unsuccessful_callback(
+    app, mock_parser_host, callback_result
+):
+    """False-like plugin callback results are reported to the caller."""
+    compute = ComputeManager(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = MagicMock()
+
+    assert (
+        compute._run_plugin_optimization(
+            "MY_OPT",
+            {"label": "x", "callback": MagicMock(return_value=callback_result)},
+        )
+        is False
+    )
+
+
+def test_plugin_optimizer_returns_false_when_callback_raises(app, mock_parser_host):
+    """Plugin callback exceptions are isolated and reported to the caller."""
+    compute = ComputeManager(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = MagicMock()
+    callback = MagicMock(side_effect=RuntimeError("broken plugin"))
+
+    assert (
+        compute._run_plugin_optimization("MY_OPT", {"label": "x", "callback": callback})
+        is False
+    )
+
+
+def test_plugin_optimizer_returns_true_after_completion(app, mock_parser_host):
+    """A completed plugin optimization reports success to its caller."""
+    compute = ComputeManager(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = MagicMock()
+
+    assert (
+        compute._run_plugin_optimization(
+            "MY_OPT", {"label": "x", "callback": MagicMock(return_value=True)}
+        )
+        is True
+    )
 
 
 def test_dialog_lists_double_bonds(app):

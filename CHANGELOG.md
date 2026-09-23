@@ -7,12 +7,14 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Fixed
+* **Plugin optimization failure ran the stereo check**: plugin optimizers now report success explicitly, and failed callbacks keep their failure status instead of immediately running the post-optimization stereochemistry check.
+* **Malformed clipboard fragments could be pasted partially**: the entire atom and bond payload, including bond indexes, is now validated before any scene item is created.
 * **Opening a corrupt project wiped the open document**: Open Project cleared the canvas before reading the file, so picking a corrupt `.pmeprj`/`.pmeraw` or a non-project file left an empty, untitled document behind the error. The file is now read and validated first; the document is cleared only once it is known to load.
 * **Blank SMILES reported success**: Import SMILES with only spaces reported *Successfully loaded from SMILES.* and added an empty undo step, because RDKit parses an empty string as an empty molecule. It now reports that the string was empty.
 * **Plugins that failed to import disappeared**: a plugin with a syntax error or a missing dependency was left out of the Plugin Manager altogether, so nothing showed why it was missing, and the Plugin Installer listed it as not installed. It is now listed with the status *Error (Load): …* (in red) and its metadata, and its half-imported module is removed from `sys.modules`.
 * **Export to an unwritable location**: SVG export said *2D view exported to …* even when the file could not be created (the painter failed silently), and a permission or disk error during STL, color STL or 3D PNG export escaped as an unhandled exception. Both are now reported in the status bar.
 * **User templates**: one unreadable template file (not UTF-8, or JSON that is not an object) stopped the Templates dialog from listing any file after it, or crashed it; such files are now skipped on their own. A template name containing `/`, `\`, `:` or other characters not allowed in file names failed to save, and `..` could write outside the templates folder; those characters are now replaced with `_`. Templates are listed in file-name order.
-* **2D atom font rewritten by opening Settings**: when the saved atom label font (Arial by default) is not installed, as on many Linux systems, the font list shows a substitute, and pressing OK saved that substitute although nothing was changed. The saved font is now kept unless another one is picked.
+* **2D atom font rewritten by opening Settings**: when the saved atom label font (Arial by default) is not installed, as on many Linux systems, the font list shows a substitute, and pressing OK saved that substitute although nothing was changed. The saved font is now kept until the user explicitly activates a font, including re-selecting the displayed substitute.
 
 ---
 
