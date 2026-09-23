@@ -628,6 +628,29 @@ except BaseException:
         plugin2 = next((p for p in pm.plugins if "badauto" in p["filepath"]), None)
         assert plugin2 and "Error (Autorun): AUTO_ERR" in plugin2["status"]
 
+    def test_plugin_import_failure_is_listed_with_error(self, tmpdir):
+        """A plugin that fails to import is listed with its error, not dropped.
+
+        It used to vanish from the Plugin Manager, leaving the user no way to
+        see why, and its half-executed module stayed in sys.modules.
+        """
+        pm = PluginManager()
+        pm.plugin_dir = str(tmpdir.mkdir("plugins"))
+        broken = tmpdir.join("plugins").join("broken_import_plugin.py")
+        broken.write(
+            "PLUGIN_NAME = 'Broken'\nPLUGIN_VERSION = '1.2'\n"
+            "import no_such_module_xyz\n"
+        )
+        pm.discover_plugins()
+
+        plugin = next(p for p in pm.plugins if p["filepath"] == str(broken))
+        assert plugin["name"] == "Broken"
+        assert plugin["version"] == "1.2"
+        assert plugin["status"].startswith("Error (Load):")
+        assert "no_such_module_xyz" in plugin["status"]
+        assert plugin["module"] is None
+        assert "broken_import_plugin" not in sys.modules
+
     @patch("importlib.util.spec_from_file_location")
     @patch("importlib.util.module_from_spec")
     def test_load_plugin_version_tuple(self, mock_mod, mock_spec):
