@@ -371,3 +371,51 @@ def test_actual_ez_reads_cip_from_3d():
 
     flat = Chem.MolFromSmiles("C/C=C/C")  # no conformer
     assert actual_ez(flat) == {}
+
+
+def test_drawn_stereo_is_empty_when_the_drawing_cannot_be_built(monkeypatch):
+    """An unbuildable drawing specifies nothing to compare."""
+    from moleditpy.core import stereo_check as sc
+
+    data = _draw("C[C@H](F)Cl")
+    monkeypatch.setattr(data, "to_rdkit_mol", lambda **_kw: None)
+    assert sc.drawn_chirality(data) == {}
+
+    alkene, _ = _labelled_alkene("CC=CC", 4)
+    monkeypatch.setattr(alkene, "to_rdkit_mol", lambda **_kw: None)
+    assert sc.drawn_ez(alkene) == {}
+
+
+def test_3d_checks_skip_a_molecule_without_coordinates():
+    """Without a conformer there is no 3D configuration to read."""
+    from moleditpy.core import stereo_check as sc
+
+    assert sc.actual_chirality(Chem.MolFromSmiles("C[C@H](F)Cl")) == {}
+    data, _ = _labelled_alkene("CC=CC", 4)
+    assert sc.find_ez_mismatches(data, Chem.MolFromSmiles("CC=CC")) == []
+
+
+def test_ez_check_survives_a_cip_failure():
+    """A CIP labeller error is logged and the check reports nothing."""
+    from unittest.mock import patch
+
+    from moleditpy.core import stereo_check as sc
+
+    data, _ = _labelled_alkene("CC=CC", 4)
+    mol = _convert(data)
+    with patch.object(
+        sc.rdCIPLabeler, "AssignCIPLabels", side_effect=RuntimeError("boom")
+    ):
+        assert sc.find_ez_mismatches(data, mol) == []
+
+
+def test_ez_check_skips_labels_on_atoms_no_longer_drawn():
+    """A label whose atoms were deleted since is not compared."""
+    from unittest.mock import patch
+
+    from moleditpy.core import stereo_check as sc
+
+    data, _ = _labelled_alkene("CC=CC", 4)
+    mol = _convert(data)
+    with patch.object(sc, "drawn_ez", return_value={(998, 999): "E"}):
+        assert sc.find_ez_mismatches(data, mol) == []

@@ -842,3 +842,17 @@ def test_fallback_v3000_encodes_wedge_and_dash():
     ]
     assert any(ln.endswith("CFG=1") for ln in bond_lines)
     assert any(ln.endswith("CFG=3") for ln in bond_lines)
+
+
+def test_align_ez_to_cip_leaves_the_mol_alone_when_cip_fails():
+    """A CIP labeller error keeps the bond stereo as it was."""
+    from moleditpy.core import molecular_data as md
+
+    mol = Chem.MolFromSmiles("C/C=C/C")
+    double = next(b for b in mol.GetBonds() if b.GetBondTypeAsDouble() == 2)
+    before = double.GetStereo()
+    with patch.object(
+        md.rdCIPLabeler, "AssignCIPLabels", side_effect=RuntimeError("boom")
+    ):
+        md.align_ez_to_cip(mol, {double.GetIdx(): "Z"})
+    assert mol.GetBondWithIdx(double.GetIdx()).GetStereo() == before

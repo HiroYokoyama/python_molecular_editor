@@ -1433,3 +1433,59 @@ def test_ez_label_lost_in_3d_uses_check_marker(mock_parser_host):
     }
     assert calls["ez_labels_wrong"].args[1] == ["?"]
     assert "ez_labels" not in calls
+
+
+def test_chiral_labels_survive_actor_removal_errors(mock_parser_host):
+    """A failing remove_actor for old chiral labels does not stop the redraw."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.show_chiral_labels = True
+    mol = Chem.AddHs(Chem.MolFromSmiles("C[C@H](F)Cl"))
+    AllChem.EmbedMolecule(mol, randomSeed=3)
+    view3d.atom_positions_3d = mol.GetConformer().GetPositions()
+    view3d.plotter.remove_actor.side_effect = RuntimeError("gone")
+
+    view3d._add_3d_labels(mol, mol)
+
+    names = [c.kwargs["name"] for c in view3d.plotter.add_point_labels.call_args_list]
+    assert "chiral_labels" in names
+
+
+def test_chiral_labels_skipped_without_3d_positions(mock_parser_host, caplog):
+    """Chiral centers but no cached positions: warn and draw nothing."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.show_chiral_labels = True
+    mol = Chem.AddHs(Chem.MolFromSmiles("C[C@H](F)Cl"))
+    AllChem.EmbedMolecule(mol, randomSeed=3)
+    view3d.atom_positions_3d = None
+
+    view3d._add_3d_labels(mol, mol)
+
+    assert "atom_positions_3d is None" in caplog.text
+    view3d.plotter.add_point_labels.assert_not_called()
+
+
+def test_ez_labels_survive_actor_removal_errors(mock_parser_host):
+    """Old E/Z label actors that cannot be removed do not stop the new ones."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.plotter.renderer.actors = {"ez_labels": 1, "ez_labels_wrong": 1}
+    view3d.plotter.remove_actor.side_effect = RuntimeError("gone")
+    mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C"))
+    AllChem.EmbedMolecule(mol, randomSeed=5)
+
+    view3d.show_ez_labels_3d(mol)
+
+    call = view3d.plotter.add_point_labels.call_args
+    assert call.kwargs["name"] == "ez_labels"
+    assert call.args[1] == ["E"]
+
+
+def test_ez_labels_skipped_when_3d_perception_fails(mock_parser_host):
+    """An E/Z perception error leaves the scene without E/Z labels."""
+    view3d = _make_view3d(mock_parser_host)
+    mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C"))
+    AllChem.EmbedMolecule(mol, randomSeed=5)
+    with patch(
+        "moleditpy.ui.view_3d_logic.actual_ez", side_effect=RuntimeError("boom")
+    ):
+        view3d.show_ez_labels_3d(mol)
+    view3d.plotter.add_point_labels.assert_not_called()

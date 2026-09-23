@@ -1103,3 +1103,21 @@ def test_export_2d_svg_unwritable_path_is_not_reported_as_exported(
     assert not any("exported to" in m for m in messages)
     assert any("Failed to save SVG" in m for m in messages)
     exporter.scene.render.assert_not_called()
+
+
+def test_export_color_stl_permission_error_reported(mock_parser_host, tmp_path):
+    """Color STL: a write refused by the OS is reported, not raised."""
+    exporter = DummyExport(mock_parser_host)
+    mesh = MagicMock()
+    mesh.n_points = 10
+    mesh.save.side_effect = PermissionError("read-only")
+    exporter.export_from_3d_view = MagicMock(return_value=mesh)
+    with patch(
+        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(str(tmp_path / "out.stl"), ""),
+    ):
+        exporter.export_color_stl()
+    assert any(
+        "Error exporting STL: read-only" in m
+        for m in _status_messages(mock_parser_host)
+    )

@@ -1564,3 +1564,35 @@ def test_click_on_group_atom_closes_the_drag_gesture():
     ]
     assert events == ["start", "end"]
     move_group_dialog.on_atom_picked.assert_called_once_with(0)
+
+
+def test_measurement_pick_error_is_logged_not_raised():
+    """A failing measurement selection in the deferred callback is contained."""
+    from rdkit import Chem
+
+    host = MagicMock()
+    host.edit_3d_manager.measurement_mode = True
+    host.view_3d_manager.current_mol = Chem.MolFromSmiles("CC")
+    host.edit_3d_manager.handle_measurement_atom_selection.side_effect = RuntimeError(
+        "boom"
+    )
+    style = CustomInteractorStyle(host)
+    style.GetInteractor = MagicMock(return_value=MagicMock())
+
+    deferred = []
+    with (
+        patch("moleditpy.ui.custom_interactor_style.QApplication") as mock_qapp,
+        patch(
+            "moleditpy.ui.custom_interactor_style.pick_atom_index_from_screen",
+            return_value=0,
+        ),
+        patch(
+            "moleditpy.ui.custom_interactor_style.QTimer.singleShot",
+            side_effect=lambda _ms, fn: deferred.append(fn),
+        ),
+    ):
+        mock_qapp.topLevelWidgets.return_value = []
+        style.on_left_button_down(None, None)
+    assert len(deferred) == 1
+    deferred[0]()  # must not raise
+    host.edit_3d_manager.handle_measurement_atom_selection.assert_called_once_with(0)

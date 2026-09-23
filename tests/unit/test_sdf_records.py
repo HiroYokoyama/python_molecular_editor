@@ -237,3 +237,42 @@ def test_cancelling_is_quiet(tmp_path, loader, message):
     report.assert_not_called()
     io.host.statusBar.return_value.showMessage.assert_called_with(message)
     io.host.edit_actions_manager.clear_all.assert_not_called()
+
+
+def test_formula_is_blank_when_rdkit_cannot_compute_it():
+    """A formula error shows as an empty cell rather than failing the list."""
+    from moleditpy.utils import sdf_records
+
+    record = read_sdf_records(_sdf(_record("CCO", "Ethanol")))[0]
+    with patch.object(sdf_records, "CalcMolFormula", side_effect=RuntimeError("x")):
+        assert record.formula == ""
+
+
+def test_record_that_raises_is_kept_as_unreadable():
+    """A record the supplier raises on stays in the list, unreadable."""
+    from moleditpy.utils import sdf_records
+
+    good = Chem.MolFromSmiles("CC")
+    good.SetProp("_Name", "One")  # a real supplier always sets the title
+    calls = {"n": 0}
+
+    def fake_supplier(*_a, **_k):
+        class S:
+            def __iter__(self):
+                return self
+
+            def __next__(self):
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    return good
+                if calls["n"] == 2:
+                    raise RuntimeError("bad record")
+                raise StopIteration
+
+        return S()
+
+    text = _sdf(_record("CC", "One"), _record("CCC", "Two"))
+    with patch.object(sdf_records.Chem, "ForwardSDMolSupplier", fake_supplier):
+        records = read_sdf_records(text)
+    assert [r.readable for r in records] == [True, False]
+    assert records[1].name == "Two"

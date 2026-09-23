@@ -1805,3 +1805,21 @@ def test_ez_block_keeps_drawn_stereocenter(mock_parser_host, wedge, ez_label):
     block = ComputeManager._setup_mol_block_for_worker(compute, mol)
 
     assert _chiral_tag(block) == reference
+
+
+def test_plugin_optimization_without_3d_structure_reports_failure(mock_parser_host):
+    """No 3D molecule: the plugin is not called and the run counts as failed."""
+    from moleditpy.ui.compute_logic import ComputeManager
+
+    compute = ComputeManager(mock_parser_host)
+    mock_parser_host.view_3d_manager.current_mol = None
+    callback = MagicMock()
+    ok = compute._run_plugin_optimization(
+        "X", {"label": "My Opt", "callback": callback}
+    )
+    assert ok is False
+    callback.assert_not_called()
+    assert (
+        "needs a 3D structure"
+        in (mock_parser_host.update_status_message.call_args.args[0])
+    )

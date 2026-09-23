@@ -369,3 +369,19 @@ def test_dialog_marks_and_clears_double_bonds(app):
     assert mw.view_3d_manager.ez_mismatches == {4: "E"}
     dlg.reject()
     assert mw.view_3d_manager.ez_mismatches == {}
+
+
+def test_dialog_without_a_3d_view_opens_and_closes_quietly(app):
+    """A host with no 3D view manager still gets a working warning."""
+    mw = MagicMock(spec=[])
+    dlg = ChiralityWarningDialog(mw, MISMATCHES, 3, parent=None)
+    dlg.reject()
+
+
+def test_failed_redraw_is_logged_not_raised(app):
+    """A 3D redraw error while forcing labels does not break the dialog."""
+    mw = _main_window()
+    mw.view_3d_manager.draw_molecule_3d.side_effect = RuntimeError("gl")
+    dlg = ChiralityWarningDialog(mw, MISMATCHES, 3, parent=None)
+    assert mw.view_3d_manager.show_chiral_labels is True
+    dlg.reject()

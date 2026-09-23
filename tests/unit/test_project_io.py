@@ -932,3 +932,30 @@ def test_set_mol_prop_safe_module_helper():
     _set_mol_prop_safe(mol, "k_float", 2.25)
     assert mol.GetIntProp("k_int") == 5
     assert mol.GetDoubleProp("k_float") == 2.25
+
+
+def test_load_json_data_stops_when_clearing_is_refused(mock_parser_host, tmp_path):
+    """A valid project is not loaded if the document cannot be cleared."""
+    io = DummyProjectIo(mock_parser_host)
+    json_file = tmp_path / "ok.pmeprj"
+    json_file.write_text(json.dumps({"format": "PME Project"}), encoding="utf-8")
+    with (
+        patch.object(io.host.edit_actions_manager, "clear_all", return_value=False),
+        patch.object(io.host.state_manager, "load_from_json_data") as load,
+    ):
+        io.load_json_data(str(json_file))
+    load.assert_not_called()
+
+
+def test_load_raw_data_stops_when_clearing_is_refused(mock_parser_host, tmp_path):
+    """A readable .pmeraw is not applied if the document cannot be cleared."""
+    io = DummyProjectIo(mock_parser_host)
+    raw_file = tmp_path / "ok.pmeraw"
+    raw_file.write_bytes(pickle.dumps({"atoms": {}}))
+    with (
+        patch.object(io, "_confirm_pickle_load", return_value=True),
+        patch.object(io.host.edit_actions_manager, "clear_all", return_value=False),
+        patch.object(io.host.state_manager, "set_state_from_data") as apply_state,
+    ):
+        io.load_raw_data(str(raw_file))
+    apply_state.assert_not_called()

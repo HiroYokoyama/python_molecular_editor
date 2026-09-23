@@ -796,6 +796,21 @@ def test_paste_invalid_json_reports_error(mock_parser_host):
             "atoms": [{"symbol": "C", "rel_pos": [0.0, 0.0]}],
             "bonds": [{"idx1": 0, "idx2": 1}],
         },  # index out of range
+        [1, 2],  # not an object
+        {"atoms": {}, "bonds": []},  # atoms not a list
+        {"atoms": [1], "bonds": []},  # atom not an object
+        {"atoms": [{"symbol": "", "rel_pos": [0, 0]}], "bonds": []},  # no symbol
+        {"atoms": [{"symbol": "C", "rel_pos": [0, 0, 0]}], "bonds": []},
+        {"atoms": [{"symbol": "C", "rel_pos": [float("inf"), 0]}], "bonds": []},
+        {"atoms": [{"symbol": "C", "rel_pos": [0, 0], "charge": "1"}], "bonds": []},
+        {"atoms": [{"symbol": "C", "rel_pos": [0, 0]}], "bonds": [1]},
+        {
+            "atoms": [
+                {"symbol": "C", "rel_pos": [0, 0]},
+                {"symbol": "C", "rel_pos": [1, 0]},
+            ],
+            "bonds": [{"idx1": 0, "idx2": 1, "order": 5}],
+        },  # impossible bond order
     ],
 )
 def test_paste_malformed_fragment_reports_error(mock_parser_host, payload):
