@@ -41,3 +41,21 @@ def test_about_dialog_ignore_left_click(app, mock_parser_host):
 
     mock_parser_host.clear_all.assert_not_called()
     event.ignore.assert_called_once()
+
+
+def test_about_dialog_easter_egg_respects_cancel(app, mock_parser_host):
+    """Cancelling the unsaved-changes prompt leaves the document alone.
+
+    The return value of clear_all() was ignored, so after Cancel the
+    bipyrimidine was added to the user's drawing and the result converted
+    to 3D, replacing their 3D model.
+    """
+    dialog = AboutDialog(main_window=mock_parser_host)
+    mock_parser_host.edit_actions_manager.clear_all.return_value = False
+
+    event = MagicMock()
+    event.button.return_value = Qt.MouseButton.RightButton
+    dialog.image_mouse_press_event(event)
+
+    mock_parser_host.string_importer_manager.load_from_smiles.assert_not_called()
+    mock_parser_host.compute_manager.trigger_conversion.assert_not_called()

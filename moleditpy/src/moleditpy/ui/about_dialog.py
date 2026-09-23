@@ -102,8 +102,10 @@ class AboutDialog(QDialog):
 
     def image_clicked(self, event: QMouseEvent) -> None:
         """Clear all, load bipyrimidine from SMILES, and build it in 3D."""
-        # Clear the current scene
-        self.main_window.edit_actions_manager.clear_all()
+        # Clear the current scene; stop if the user cancels the
+        # unsaved-changes prompt, or the molecule would be added to their work.
+        if not self.main_window.edit_actions_manager.clear_all():
+            return
 
         bipyrimidine_smiles = "C1=CN=C(N=C1)C2=NC=CC=N2"
         self.main_window.string_importer_manager.load_from_smiles(bipyrimidine_smiles)
