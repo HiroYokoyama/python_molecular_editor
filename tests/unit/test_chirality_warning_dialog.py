@@ -73,14 +73,20 @@ def test_closing_restores_menu_setting(app):
     mw.view_3d_manager.draw_molecule_3d.assert_called_once()
 
 
-def test_labels_already_on_are_left_alone(app):
-    """If the user already shows chiral labels, neither open nor close redraws."""
+def test_labels_already_on_stay_on_but_lose_red_marks(app):
+    """With labels already on, closing keeps them on and removes the red marks.
+
+    Previously neither opening nor closing redrew in this case; the dialog now
+    marks wrong centers, so both must redraw to add and then clear the marks.
+    """
     mw = _main_window(labels_on=True, menu_checked=True)
     dlg = ChiralityWarningDialog(mw, MISMATCHES, 9, parent=None)
+    assert mw.view_3d_manager.chirality_mismatches == {3: "S", 12: "?"}
     dlg.reject()
 
     assert mw.view_3d_manager.show_chiral_labels is True
-    mw.view_3d_manager.draw_molecule_3d.assert_not_called()
+    assert mw.view_3d_manager.chirality_mismatches == {}
+    assert mw.view_3d_manager.draw_molecule_3d.call_count == 2
 
 
 def _compute(settings, mismatches):

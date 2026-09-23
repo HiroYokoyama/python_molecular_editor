@@ -34,7 +34,8 @@ class ChiralityWarningDialog(QDialog):
     """Non-modal, always-on-top warning that the 3D result has wrong chirality.
 
     While it is open the 3D view shows chiral labels, whatever the View menu
-    says; closing it hands the labels back to the menu setting.
+    says, with the wrong centers in red; closing it hands the labels back to
+    the menu setting.
     """
 
     def __init__(
@@ -86,8 +87,9 @@ class ChiralityWarningDialog(QDialog):
         layout.addWidget(table)
 
         hint = QLabel(
-            "Chiral labels are shown in the 3D view while this window is open. "
-            "Check the wedges at these atoms, then convert again."
+            "Please flip these stereocenters manually in the 3D structure. "
+            "While this window is open, the 3D view shows chiral labels: "
+            "wrong centers in red, correct ones in the usual color."
         )
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -111,10 +113,15 @@ class ChiralityWarningDialog(QDialog):
                 logging.warning("Redraw for chiral labels failed: %s", e)
 
     def _force_chiral_labels(self) -> None:
-        """Turn chiral labels on for as long as the dialog is open."""
+        """Show chiral labels, wrong centers marked, for as long as the dialog is open."""
         view_3d = self._view_3d()
-        if view_3d is None or getattr(view_3d, "show_chiral_labels", False):
+        if view_3d is None:
             return
+        view_3d.chirality_mismatches = {
+            m.rdkit_index: m.actual or "?"
+            for m in self.mismatches
+            if m.rdkit_index is not None
+        }
         view_3d.show_chiral_labels = True
         self._redraw(view_3d)
 
@@ -128,7 +135,9 @@ class ChiralityWarningDialog(QDialog):
             "toggle_chiral_action",
             None,
         )
-        wanted = bool(action.isChecked()) if action is not None else False
-        if bool(getattr(view_3d, "show_chiral_labels", False)) != wanted:
-            view_3d.show_chiral_labels = wanted
-            self._redraw(view_3d)
+        view_3d.chirality_mismatches = {}
+        view_3d.show_chiral_labels = (
+            bool(action.isChecked()) if action is not None else False
+        )
+        # Always redraw: even with labels left on, the red marks must go.
+        self._redraw(view_3d)

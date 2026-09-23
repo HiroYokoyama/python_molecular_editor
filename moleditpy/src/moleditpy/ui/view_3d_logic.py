@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 from ..utils.suppress_log import suppress_log
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from .custom_qt_interactor import CustomQtInteractor
@@ -37,6 +37,11 @@ from ..utils.label_style import label_kwargs
 from .template_preview_item import TemplatePreviewItem
 
 
+# Fixed on purpose (not a setting): marks a stereocenter the chirality check
+# found inverted, against the normal chiral label color.
+WRONG_CHIRAL_COLOR = "#FF0000"
+
+
 class View3DManager:
     """Independent manager for 3D rendering logic, ported from MainWindowView3d mixin."""
 
@@ -57,6 +62,9 @@ class View3DManager:
         self.atom_info_display_mode: Optional[str] = None
         self.atom_index_base: int = 0  # 0 = 0-based, 1 = 1-based
         self.show_chiral_labels: bool = False
+        # RDKit atom index -> R/S the 3D structure actually has, for centers
+        # the chirality check found wrong; drawn in WRONG_CHIRAL_COLOR.
+        self.chirality_mismatches: Dict[int, str] = {}
         self.current_atom_info_labels: Optional[List[pv.Actor]] = None
         self.atom_label_legend_names: List[str] = []
         self._camera_initialized: bool = False
@@ -1060,36 +1068,43 @@ class View3DManager:
             try:
                 # Calculate chiral centers from 3D coordinates
                 chiral_centers = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
-                if chiral_centers:
-                    pts, labels = [], []
-                    z_off = 0
-                    for idx, lbl in chiral_centers:
-                        if self.atom_positions_3d is None:
-                            logging.warning(
-                                "atom_positions_3d is None in _add_3d_labels"
-                            )
-                            continue
-                        coord = self.atom_positions_3d[idx].copy()
-                        coord[2] += z_off
-                        pts.append(coord)
-                        labels.append(lbl if lbl is not None else "?")
+                wrong = getattr(self, "chirality_mismatches", {}) or {}
+                for name in ("chiral_labels", "chiral_labels_wrong"):
                     try:
-                        self.plotter.remove_actor("chiral_labels")  # type: ignore[arg-type, union-attr]
+                        self.plotter.remove_actor(name)  # type: ignore[arg-type, union-attr]
                     except (AttributeError, RuntimeError, TypeError) as e:
-                        logging.debug(
-                            f"Suppressed exception: {e}"
-                        )  # Suppress non-critical 3D label update errors
-                    self.plotter.add_point_labels(  # type: ignore[union-attr]
-                        np.array(pts),
-                        labels,
-                        point_size=0,
-                        name="chiral_labels",
-                        always_visible=True,
-                        shape="rect",
-                        tolerance=0.01,
-                        show_points=False,
-                        **self._label_kwargs("chiral"),
-                    )
+                        logging.debug("Suppressed exception: %s", e)
+                if chiral_centers and self.atom_positions_3d is not None:
+                    groups: Dict[bool, Tuple[List[Any], List[str]]] = {
+                        False: ([], []),
+                        True: ([], []),
+                    }
+                    for idx, lbl in chiral_centers:
+                        is_wrong = idx in wrong
+                        pts, labels = groups[is_wrong]
+                        pts.append(self.atom_positions_3d[idx].copy())
+                        # A wrong center shows the chirality check's own label
+                        # (new CIP rules), so it matches the warning dialog.
+                        labels.append(wrong[idx] if is_wrong else (lbl or "?"))
+                    for is_wrong, (pts, labels) in groups.items():
+                        if not pts:
+                            continue
+                        style = self._label_kwargs("chiral")
+                        if is_wrong:
+                            style["text_color"] = WRONG_CHIRAL_COLOR
+                        self.plotter.add_point_labels(  # type: ignore[union-attr]
+                            np.array(pts),
+                            labels,
+                            point_size=0,
+                            name="chiral_labels_wrong" if is_wrong else "chiral_labels",
+                            always_visible=True,
+                            shape="rect",
+                            tolerance=0.01,
+                            show_points=False,
+                            **style,
+                        )
+                elif chiral_centers:
+                    logging.warning("atom_positions_3d is None in _add_3d_labels")
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 self.host.statusBar().showMessage(f"3D chiral label drawing error: {e}")  # type: ignore[union-attr]
 

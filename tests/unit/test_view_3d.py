@@ -1353,3 +1353,43 @@ def test_legend_uses_label_color_setting(mock_parser_host, mode, kind, legend, p
     assert calls[0].kwargs["color"] == "#123456"
     labels = view3d.plotter.add_point_labels.call_args.kwargs
     assert labels["text_color"] == "#123456"
+
+
+def test_wrong_chiral_centers_are_drawn_in_red(mock_parser_host):
+    """Centers the chirality check found wrong get a red label; others keep theirs."""
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.settings = {"label_color_chiral_3d": "#0000FF"}
+    view3d.show_chiral_labels = True
+    view3d.show_ez_labels_3d = MagicMock()
+    mol = Chem.AddHs(Chem.MolFromSmiles("N[C@@H](C)[C@H](O)C(=O)O"))
+    AllChem.EmbedMolecule(mol, randomSeed=7)
+    Chem.AssignStereochemistryFrom3D(mol)
+    view3d.atom_positions_3d = mol.GetConformer().GetPositions()
+    centers = [idx for idx, _ in Chem.FindMolChiralCenters(mol)]
+    view3d.chirality_mismatches = {centers[0]: "S"}
+
+    view3d._add_3d_labels(mol, mol)
+
+    calls = {
+        c.kwargs["name"]: c for c in view3d.plotter.add_point_labels.call_args_list
+    }
+    assert calls["chiral_labels_wrong"].kwargs["text_color"] == "#FF0000"
+    assert calls["chiral_labels_wrong"].args[1] == ["S"]
+    assert calls["chiral_labels"].kwargs["text_color"] == "#0000FF"
+    assert len(calls["chiral_labels"].args[1]) == len(centers) - 1
+
+
+def test_no_red_group_without_mismatches(mock_parser_host):
+    """Normally only the usual chiral label group is drawn."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.show_chiral_labels = True
+    view3d.show_ez_labels_3d = MagicMock()
+    mol = Chem.AddHs(Chem.MolFromSmiles("N[C@@H](C)C(=O)O"))
+    AllChem.EmbedMolecule(mol, randomSeed=7)
+    Chem.AssignStereochemistryFrom3D(mol)
+    view3d.atom_positions_3d = mol.GetConformer().GetPositions()
+
+    view3d._add_3d_labels(mol, mol)
+
+    names = [c.kwargs["name"] for c in view3d.plotter.add_point_labels.call_args_list]
+    assert names == ["chiral_labels"]
