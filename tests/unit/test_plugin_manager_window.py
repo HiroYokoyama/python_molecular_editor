@@ -225,13 +225,23 @@ def test_on_remove_plugin_package(
     mock_info.assert_called()
 
 
+@patch("moleditpy.plugins.plugin_manager_window.QMessageBox.critical")
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.question")
 @patch("os.path.exists", return_value=True)
 @patch("os.remove", side_effect=PermissionError("Remove error"))
 def test_on_remove_plugin_error(
-    mock_remove, mock_exists, mock_question, mock_plugin_manager, qtbot, caplog
+    mock_remove,
+    mock_exists,
+    mock_question,
+    mock_critical,
+    mock_plugin_manager,
+    qtbot,
+    caplog,
 ):
-    """on_remove_plugin logs the error when os.remove raises OSError."""
+    """on_remove_plugin logs the error when os.remove raises OSError.
+
+    It now also shows an error dialog (patched here, or it would block).
+    """
     mock_question.return_value = QMessageBox.StandardButton.Yes
     window = PluginManagerWindow(mock_plugin_manager)
     qtbot.addWidget(window)
@@ -241,6 +251,7 @@ def test_on_remove_plugin_error(
         window.on_remove_plugin()
 
     assert "Failed to delete plugin: Remove error" in caplog.text
+    mock_critical.assert_called_once()
 
 
 @patch("moleditpy.plugins.plugin_manager_window.QMessageBox.warning")
