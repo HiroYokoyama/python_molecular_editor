@@ -45,6 +45,9 @@ def _cip_labels_by_atom_id(mol: Chem.Mol) -> Dict[int, str]:
 
 def drawn_chirality(data: MolecularData) -> Dict[int, str]:
     """CIP labels of the stereocenters the 2D drawing specifies with wedges."""
+    # Nothing is specified without a wedge or hash; skip CIP labelling.
+    if not any(bond.get("stereo") in (1, 2) for bond in data.bonds.values()):
+        return {}
     mol = data.to_rdkit_mol(use_2d_stereo=False)
     if mol is None:
         return {}
