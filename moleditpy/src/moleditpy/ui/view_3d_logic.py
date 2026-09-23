@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import QGraphicsView
 
 
 from ..utils.constants import CPK_COLORS_PV, VDW_DISPLAY_RADII, pt
+from ..utils.default_settings import DEFAULT_SETTINGS
 from .template_preview_item import TemplatePreviewItem
 
 
@@ -1048,6 +1049,12 @@ class View3DManager:
             except (AttributeError, RuntimeError, TypeError, ValueError) as e:
                 logging.warning(f"Error rendering aromatic circles: {e}")
 
+    def _label_setting(self, key: str) -> str:
+        """Return a 3D label color setting, falling back to its default."""
+        settings = getattr(getattr(self.host, "init_manager", None), "settings", {})
+        value = settings.get(key, DEFAULT_SETTINGS[key])
+        return str(value) if value is not None else ""
+
     def _add_3d_labels(self, mol: Any, mol_to_draw: Any) -> None:
         """Render chiral and E/Z stereochemistry labels in the 3D scene."""
         if getattr(self, "show_chiral_labels", False):
@@ -1078,11 +1085,11 @@ class View3DManager:
                         labels,
                         font_size=20,
                         point_size=0,
-                        text_color="blue",
+                        text_color=self._label_setting("chiral_label_color_3d"),
                         name="chiral_labels",
                         always_visible=True,
                         shape="rect",
-                        shape_color="gray",
+                        shape_color=self._label_setting("label_background_color_3d"),
                         shape_opacity=0.5,
                         tolerance=0.01,
                         show_points=False,
@@ -1291,7 +1298,7 @@ class View3DManager:
                 name="ez_labels",
                 always_visible=True,
                 shape="rect",
-                shape_color="gray",
+                shape_color=self._label_setting("label_background_color_3d"),
                 shape_opacity=0.5,
                 tolerance=0.01,
                 show_points=False,
@@ -1591,11 +1598,12 @@ class View3DManager:
             else:
                 continue
 
-        # Color definitions (dark blue/green/red)
-        rdkit_color = "#003366"  # Dark blue
-        id_color = "#009000"  # Green
-        xyz_color = "#8B0000"  # Dark red
-        other_color = "black"
+        # Each mode has its own color unless the user set one for all of them.
+        override = self._label_setting("atom_label_color_3d")
+        rdkit_color = override or "#003366"  # Dark blue
+        id_color = override or "#009000"  # Green
+        xyz_color = override or "#8B0000"  # Dark red
+        other_color = override or "black"
 
         # Add labels for each group and keep references in a list
         self.current_atom_info_labels = []
@@ -1609,7 +1617,7 @@ class View3DManager:
                     text_color=rdkit_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color="gray",
+                    shape_color=self._label_setting("label_background_color_3d"),
                     shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
@@ -1626,7 +1634,7 @@ class View3DManager:
                     text_color=id_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color="gray",
+                    shape_color=self._label_setting("label_background_color_3d"),
                     shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
@@ -1643,7 +1651,7 @@ class View3DManager:
                     text_color=xyz_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color="gray",
+                    shape_color=self._label_setting("label_background_color_3d"),
                     shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,
@@ -1660,7 +1668,7 @@ class View3DManager:
                     text_color=other_color,
                     always_visible=True,
                     shape="rect",
-                    shape_color="gray",
+                    shape_color=self._label_setting("label_background_color_3d"),
                     shape_opacity=0.5,
                     tolerance=0.01,
                     show_points=False,

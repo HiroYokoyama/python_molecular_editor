@@ -55,6 +55,11 @@ def test_scene_tab_get_settings_keys(app):
         "mouse_rotation_sensitivity",
         "realtime_3d_drag",
         "rotate_group_follow_mouse",
+        # 3D Labels section
+        "atom_label_color_3d",
+        "chiral_label_color_3d",
+        "label_background_color_3d",
+        "check_chirality_after_conversion",
     }
     assert expected_keys == set(result.keys())
 
@@ -307,3 +312,53 @@ def test_model_tab_ball_stick_color_button_size(app):
     tab = SettingsModelTab("ball_stick", "info", DEFAULT_SETTINGS)
     assert tab.bond_color_button.width() == 60
     assert tab.bond_color_button.height() == 24
+
+
+def test_scene_tab_label_colors_round_trip(app):
+    """Label colors and the chirality check survive update_ui -> get_settings."""
+    tab = Settings3DSceneTab(DEFAULT_SETTINGS)
+    settings = dict(DEFAULT_SETTINGS)
+    settings.update(
+        {
+            "atom_label_color_3d": "#112233",
+            "chiral_label_color_3d": "#445566",
+            "label_background_color_3d": "#778899",
+            "check_chirality_after_conversion": False,
+        }
+    )
+    tab.update_ui(settings)
+    out = tab.get_settings()
+    assert out["atom_label_color_3d"] == "#112233"
+    assert out["chiral_label_color_3d"] == "#445566"
+    assert out["label_background_color_3d"] == "#778899"
+    assert out["check_chirality_after_conversion"] is False
+
+
+def test_scene_tab_atom_label_color_auto(app):
+    """An empty atom label color shows "Auto" and is stored as empty."""
+    tab = Settings3DSceneTab(DEFAULT_SETTINGS)
+    tab._set_label_color("atom_label_color_3d", "#112233")
+    assert tab.label_color_buttons["atom_label_color_3d"].text() == ""
+    tab._set_label_color("atom_label_color_3d", "")
+    assert tab.label_color_buttons["atom_label_color_3d"].text() == "Auto"
+    assert tab.get_settings()["atom_label_color_3d"] == ""
+
+
+def test_scene_tab_pick_label_color(app):
+    """Picking a color from the dialog stores it under the given key."""
+    from PyQt6.QtGui import QColor
+
+    tab = Settings3DSceneTab(DEFAULT_SETTINGS)
+    with patch(
+        "moleditpy.ui.settings_tabs.settings_3d_tabs.QColorDialog.getColor",
+        return_value=QColor("#abcdef"),
+    ):
+        tab._pick_label_color("chiral_label_color_3d")
+    assert tab.get_settings()["chiral_label_color_3d"] == "#abcdef"
+
+
+def test_scene_tab_chirality_check_default_on(app):
+    """The chirality check is enabled by default."""
+    tab = Settings3DSceneTab(DEFAULT_SETTINGS)
+    tab.update_ui(DEFAULT_SETTINGS)
+    assert tab.get_settings()["check_chirality_after_conversion"] is True

@@ -6,6 +6,9 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+* **3D label colors** (Settings → 3D Scene → 3D Labels): the atom info label color (Auto keeps each mode's own color), the chiral label color, and the background color shared by the atom info, chiral and E/Z labels.
+
 ### Fixed
 * **An E/Z label inverted a wedged stereocenter in 3D**: When any double bond carried an explicit E/Z label, the 2D layout sent to 3D generation was rebuilt from scratch, but the wedge and hash bonds were carried over unchanged onto the new coordinates, where they could encode the opposite configuration. The same drawing converted to one enantiomer without the label and the other with it. Wedges are now read into chiral tags first and re-drawn on the new layout.
 * **Settings save could raise on exit**: `save_settings` did not catch `OSError`, so a read-only, locked or full settings location raised out of the save instead of being logged.

@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QColorDialog,
     QComboBox,
+    QHBoxLayout,
     QLabel,
     QPushButton,
     QWidget,
@@ -40,7 +41,20 @@ class Settings3DSceneTab(SettingsTabBase):
         self.realtime_drag_checkbox: Any = None
         self.rotate_group_follow_mouse_checkbox: Any = None
         self.current_bg_color = default_settings["background_color"]
+        self.chirality_check_checkbox: Any = None
+        # Label colors, keyed by setting name. An empty atom label color means
+        # "Auto": each atom info mode keeps its own built-in color.
+        self.label_colors: dict[str, str] = {
+            key: default_settings[key] for key in self._LABEL_COLOR_KEYS
+        }
+        self.label_color_buttons: dict[str, QPushButton] = {}
         self._setup_ui()
+
+    _LABEL_COLOR_KEYS = (
+        "atom_label_color_3d",
+        "chiral_label_color_3d",
+        "label_background_color_3d",
+    )
 
     def _setup_ui(self) -> None:
         """Construct controls and form layout for 3D scene settings."""
@@ -112,6 +126,73 @@ class Settings3DSceneTab(SettingsTabBase):
             "Rotate Groups: Follow Mouse:", self.rotate_group_follow_mouse_checkbox
         )
 
+        form_layout.addRow(self._create_separator())
+        form_layout.addRow(QLabel("<b>3D Labels</b>"))
+
+        atom_row = QHBoxLayout()
+        atom_row.addWidget(self._make_label_color_button("atom_label_color_3d"))
+        auto_button = QPushButton("Auto")
+        auto_button.setToolTip("Use each atom info mode's own color")
+        auto_button.clicked.connect(
+            lambda: self._set_label_color("atom_label_color_3d", "")
+        )
+        atom_row.addWidget(auto_button)
+        atom_row.addStretch(1)
+        form_layout.addRow("Atom Info Label Color:", atom_row)
+
+        form_layout.addRow(
+            "Chiral Label Color:",
+            self._make_label_color_button("chiral_label_color_3d"),
+        )
+        form_layout.addRow(
+            "Label Background Color:",
+            self._make_label_color_button("label_background_color_3d"),
+        )
+
+        self.chirality_check_checkbox = QCheckBox()
+        self.chirality_check_checkbox.setToolTip(
+            "After Convert 2D to 3D, compare every stereocenter drawn with a\n"
+            "wedge or hash against the 3D result, and warn if any differs."
+        )
+        form_layout.addRow(
+            "Check Chirality After 3D Conversion:", self.chirality_check_checkbox
+        )
+
+    def _make_label_color_button(self, key: str) -> QPushButton:
+        """Create a swatch button that picks the color stored under *key*."""
+        button = QPushButton()
+        button.setFixedSize(60, 24)
+        button.setToolTip("Click to select a color")
+        button.clicked.connect(lambda: self._pick_label_color(key))
+        self.label_color_buttons[key] = button
+        self._update_label_color_button(key)
+        return button
+
+    def _pick_label_color(self, key: str) -> None:
+        """Open a color dialog for the label color stored under *key*."""
+        start = self.label_colors[key] or "#000000"
+        color = QColorDialog.getColor(QColor(start), self)
+        if color.isValid():
+            self._set_label_color(key, color.name())
+
+    def _set_label_color(self, key: str, value: str) -> None:
+        """Store a label color and refresh its swatch."""
+        self.label_colors[key] = value
+        self._update_label_color_button(key)
+
+    def _update_label_color_button(self, key: str) -> None:
+        """Show the stored label color on its swatch, or "Auto" when unset."""
+        button = self.label_color_buttons.get(key)
+        if button is None:
+            return
+        value = self.label_colors[key]
+        if value:
+            button.setText("")
+            button.setStyleSheet(f"background-color: {value}; border: 1px solid #888;")
+        else:
+            button.setText("Auto")
+            button.setStyleSheet("")
+
     def _select_color(self) -> None:
         """Open color dialog to pick 3D viewport background color."""
         color = QColorDialog.getColor(QColor(self.current_bg_color), self)
@@ -156,6 +237,13 @@ class Settings3DSceneTab(SettingsTabBase):
         self.rotate_group_follow_mouse_checkbox.setChecked(
             settings_dict.get("rotate_group_follow_mouse", False)
         )
+        for key in self._LABEL_COLOR_KEYS:
+            self._set_label_color(
+                key, str(settings_dict.get(key, self.default_settings[key]))
+            )
+        self.chirality_check_checkbox.setChecked(
+            settings_dict.get("check_chirality_after_conversion", True)
+        )
 
     def get_settings(self) -> dict[str, Any]:
         """Collect current 3D scene options as a dictionary."""
@@ -170,6 +258,8 @@ class Settings3DSceneTab(SettingsTabBase):
             "mouse_rotation_sensitivity": self.rotation_sens_slider.value() / 100.0,
             "realtime_3d_drag": self.realtime_drag_checkbox.isChecked(),
             "rotate_group_follow_mouse": self.rotate_group_follow_mouse_checkbox.isChecked(),
+            **self.label_colors,
+            "check_chirality_after_conversion": self.chirality_check_checkbox.isChecked(),
         }
 
 

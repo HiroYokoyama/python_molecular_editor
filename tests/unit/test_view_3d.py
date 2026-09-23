@@ -1193,3 +1193,58 @@ def test_menu_state_keeps_original_id_mode_when_ids_present(mock_parser_host):
     view3d.update_atom_id_menu_state()
 
     assert view3d.atom_info_display_mode == "original_id"
+
+
+def _atom_info_view(mock_parser_host, settings):
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.settings = settings
+    view3d.atom_info_display_mode = "rdkit_index"
+    view3d.atom_index_base = 0
+    view3d.atom_positions_3d = np.array([[0.0, 0.0, 0.0]])
+    view3d.current_mol = Chem.MolFromSmiles("C")
+    return view3d
+
+
+@pytest.mark.parametrize(
+    "settings,text_color,shape_color",
+    [
+        ({}, "#003366", "#808080"),
+        (
+            {"atom_label_color_3d": "#112233", "label_background_color_3d": "#ffffff"},
+            "#112233",
+            "#ffffff",
+        ),
+        ({"atom_label_color_3d": ""}, "#003366", "#808080"),
+    ],
+)
+def test_atom_info_labels_use_label_color_settings(
+    mock_parser_host, settings, text_color, shape_color
+):
+    """Atom info labels follow the label color settings; empty keeps the mode color."""
+    view3d = _atom_info_view(mock_parser_host, settings)
+    view3d.show_all_atom_info()
+    kwargs = view3d.plotter.add_point_labels.call_args.kwargs
+    assert kwargs["text_color"] == text_color
+    assert kwargs["shape_color"] == shape_color
+
+
+def test_chiral_labels_use_label_color_settings(mock_parser_host):
+    """3D R/S labels use the chiral label and background color settings."""
+    view3d = _make_view3d(mock_parser_host)
+    mock_parser_host.init_manager.settings = {
+        "chiral_label_color_3d": "#ff0000",
+        "label_background_color_3d": "#00ff00",
+    }
+    view3d.show_chiral_labels = True
+    view3d.show_ez_labels_3d = MagicMock()
+    mol = Chem.AddHs(Chem.MolFromSmiles("N[C@@H](C)C(=O)O"))
+    AllChem.EmbedMolecule(mol, randomSeed=7)
+    Chem.AssignStereochemistryFrom3D(mol)
+    view3d.atom_positions_3d = mol.GetConformer().GetPositions()
+
+    view3d._add_3d_labels(mol, mol)
+
+    kwargs = view3d.plotter.add_point_labels.call_args.kwargs
+    assert kwargs["name"] == "chiral_labels"
+    assert kwargs["text_color"] == "#ff0000"
+    assert kwargs["shape_color"] == "#00ff00"
