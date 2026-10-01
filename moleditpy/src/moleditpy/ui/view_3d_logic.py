@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 import logging
 from ..utils.suppress_log import suppress_log
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple
 
 if TYPE_CHECKING:
     from .custom_qt_interactor import CustomQtInteractor
@@ -41,6 +41,17 @@ from .template_preview_item import TemplatePreviewItem
 # Fixed on purpose (not a setting): marks a stereocenter or double bond the
 # stereo check found wrong, against the normal chiral / E/Z label color.
 WRONG_CHIRAL_COLOR = "#FF0000"
+
+
+def _apply_overrides(
+    store: Dict[int, str], colors: Mapping[int, Optional[str]]
+) -> None:
+    """Write plugin color overrides into *store*; a None color removes one."""
+    for index, color in colors.items():
+        if color is None:
+            store.pop(index, None)
+        else:
+            store[index] = color
 
 
 class View3DManager:
@@ -1971,13 +1982,14 @@ class View3DManager:
         self, bond_idx: int, hex_color: Optional[str]
     ) -> None:
         """Plugin API helper to override bond color."""
+        self.update_bond_color_overrides({bond_idx: hex_color})
 
-        if hex_color is None:
-            if bond_idx in self._plugin_bond_color_overrides:
-                del self._plugin_bond_color_overrides[bond_idx]
-        else:
-            self._plugin_bond_color_overrides[bond_idx] = hex_color
+    def update_bond_color_overrides(self, colors: Mapping[int, Optional[str]]) -> None:
+        """Plugin API helper: apply many bond color overrides, redraw once.
 
+        A ``None`` color removes that bond's override.
+        """
+        _apply_overrides(self._plugin_bond_color_overrides, colors)
         if self.current_mol:
             self.draw_molecule_3d(self.current_mol)
 
@@ -1985,12 +1997,13 @@ class View3DManager:
         self, atom_index: int, color_hex: Optional[str]
     ) -> None:
         """Plugin helper to update specific atom color override."""
+        self.update_atom_color_overrides({atom_index: color_hex})
 
-        if color_hex is None:
-            if atom_index in self._plugin_color_overrides:
-                del self._plugin_color_overrides[atom_index]
-        else:
-            self._plugin_color_overrides[atom_index] = color_hex
+    def update_atom_color_overrides(self, colors: Mapping[int, Optional[str]]) -> None:
+        """Plugin API helper: apply many atom color overrides, redraw once.
 
+        A ``None`` color removes that atom's override.
+        """
+        _apply_overrides(self._plugin_color_overrides, colors)
         if self.current_mol:
             self.draw_molecule_3d(self.current_mol)

@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Plugin API: `Plugin3DController.set_atom_colors()` and `set_bond_colors()` apply many 3D color overrides with a single redraw. The per-item `set_atom_color()` / `set_bond_color()` redraw the whole molecule on every call, which made coloring a few hundred bonds take long enough to time out.
+
 ---
 
 ## [4.11.0] - 2026-09-23

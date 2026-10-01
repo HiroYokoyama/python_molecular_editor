@@ -596,6 +596,7 @@ Obtain a controller via `ctrl = context.get_3d_controller()`. These overrides ar
 - `set_atom_color(atom_index: int, color_hex: str)`: Override the color of a specific atom (e.g., `"#FF0000"` for red).
 - `set_bond_color(bond_index: int, color_hex: str)`: Override the color of a specific RDKit bond by its index.
 - `set_bond_color_by_atoms(idx1: int, idx2: int, color_hex: str)`: Helper to find and color the bond connecting two atom indices.
+- `set_atom_colors(colors: Mapping[int, str | None])` / `set_bond_colors(colors: Mapping[int, str | None])`: Apply many overrides at once (index → color, `None` removes an override) with a single redraw. *(4.11.1+)* The single-item methods above redraw the whole molecule on every call, so use these when coloring more than a handful of atoms or bonds. On older hosts, guard with `hasattr(ctrl, "set_bond_colors")` and fall back to a loop.
 
 ---
 

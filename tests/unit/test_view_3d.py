@@ -816,6 +816,50 @@ def test_update_bond_color_override_set_and_clear(mock_parser_host):
     view3d.draw_molecule_3d.assert_not_called()  # no molecule loaded
 
 
+def test_update_atom_color_overrides_batch_redraws_once(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.current_mol = MagicMock()
+    view3d.draw_molecule_3d = MagicMock()
+    view3d._plugin_color_overrides = {0: "#111111", 5: "#555555"}
+
+    colors = {i: "#ff0000" for i in range(1, 200)}
+    colors[5] = None
+    view3d.update_atom_color_overrides(colors)
+
+    assert view3d._plugin_color_overrides[0] == "#111111"
+    assert view3d._plugin_color_overrides[1] == "#ff0000"
+    assert 5 not in view3d._plugin_color_overrides
+    view3d.draw_molecule_3d.assert_called_once_with(view3d.current_mol)
+
+
+def test_update_bond_color_overrides_batch_redraws_once(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.current_mol = MagicMock()
+    view3d.draw_molecule_3d = MagicMock()
+    view3d._plugin_bond_color_overrides = {3: "#333333"}
+
+    colors = {i: "#00ff00" for i in range(240)}
+    colors[3] = None
+    view3d.update_bond_color_overrides(colors)
+
+    assert len(view3d._plugin_bond_color_overrides) == 239
+    assert 3 not in view3d._plugin_bond_color_overrides
+    view3d.draw_molecule_3d.assert_called_once_with(view3d.current_mol)
+
+
+def test_update_color_overrides_batch_without_molecule(mock_parser_host):
+    view3d = _make_view3d(mock_parser_host)
+    view3d.current_mol = None
+    view3d.draw_molecule_3d = MagicMock()
+
+    view3d.update_atom_color_overrides({1: "#ff0000"})
+    view3d.update_bond_color_overrides({1: "#00ff00"})
+
+    assert view3d._plugin_color_overrides == {1: "#ff0000"}
+    assert view3d._plugin_bond_color_overrides == {1: "#00ff00"}
+    view3d.draw_molecule_3d.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # show_all_atom_info — per-mode label building
 # ---------------------------------------------------------------------------
