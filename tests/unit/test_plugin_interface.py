@@ -6,12 +6,16 @@ from moleditpy.plugins.plugin_interface import PluginContext, Plugin3DController
 
 
 class TestPluginInterface:
+    """PluginContext delegation and the Plugin3DController scene helpers."""
+
     @pytest.fixture
     def mock_manager(self):
+        """A stand-in PluginManager for building a PluginContext."""
         return MagicMock()
 
     @pytest.fixture
     def mock_main_window(self):
+        """A main window whose 3D manager reports a loaded molecule."""
         mw = MagicMock()
         mw.view_3d_manager.current_mol = "mock_molecule"
         return mw
@@ -264,7 +268,7 @@ class TestPluginInterface:
         """set_bond_colors hands the whole batch over and renders once."""
         controller = Plugin3DController(mock_main_window)
         mock_main_window.view_3d_manager = MagicMock()
-        colors = {i: "#00FF00" for i in range(240)}
+        colors = dict.fromkeys(range(240), "#00FF00")
 
         controller.set_bond_colors(colors)
 
