@@ -163,6 +163,7 @@ def _make_view3d_ext(mock_host):
 
 @pytest.fixture
 def mock_pv():
+    """Patch PyVista in view_3d_logic with mesh factories that return mocks."""
     with patch("moleditpy.ui.view_3d_logic.pv") as mock:
         mock_poly = MagicMock()
         mock.PolyData.return_value = mock_poly
@@ -417,6 +418,7 @@ def test_color_overrides(app, mock_parser_host, mock_pv):
 
 
 def test_plotter_property_roundtrip(mock_parser_host):
+    """The plotter property returns what was assigned, including None."""
     view3d = _make_view3d(mock_parser_host)
     sentinel = MagicMock()
     view3d.plotter = sentinel
@@ -426,6 +428,7 @@ def test_plotter_property_roundtrip(mock_parser_host):
 
 
 def test_cleanup_clears_and_closes_plotter(mock_parser_host):
+    """cleanup() clears and closes the plotter and drops the current molecule."""
     view3d = _make_view3d(mock_parser_host)
     plotter = MagicMock()
     view3d.plotter = plotter
@@ -437,6 +440,7 @@ def test_cleanup_clears_and_closes_plotter(mock_parser_host):
 
 
 def test_cleanup_without_plotter(mock_parser_host):
+    """cleanup() with no plotter still drops the current molecule without raising."""
     view3d = _make_view3d(mock_parser_host)
     view3d.plotter = None
     view3d.current_mol = MagicMock()
@@ -445,6 +449,7 @@ def test_cleanup_without_plotter(mock_parser_host):
 
 
 def test_set_3d_style_same_style_is_noop(mock_parser_host):
+    """Selecting the active 3D style again changes nothing, not even the 3D selection."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_3d_style = "stick"
     view3d.set_3d_style("stick")
@@ -452,6 +457,7 @@ def test_set_3d_style_same_style_is_noop(mock_parser_host):
 
 
 def test_set_3d_style_disables_edit_modes_and_redraws(mock_parser_host):
+    """A style change leaves measurement and 3D edit modes, clears the selection and redraws."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_3d_style = "ball_and_stick"
     view3d.current_mol = MagicMock()
@@ -474,6 +480,7 @@ def test_set_3d_style_disables_edit_modes_and_redraws(mock_parser_host):
 
 
 def test_set_3d_style_without_molecule_skips_redraw(mock_parser_host):
+    """A style change with no molecule loaded records the style but draws nothing."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_3d_style = "ball_and_stick"
     view3d.current_mol = None
@@ -487,6 +494,7 @@ def test_set_3d_style_without_molecule_skips_redraw(mock_parser_host):
 
 
 def test_draw_molecule_3d_uses_plugin_custom_style(mock_parser_host):
+    """A plugin-registered 3D style draws through its callback instead of the standard path."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_3d_style = "plugin_style"
     handler = MagicMock()
@@ -505,6 +513,7 @@ def test_draw_molecule_3d_uses_plugin_custom_style(mock_parser_host):
 def test_draw_molecule_3d_broken_plugin_falls_back_to_standard(
     mock_parser_host,
 ):
+    """A plugin style callback that raises falls back to the standard drawing."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_3d_style = "plugin_style"
     mock_parser_host.plugin_manager.custom_3d_styles = {
@@ -519,6 +528,7 @@ def test_draw_molecule_3d_broken_plugin_falls_back_to_standard(
 
 
 def test_draw_molecule_3d_standard_when_style_not_custom(mock_parser_host):
+    """A built-in style is drawn by draw_standard_3d_style."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_3d_style = "ball_and_stick"
     mock_parser_host.plugin_manager.custom_3d_styles = {}
@@ -536,6 +546,7 @@ def test_draw_molecule_3d_standard_when_style_not_custom(mock_parser_host):
 
 
 def test_toggle_chiral_labels_on_redraws_and_reports(mock_parser_host):
+    """Turning chiral labels on redraws the molecule and reports it in the status bar."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_mol = MagicMock()
     view3d.draw_molecule_3d = MagicMock()
@@ -551,6 +562,7 @@ def test_toggle_chiral_labels_on_redraws_and_reports(mock_parser_host):
 
 
 def test_toggle_chiral_labels_off_reports_disabled(mock_parser_host):
+    """Turning chiral labels off with no molecule reports 'Chiral labels disabled.'."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_mol = None
     view3d.toggle_chiral_labels_display(False)
@@ -562,6 +574,7 @@ def test_toggle_chiral_labels_off_reports_disabled(mock_parser_host):
 
 
 def test_update_chiral_labels_disabled_clears_items(mock_parser_host):
+    """With chiral labels off, every 2D atom item loses its R/S label."""
     view3d = _make_view3d(mock_parser_host)
     view3d.show_chiral_labels = False
     item = MagicMock()
@@ -575,6 +588,7 @@ def test_update_chiral_labels_disabled_clears_items(mock_parser_host):
 
 
 def test_update_chiral_labels_assigns_r_or_s(mock_parser_host):
+    """A real stereocenter gets an R or S label on its 2D atom item via _original_atom_id."""
     view3d = _make_view3d(mock_parser_host)
     view3d.show_chiral_labels = True
 
@@ -602,6 +616,7 @@ def test_update_chiral_labels_assigns_r_or_s(mock_parser_host):
 
 
 def test_toggle_atom_info_same_mode_turns_off(mock_parser_host):
+    """Choosing the active atom info mode again turns the display off and unchecks its menus."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = "rdkit_index"
     view3d.clear_all_atom_info_labels = MagicMock()
@@ -620,6 +635,7 @@ def test_toggle_atom_info_same_mode_turns_off(mock_parser_host):
 
 
 def test_toggle_atom_info_new_index_mode_enables_base_menu(mock_parser_host):
+    """Switching to an index mode checks its action, enables the 0/1 base menu and draws labels."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = None
     view3d.clear_all_atom_info_labels = MagicMock()
@@ -640,6 +656,7 @@ def test_toggle_atom_info_new_index_mode_enables_base_menu(mock_parser_host):
 
 
 def test_toggle_atom_info_symbol_mode_disables_base_menu(mock_parser_host):
+    """Symbol mode disables the index base menu and reports the mode."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = None
     view3d.clear_all_atom_info_labels = MagicMock()
@@ -657,6 +674,7 @@ def test_toggle_atom_info_symbol_mode_disables_base_menu(mock_parser_host):
 
 
 def test_set_atom_index_base_syncs_checkmarks(mock_parser_host):
+    """Setting the index base updates the 0-based / 1-based menu checkmarks."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = None
     view3d.set_atom_index_base(1)
@@ -670,6 +688,7 @@ def test_set_atom_index_base_syncs_checkmarks(mock_parser_host):
 
 
 def test_set_atom_index_base_refreshes_active_index_labels(mock_parser_host):
+    """Changing the base while an index mode is shown redraws the labels."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = "xyz_index"
     view3d.clear_all_atom_info_labels = MagicMock()
@@ -688,6 +707,7 @@ def test_set_atom_index_base_refreshes_active_index_labels(mock_parser_host):
 
 
 def test_is_xyz_derived_molecule_detects_property(mock_parser_host):
+    """An atom carrying xyz_unique_id marks the molecule as XYZ-derived."""
     view3d = _make_view3d(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     mol.GetAtomWithIdx(0).SetProp("xyz_unique_id", "7")
@@ -696,6 +716,7 @@ def test_is_xyz_derived_molecule_detects_property(mock_parser_host):
 
 
 def test_is_xyz_derived_molecule_false_cases(mock_parser_host):
+    """No molecule, or one without xyz_unique_id, is not XYZ-derived."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_mol = None
     assert view3d.is_xyz_derived_molecule() is False
@@ -704,6 +725,7 @@ def test_is_xyz_derived_molecule_false_cases(mock_parser_host):
 
 
 def test_has_original_atom_ids(mock_parser_host):
+    """has_original_atom_ids() is true once any atom carries _original_atom_id."""
     view3d = _make_view3d(mock_parser_host)
     mol = Chem.MolFromSmiles("CC")
     view3d.current_mol = mol
@@ -713,6 +735,7 @@ def test_has_original_atom_ids(mock_parser_host):
 
 
 def test_update_atom_id_menu_state_enables_matching_actions(mock_parser_host):
+    """For an XYZ-derived molecule, XYZ index is enabled and original ID is not."""
     view3d = _make_view3d(mock_parser_host)
     mol = Chem.MolFromSmiles("C")
     mol.GetAtomWithIdx(0).SetProp("xyz_unique_id", "1")
@@ -734,6 +757,7 @@ def test_update_atom_id_menu_state_enables_matching_actions(mock_parser_host):
 
 
 def test_zoom_in_and_out_scale_view(mock_parser_host):
+    """Zoom in and out scale the 2D view by 1.2 and its inverse."""
     view3d = _make_view3d(mock_parser_host)
     view3d.zoom_in()
     mock_parser_host.init_manager.view_2d.scale.assert_called_with(1.2, 1.2)
@@ -742,6 +766,7 @@ def test_zoom_in_and_out_scale_view(mock_parser_host):
 
 
 def test_reset_zoom_sets_075_transform(mock_parser_host):
+    """Reset zoom sets the 2D view transform to 0.75 scale."""
     view3d = _make_view3d(mock_parser_host)
     view3d.reset_zoom()
     transform = mock_parser_host.init_manager.view_2d.setTransform.call_args.args[0]
@@ -750,6 +775,7 @@ def test_reset_zoom_sets_075_transform(mock_parser_host):
 
 
 def test_fit_to_view_empty_scene_resets_zoom(mock_parser_host):
+    """Fit to view on an empty scene falls back to reset zoom."""
     view3d = _make_view3d(mock_parser_host)
     mock_parser_host.init_manager.scene.items.return_value = []
     view3d.reset_zoom = MagicMock()
@@ -758,6 +784,7 @@ def test_fit_to_view_empty_scene_resets_zoom(mock_parser_host):
 
 
 def test_fit_to_view_fits_visible_items(mock_parser_host):
+    """Fit to view fits the visible items' bounds plus 10% padding."""
     from PyQt6.QtCore import QRectF
 
     view3d = _make_view3d(mock_parser_host)
@@ -777,6 +804,7 @@ def test_fit_to_view_fits_visible_items(mock_parser_host):
 
 
 def test_setup_3d_hover_only_refreshes_when_mode_active(mock_parser_host):
+    """setup_3d_hover() redraws atom info only when a display mode is active."""
     view3d = _make_view3d(mock_parser_host)
     view3d.show_all_atom_info = MagicMock()
     view3d.atom_info_display_mode = None
@@ -793,6 +821,7 @@ def test_setup_3d_hover_only_refreshes_when_mode_active(mock_parser_host):
 
 
 def test_update_atom_color_override_set_and_clear(mock_parser_host):
+    """A single atom override is stored, removed with None, and redraws each time."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_mol = MagicMock()
     view3d.draw_molecule_3d = MagicMock()
@@ -805,6 +834,7 @@ def test_update_atom_color_override_set_and_clear(mock_parser_host):
 
 
 def test_update_bond_color_override_set_and_clear(mock_parser_host):
+    """A single bond override is stored and removed; nothing is drawn with no molecule."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_mol = None
     view3d.draw_molecule_3d = MagicMock()
@@ -816,12 +846,60 @@ def test_update_bond_color_override_set_and_clear(mock_parser_host):
     view3d.draw_molecule_3d.assert_not_called()  # no molecule loaded
 
 
+def test_update_atom_color_overrides_batch_redraws_once(mock_parser_host):
+    """A batch of atom overrides is applied, None removes one, others are kept, one redraw."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.current_mol = MagicMock()
+    view3d.draw_molecule_3d = MagicMock()
+    view3d._plugin_color_overrides = {0: "#111111", 5: "#555555"}
+
+    colors = dict.fromkeys(range(1, 200), "#ff0000")
+    colors[5] = None
+    view3d.update_atom_color_overrides(colors)
+
+    assert view3d._plugin_color_overrides[0] == "#111111"
+    assert view3d._plugin_color_overrides[1] == "#ff0000"
+    assert 5 not in view3d._plugin_color_overrides
+    view3d.draw_molecule_3d.assert_called_once_with(view3d.current_mol)
+
+
+def test_update_bond_color_overrides_batch_redraws_once(mock_parser_host):
+    """240 bond overrides apply with a single redraw, and None removes an existing one."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.current_mol = MagicMock()
+    view3d.draw_molecule_3d = MagicMock()
+    view3d._plugin_bond_color_overrides = {3: "#333333"}
+
+    colors = dict.fromkeys(range(240), "#00ff00")
+    colors[3] = None
+    view3d.update_bond_color_overrides(colors)
+
+    assert len(view3d._plugin_bond_color_overrides) == 239
+    assert 3 not in view3d._plugin_bond_color_overrides
+    view3d.draw_molecule_3d.assert_called_once_with(view3d.current_mol)
+
+
+def test_update_color_overrides_batch_without_molecule(mock_parser_host):
+    """Batch overrides are stored even with no molecule loaded, without drawing."""
+    view3d = _make_view3d(mock_parser_host)
+    view3d.current_mol = None
+    view3d.draw_molecule_3d = MagicMock()
+
+    view3d.update_atom_color_overrides({1: "#ff0000"})
+    view3d.update_bond_color_overrides({1: "#00ff00"})
+
+    assert view3d._plugin_color_overrides == {1: "#ff0000"}
+    assert view3d._plugin_bond_color_overrides == {1: "#00ff00"}
+    view3d.draw_molecule_3d.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # show_all_atom_info — per-mode label building
 # ---------------------------------------------------------------------------
 
 
 def _labels_view(mock_parser_host, mode, mol=None, base=0):
+    """A View3DManager with two atom positions, set up to draw labels in *mode*."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = mode
     view3d.atom_index_base = base
@@ -840,12 +918,14 @@ def _label_calls(view3d):
 
 
 def test_show_all_atom_info_noop_without_mode(mock_parser_host):
+    """No atom info mode means no labels are drawn."""
     view3d = _labels_view(mock_parser_host, None)
     view3d.show_all_atom_info()
     view3d.plotter.add_point_labels.assert_not_called()
 
 
 def test_show_all_atom_info_noop_without_positions(mock_parser_host):
+    """No 3D atom positions means no labels are drawn."""
     view3d = _labels_view(mock_parser_host, "rdkit_index")
     view3d.atom_positions_3d = None
     view3d.show_all_atom_info()
@@ -853,6 +933,7 @@ def test_show_all_atom_info_noop_without_positions(mock_parser_host):
 
 
 def test_show_all_atom_info_rdkit_index_respects_base(mock_parser_host):
+    """RDKit index labels honor the 1-based setting and draw the RDKit legend."""
     view3d = _labels_view(mock_parser_host, "rdkit_index", base=1)
     view3d.show_all_atom_info()
     calls = _label_calls(view3d)
@@ -865,6 +946,7 @@ def test_show_all_atom_info_rdkit_index_respects_base(mock_parser_host):
 def test_show_all_atom_info_original_id_only_labels_tagged_atoms(
     mock_parser_host,
 ):
+    """Original-ID mode labels only atoms that carry _original_atom_id."""
     mol = Chem.MolFromSmiles("CC")
     mol.GetAtomWithIdx(1).SetIntProp("_original_atom_id", 42)
     view3d = _labels_view(mock_parser_host, "original_id", mol=mol)
@@ -877,6 +959,7 @@ def test_show_all_atom_info_original_id_only_labels_tagged_atoms(
 def test_show_all_atom_info_xyz_index_mixes_with_rdkit_fallback(
     mock_parser_host,
 ):
+    """XYZ index mode labels tagged atoms and falls back to RDKit indices for the rest."""
     mol = Chem.MolFromSmiles("CC")
     mol.GetAtomWithIdx(0).SetIntProp("xyz_unique_id", 10)
     view3d = _labels_view(mock_parser_host, "xyz_index", mol=mol, base=1)
@@ -888,6 +971,7 @@ def test_show_all_atom_info_xyz_index_mixes_with_rdkit_fallback(
 
 
 def test_show_all_atom_info_coords_formats_positions(mock_parser_host):
+    """Coordinate mode prints each position to two decimals, with no legend."""
     view3d = _labels_view(mock_parser_host, "coords")
     view3d.show_all_atom_info()
     calls = _label_calls(view3d)
@@ -899,6 +983,7 @@ def test_show_all_atom_info_coords_formats_positions(mock_parser_host):
 
 
 def test_show_all_atom_info_symbol_mode(mock_parser_host):
+    """Symbol mode labels each atom with its element symbol."""
     mol = Chem.MolFromSmiles("CO")
     view3d = _labels_view(mock_parser_host, "symbol", mol=mol)
     view3d.show_all_atom_info()
@@ -908,6 +993,7 @@ def test_show_all_atom_info_symbol_mode(mock_parser_host):
 def test_show_all_atom_info_symbol_mode_without_mol_uses_placeholder(
     mock_parser_host,
 ):
+    """Symbol mode with no molecule labels every position '?'."""
     view3d = _labels_view(mock_parser_host, "symbol", mol=None)
     view3d.show_all_atom_info()
     assert _label_calls(view3d)["atom_labels_other"] == ["?", "?"]
@@ -919,6 +1005,7 @@ def test_show_all_atom_info_symbol_mode_without_mol_uses_placeholder(
 
 
 def test_clear_labels_removes_list_of_actors_and_legends(mock_parser_host):
+    """Clearing removes every label actor and legend and resets the tracking state."""
     view3d = _make_view3d(mock_parser_host)
     actor_a, actor_b = MagicMock(), MagicMock()
     view3d.current_atom_info_labels = [actor_a, actor_b]
@@ -934,6 +1021,7 @@ def test_clear_labels_removes_list_of_actors_and_legends(mock_parser_host):
 
 
 def test_clear_labels_handles_single_actor(mock_parser_host):
+    """A single label actor (not a list) is removed too."""
     view3d = _make_view3d(mock_parser_host)
     actor = MagicMock()
     view3d.current_atom_info_labels = actor
@@ -945,6 +1033,7 @@ def test_clear_labels_handles_single_actor(mock_parser_host):
 
 
 def test_clear_labels_survives_remove_actor_failure(mock_parser_host):
+    """A remove_actor failure does not stop the label state from being reset."""
     view3d = _make_view3d(mock_parser_host)
     view3d.plotter.remove_actor.side_effect = RuntimeError("actor gone")
     view3d.current_atom_info_labels = [MagicMock()]
@@ -962,6 +1051,7 @@ def test_clear_labels_survives_remove_actor_failure(mock_parser_host):
 
 
 def _settings_view(mock_host, **settings):
+    """A View3DManager whose host settings are updated with *settings*."""
     view3d = _make_view3d(mock_host)
     mock_host.init_manager.settings.update(settings)
     view3d.axes_widget = None
@@ -969,6 +1059,7 @@ def _settings_view(mock_host, **settings):
 
 
 def test_apply_3d_settings_orthographic_sets_parallel_projection(mock_parser_host):
+    """Orthographic projection turns on parallel projection on the active camera."""
     view3d = _settings_view(
         mock_parser_host, projection_mode="Orthographic", show_3d_axes=False
     )
@@ -982,6 +1073,7 @@ def test_apply_3d_settings_orthographic_sets_parallel_projection(mock_parser_hos
 
 
 def test_apply_3d_settings_hides_axes_when_disabled(mock_parser_host):
+    """With 3D axes off the axes are hidden, and the background color is applied."""
     view3d = _settings_view(
         mock_parser_host, show_3d_axes=False, background_color="#222222"
     )
@@ -993,6 +1085,7 @@ def test_apply_3d_settings_hides_axes_when_disabled(mock_parser_host):
 
 
 def test_apply_3d_settings_redraw_true_draws_molecule(mock_parser_host):
+    """redraw=True redraws the current molecule."""
     view3d = _settings_view(mock_parser_host, show_3d_axes=False)
     view3d.current_mol = MagicMock()
     with patch.object(view3d, "draw_molecule_3d") as draw:
@@ -1001,6 +1094,7 @@ def test_apply_3d_settings_redraw_true_draws_molecule(mock_parser_host):
 
 
 def test_apply_3d_settings_redraw_false_skips_draw(mock_parser_host):
+    """redraw=False applies settings without redrawing."""
     view3d = _settings_view(mock_parser_host, show_3d_axes=False)
     with patch.object(view3d, "draw_molecule_3d") as draw:
         view3d.apply_3d_settings(redraw=False)
@@ -1008,6 +1102,7 @@ def test_apply_3d_settings_redraw_false_skips_draw(mock_parser_host):
 
 
 def test_apply_3d_settings_resets_camera_only_once(mock_parser_host):
+    """The camera is reset on the first apply only, not on later ones."""
     view3d = _settings_view(mock_parser_host, show_3d_axes=False)
     with patch.object(view3d, "draw_molecule_3d"):
         view3d.apply_3d_settings(redraw=False)
@@ -1018,6 +1113,7 @@ def test_apply_3d_settings_resets_camera_only_once(mock_parser_host):
 
 
 def test_apply_3d_settings_axes_on_builds_orientation_widget(mock_parser_host):
+    """With 3D axes on, an orientation marker widget is created."""
     view3d = _settings_view(
         mock_parser_host, show_3d_axes=True, background_color="#000000"
     )
@@ -1037,6 +1133,7 @@ def test_apply_3d_settings_axes_on_builds_orientation_widget(mock_parser_host):
 
 
 def _scene_with_atom_items(mock_host, atom_ids):
+    """Put mock 2D atom items with a stale chiral label into the host scene."""
     items = {}
     for aid in atom_ids:
         it = MagicMock()
@@ -1047,6 +1144,7 @@ def _scene_with_atom_items(mock_host, atom_ids):
 
 
 def test_update_chiral_labels_clears_when_disabled(mock_parser_host):
+    """With chiral labels off, stale labels are cleared and the scene repainted."""
     view3d = _make_view3d(mock_parser_host)
     view3d.show_chiral_labels = False
     items = _scene_with_atom_items(mock_parser_host, [1, 2])
@@ -1058,6 +1156,7 @@ def test_update_chiral_labels_clears_when_disabled(mock_parser_host):
 
 
 def test_update_chiral_labels_returns_when_no_current_mol(mock_parser_host):
+    """With no 3D molecule, stale chiral labels are cleared and none assigned."""
     view3d = _make_view3d(mock_parser_host)
     view3d.show_chiral_labels = True
     view3d.current_mol = None
@@ -1069,6 +1168,7 @@ def test_update_chiral_labels_returns_when_no_current_mol(mock_parser_host):
 
 
 def test_update_chiral_labels_assigns_rs_to_matching_items(mock_parser_host):
+    """The stereocenter's R/S lands on the 2D item matching its _original_atom_id."""
     view3d = _make_view3d(mock_parser_host)
     view3d.show_chiral_labels = True
     mol = Chem.MolFromSmiles("C[C@H](N)O")
@@ -1085,6 +1185,7 @@ def test_update_chiral_labels_assigns_rs_to_matching_items(mock_parser_host):
 
 
 def test_toggle_chiral_labels_display_on_redraws_and_reports(mock_parser_host):
+    """Enabling chiral labels redraws and reports it in the status bar."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_mol = MagicMock()
     with patch.object(view3d, "draw_molecule_3d") as draw:
@@ -1097,6 +1198,7 @@ def test_toggle_chiral_labels_display_on_redraws_and_reports(mock_parser_host):
 
 
 def test_toggle_chiral_labels_display_off_reports_disabled(mock_parser_host):
+    """Disabling chiral labels shows exactly 'Chiral labels disabled.'."""
     view3d = _make_view3d(mock_parser_host)
     view3d.current_mol = None
     view3d.toggle_chiral_labels_display(False)
@@ -1112,6 +1214,7 @@ def test_toggle_chiral_labels_display_off_reports_disabled(mock_parser_host):
 
 
 def test_toggle_atom_info_index_mode_enables_base_menu(mock_parser_host):
+    """Index mode enables the index base menu and renders."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = None
     view3d.atom_positions_3d = None  # show_all_atom_info early-returns safely
@@ -1125,6 +1228,7 @@ def test_toggle_atom_info_index_mode_enables_base_menu(mock_parser_host):
 
 
 def test_toggle_atom_info_coords_mode_disables_base_menu(mock_parser_host):
+    """Coordinate mode disables the index base menu."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = None
     view3d.atom_positions_3d = None
@@ -1137,6 +1241,7 @@ def test_toggle_atom_info_coords_mode_disables_base_menu(mock_parser_host):
 
 
 def test_set_atom_index_base_refreshes_when_index_mode_active(mock_parser_host):
+    """Changing the base in an index mode redraws the labels and renders."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = "rdkit_index"
     view3d.atom_positions_3d = None
@@ -1148,6 +1253,7 @@ def test_set_atom_index_base_refreshes_when_index_mode_active(mock_parser_host):
 
 
 def test_set_atom_index_base_no_refresh_when_no_index_mode(mock_parser_host):
+    """Changing the base in a non-index mode stores it without redrawing labels."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = "symbol"
     with patch.object(view3d, "show_all_atom_info") as show:
@@ -1162,6 +1268,7 @@ def test_set_atom_index_base_no_refresh_when_no_index_mode(mock_parser_host):
 
 
 def test_menu_state_clears_original_id_mode_when_ids_absent(mock_parser_host):
+    """Original-ID mode is turned off when the molecule has no original IDs."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = "original_id"
     view3d.current_mol = Chem.MolFromSmiles("CC")  # no _original_atom_id props
@@ -1174,6 +1281,7 @@ def test_menu_state_clears_original_id_mode_when_ids_absent(mock_parser_host):
 
 
 def test_menu_state_clears_xyz_mode_when_not_xyz_derived(mock_parser_host):
+    """XYZ index mode is turned off when the molecule is not XYZ-derived."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = "xyz_index"
     view3d.current_mol = Chem.MolFromSmiles("CC")  # no xyz_unique_id props
@@ -1186,6 +1294,7 @@ def test_menu_state_clears_xyz_mode_when_not_xyz_derived(mock_parser_host):
 
 
 def test_menu_state_keeps_original_id_mode_when_ids_present(mock_parser_host):
+    """Original-ID mode stays on while the molecule still has original IDs."""
     view3d = _make_view3d(mock_parser_host)
     view3d.atom_info_display_mode = "original_id"
     mol = Chem.MolFromSmiles("CC")
@@ -1198,6 +1307,7 @@ def test_menu_state_keeps_original_id_mode_when_ids_present(mock_parser_host):
 
 
 def _atom_info_view(mock_parser_host, settings):
+    """A View3DManager showing RDKit indices for one carbon, with *settings* applied."""
     view3d = _make_view3d(mock_parser_host)
     mock_parser_host.init_manager.settings = settings
     view3d.atom_info_display_mode = "rdkit_index"
@@ -1401,7 +1511,7 @@ def test_wrong_ez_labels_are_drawn_in_red(mock_parser_host):
     """Double bonds the stereo check found wrong get a red E/Z label."""
     view3d = _make_view3d(mock_parser_host)
     mock_parser_host.init_manager.settings = {"label_color_ez_3d": "#006400"}
-    mol = Chem.AddHs(Chem.MolFromSmiles("C/C=C/C.C/C=C\C"))
+    mol = Chem.AddHs(Chem.MolFromSmiles(r"C/C=C/C.C/C=C\C"))
     AllChem.EmbedMolecule(mol, randomSeed=5)
     doubles = [b.GetIdx() for b in mol.GetBonds() if b.GetBondTypeAsDouble() == 2]
     # The first bond is E in 3D (drawn Z, say); the red label is its 3D E/Z.

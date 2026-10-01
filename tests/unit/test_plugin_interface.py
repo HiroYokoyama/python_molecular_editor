@@ -6,12 +6,16 @@ from moleditpy.plugins.plugin_interface import PluginContext, Plugin3DController
 
 
 class TestPluginInterface:
+    """PluginContext delegation and the Plugin3DController scene helpers."""
+
     @pytest.fixture
     def mock_manager(self):
+        """A stand-in PluginManager for building a PluginContext."""
         return MagicMock()
 
     @pytest.fixture
     def mock_main_window(self):
+        """A main window whose 3D manager reports a loaded molecule."""
         mw = MagicMock()
         mw.view_3d_manager.current_mol = "mock_molecule"
         return mw
@@ -245,6 +249,41 @@ class TestPluginInterface:
             2, "#00FF00"
         )
         mock_main_window.view_3d_manager.plotter.render.assert_called_once()
+
+    def test_3d_controller_set_atom_colors(self, mock_main_window):
+        """set_atom_colors hands the whole batch over and renders once."""
+        controller = Plugin3DController(mock_main_window)
+        mock_main_window.view_3d_manager = MagicMock()
+        colors = {1: "#FF0000", 2: None}
+
+        controller.set_atom_colors(colors)
+
+        mock_main_window.view_3d_manager.update_atom_color_overrides.assert_called_once_with(
+            colors
+        )
+        mock_main_window.view_3d_manager.update_atom_color_override.assert_not_called()
+        mock_main_window.view_3d_manager.plotter.render.assert_called_once()
+
+    def test_3d_controller_set_bond_colors(self, mock_main_window):
+        """set_bond_colors hands the whole batch over and renders once."""
+        controller = Plugin3DController(mock_main_window)
+        mock_main_window.view_3d_manager = MagicMock()
+        colors = dict.fromkeys(range(240), "#00FF00")
+
+        controller.set_bond_colors(colors)
+
+        mock_main_window.view_3d_manager.update_bond_color_overrides.assert_called_once_with(
+            colors
+        )
+        mock_main_window.view_3d_manager.update_bond_color_override.assert_not_called()
+        mock_main_window.view_3d_manager.plotter.render.assert_called_once()
+
+    def test_3d_controller_batch_colors_without_3d_manager(self, mock_main_window):
+        """No 3D manager: the batch calls are a quiet no-op."""
+        mock_main_window.view_3d_manager = None
+        controller = Plugin3DController(mock_main_window)
+        controller.set_atom_colors({1: "#FF0000"})
+        controller.set_bond_colors({1: "#00FF00"})
 
     # ------------------------------------------------------------------
     # Tests for methods added in V3.1

@@ -13,7 +13,17 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 if TYPE_CHECKING:
     # Annotation-only: plugin test suites import this module without RDKit.
@@ -649,6 +659,40 @@ class Plugin3DController:
         v3d = self._get_v3d()
         if v3d:
             v3d.update_bond_color_override(bond_index, color_hex)
+            if v3d.plotter:
+                v3d.plotter.render()
+
+    def set_atom_colors(self, colors: Mapping[int, Optional[str]]) -> None:
+        """
+        Set the colors of many atoms in the 3D view with a single redraw.
+
+        ``set_atom_color`` redraws the molecule on every call, so coloring
+        hundreds of atoms one by one is slow; use this for batches.
+
+        Args:
+            colors: RDKit atom index -> hex string e.g. "#FF0000".
+                ``None`` removes that atom's override.
+        """
+        v3d = self._get_v3d()
+        if v3d:
+            v3d.update_atom_color_overrides(colors)
+            if v3d.plotter:
+                v3d.plotter.render()
+
+    def set_bond_colors(self, colors: Mapping[int, Optional[str]]) -> None:
+        """
+        Set the colors of many bonds in the 3D view with a single redraw.
+
+        ``set_bond_color`` redraws the molecule on every call, so coloring
+        hundreds of bonds one by one is slow; use this for batches.
+
+        Args:
+            colors: RDKit bond index -> hex string e.g. "#00FF00".
+                ``None`` removes that bond's override.
+        """
+        v3d = self._get_v3d()
+        if v3d:
+            v3d.update_bond_color_overrides(colors)
             if v3d.plotter:
                 v3d.plotter.render()
 
