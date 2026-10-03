@@ -1,6 +1,51 @@
 title: MoleditPy
-remote_theme: jekyll/minima@8d0aa75
+description: "A Programmable & Cross-Platform Python Molecular Editor"
+baseurl: "/python_molecular_editor"
+url: "https://hiroyokoyama.github.io"
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
 defaults:
   - scope:
       path: ""
       type: "pages"
+    values:
+      layout: "page"
+
+exclude:
+  - src
+  - moleditpy
+  - moleditpy-linux
+  - tests
+  - scripts
+  - htmlcov
+  - docs
+  - "*.py"
+  - "*.toml"
+  - "*.cfg"
+  - "*.ini"
+  - "*.xml"
+  - "*.cff"
+  - ".ruff_cache"
+  - ".mypy_cache"
+  - ".pytest_cache"
+  - __pycache__
+  - coverage.xml
+  - .coverage
+  - .coveragerc
+  - .pylintrc
+  - ruff.toml
+  - mypy.ini
+  - requirements-lint.txt
+  - AGENTS.md
+  - CLAUDE.md
+  - DESIGN_PRINCIPLES.md
+  - CODE_OF_CONDUCT.md
+  - CONTRIBUTING.md
+  - SECURITY.md
+  - CHANGELOG.md
+  - settings.local.json
+  - google84ba9bc3a8e4c11c.html
