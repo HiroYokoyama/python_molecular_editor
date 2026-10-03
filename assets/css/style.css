@@ -615,23 +615,23 @@ body[data-lang="ja"] .lang-en {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 52px;
-  height: 52px;
-  background: rgba(15, 23, 42, 0.75);
+  width: 56px;
+  height: 56px;
+  background: rgba(15, 23, 42, 0.78);
   backdrop-filter: blur(4px);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 .video-card:hover .video-play-btn {
   background: var(--accent-color);
-  transform: translate(-50%, -50%) scale(1.1);
-  box-shadow: 0 6px 20px rgba(53, 119, 247, 0.4);
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35);
 }
 
 .video-play-btn svg {
