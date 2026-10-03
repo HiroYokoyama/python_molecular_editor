@@ -43,29 +43,28 @@
   <main>
     <!-- Hero Section -->
     <section class="hero">
-      <div class="hero-badges">
-        <a href="https://doi.org/10.5281/zenodo.17268532"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.17268532.svg" alt="DOI"></a>
-        <img src="https://img.shields.io/badge/MoleditPy-v4-3577F7" alt="MoleditPy v4">
-        <a href="https://www.rdkit.org/"><img src="https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg" alt="Powered by RDKit"></a>
-        <a href="https://badge.fury.io/py/MoleditPy"><img src="https://badge.fury.io/py/MoleditPy.svg" alt="PyPI version"></a>
-        <a href="https://pypi.org/project/MoleditPy/"><img src="https://img.shields.io/badge/python-3.9--3.14-blue.svg" alt="Python Versions"></a>
-        <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License"></a>
-        <a href="https://github.com/HiroYokoyama/python_molecular_editor/actions"><img src="https://github.com/HiroYokoyama/python_molecular_editor/actions/workflows/tests.yml/badge.svg" alt="Build Status"></a>
-        <a href="https://codecov.io/gh/HiroYokoyama/python_molecular_editor"><img src="https://codecov.io/gh/HiroYokoyama/python_molecular_editor/graph/badge.svg" alt="codecov"></a>
+      <!-- App Brand (Logo + Heading) -->
+      <div class="hero-brand">
+        <img src="img/icon.png" alt="MoleditPy Icon" class="hero-logo" width="84" height="84">
+        <h1 class="hero-title">MoleditPy</h1>
       </div>
 
-      <h1>MoleditPy</h1>
-      <p class="subtitle">
+      <!-- Tagline & Description -->
+      <p class="hero-tagline">
+        <span class="lang-en">A Programmable &amp; Cross-Platform Molecular Editor</span>
+        <span class="lang-ja">拡張自在なクロスプラットフォーム分子エディター</span>
+      </p>
+
+      <p class="hero-description">
         <span class="lang-en">
-          A <strong>programmable</strong> and cross-platform molecular editor built in Python.<br>
-          Streamline your workflow from 2D drawing to 3D visualization — an ideal tool for rapidly preparing DFT calculation inputs.
+          Streamline your workflow from 2D drawing to 3D visualization — an ideal tool for rapidly preparing DFT calculation inputs in Python.
         </span>
         <span class="lang-ja">
-          Pythonで構築された、<strong>機能拡張が自由自在な</strong>分子エディタープラットフォーム。<br>
-          2D描画から3Dへの変換により、DFT計算用インプットの迅速な作成に最適です。
+          2D化学構造の直感描画から3D構造の精密編集、DFT計算インプットの迅速な作成までをPythonでシームレスにつなぐ統合環境。
         </span>
       </p>
 
+      <!-- Action Buttons -->
       <div class="hero-actions">
         <a id="btn-manual" class="btn btn-primary" href="manual/manual">
           <span class="lang-en">User Manual</span>
@@ -81,6 +80,19 @@
         </a>
       </div>
 
+      <!-- Badges Container -->
+      <div class="hero-badges-container">
+        <div class="hero-badges">
+          <a href="https://doi.org/10.5281/zenodo.17268532"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.17268532.svg" alt="DOI"></a>
+          <img src="https://img.shields.io/badge/MoleditPy-v4-3577F7" alt="MoleditPy v4">
+          <a href="https://www.rdkit.org/"><img src="https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg" alt="Powered by RDKit"></a>
+          <a href="https://badge.fury.io/py/MoleditPy"><img src="https://badge.fury.io/py/MoleditPy.svg" alt="PyPI version"></a>
+          <a href="https://pypi.org/project/MoleditPy/"><img src="https://img.shields.io/badge/python-3.9--3.14-blue.svg" alt="Python Versions"></a>
+          <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License"></a>
+        </div>
+      </div>
+
+      <!-- Screenshot with soft ambient shadow -->
       <div class="hero-screenshot">
         <img src="img/screenshot.png" alt="MoleditPy Screenshot" loading="lazy">
       </div>
@@ -103,13 +115,13 @@
         <div class="card-grid">
 
           <!-- Feature 1 -->
-          <div class="card">
-            <span class="card-num">01 / 2D Canvas</span>
-            <h3 class="card-title">
+          <div class="feature-card">
+            <span class="feature-tag">01 / 2D Canvas</span>
+            <h3>
               <span class="lang-en">Intuitive 2D Drawing</span>
               <span class="lang-ja">直感的な2D描画と編集</span>
             </h3>
-            <p class="card-desc">
+            <p>
               <span class="lang-en">Draw and edit molecular structures with simple mouse controls on a responsive PyQt6 canvas.</span>
               <span class="lang-ja">PyQt6によるモダンで軽快なキャンバス上で、原子や結合を直感的なマウス操作で描画・編集できます。</span>
             </p>
@@ -130,13 +142,13 @@
           </div>
 
           <!-- Feature 2 -->
-          <div class="card">
-            <span class="card-num">02 / 3D Modeling</span>
-            <h3 class="card-title">
+          <div class="feature-card">
+            <span class="feature-tag">02 / 3D Modeling</span>
+            <h3>
               <span class="lang-en">Interactive 3D Editing</span>
               <span class="lang-ja">3D可視化と高度な幾何編集</span>
             </h3>
-            <p class="card-desc">
+            <p>
               <span class="lang-en">Conformation generation and fine-grained geometric adjustments directly in the 3D viewport.</span>
               <span class="lang-ja">RDKitによる2D-3D変換と、3Dビュー内で原子を直接ドラッグ操作できる本格的な配座調整ツール群。</span>
             </p>
@@ -157,13 +169,13 @@
           </div>
 
           <!-- Feature 3 -->
-          <div class="card">
-            <span class="card-num">03 / Analysis &amp; IO</span>
-            <h3 class="card-title">
+          <div class="feature-card">
+            <span class="feature-tag">03 / Analysis &amp; IO</span>
+            <h3>
               <span class="lang-en">Analysis &amp; Export</span>
               <span class="lang-ja">解析とファイル入出力</span>
             </h3>
-            <p class="card-desc">
+            <p>
               <span class="lang-en">Compute molecular properties and export structures to computational chemistry software.</span>
               <span class="lang-ja">分子特性の自動計算から、DFT計算ソフト・3Dプリント・論文発表向けのエクスポートに対応。</span>
             </p>
@@ -184,13 +196,13 @@
           </div>
 
           <!-- Feature 4 -->
-          <div class="card">
-            <span class="card-num">04 / Extensibility</span>
-            <h3 class="card-title">
+          <div class="feature-card">
+            <span class="feature-tag">04 / Extensibility</span>
+            <h3>
               <span class="lang-en">Programmable Python Plugins</span>
               <span class="lang-ja">プログラマブルな拡張性</span>
             </h3>
-            <p class="card-desc">
+            <p>
               <span class="lang-en">Extend the editor with custom scripts and browse community-contributed plugins.</span>
               <span class="lang-ja">Pythonスクリプトを配置するだけで機能を追加できるプラグインシステムとコミュニティ連携。</span>
             </p>
@@ -226,23 +238,28 @@
           </p>
         </div>
 
-        <div class="video-container">
-          <table class="video-table">
-            <tr>
-              <td align="center" valign="top" width="50%">
-                <a class="video-card" href="https://www.youtube.com/watch?v=ccWn9psgBlM" target="_blank" rel="noopener">
-                  <img src="https://img.youtube.com/vi/ccWn9psgBlM/hqdefault.jpg" alt="MoleditPy: introduction">
-                  <b>MoleditPy: introduction</b>
-                </a>
-              </td>
-              <td align="center" valign="top" width="50%">
-                <a class="video-card" href="https://www.youtube.com/watch?v=Iwm9JFXpXE4" target="_blank" rel="noopener">
-                  <img src="https://img.youtube.com/vi/Iwm9JFXpXE4/hqdefault.jpg" alt="PySCF Calculator for MoleditPy">
-                  <b>PySCF Calculator for MoleditPy</b>
-                </a>
-              </td>
-            </tr>
-          </table>
+        <div class="video-grid">
+          <!-- Video 1 -->
+          <a class="video-card" href="https://www.youtube.com/watch?v=ccWn9psgBlM" target="_blank" rel="noopener">
+            <div class="video-thumb-wrap">
+              <img src="https://img.youtube.com/vi/ccWn9psgBlM/hqdefault.jpg" alt="MoleditPy: introduction">
+              <span class="video-play-btn" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </div>
+            <span class="video-title">MoleditPy: introduction</span>
+          </a>
+
+          <!-- Video 2 -->
+          <a class="video-card" href="https://www.youtube.com/watch?v=Iwm9JFXpXE4" target="_blank" rel="noopener">
+            <div class="video-thumb-wrap">
+              <img src="https://img.youtube.com/vi/Iwm9JFXpXE4/hqdefault.jpg" alt="PySCF Calculator for MoleditPy">
+              <span class="video-play-btn" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </div>
+            <span class="video-title">PySCF Calculator for MoleditPy</span>
+          </a>
         </div>
       </div>
     </section>
@@ -261,34 +278,61 @@
           </p>
         </div>
 
+        <!-- Install Pill with Copy Button -->
         <div class="install-pill">
-          <span class="prompt">$</span>
-          <code>pip install moleditpy-installer</code>
+          <div class="install-code-group">
+            <span class="prompt">$</span>
+            <code id="pip-command">pip install moleditpy-installer</code>
+          </div>
+          <button type="button" class="copy-btn" id="copy-btn" onclick="copyInstallCmd()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span id="copy-text">Copy</span>
+          </button>
         </div>
 
+        <!-- Platform Grid with Minimal Clean SVG Icons -->
         <div class="install-grid">
+          <!-- Windows -->
           <a id="link-win" class="install-item" href="windows-installer/windows_installer">
+            <div class="install-item-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.401H10.949M0 12.6h9.75V22.1L0 20.751M10.949 12.6H24V24l-12.9-1.801"/></svg>
+            </div>
             <span class="install-item-title">Windows</span>
             <span class="install-item-desc">
               <span class="lang-en">Standalone installer</span>
               <span class="lang-ja">インストーラー</span>
             </span>
           </a>
+
+          <!-- macOS -->
           <a id="link-mac" class="install-item" href="macos-installer/macos_installer">
+            <div class="install-item-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.38c.62-.75 1.04-1.8 0.93-2.85-.9.04-1.99.6-2.61 1.34-.55.63-.99 1.68-.86 2.7.99.08 2.02-.44 2.54-1.19z"/></svg>
+            </div>
             <span class="install-item-title">macOS</span>
             <span class="install-item-desc">
               <span class="lang-en">App bundle</span>
               <span class="lang-ja">アプリバンドル</span>
             </span>
           </a>
+
+          <!-- Linux -->
           <a class="install-item" href="https://github.com/HiroYokoyama/python_molecular_editor/wiki" target="_blank" rel="noopener">
+            <div class="install-item-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a4 4 0 0 0-4 4v2H7a3 3 0 0 0-3 3v5a6 6 0 0 0 6 6h4a6 6 0 0 0 6-6v-5a3 3 0 0 0-3-3h-1V6a4 4 0 0 0-4-4zm-2 4a2 2 0 1 1 4 0v2h-4V6zm-2 5h8a1 1 0 0 1 1 1v5a4 4 0 0 1-4 4h-2a4 4 0 0 1-4-4v-5a1 1 0 0 1 1-1z"/></svg>
+            </div>
             <span class="install-item-title">Linux</span>
             <span class="install-item-desc">
               <span class="lang-en">pip package</span>
               <span class="lang-ja">pip パッケージ</span>
             </span>
           </a>
+
+          <!-- Docker -->
           <a class="install-item" href="https://github.com/HiroYokoyama/python_molecular_editor_docker" target="_blank" rel="noopener">
+            <div class="install-item-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M13.983 11.078h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.186v1.887c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 00.186-.186V3.574a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185m0 2.716h2.118a.187.187 0 00.186-.186V6.29a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.186.185.186m-2.93 0h2.12a.186.186 0 00.184-.186V6.29a.185.185 0 00-.185-.185H8.1a.185.185 0 00-.185.185v1.888c0 .102.083.186.185.186m-2.954 0h2.119a.186.186 0 00.185-.186V6.29a.185.185 0 00-.185-.185H5.145a.185.185 0 00-.185.185v1.888c0 .102.083.186.185.186m5.884 2.714h2.118a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.118a.185.185 0 00-.185.186v1.887c0 .102.082.185.185.185m-2.93 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.185-.186H8.1a.185.185 0 00-.185.186v1.887c0 .102.083.185.185.185m-2.954 0h2.119a.185.185 0 00.185-.185V9.006a.185.185 0 00-.185-.186H5.145a.185.185 0 00-.185.186v1.887c0 .102.083.185.185.185m-2.93 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.185-.186h-2.12a.185.185 0 00-.184.186v1.887c0 .102.083.185.185.185M23.763 9.89c-.065-.051-.672-.51-1.954-.51-.338.001-.676.03-1.01.087-.248-1.7-1.653-2.53-1.716-2.566l-.344-.199-.226.327c-.284.438-.49.922-.612 1.43-1.066.082-1.952.55-2.52 1.341H1.056a.86.86 0 00-.86.86v4.615c.026.837.288 1.65.753 2.348C2.102 19.345 5.093 21 9.49 21c7.228 0 11.233-3.793 11.666-8.773.003-.036.004-.07.004-.105.006-.217.07-.428.188-.61.353-.518 1.83-1.258 2.415-1.622zm0 0"/></svg>
+            </div>
             <span class="install-item-title">Docker</span>
             <span class="install-item-desc">
               <span class="lang-en">Container image</span>
@@ -318,18 +362,16 @@
     </div>
   </footer>
 
-  <!-- Language Switch Script -->
+  <!-- Interactive Scripts (Language Switch & Copy) -->
   <script>
     function setLang(lang) {
       document.body.setAttribute('data-lang', lang);
       document.documentElement.lang = lang;
       
-      // Update buttons
       document.querySelectorAll('.lang-switch-btn').forEach(function(btn) {
         btn.classList.toggle('active', btn.getAttribute('data-lang-btn') === lang);
       });
 
-      // Update manual and installer links to match language
       var navManual = document.getElementById('nav-manual');
       var btnManual = document.getElementById('btn-manual');
       var footerManual = document.getElementById('footer-manual');
@@ -355,7 +397,20 @@
       } catch (e) {}
     }
 
-    // Auto-detect on load: localStorage > URL hash (#ja) > browser language
+    function copyInstallCmd() {
+      var cmd = "pip install moleditpy-installer";
+      navigator.clipboard.writeText(cmd).then(function() {
+        var btn = document.getElementById('copy-btn');
+        var text = document.getElementById('copy-text');
+        btn.classList.add('copied');
+        text.textContent = 'Copied!';
+        setTimeout(function() {
+          btn.classList.remove('copied');
+          text.textContent = 'Copy';
+        }, 2000);
+      });
+    }
+
     (function() {
       var savedLang = null;
       try {
