@@ -168,24 +168,48 @@ a:hover {
   margin: 0 0.35rem;
 }
 
-.site-nav a.lang-switch {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--accent-color);
-  background: var(--accent-light);
-  border: 1px solid rgba(53, 119, 247, 0.25);
-  padding: 0.25rem 0.65rem;
+.lang-switch-group {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
   border-radius: 9999px;
-  letter-spacing: 0.05em;
-  text-decoration: none;
-  transition: all 0.2s ease;
+  padding: 2px;
+  gap: 2px;
 }
 
-.site-nav a.lang-switch:hover {
+.lang-switch-btn {
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 0.22rem 0.6rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.lang-switch-btn:hover {
+  color: var(--accent-color);
+}
+
+.lang-switch-btn.active {
   background: var(--accent-color);
   color: #ffffff;
-  border-color: var(--accent-color);
-  text-decoration: none;
+  box-shadow: 0 1px 4px rgba(53, 119, 247, 0.35);
+}
+
+/* Language Content Visibility Rules */
+body[data-lang="en"] .lang-ja {
+  display: none !important;
+}
+
+body[data-lang="ja"] .lang-en {
+  display: none !important;
 }
 
 @media (max-width: 768px) {
