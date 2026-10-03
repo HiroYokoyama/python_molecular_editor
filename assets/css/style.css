@@ -161,6 +161,33 @@ a:hover {
   background: var(--accent-light);
 }
 
+.nav-divider {
+  width: 1px;
+  height: 18px;
+  background-color: var(--border-color);
+  margin: 0 0.35rem;
+}
+
+.site-nav a.lang-switch {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  background: var(--accent-light);
+  border: 1px solid rgba(53, 119, 247, 0.25);
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.site-nav a.lang-switch:hover {
+  background: var(--accent-color);
+  color: #ffffff;
+  border-color: var(--accent-color);
+  text-decoration: none;
+}
+
 @media (max-width: 768px) {
   .site-nav {
     display: none;
