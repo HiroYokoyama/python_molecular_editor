@@ -277,10 +277,11 @@ body[data-lang="ja"] .lang-en {
 }
 
 .hero-title {
-  font-size: 3.5rem;
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 1.1;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", "Aptos", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 3.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
   color: var(--heading-color);
   margin: 0;
 }
@@ -361,16 +362,16 @@ body[data-lang="ja"] .lang-en {
 }
 
 .btn-primary {
-  background: var(--accent-gradient);
+  background: var(--accent-color);
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.28);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover-gradient);
+  background: var(--accent-hover);
   color: #ffffff;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(53, 119, 247, 0.38);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
   text-decoration: none;
 }
 
@@ -384,8 +385,8 @@ body[data-lang="ja"] .lang-en {
 .btn-secondary:hover {
   border-color: var(--accent-color);
   color: var(--accent-color);
-  background: var(--accent-light);
-  transform: translateY(-2px);
+  background: var(--bg-subtle);
+  transform: translateY(-1px);
   text-decoration: none;
 }
 
