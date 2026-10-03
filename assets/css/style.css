@@ -20,14 +20,12 @@
   --border-subtle: #f1f5f9;
   --border-hover: #cbd5e1;
 
-  /* MoleditPy Brand Gradients & Accents */
+  /* MoleditPy Brand Accents */
   --accent-color: #3577F7;
   --accent-hover: #1e5fe3;
   --accent-dark: #154dc0;
   --accent-light: #eff6ff;
   --accent-border: #bfdbfe;
-  --accent-gradient: linear-gradient(135deg, #0ea5e9 0%, #3577F7 100%);
-  --accent-hover-gradient: linear-gradient(135deg, #0284c7 0%, #2553ad 100%);
 
   /* System Font Stack */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
@@ -42,14 +40,13 @@
   --radius-lg: 14px;
   --radius-xl: 20px;
 
-  /* Refined Shadow Hierarchy */
+  /* Refined Natural Shadow Hierarchy */
   --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
   --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.07), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
   --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.07), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
-  --shadow-glow: 0 0 35px rgba(53, 119, 247, 0.12);
-  --shadow-hero: 0 20px 40px -15px rgba(15, 23, 42, 0.1), 0 0 50px rgba(53, 119, 247, 0.08);
+  --shadow-hero: 0 12px 32px -4px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
 }
 
 /* ==========================================================================
@@ -229,8 +226,12 @@ a:hover {
 }
 
 @media (max-width: 768px) {
-  .site-nav {
+  .site-nav > a,
+  .site-nav .nav-divider {
     display: none;
+  }
+  .lang-switch-group {
+    margin-right: 0;
   }
 }
 
@@ -265,15 +266,15 @@ body[data-lang="ja"] .lang-en {
   width: 84px;
   height: 84px;
   border-radius: 18px;
-  box-shadow: 0 10px 25px -4px rgba(53, 119, 247, 0.25), 0 2px 8px -1px rgba(15, 23, 42, 0.08);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04);
+  border: 1px solid var(--border-color);
   background: #ffffff;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
 }
 
 .hero-logo:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 14px 30px -4px rgba(53, 119, 247, 0.35), 0 4px 12px -1px rgba(15, 23, 42, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
 }
 
 .hero-title {
@@ -407,7 +408,7 @@ body[data-lang="ja"] .lang-en {
 }
 
 .hero-screenshot img:hover {
-  box-shadow: 0 25px 50px -15px rgba(15, 23, 42, 0.14), 0 0 60px rgba(53, 119, 247, 0.12);
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.14);
 }
 
 /* ==========================================================================
@@ -446,7 +447,7 @@ body[data-lang="ja"] .lang-en {
   transform: translateX(-50%);
   width: 44px;
   height: 3px;
-  background: var(--accent-gradient);
+  background: var(--accent-color);
   border-radius: 2px;
 }
 
@@ -847,7 +848,7 @@ body[data-lang="ja"] .lang-en {
   left: 0;
   width: 40px;
   height: 3px;
-  background: var(--accent-gradient);
+  background: var(--accent-color);
   border-radius: 2px;
 }
 
@@ -975,7 +976,7 @@ body[data-lang="ja"] .lang-en {
    ========================================================================== */
 .site-footer {
   border-top: 1px solid var(--border-color);
-  padding: 4rem 2rem 3rem;
+  padding: 3.25rem 2rem 2.5rem;
   text-align: center;
   font-size: 0.92rem;
   color: var(--text-muted);
@@ -1009,7 +1010,7 @@ body[data-lang="ja"] .lang-en {
 }
 
 .site-footer .copyright {
-  margin-top: 1.5rem;
+  margin-top: 1rem;
   font-size: 0.85rem;
   color: var(--text-light);
 }
