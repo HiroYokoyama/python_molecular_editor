@@ -1586,22 +1586,32 @@ body[data-lang="ja"] .lang-en {
 }
 
 .alternative-install-card {
-  display: grid;
-  align-content: start;
-  gap: 0.65rem;
-  min-height: 180px;
-  padding: 1.25rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 118px;
+  padding: 1rem 2.5rem 1rem 1.1rem;
   color: var(--home-slate);
   border: 1px solid #c7d3dc;
-  border-radius: 9px;
+  border-radius: 8px;
   background: #ffffff;
-  font-size: 0.88rem;
-  line-height: 1.58;
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .alternative-install-card strong {
   color: var(--home-ink);
-  font-size: 1rem;
+  font-size: 0.94rem;
+}
+
+.alternative-install-arrow {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  color: var(--home-blue);
+  font-size: 1.15rem;
+  transform: translateY(-50%);
 }
 
 .alternative-install-card:hover {

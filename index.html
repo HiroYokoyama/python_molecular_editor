@@ -255,11 +255,11 @@
         <div class="section-header">
           <h2 class="section-title">
             <span class="lang-en">Videos</span>
-            <span class="lang-ja">デモ・チュートリアル動画</span>
+            <span class="lang-ja">紹介・デモ動画</span>
           </h2>
           <p class="section-subtitle">
             <span class="lang-en">An introduction to MoleditPy and a demonstration of the PySCF Calculator workflow.</span>
-            <span class="lang-ja">MoleditPyの基本操作と、PySCF Calculatorプラグインを用いた計算連携のデモ動画。</span>
+            <span class="lang-ja">MoleditPyの紹介と、PySCF Calculatorのデモンストレーション。</span>
           </p>
         </div>
 
@@ -340,24 +340,27 @@
 
         <div class="home-install-alternatives" aria-labelledby="alternative-install-title">
           <div class="home-install-alternatives-heading">
-            <p class="home-kicker"><span class="lang-en">Alternative distributions</span><span class="lang-ja">その他のインストール形式</span></p>
-            <h3 id="alternative-install-title"><span class="lang-en">Installers for basic use, or Docker for a containerized setup.</span><span class="lang-ja">スタンドアロンインストーラー、またはコンテナ化されたDocker環境。</span></h3>
+            <p class="home-kicker"><span class="lang-en">Other ways to install</span><span class="lang-ja">その他のインストール方法</span></p>
+            <h3 id="alternative-install-title"><span class="lang-en">Basic feature installers, plus Docker.</span><span class="lang-ja">基本機能向けインストーラーとDocker。</span></h3>
           </div>
           <div class="alternative-install-grid">
             <a id="link-win" class="alternative-install-card" href="windows-installer/windows_installer">
               <strong>Windows Installer</strong>
-              <span class="lang-en">No Python setup. Basic drawing and editing are available; the Open Babel 3D-conversion fallback is unavailable.</span>
-              <span class="lang-ja">Python環境構築は不要です。2D描画・編集などの基本機能を利用できます（Open Babelによる3Dフォールバック機能は非対応）。</span>
+              <span class="lang-en">Basic features · No Python setup</span>
+              <span class="lang-ja">基本機能 · Python設定不要</span>
+              <span class="alternative-install-arrow" aria-hidden="true">→</span>
             </a>
             <a id="link-mac" class="alternative-install-card" href="macos-installer/macos_installer">
               <strong>macOS App Bundle</strong>
-              <span class="lang-en">Apple Silicon only. Basic drawing and editing are available; use pip for the full feature set.</span>
-              <span class="lang-ja">Apple Silicon専用。Python環境構築不要で基本機能を利用できます。全機能を使用する場合はpip版をご利用ください。</span>
+              <span class="lang-en">Apple Silicon · Basic features</span>
+              <span class="lang-ja">Apple Silicon · 基本機能</span>
+              <span class="alternative-install-arrow" aria-hidden="true">→</span>
             </a>
             <a class="alternative-install-card" href="https://github.com/HiroYokoyama/python_molecular_editor_docker" target="_blank" rel="noopener">
               <strong>Docker</strong>
-              <span class="lang-en">Use the available container image when a containerized environment suits your workflow.</span>
-              <span class="lang-ja">コンテナ化された環境でMoleditPyを利用したい場合は、公式Dockerイメージをご利用ください。</span>
+              <span class="lang-en">Container image</span>
+              <span class="lang-ja">コンテナイメージ</span>
+              <span class="alternative-install-arrow" aria-hidden="true">→</span>
             </a>
           </div>
         </div>
@@ -470,7 +473,7 @@
           savedLang = 'en';
         }
       }
-      setLang(savedLang);
+      setLang(savedLang === 'ja' ? 'ja' : 'en');
     })();
   </script>
 
