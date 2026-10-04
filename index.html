@@ -36,7 +36,7 @@
         </a>
         <a href="https://hiroyokoyama.github.io/moleditpy-plugins/explorer/" target="_blank" rel="noopener">Plugins</a>
         <span class="nav-divider"></span>
-        <div class="lang-switch-group" role="group" aria-label="Language selection">
+        <div id="language-switch" class="lang-switch-group" role="group" aria-label="Language selection">
           <button type="button" class="lang-switch-btn active" data-lang-btn="en" onclick="setLang('en')">EN</button>
           <button type="button" class="lang-switch-btn" data-lang-btn="ja" onclick="setLang('ja')">JA</button>
         </div>
@@ -53,21 +53,20 @@
       <div class="wrapper home-hero-layout">
         <div class="home-hero-copy">
           <p class="home-product"><img src="img/icon.png" alt="" width="36" height="36"> MoleditPy <span>v4</span></p>
-          <p class="home-eyebrow"><span aria-hidden="true"></span><span class="lang-en">A continuous molecular workspace</span><span class="lang-ja">途切れない分子ワークスペース</span></p>
-          <h1 id="hero-title"><span class="lang-en">Draw it. Shape it. <em>Make it useful.</em></span><span class="lang-ja">描く。形にする。<em>計算へつなげる。</em></span></h1>
-          <p class="hero-description"><span class="lang-en">MoleditPy brings 2D sketching, interactive 3D geometry editing, and computational-chemistry preparation into one programmable desktop workspace.</span><span class="lang-ja">MoleditPyは、2D構造の描画、対話的な3D幾何編集、計算化学の準備を、拡張可能なひとつのデスクトップ環境にまとめます。</span></p>
+          <p class="home-eyebrow"><span class="lang-en">Unified Molecular Workspace</span><span class="lang-ja">2D/3D・計算化学を統合する分子ワークスペース</span></p>
+          <h1 id="hero-title"><span class="lang-en">Draw. Shape. <em>Compute.</em></span><span class="lang-ja">分子を描き、<em>計算へ。</em></span></h1>
+          <p class="hero-description"><span class="lang-en">MoleditPy brings 2D sketching, interactive 3D geometry editing, and computational-chemistry preparation into one programmable desktop workspace.</span><span class="lang-ja">MoleditPyは、2D分子描画、直感的な3D構造モデリング、計算化学の準備をシームレスに統合した拡張自在な分子エディターです。</span></p>
           <div class="hero-actions">
             <a class="btn btn-primary" href="#install"><span class="lang-en">Install with pip</span><span class="lang-ja">pip でインストール</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
             <a id="btn-manual" class="home-text-link" href="manual/manual"><span class="lang-en">Read the manual</span><span class="lang-ja">マニュアルを読む</span></a>
           </div>
           <ul class="home-proof-list" aria-label="MoleditPy highlights">
-            <li><strong>2D</strong><span class="lang-en">Sketch and annotate</span><span class="lang-ja">描画と注釈</span></li>
-            <li><strong>3D</strong><span class="lang-en">Refine geometry directly</span><span class="lang-ja">直接ジオメトリを調整</span></li>
+            <li><strong>2D</strong><span class="lang-en">Sketch and annotate</span><span class="lang-ja">直感的な2D描画</span></li>
+            <li><strong>3D</strong><span class="lang-en">Direct 3D modeling</span><span class="lang-ja">3D構造モデリング</span></li>
             <li><strong>PY</strong><span class="lang-en">Automate with plugins</span><span class="lang-ja">プラグインで自動化</span></li>
           </ul>
         </div>
         <figure class="hero-screenshot home-app-preview">
-          <figcaption><span aria-hidden="true"></span><span class="lang-en">MoleditPy workspace</span><span class="lang-ja">MoleditPy ワークスペース</span><b>2D / 3D</b></figcaption>
           <img src="img/screenshot.png" alt="MoleditPy showing a 2D molecular drawing alongside an interactive 3D molecular view" loading="eager">
         </figure>
       </div>
@@ -76,24 +75,24 @@
     <section class="home-workflow-section" id="workflow" aria-labelledby="workflow-title">
       <div class="wrapper">
         <div class="home-section-heading">
-          <p class="home-kicker">01 / <span class="lang-en">One continuous workspace</span><span class="lang-ja">ひとつながりの作業環境</span></p>
-          <h2 id="workflow-title"><span class="lang-en">Stay with the molecule from first bond to final file.</span><span class="lang-ja">最初の結合から最終ファイルまで、分子とともに作業できます。</span></h2>
+          <p class="home-kicker">01 / <span class="lang-en">Seamless workflow</span><span class="lang-ja">シームレスなワークフロー</span></p>
+          <h2 id="workflow-title"><span class="lang-en">Stay with the molecule from first bond to final file.</span><span class="lang-ja">最初の結合描画から計算ファイルの出力まで、ひとつの環境で完結。</span></h2>
         </div>
         <div class="workflow-grid">
           <article class="workflow-step">
             <span class="workflow-number">01</span>
-            <h3><span class="lang-en">Sketch a structure</span><span class="lang-ja">構造を描く</span></h3>
-            <p><span class="lang-en">Build molecules with ring templates, chains, stereochemistry, charges, and the full periodic table.</span><span class="lang-ja">環テンプレート、鎖、立体結合、電荷、周期表を使って分子を構築します。</span></p>
+            <h3><span class="lang-en">Sketch a structure</span><span class="lang-ja">2D構造を描画</span></h3>
+            <p><span class="lang-en">Build molecules with ring templates, chains, stereochemistry, charges, and the full periodic table.</span><span class="lang-ja">環テンプレート、アルキル鎖、立体化学（楔形結合）、形式電荷、全周期表元素を使って分子を素早く構築。</span></p>
           </article>
           <article class="workflow-step">
             <span class="workflow-number">02</span>
-            <h3><span class="lang-en">Shape it in 3D</span><span class="lang-ja">3Dで形を整える</span></h3>
-            <p><span class="lang-en">Generate conformers, drag atoms in the viewport, set exact geometry, and optimize with MMFF94 or UFF.</span><span class="lang-ja">配座を生成し、3Dビューで原子を操作し、精密な幾何を設定してMMFF94またはUFFで最適化します。</span></p>
+            <h3><span class="lang-en">Shape it in 3D</span><span class="lang-ja">3D構造をモデリング</span></h3>
+            <p><span class="lang-en">Generate conformers, drag atoms in the viewport, set exact geometry, and optimize with MMFF94 or UFF.</span><span class="lang-ja">高精度な初期配座生成、3Dビューでの原子ドラッグ操作、結合長・結合角・二面角の精密指定、力場（MMFF94/UFF）最適化に対応。</span></p>
           </article>
           <article class="workflow-step">
             <span class="workflow-number">03</span>
-            <h3><span class="lang-en">Check, export, continue</span><span class="lang-ja">確認して、出力し、次へ進む</span></h3>
-            <p><span class="lang-en">Inspect molecular properties and move into calculation or publication workflows with practical file exports.</span><span class="lang-ja">分子特性を確認し、実用的なファイル出力で計算や論文作成の工程へ進めます。</span></p>
+            <h3><span class="lang-en">Check, export, continue</span><span class="lang-ja">特性確認とファイル出力</span></h3>
+            <p><span class="lang-en">Inspect molecular properties and transition directly into downstream calculation workflows with practical file exports.</span><span class="lang-ja">分子特性を瞬時に確認し、多彩なファイル形式（MOL, SDF, XYZ等）で量子化学計算や後続の解析へスムーズに出力。</span></p>
           </article>
         </div>
       </div>
@@ -103,14 +102,14 @@
     <section class="section alt-bg home-capabilities" id="features">
       <div class="wrapper">
         <div class="section-header">
-          <p class="home-kicker">02 / <span class="lang-en">Built for molecular work</span><span class="lang-ja">分子作業のための機能</span></p>
+          <p class="home-kicker">02 / <span class="lang-en">Built for molecular work</span><span class="lang-ja">分子研究のための機能群</span></p>
           <h2 class="section-title">
             <span class="lang-en">The details you need, where you need them.</span>
-            <span class="lang-ja">必要な細部を、必要な場所に。</span>
+            <span class="lang-ja">必要な機能を、必要な場所に。</span>
           </h2>
           <p class="section-subtitle">
             <span class="lang-en">Visual intuition when you are exploring; exact control when the geometry matters.</span>
-            <span class="lang-ja">探索には視覚的な直感を、精度が必要なときには正確な制御を。</span>
+            <span class="lang-ja">自由なスケッチには直感的な操作性を、構造の最適化には精密な幾何制御を提供します。</span>
           </p>
         </div>
         
@@ -148,11 +147,11 @@
             <span class="feature-tag">02 / 3D Modeling</span>
             <h3>
               <span class="lang-en">Interactive 3D Editing</span>
-              <span class="lang-ja">3D可視化と高度な幾何編集</span>
+              <span class="lang-ja">3D可視化と高度な構造編集</span>
             </h3>
             <p>
               <span class="lang-en">Conformation generation and fine-grained geometric adjustments directly in the 3D viewport.</span>
-              <span class="lang-ja">RDKitによる2D-3D変換と、3Dビュー内で原子を直接ドラッグ操作できる本格的な配座調整ツール群。</span>
+              <span class="lang-ja">RDKitによる高精度配座生成と、3Dビュー内で原子を直接ドラッグ操作できる本格的な構造編集ツール群。</span>
             </p>
             <ul class="lang-en">
               <li>Direct 3D atom dragging for intuitive conformation editing</li>
@@ -178,22 +177,22 @@
               <span class="lang-ja">解析とファイル入出力</span>
             </h3>
             <p>
-              <span class="lang-en">Compute molecular properties and export structures to computational chemistry software.</span>
-              <span class="lang-ja">分子特性の自動計算から、DFT計算ソフト・3Dプリント・論文発表向けのエクスポートに対応。</span>
+              <span class="lang-en">Compute molecular properties and export structures to computational chemistry software and rendering tools.</span>
+              <span class="lang-ja">分子特性の自動計算から、DFT計算ソフト・3Dプリント・画像出力まで幅広く対応。</span>
             </p>
             <ul class="lang-en">
               <li>Calculated properties: formula, weight, SMILES, LogP, TPSA</li>
               <li>Automatic chiral center recognition with R/S labels in 3D</li>
               <li>Format support: MOL, SDF, XYZ, SMILES, and InChI</li>
               <li>3D printing support: STL and OBJ/MTL export</li>
-              <li>High-resolution publication image export (PNG &amp; SVG)</li>
+              <li>High-resolution image export (PNG &amp; SVG)</li>
             </ul>
             <ul class="lang-ja">
               <li>分子特性解析（分子式・分子量・SMILES・LogP・TPSA等）</li>
               <li>キラル中心の自動認識と3DビューでのR/S立体化学ラベル表示</li>
               <li>MOL、SDF、XYZ、SMILES、InChI のインポート・エクスポート</li>
               <li>3Dプリント・レンダリング向けの STL / OBJ / MTL 出力</li>
-              <li>論文・発表向け高解像度 PNG（2D/3D）および SVG（2D）出力</li>
+              <li>高解像度画像（2D/3D PNG、2D SVG）出力</li>
             </ul>
           </div>
 
@@ -202,11 +201,11 @@
             <span class="feature-tag">04 / Extensibility</span>
             <h3>
               <span class="lang-en">Programmable Python Plugins</span>
-              <span class="lang-ja">プログラマブルな拡張性</span>
+              <span class="lang-ja">Pythonによる柔軟な拡張性</span>
             </h3>
             <p>
               <span class="lang-en">Extend the editor with custom scripts and browse community-contributed plugins.</span>
-              <span class="lang-ja">Pythonスクリプトを配置するだけで機能を追加できるプラグインシステムとコミュニティ連携。</span>
+              <span class="lang-ja">Pythonスクリプトを追加するだけで機能を拡張できるプラグイン機構とコミュニティ連携。</span>
             </p>
             <ul class="lang-en">
               <li>Drop-in Python scripts that integrate directly into the application menu</li>
@@ -215,10 +214,10 @@
               <li>Ideal for automating repetitive workflows and algorithm prototyping</li>
             </ul>
             <ul class="lang-ja">
-              <li>スクリプトをフォルダに入れるだけで即メニュー化するプラグイン機構</li>
-              <li><a href="https://hiroyokoyama.github.io/moleditpy-plugins/explorer/" target="_blank" rel="noopener">Plugin Explorer</a> から特化プラグインを直接探索・入手可能</li>
+              <li>スクリプトをフォルダに入れるだけで即座にメニュー化するプラグイン機構</li>
+              <li><a href="https://hiroyokoyama.github.io/moleditpy-plugins/explorer/" target="_blank" rel="noopener">Plugin Explorer</a> から拡張プラグインを直接探索・導入可能</li>
               <li>MainWindow、RDKit分子、Qtシーンへの完全なAPIアクセス</li>
-              <li>独自の計算化学ワークフロー自動化や新アルゴリズムの検証に最適</li>
+              <li>独自の計算化学ワークフロー自動化や新アルゴリズムのプロトタイピングに最適</li>
             </ul>
           </div>
 
@@ -229,12 +228,12 @@
     <section class="home-plugin-section" aria-labelledby="plugins-title">
       <div class="wrapper home-plugin-layout">
         <div class="home-plugin-copy">
-          <p class="home-kicker">03 / <span class="lang-en">Python at the edge of the canvas</span><span class="lang-ja">キャンバスの先にあるPython</span></p>
-          <h2 id="plugins-title"><span class="lang-en">Make the editor fit your research—not the other way around.</span><span class="lang-ja">研究に合わせてエディターを拡張する。</span></h2>
-          <p><span class="lang-en">Write a small Python plugin to add an action, work with the current molecule, connect a custom calculation, or build a focused tool for your lab.</span><span class="lang-ja">小さなPythonプラグインで、操作の追加、現在の分子の利用、独自計算との接続、研究室向けツールの作成ができます。</span></p>
+          <p class="home-kicker">03 / <span class="lang-en">Python Extensibility</span><span class="lang-ja">Pythonによる自由な拡張</span></p>
+          <h2 id="plugins-title"><span class="lang-en">Make the editor fit your research—not the other way around.</span><span class="lang-ja">研究のニーズに合わせてエディターを自在にカスタマイズ。</span></h2>
+          <p><span class="lang-en">Write a small Python plugin to add an action, work with the current molecule, connect a custom calculation, or build a focused tool for your lab.</span><span class="lang-ja">わずか数行のPythonプラグインで、独自メニューの追加、分子データの処理、外部計算ツールとの連携など、研究に特化した機能を素早く構築できます。</span></p>
           <div class="home-plugin-actions">
-            <a href="https://hiroyokoyama.github.io/moleditpy-plugins/explorer/" target="_blank" rel="noopener"><span class="lang-en">Browse plugins</span><span class="lang-ja">プラグインを探す</span></a>
-            <a href="https://github.com/HiroYokoyama/python_molecular_editor/blob/main/docs/PLUGIN_DEVELOPMENT_MANUAL_V4.md" target="_blank" rel="noopener"><span class="lang-en">Plugin API guide</span><span class="lang-ja">プラグインAPIガイド</span></a>
+            <a href="https://hiroyokoyama.github.io/moleditpy-plugins/explorer/" target="_blank" rel="noopener"><span class="lang-en">Browse plugins</span><span class="lang-ja">プラグイン一覧を見る</span></a>
+            <a href="https://github.com/HiroYokoyama/python_molecular_editor/blob/main/docs/PLUGIN_DEVELOPMENT_MANUAL_V4.md" target="_blank" rel="noopener"><span class="lang-en">Plugin API guide</span><span class="lang-ja">プラグイン開発ガイド</span></a>
           </div>
         </div>
         <div class="plugin-code-window" aria-label="Example MoleditPy plugin code">
@@ -256,11 +255,11 @@
         <div class="section-header">
           <h2 class="section-title">
             <span class="lang-en">Videos</span>
-            <span class="lang-ja">動画</span>
+            <span class="lang-ja">デモ・チュートリアル動画</span>
           </h2>
           <p class="section-subtitle">
             <span class="lang-en">An introduction to MoleditPy and a demonstration of the PySCF Calculator workflow.</span>
-            <span class="lang-ja">MoleditPyの紹介と、PySCF Calculatorワークフローのデモンストレーション。</span>
+            <span class="lang-ja">MoleditPyの基本操作と、PySCF Calculatorプラグインを用いた計算連携のデモ動画。</span>
           </p>
         </div>
 
@@ -296,11 +295,11 @@
         <div class="section-header">
           <h2 class="section-title">
             <span class="lang-en">Install with pip. Start editing.</span>
-            <span class="lang-ja">pipでインストールして、編集を始める。</span>
+            <span class="lang-ja">pipで簡単インストール。すぐに使い始められます。</span>
           </h2>
           <p class="section-subtitle">
             <span class="lang-en">Use pip on Windows, macOS, and Linux for the complete, recommended installation.</span>
-            <span class="lang-ja">Windows、macOS、Linuxでは、完全な機能セットを利用できるpipでのインストールを推奨します。</span>
+            <span class="lang-ja">Windows、macOS、Linuxで利用可能。すべての機能を利用できるpipインストールを推奨しています。</span>
           </p>
         </div>
 
@@ -341,24 +340,24 @@
 
         <div class="home-install-alternatives" aria-labelledby="alternative-install-title">
           <div class="home-install-alternatives-heading">
-            <p class="home-kicker"><span class="lang-en">Alternative distributions</span><span class="lang-ja">代替配布版</span></p>
-            <h3 id="alternative-install-title"><span class="lang-en">Installers for basic use, or Docker for a containerized setup.</span><span class="lang-ja">基本機能向けのインストーラー、またはコンテナ化されたDocker環境。</span></h3>
+            <p class="home-kicker"><span class="lang-en">Alternative distributions</span><span class="lang-ja">その他のインストール形式</span></p>
+            <h3 id="alternative-install-title"><span class="lang-en">Installers for basic use, or Docker for a containerized setup.</span><span class="lang-ja">スタンドアロンインストーラー、またはコンテナ化されたDocker環境。</span></h3>
           </div>
           <div class="alternative-install-grid">
             <a id="link-win" class="alternative-install-card" href="windows-installer/windows_installer">
               <strong>Windows Installer</strong>
               <span class="lang-en">No Python setup. Basic drawing and editing are available; the Open Babel 3D-conversion fallback is unavailable.</span>
-              <span class="lang-ja">Pythonのセットアップは不要です。基本的な描画と編集を利用できますが、Open Babelによる3D変換フォールバックは利用できません。</span>
+              <span class="lang-ja">Python環境構築は不要です。2D描画・編集などの基本機能を利用できます（Open Babelによる3Dフォールバック機能は非対応）。</span>
             </a>
             <a id="link-mac" class="alternative-install-card" href="macos-installer/macos_installer">
               <strong>macOS App Bundle</strong>
               <span class="lang-en">Apple Silicon only. Basic drawing and editing are available; use pip for the full feature set.</span>
-              <span class="lang-ja">Apple Silicon専用です。基本的な描画と編集を利用できます。すべての機能を使う場合はpipをご利用ください。</span>
+              <span class="lang-ja">Apple Silicon専用。Python環境構築不要で基本機能を利用できます。全機能を使用する場合はpip版をご利用ください。</span>
             </a>
             <a class="alternative-install-card" href="https://github.com/HiroYokoyama/python_molecular_editor_docker" target="_blank" rel="noopener">
               <strong>Docker</strong>
               <span class="lang-en">Use the available container image when a containerized environment suits your workflow.</span>
-              <span class="lang-ja">コンテナ化された環境がワークフローに適している場合は、利用可能なコンテナイメージをお使いください。</span>
+              <span class="lang-ja">コンテナ化された環境でMoleditPyを利用したい場合は、公式Dockerイメージをご利用ください。</span>
             </a>
           </div>
         </div>
