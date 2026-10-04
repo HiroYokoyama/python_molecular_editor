@@ -1020,9 +1020,9 @@ body[data-lang="ja"] .lang-en {
    ========================================================================== */
 .home-page {
   --home-ink: #152433;
-  --home-blue: #1769d6;
-  --home-blue-dark: #0f4f9e;
-  --home-blue-soft: #e7f0fc;
+  --home-blue: #3577F7;
+  --home-blue-dark: #1e5fe3;
+  --home-blue-soft: #eff6ff;
   --home-slate: #5d6c7b;
   --home-line: #d7e0e8;
   --home-canvas: #f4f7f9;
@@ -1349,12 +1349,14 @@ body[data-lang="ja"] .lang-en {
   border-color: #cbd6df;
   border-radius: 10px;
   box-shadow: none;
+  transform: none;
+  transition: none;
 }
 
 .home-page .feature-card:hover {
-  transform: translateY(-3px);
-  border-color: #8fb5e7;
-  box-shadow: 0 14px 30px -23px rgba(21, 36, 51, 0.5);
+  transform: none;
+  border-color: #cbd6df;
+  box-shadow: none;
 }
 
 .home-page .feature-tag {
@@ -1509,7 +1511,7 @@ body[data-lang="ja"] .lang-en {
 }
 
 .home-page .video-card:hover {
-  border-color: #8fb5e7;
+  border-color: var(--accent-border);
   box-shadow: 0 14px 30px -23px rgba(21, 36, 51, 0.5);
 }
 
@@ -1604,7 +1606,7 @@ body[data-lang="ja"] .lang-en {
 
 .alternative-install-card:hover {
   color: var(--home-slate);
-  border-color: #8fb5e7;
+  border-color: var(--accent-border);
   box-shadow: 0 12px 25px -22px rgba(21, 36, 51, 0.6);
   transform: translateY(-2px);
 }
