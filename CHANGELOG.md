@@ -6,6 +6,13 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Refreshed the project homepage around MoleditPy's 2D-to-3D workflow, with pip as the sole installation path and clearer product videos.
+
+### Documentation
+
+- Corrected the recorded OpenAI model name from GPT-5.6 Sol to GPT-5.6 Terra.
 
 
 ---
