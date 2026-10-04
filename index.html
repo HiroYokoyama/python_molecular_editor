@@ -8,7 +8,7 @@
   <link rel="icon" href="icon_images/favicon.ico">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body data-lang="en">
+<body class="home-page" data-lang="en">
 
   <!-- Navigation Bar -->
   <header class="site-header">
@@ -18,6 +18,14 @@
         MoleditPy
       </a>
       <nav class="site-nav">
+        <a href="#workflow">
+          <span class="lang-en">Workflow</span>
+          <span class="lang-ja">ワークフロー</span>
+        </a>
+        <a href="#features">
+          <span class="lang-en">Capabilities</span>
+          <span class="lang-ja">機能</span>
+        </a>
         <a id="nav-manual" href="manual/manual">
           <span class="lang-en">Manual</span>
           <span class="lang-ja">マニュアル</span>
@@ -28,7 +36,7 @@
         </a>
         <a href="https://hiroyokoyama.github.io/moleditpy-plugins/explorer/" target="_blank" rel="noopener">Plugins</a>
         <span class="nav-divider"></span>
-        <div class="lang-switch-group" role="group" aria-label="Language selection">
+        <div id="language-switch" class="lang-switch-group" role="group" aria-label="Language selection">
           <button type="button" class="lang-switch-btn active" data-lang-btn="en" onclick="setLang('en')">EN</button>
           <button type="button" class="lang-switch-btn" data-lang-btn="ja" onclick="setLang('ja')">JA</button>
         </div>
@@ -41,74 +49,67 @@
   </header>
 
   <main>
-    <!-- Hero Section -->
-    <section class="hero">
-      <!-- App Brand (Logo + Heading) -->
-      <div class="hero-brand">
-        <img src="img/icon.png" alt="MoleditPy Icon" class="hero-logo" width="84" height="84">
-        <h1 class="hero-title">MoleditPy</h1>
-      </div>
-
-      <!-- Tagline & Description -->
-      <p class="hero-tagline">
-        <span class="lang-en">A Programmable &amp; Cross-Platform Molecular Editor</span>
-        <span class="lang-ja">拡張自在なクロスプラットフォーム分子エディター</span>
-      </p>
-
-      <p class="hero-description">
-        <span class="lang-en">
-          Streamline your workflow from 2D drawing to 3D visualization — an ideal tool for rapidly preparing DFT calculation inputs in Python.
-        </span>
-        <span class="lang-ja">
-          2D化学構造の直感描画から3D構造の精密編集、DFT計算インプットの迅速な作成までをPythonでシームレスにつなぐ統合環境。
-        </span>
-      </p>
-
-      <!-- Action Buttons -->
-      <div class="hero-actions">
-        <a class="btn btn-primary" href="#install">
-          <span class="lang-en">Quick Install</span>
-          <span class="lang-ja">クイックインストール</span>
-        </a>
-        <a id="btn-manual" class="btn btn-secondary" href="manual/manual">
-          <span class="lang-en">User Manual</span>
-          <span class="lang-ja">ユーザーマニュアル</span>
-        </a>
-        <a class="btn btn-secondary" href="https://github.com/HiroYokoyama/python_molecular_editor" target="_blank" rel="noopener">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          GitHub
-        </a>
-      </div>
-
-      <!-- Badges Container -->
-      <div class="hero-badges-container">
-        <div class="hero-badges">
-          <a href="https://doi.org/10.5281/zenodo.17268532"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.17268532.svg" alt="DOI"></a>
-          <img src="https://img.shields.io/badge/MoleditPy-v4-3577F7" alt="MoleditPy v4">
-          <a href="https://www.rdkit.org/"><img src="https://img.shields.io/badge/Powered%20by-RDKit-3838ff.svg" alt="Powered by RDKit"></a>
-          <a href="https://badge.fury.io/py/MoleditPy"><img src="https://badge.fury.io/py/MoleditPy.svg" alt="PyPI version"></a>
-          <a href="https://pypi.org/project/MoleditPy/"><img src="https://img.shields.io/badge/python-3.9--3.14-blue.svg" alt="Python Versions"></a>
-          <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License"></a>
+    <section class="hero home-hero" aria-labelledby="hero-title">
+      <div class="wrapper home-hero-layout">
+        <div class="home-hero-copy">
+          <p class="home-product"><img src="img/icon.png" alt="" width="36" height="36"> MoleditPy <span>v4</span></p>
+          <p class="home-eyebrow"><span class="lang-en">Unified Molecular Workspace</span><span class="lang-ja">2D/3D・計算化学を統合する分子ワークスペース</span></p>
+          <h1 id="hero-title"><span class="lang-en">Draw. Shape. <em>Compute.</em></span><span class="lang-ja">分子を描き、<br><em>計算へ。</em></span></h1>
+          <p class="hero-description"><span class="lang-en">MoleditPy brings 2D sketching, interactive 3D geometry editing, and computational-chemistry preparation into one programmable desktop workspace.</span><span class="lang-ja">MoleditPyは、2D分子描画、直感的な3D構造モデリング、計算化学の準備をシームレスに統合した拡張自在な分子エディターです。</span></p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#install"><span class="lang-en">Install with pip</span><span class="lang-ja">pip でインストール</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
+            <a id="btn-manual" class="home-text-link" href="manual/manual"><span class="lang-en">Read the manual</span><span class="lang-ja">マニュアルを読む</span></a>
+          </div>
+          <ul class="home-proof-list" aria-label="MoleditPy highlights">
+            <li><strong>2D</strong><span class="lang-en">Sketch and annotate</span><span class="lang-ja">直感的な2D描画</span></li>
+            <li><strong>3D</strong><span class="lang-en">Direct 3D modeling</span><span class="lang-ja">3D構造モデリング</span></li>
+            <li><strong>PY</strong><span class="lang-en">Automate with plugins</span><span class="lang-ja">プラグインで自動化</span></li>
+          </ul>
         </div>
+        <figure class="hero-screenshot home-app-preview">
+          <img src="img/screenshot.png" alt="MoleditPy showing a 2D molecular drawing alongside an interactive 3D molecular view" loading="eager">
+        </figure>
       </div>
+    </section>
 
-      <!-- Screenshot with soft ambient shadow -->
-      <div class="hero-screenshot">
-        <img src="img/screenshot.png" alt="MoleditPy Screenshot" loading="lazy">
+    <section class="home-workflow-section" id="workflow" aria-labelledby="workflow-title">
+      <div class="wrapper">
+        <div class="home-section-heading">
+          <p class="home-kicker">01 / <span class="lang-en">Seamless workflow</span><span class="lang-ja">シームレスなワークフロー</span></p>
+          <h2 id="workflow-title"><span class="lang-en">Stay with the molecule from first bond to final file.</span><span class="lang-ja">最初の結合描画から計算ファイルの出力まで、ひとつの環境で完結。</span></h2>
+        </div>
+        <div class="workflow-grid">
+          <article class="workflow-step">
+            <span class="workflow-number">01</span>
+            <h3><span class="lang-en">Sketch a structure</span><span class="lang-ja">2D構造を描画</span></h3>
+            <p><span class="lang-en">Build molecules with ring templates, chains, stereochemistry, charges, and the full periodic table.</span><span class="lang-ja">環テンプレート、アルキル鎖、立体化学（楔形結合）、形式電荷、全周期表元素を使って分子を素早く構築。</span></p>
+          </article>
+          <article class="workflow-step">
+            <span class="workflow-number">02</span>
+            <h3><span class="lang-en">Shape it in 3D</span><span class="lang-ja">3D構造をモデリング</span></h3>
+            <p><span class="lang-en">Generate conformers, drag atoms in the viewport, set exact geometry, and optimize with MMFF94 or UFF.</span><span class="lang-ja">高精度な初期配座生成、3Dビューでの原子ドラッグ操作、結合長・結合角・二面角の精密指定、力場（MMFF94/UFF）最適化に対応。</span></p>
+          </article>
+          <article class="workflow-step">
+            <span class="workflow-number">03</span>
+            <h3><span class="lang-en">Check, export, continue</span><span class="lang-ja">特性確認とファイル出力</span></h3>
+            <p><span class="lang-en">Inspect molecular properties and transition directly into downstream calculation workflows with practical file exports.</span><span class="lang-ja">分子特性を瞬時に確認し、多彩なファイル形式（MOL, SDF, XYZ等）で量子化学計算や後続の解析へスムーズに出力。</span></p>
+          </article>
+        </div>
       </div>
     </section>
 
     <!-- Core Features Section -->
-    <section class="section alt-bg">
+    <section class="section alt-bg home-capabilities" id="features">
       <div class="wrapper">
         <div class="section-header">
+          <p class="home-kicker">02 / <span class="lang-en">Built for molecular work</span><span class="lang-ja">分子研究のための機能群</span></p>
           <h2 class="section-title">
-            <span class="lang-en">Core Features</span>
-            <span class="lang-ja">主な機能</span>
+            <span class="lang-en">The details you need, where you need them.</span>
+            <span class="lang-ja">必要な機能を、必要な場所に。</span>
           </h2>
           <p class="section-subtitle">
-            <span class="lang-en">A unified platform combining 2D chemical drawing, 3D conformation editing, and DFT input preparation.</span>
-            <span class="lang-ja">2D化学構造の直感描画から3D構造の精密編集、DFT計算インプット作成までをスムーズにつなぐ統合環境。</span>
+            <span class="lang-en">Visual intuition when you are exploring; exact control when the geometry matters.</span>
+            <span class="lang-ja">自由なスケッチには直感的な操作性を、構造の最適化には精密な幾何制御を提供します。</span>
           </p>
         </div>
         
@@ -146,11 +147,11 @@
             <span class="feature-tag">02 / 3D Modeling</span>
             <h3>
               <span class="lang-en">Interactive 3D Editing</span>
-              <span class="lang-ja">3D可視化と高度な幾何編集</span>
+              <span class="lang-ja">3D可視化と高度な構造編集</span>
             </h3>
             <p>
               <span class="lang-en">Conformation generation and fine-grained geometric adjustments directly in the 3D viewport.</span>
-              <span class="lang-ja">RDKitによる2D-3D変換と、3Dビュー内で原子を直接ドラッグ操作できる本格的な配座調整ツール群。</span>
+              <span class="lang-ja">RDKitによる高精度配座生成と、3Dビュー内で原子を直接ドラッグ操作できる本格的な構造編集ツール群。</span>
             </p>
             <ul class="lang-en">
               <li>Direct 3D atom dragging for intuitive conformation editing</li>
@@ -176,22 +177,22 @@
               <span class="lang-ja">解析とファイル入出力</span>
             </h3>
             <p>
-              <span class="lang-en">Compute molecular properties and export structures to computational chemistry software.</span>
-              <span class="lang-ja">分子特性の自動計算から、DFT計算ソフト・3Dプリント・論文発表向けのエクスポートに対応。</span>
+              <span class="lang-en">Compute molecular properties and export structures to computational chemistry software and rendering tools.</span>
+              <span class="lang-ja">分子特性の自動計算から、DFT計算ソフト・3Dプリント・画像出力まで幅広く対応。</span>
             </p>
             <ul class="lang-en">
               <li>Calculated properties: formula, weight, SMILES, LogP, TPSA</li>
               <li>Automatic chiral center recognition with R/S labels in 3D</li>
               <li>Format support: MOL, SDF, XYZ, SMILES, and InChI</li>
               <li>3D printing support: STL and OBJ/MTL export</li>
-              <li>High-resolution publication image export (PNG &amp; SVG)</li>
+              <li>High-resolution image export (PNG &amp; SVG)</li>
             </ul>
             <ul class="lang-ja">
               <li>分子特性解析（分子式・分子量・SMILES・LogP・TPSA等）</li>
               <li>キラル中心の自動認識と3DビューでのR/S立体化学ラベル表示</li>
               <li>MOL、SDF、XYZ、SMILES、InChI のインポート・エクスポート</li>
               <li>3Dプリント・レンダリング向けの STL / OBJ / MTL 出力</li>
-              <li>論文・発表向け高解像度 PNG（2D/3D）および SVG（2D）出力</li>
+              <li>高解像度画像（2D/3D PNG、2D SVG）出力</li>
             </ul>
           </div>
 
@@ -200,11 +201,11 @@
             <span class="feature-tag">04 / Extensibility</span>
             <h3>
               <span class="lang-en">Programmable Python Plugins</span>
-              <span class="lang-ja">プログラマブルな拡張性</span>
+              <span class="lang-ja">Pythonによる柔軟な拡張性</span>
             </h3>
             <p>
               <span class="lang-en">Extend the editor with custom scripts and browse community-contributed plugins.</span>
-              <span class="lang-ja">Pythonスクリプトを配置するだけで機能を追加できるプラグインシステムとコミュニティ連携。</span>
+              <span class="lang-ja">Pythonスクリプトを追加するだけで機能を拡張できるプラグイン機構とコミュニティ連携。</span>
             </p>
             <ul class="lang-en">
               <li>Drop-in Python scripts that integrate directly into the application menu</li>
@@ -213,10 +214,10 @@
               <li>Ideal for automating repetitive workflows and algorithm prototyping</li>
             </ul>
             <ul class="lang-ja">
-              <li>スクリプトをフォルダに入れるだけで即メニュー化するプラグイン機構</li>
-              <li><a href="https://hiroyokoyama.github.io/moleditpy-plugins/explorer/" target="_blank" rel="noopener">Plugin Explorer</a> から特化プラグインを直接探索・入手可能</li>
+              <li>スクリプトをフォルダに入れるだけで即座にメニュー化するプラグイン機構</li>
+              <li><a href="https://hiroyokoyama.github.io/moleditpy-plugins/explorer/" target="_blank" rel="noopener">Plugin Explorer</a> から拡張プラグインを直接探索・導入可能</li>
               <li>MainWindow、RDKit分子、Qtシーンへの完全なAPIアクセス</li>
-              <li>独自の計算化学ワークフロー自動化や新アルゴリズムの検証に最適</li>
+              <li>独自の計算化学ワークフロー自動化や新アルゴリズムのプロトタイピングに最適</li>
             </ul>
           </div>
 
@@ -224,17 +225,41 @@
       </div>
     </section>
 
-    <!-- Video Tutorials Section -->
-    <section class="section" id="tutorials">
+    <section class="home-plugin-section" aria-labelledby="plugins-title">
+      <div class="wrapper home-plugin-layout">
+        <div class="home-plugin-copy">
+          <p class="home-kicker">03 / <span class="lang-en">Python Extensibility</span><span class="lang-ja">Pythonによる自由な拡張</span></p>
+          <h2 id="plugins-title"><span class="lang-en">Make the editor fit your research—not the other way around.</span><span class="lang-ja">研究のニーズに合わせてエディターを自在にカスタマイズ。</span></h2>
+          <p><span class="lang-en">Write a small Python plugin to add an action, work with the current molecule, connect a custom calculation, or build a focused tool for your lab.</span><span class="lang-ja">わずか数行のPythonプラグインで、独自メニューの追加、分子データの処理、外部計算ツールとの連携など、研究に特化した機能を素早く構築できます。</span></p>
+          <div class="home-plugin-actions">
+            <a href="https://hiroyokoyama.github.io/moleditpy-plugins/explorer/" target="_blank" rel="noopener"><span class="lang-en">Browse plugins</span><span class="lang-ja">プラグイン一覧を見る</span></a>
+            <a href="https://github.com/HiroYokoyama/python_molecular_editor/blob/main/docs/PLUGIN_DEVELOPMENT_MANUAL_V4.md" target="_blank" rel="noopener"><span class="lang-en">Plugin API guide</span><span class="lang-ja">プラグイン開発ガイド</span></a>
+          </div>
+        </div>
+        <div class="plugin-code-window" aria-label="Example MoleditPy plugin code">
+          <div class="plugin-code-window-bar"><span></span><span></span><span></span><code>my_analysis.py</code></div>
+          <pre><code><span class="code-keyword">def</span> <span class="code-function">initialize</span>(context):
+    context.<span class="code-function">add_menu_action</span>(
+        <span class="code-string">"Research/My analysis"</span>,
+        <span class="code-keyword">lambda</span>: <span class="code-function">analyze</span>(
+            context.current_molecule
+        ),
+    )</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Videos -->
+    <section class="section home-videos" id="videos">
       <div class="wrapper">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="lang-en">Video Tutorials</span>
-            <span class="lang-ja">チュートリアル動画</span>
+            <span class="lang-en">Videos</span>
+            <span class="lang-ja">紹介動画</span>
           </h2>
           <p class="section-subtitle">
-            <span class="lang-en">Video demonstrations and tutorials of MoleditPy in action.</span>
-            <span class="lang-ja">MoleditPyの機能解説と実際の操作チュートリアル動画。</span>
+            <span class="lang-en">An introduction to MoleditPy and a demonstration of the PySCF Calculator workflow.</span>
+            <span class="lang-ja">MoleditPyの紹介と、PySCF Calculatorのデモンストレーション。</span>
           </p>
         </div>
 
@@ -264,34 +289,34 @@
       </div>
     </section>
 
-    <!-- Quick Install -->
-    <section class="section alt-bg" id="install">
+    <!-- pip Installation -->
+    <section class="section alt-bg home-install" id="install">
       <div class="wrapper">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="lang-en">Quick Install</span>
-            <span class="lang-ja">クイックインストール</span>
+            <span class="lang-en">Install with pip</span>
+            <span class="lang-ja">pip でインストール</span>
           </h2>
           <p class="section-subtitle">
-            <span class="lang-en">Get started in seconds with pip or standalone installers.</span>
-            <span class="lang-ja">pip または各OS向けインストーラーですぐにお使いいただけます。</span>
+            <span class="lang-en">Recommended for Windows, macOS, and Linux.</span>
+            <span class="lang-ja">Windows、macOS、Linux対応（推奨）。</span>
           </p>
         </div>
 
         <!-- Install Terminal with Steps (1. Install, 2. Shortcut) -->
         <div class="install-terminal">
           <div class="install-terminal-header">
-            <span class="terminal-label">Terminal / Shell</span>
+            <span class="terminal-label">Recommended: Python / pip</span>
             <button type="button" class="copy-btn" id="copy-btn" onclick="copyInstallCmd()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              <span id="copy-text">Copy</span>
+              <span id="copy-text">Copy commands</span>
             </button>
           </div>
           <div class="install-terminal-body">
             <div class="terminal-line">
               <span class="terminal-comment">
-                <span class="lang-en"># 1. Install package</span>
-                <span class="lang-ja"># 1. パッケージのインストール</span>
+                <span class="lang-en"># 1. Install MoleditPy</span>
+                <span class="lang-ja"># 1. MoleditPyをインストール</span>
               </span>
             </div>
             <div class="terminal-line">
@@ -300,8 +325,8 @@
             </div>
             <div class="terminal-line" style="margin-top: 0.75rem;">
               <span class="terminal-comment">
-                <span class="lang-en"># 2. Create app shortcut (Start Menu / Applications)</span>
-                <span class="lang-ja"># 2. アプリショートカットの作成（スタートメニュー／アプリ一覧）</span>
+                <span class="lang-en"># 2. Create an application shortcut</span>
+                <span class="lang-ja"># 2. アプリケーションショートカットを作成</span>
               </span>
             </div>
             <div class="terminal-line">
@@ -311,43 +336,33 @@
           </div>
         </div>
 
-        <!-- Platform Grid (Text Only) -->
-        <div class="install-grid">
-          <!-- Windows -->
-          <a id="link-win" class="install-item" href="windows-installer/windows_installer">
-            <span class="install-item-title">Windows</span>
-            <span class="install-item-desc">
-              <span class="lang-en">Standalone installer</span>
-              <span class="lang-ja">インストーラー</span>
-            </span>
-          </a>
+        <p class="home-install-note"><span class="lang-en">Need help? Start with the </span><span class="lang-ja">サポートが必要な場合は、</span><a id="install-manual" href="manual/manual"><span class="lang-en">installation guide</span><span class="lang-ja">インストールガイド</span></a><span class="lang-ja">をご確認ください。</span></p>
 
-          <!-- macOS -->
-          <a id="link-mac" class="install-item" href="macos-installer/macos_installer">
-            <span class="install-item-title">macOS</span>
-            <span class="install-item-desc">
-              <span class="lang-en">App bundle</span>
-              <span class="lang-ja">アプリバンドル</span>
-            </span>
-          </a>
-
-          <!-- Linux -->
-          <a class="install-item" href="https://github.com/HiroYokoyama/python_molecular_editor/wiki" target="_blank" rel="noopener">
-            <span class="install-item-title">Linux</span>
-            <span class="install-item-desc">
-              <span class="lang-en">pip package</span>
-              <span class="lang-ja">pip パッケージ</span>
-            </span>
-          </a>
-
-          <!-- Docker -->
-          <a class="install-item" href="https://github.com/HiroYokoyama/python_molecular_editor_docker" target="_blank" rel="noopener">
-            <span class="install-item-title">Docker</span>
-            <span class="install-item-desc">
+        <div class="home-install-alternatives" aria-labelledby="alternative-install-title">
+          <div class="home-install-alternatives-heading">
+            <p class="home-kicker"><span class="lang-en">Other ways to install</span><span class="lang-ja">その他のインストール方法</span></p>
+            <h3 id="alternative-install-title"><span class="lang-en">Basic feature installers, plus Docker.</span><span class="lang-ja">基本機能向けインストーラーとDocker。</span></h3>
+          </div>
+          <div class="alternative-install-grid">
+            <a id="link-win" class="alternative-install-card" href="windows-installer/windows_installer">
+              <strong>Windows Installer</strong>
+              <span class="lang-en">Basic features · No Python setup</span>
+              <span class="lang-ja">基本機能 · Python設定不要</span>
+              <span class="alternative-install-arrow" aria-hidden="true">→</span>
+            </a>
+            <a id="link-mac" class="alternative-install-card" href="macos-installer/macos_installer">
+              <strong>macOS App Bundle</strong>
+              <span class="lang-en">Apple Silicon · Basic features</span>
+              <span class="lang-ja">Apple Silicon · 基本機能</span>
+              <span class="alternative-install-arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="alternative-install-card" href="https://github.com/HiroYokoyama/python_molecular_editor_docker" target="_blank" rel="noopener">
+              <strong>Docker</strong>
               <span class="lang-en">Container image</span>
               <span class="lang-ja">コンテナイメージ</span>
-            </span>
-          </a>
+              <span class="alternative-install-arrow" aria-hidden="true">→</span>
+            </a>
+          </div>
         </div>
       </div>
     </section>
@@ -378,28 +393,22 @@
       document.documentElement.lang = lang;
       
       document.querySelectorAll('.lang-switch-btn').forEach(function(btn) {
-        btn.classList.toggle('active', btn.getAttribute('data-lang-btn') === lang);
+        var active = btn.getAttribute('data-lang-btn') === lang;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
 
       var navManual = document.getElementById('nav-manual');
       var btnManual = document.getElementById('btn-manual');
       var footerManual = document.getElementById('footer-manual');
-      var linkWin = document.getElementById('link-win');
-      var linkMac = document.getElementById('link-mac');
+      var installManual = document.getElementById('install-manual');
+      var manualPath = lang === 'ja' ? 'manual/manual-JP' : 'manual/manual';
 
-      if (lang === 'ja') {
-        if (navManual) navManual.href = 'manual/manual-JP';
-        if (btnManual) btnManual.href = 'manual/manual-JP';
-        if (footerManual) footerManual.href = 'manual/manual-JP';
-        if (linkWin) linkWin.href = 'windows-installer/windows_installer-jp';
-        if (linkMac) linkMac.href = 'macos-installer/macos_installer-jp';
-      } else {
-        if (navManual) navManual.href = 'manual/manual';
-        if (btnManual) btnManual.href = 'manual/manual';
-        if (footerManual) footerManual.href = 'manual/manual';
-        if (linkWin) linkWin.href = 'windows-installer/windows_installer';
-        if (linkMac) linkMac.href = 'macos-installer/macos_installer';
-      }
+      if (navManual) navManual.href = manualPath;
+      if (btnManual) btnManual.href = manualPath;
+      if (footerManual) footerManual.href = manualPath;
+      if (installManual) installManual.href = manualPath;
+      document.getElementById('language-switch').setAttribute('aria-label', lang === 'ja' ? '言語選択' : 'Language selection');
 
       try {
         localStorage.setItem('moleditpy_lang', lang);
@@ -408,25 +417,54 @@
 
     function copyInstallCmd() {
       var cmd = "pip install moleditpy-installer\npython -m moleditpy_installer";
-      navigator.clipboard.writeText(cmd).then(function() {
-        var btn = document.getElementById('copy-btn');
-        var text = document.getElementById('copy-text');
+      var btn = document.getElementById('copy-btn');
+      var text = document.getElementById('copy-text');
+      var lang = document.body.getAttribute('data-lang');
+      var copiedLabel = lang === 'ja' ? 'コピーしました' : 'Copied';
+      var defaultLabel = lang === 'ja' ? 'コマンドをコピー' : 'Copy commands';
+
+      function finishCopy() {
         btn.classList.add('copied');
-        text.textContent = 'Copied!';
+        text.textContent = copiedLabel;
         setTimeout(function() {
           btn.classList.remove('copied');
-          text.textContent = 'Copy';
+          text.textContent = defaultLabel;
         }, 2000);
-      });
+      }
+
+      function fallbackCopy() {
+        var textarea = document.createElement('textarea');
+        textarea.value = cmd;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        var copied = document.execCommand('copy');
+        textarea.remove();
+        return copied;
+      }
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(cmd).then(finishCopy).catch(function() {
+          if (fallbackCopy()) finishCopy();
+        });
+        return;
+      }
+
+      if (fallbackCopy()) finishCopy();
     }
 
     (function() {
       var savedLang = null;
+      var requestedLang = new URLSearchParams(window.location.search).get('lang');
       try {
         savedLang = localStorage.getItem('moleditpy_lang');
       } catch (e) {}
 
-      if (!savedLang) {
+      if (requestedLang === 'en' || requestedLang === 'ja') {
+        savedLang = requestedLang;
+      } else if (!savedLang) {
         if (window.location.hash === '#ja') {
           savedLang = 'ja';
         } else if (navigator.language && navigator.language.toLowerCase().indexOf('ja') === 0) {
@@ -435,7 +473,7 @@
           savedLang = 'en';
         }
       }
-      setLang(savedLang);
+      setLang(savedLang === 'ja' ? 'ja' : 'en');
     })();
   </script>
 
