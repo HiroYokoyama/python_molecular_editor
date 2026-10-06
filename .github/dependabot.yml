@@ -5,12 +5,16 @@
 
 version: 2
 updates:
+  # One entry for both packages so a monthly run opens a single PR that
+  # bumps moleditpy and moleditpy-linux together; sync_linux_version.py
+  # requires their shared pins to match.
   - package-ecosystem: "pip"
-    directory: "/moleditpy/"
+    directories:
+      - "/moleditpy/"
+      - "/moleditpy-linux/"
     schedule:
       interval: "monthly"
-      
-  - package-ecosystem: "pip"
-    directory: "/moleditpy-linux/"
-    schedule:
-      interval: "monthly"
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
