@@ -160,6 +160,20 @@ a:hover {
   background: var(--accent-light);
 }
 
+.site-nav a.nav-external {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.site-nav a.nav-external svg {
+  opacity: 0.6;
+}
+
+.site-nav a.nav-external:hover svg {
+  opacity: 1;
+}
+
 .nav-divider {
   width: 1px;
   height: 18px;
@@ -1312,8 +1326,13 @@ body[data-lang="ja"] .lang-en {
 
 .home-page .section-header {
   max-width: 760px;
-  margin: 0 auto 3rem;
+  margin: 0 0 3rem;
   text-align: left;
+}
+
+.home-page .home-install .section-header {
+  margin-right: auto;
+  margin-left: auto;
 }
 
 .home-page .section-title {
