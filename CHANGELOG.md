@@ -11,6 +11,14 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [4.11.2] - 2026-10-07
+
+### Changed
+
+- Dependencies: allow pyvista 0.49 and pyvistaqt 0.13 (`pyvista < 0.50`, `pyvistaqt < 0.14`).
+
+---
+
 ## [4.11.1] - 2026-10-01
 
 ### Added
