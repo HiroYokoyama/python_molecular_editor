@@ -36,8 +36,8 @@ dependencies = [
     "numpy",
     "pyqt6 < 6.10; python_version == '3.9'",
     "pyqt6 < 6.12; python_version != '3.9'",
-    "pyvista < 0.49",
-    "pyvistaqt < 0.13",
+    "pyvista < 0.50",
+    "pyvistaqt < 0.14",
     "rdkit < 2026.4",
 ]
 
