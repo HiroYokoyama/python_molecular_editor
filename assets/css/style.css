@@ -1312,8 +1312,13 @@ body[data-lang="ja"] .lang-en {
 
 .home-page .section-header {
   max-width: 760px;
-  margin: 0 auto 3rem;
+  margin: 0 0 3rem;
   text-align: left;
+}
+
+.home-page .home-install .section-header {
+  margin-right: auto;
+  margin-left: auto;
 }
 
 .home-page .section-title {
