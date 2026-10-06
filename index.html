@@ -339,7 +339,8 @@
           </div>
         </div>
 
-        <p class="home-install-note"><span class="lang-en">Need help? Start with the </span><span class="lang-ja">サポートが必要な場合は、</span><a id="install-manual" href="manual/manual"><span class="lang-en">installation guide</span><span class="lang-ja">インストールガイド</span></a><span class="lang-ja">をご確認ください。</span></p>
+        <p class="home-install-note lang-en">Need help? Step-by-step guides for <a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-Windows" target="_blank" rel="noopener">Windows</a>, <a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-macOS" target="_blank" rel="noopener">macOS</a>, and <a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-Linux" target="_blank" rel="noopener">Linux</a>, plus <a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Troubleshooting-Common-Issues" target="_blank" rel="noopener">troubleshooting</a>, are on the wiki.</p>
+        <p class="home-install-note lang-ja">お困りの場合は、Wikiの<a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-Windows-JP" target="_blank" rel="noopener">Windows</a>・<a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-macOS-JP" target="_blank" rel="noopener">macOS</a>・<a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-Linux-JP" target="_blank" rel="noopener">Linux</a>向けインストール手順と<a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Troubleshooting-Common-Issues-JP" target="_blank" rel="noopener">トラブルシューティング</a>をご覧ください。</p>
 
         <div class="home-install-alternatives" aria-labelledby="alternative-install-title">
           <div class="home-install-alternatives-heading">
@@ -404,13 +405,11 @@
       var navManual = document.getElementById('nav-manual');
       var btnManual = document.getElementById('btn-manual');
       var footerManual = document.getElementById('footer-manual');
-      var installManual = document.getElementById('install-manual');
       var manualPath = lang === 'ja' ? 'manual/manual-JP' : 'manual/manual';
 
       if (navManual) navManual.href = manualPath;
       if (btnManual) btnManual.href = manualPath;
       if (footerManual) footerManual.href = manualPath;
-      if (installManual) installManual.href = manualPath;
       document.getElementById('language-switch').setAttribute('aria-label', lang === 'ja' ? '言語選択' : 'Language selection');
 
       try {
