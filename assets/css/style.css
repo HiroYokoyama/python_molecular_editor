@@ -160,6 +160,20 @@ a:hover {
   background: var(--accent-light);
 }
 
+.site-nav a.nav-external {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.site-nav a.nav-external svg {
+  opacity: 0.6;
+}
+
+.site-nav a.nav-external:hover svg {
+  opacity: 1;
+}
+
 .nav-divider {
   width: 1px;
   height: 18px;
