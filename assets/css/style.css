@@ -1099,7 +1099,6 @@ body[data-lang="ja"] .lang-en {
 .home-product {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.55rem;
   margin-bottom: 2.1rem;
   font-size: 1.05rem;
@@ -1123,6 +1122,13 @@ body[data-lang="ja"] .lang-en {
   border-radius: 999px;
   font-size: 0.72rem;
   letter-spacing: 0.03em;
+}
+
+.home-license {
+  margin: -1.75rem 0 2.1rem;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
 }
 
 .home-eyebrow,
