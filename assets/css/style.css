@@ -1099,6 +1099,7 @@ body[data-lang="ja"] .lang-en {
 .home-product {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.55rem;
   margin-bottom: 2.1rem;
   font-size: 1.05rem;
