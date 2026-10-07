@@ -1124,6 +1124,13 @@ body[data-lang="ja"] .lang-en {
   letter-spacing: 0.03em;
 }
 
+.home-license {
+  margin: -1.3rem 0 2.1rem;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+}
+
 .home-eyebrow,
 .home-kicker {
   display: flex;
