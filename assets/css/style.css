@@ -1241,6 +1241,17 @@ body[data-lang="ja"] .lang-en {
   color: currentColor;
 }
 
+.support-count {
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--home-line);
+  color: var(--home-slate);
+  font-variant-numeric: tabular-nums;
+}
+
+.support-count[hidden] {
+  display: none;
+}
+
 .home-proof-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
