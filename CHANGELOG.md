@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+---
+
+## [4.11.4] - 2026-10-09
+
 ### Fixed
 
 - Close molecule-bound geometry dialogs when undo, redo, import, or a calculation replaces their molecule, preventing obsolete geometry from being drawn or saved.
@@ -16,6 +20,14 @@ All notable changes to this project are recorded here. The format follows
 - Honor unsaved-change cancellation for XYZ file and text imports; viewer-only XYZ and MOL/SDF imports now initialize undo history with the imported geometry.
 - Rebuild atom connectivity when restoring undo states or projects, including isolated atoms.
 - Release deleted 2D scene items and drag references when clearing or replacing a document.
+
+### Tests & CI
+
+- Add 29 regression cases for import cancellation and undo baselines, restored connectivity, scene reset, RDKit fallback embedding, stale geometry dialogs, constrained optimization cancellation and worker lifetime, and transactional template insertion.
+
+### Documentation
+
+- Explain geometry dialog replacement and constrained optimization cancellation in the English and Japanese manuals and wiki.
 
 ---
 
