@@ -188,6 +188,7 @@ def test_stereo_loss_on_planarize(qtbot):
 @pytest.mark.parametrize("wedge", [1, 2])
 @pytest.mark.parametrize("ez", [3, 4])
 def test_ez_label_preserves_adjacent_explicit_chirality(double_first, wedge, ez):
+    """Assigning an E/Z label keeps explicit chirality on the adjacent atom."""
     data = MolecularData()
     for symbol, x, y in [
         ("C", 0, 0),

@@ -144,6 +144,7 @@ def test_clipboard_copy_serialization(mock_parser_host):
 
 class DummyHost:
     def __init__(self):
+        """Build a host stub with the attributes the edit actions read."""
         self.statusBar_mock = MagicMock()
         self.settings = {}
         self.is_xyz_derived = False
@@ -1241,6 +1242,7 @@ def test_history_change_after_save_marks_document_dirty(mock_parser_host, action
 
 @pytest.mark.parametrize("action", ["undo", "redo"])
 def test_history_noop_preserves_saved_status(mock_parser_host, action):
+    """Undo/redo with nothing to apply leaves the saved status untouched."""
     host = mock_parser_host
     manager = EditActionsManager(host)
     manager.undo_stack = ["saved"]
@@ -1255,6 +1257,7 @@ def test_history_noop_preserves_saved_status(mock_parser_host, action):
 @pytest.mark.parametrize("angle", [-360, -270, -181, 181, 270, 360])
 @pytest.mark.parametrize("control", ["angle_spin", "slider"])
 def test_rotation_controls_preserve_full_angle_range(app, angle, control):
+    """Spin box and slider both accept angles across the full -360..360 range."""
     dialog = Rotate2DDialog()
     try:
         getattr(dialog, control).setValue(angle)
@@ -1266,6 +1269,7 @@ def test_rotation_controls_preserve_full_angle_range(app, angle, control):
 
 @pytest.mark.parametrize("angle", [-360, -270, 270, 360])
 def test_rotation_dialog_restores_large_initial_angle(app, angle):
+    """An initial angle beyond +/-180 is restored unchanged in the dialog."""
     dialog = Rotate2DDialog(initial_angle=angle)
     try:
         assert dialog.get_angle() == angle
@@ -1276,6 +1280,7 @@ def test_rotation_dialog_restores_large_initial_angle(app, angle):
 
 @pytest.mark.parametrize("resume", [False, True])
 def test_document_reset_ignores_previous_calculation_result(resume):
+    """Results and errors from a calculation halted by a reset are discarded."""
     from moleditpy.ui.compute_logic import ComputeManager
 
     host = DummyHost()
@@ -1313,6 +1318,7 @@ def test_document_reset_ignores_previous_calculation_result(resume):
 
 
 def test_cancelled_document_reset_keeps_calculation_active():
+    """Cancelling the unsaved-changes prompt leaves the running calculation alone."""
     host = DummyHost()
     editor = EditActionsManager(host)
     host.state_manager.check_unsaved_changes.return_value = False

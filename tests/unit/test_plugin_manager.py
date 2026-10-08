@@ -1151,6 +1151,7 @@ raise RuntimeError("must not execute")
 def test_unsafe_zip_is_rejected_before_any_cleanup(
     tmp_path, member_name, include_valid_member
 ):
+    """An unsafe member path aborts the install before anything is removed."""
     manager = PluginManager()
     manager.plugin_dir = str(tmp_path / "plugins")
     installed = tmp_path / "plugins" / "Package"
@@ -1178,6 +1179,7 @@ def test_unsafe_zip_is_rejected_before_any_cleanup(
 
 
 def test_zip_symbolic_link_is_rejected_before_cleanup(tmp_path):
+    """A ZIP containing a symbolic link is rejected before cleanup."""
     manager = PluginManager()
     manager.plugin_dir = str(tmp_path / "plugins")
     archive_path = tmp_path / "symlink.zip"
@@ -1198,6 +1200,7 @@ def test_zip_symbolic_link_is_rejected_before_cleanup(tmp_path):
 
 
 def test_zip_normalizes_windows_path_separators(tmp_path):
+    """Backslash-separated member names install into the right subdirectories."""
     manager = PluginManager()
     manager.plugin_dir = str(tmp_path / "plugins")
     archive_path = tmp_path / "windows.zip"
@@ -1217,6 +1220,7 @@ def test_zip_normalizes_windows_path_separators(tmp_path):
 
 
 def test_zip_rejects_existing_link_outside_plugin_directory(tmp_path, monkeypatch):
+    """An existing link that resolves outside the plugin directory is rejected."""
     manager = PluginManager()
     manager.plugin_dir = str(tmp_path / "plugins")
     archive_path = tmp_path / "package.zip"
@@ -1226,6 +1230,7 @@ def test_zip_rejects_existing_link_outside_plugin_directory(tmp_path, monkeypatc
     linked_package = os.path.normcase(str(tmp_path / "plugins" / "Package"))
 
     def resolve_link(path):
+        """Pretend the installed package directory links outside the plugin directory."""
         if os.path.normcase(str(path)).startswith(linked_package):
             return str(tmp_path / "outside")
         return original_realpath(path)
@@ -1240,6 +1245,7 @@ def test_zip_rejects_existing_link_outside_plugin_directory(tmp_path, monkeypatc
 
 
 def test_empty_zip_preserves_installed_plugins(tmp_path):
+    """An empty ZIP is rejected without touching installed plugins."""
     manager = PluginManager()
     manager.plugin_dir = str(tmp_path / "plugins")
     existing = tmp_path / "plugins" / "empty"
@@ -1260,6 +1266,7 @@ def test_empty_zip_preserves_installed_plugins(tmp_path):
 
 
 def test_zip_explicit_directories_are_created_inside_package(tmp_path):
+    """Explicit directory entries are created inside the package directory."""
     manager = PluginManager()
     manager.plugin_dir = str(tmp_path / "plugins")
     archive_path = tmp_path / "directories.zip"

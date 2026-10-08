@@ -1829,6 +1829,7 @@ def test_plugin_optimization_without_3d_structure_reports_failure(mock_parser_ho
 def test_optimize_loaded_molecule_restores_its_own_atom_ids(
     mock_parser_host, prior_ids
 ):
+    """Optimization restores the atom IDs of the molecule it ran on, not stale ones."""
     from moleditpy.ui.calculation_worker import CalculationWorker
 
     compute = ComputeManager(mock_parser_host)

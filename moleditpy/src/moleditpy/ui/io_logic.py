@@ -16,6 +16,7 @@ import logging
 import os
 import json
 import pickle
+import stat
 import tempfile
 import unicodedata
 from ..utils.suppress_log import suppress_log
@@ -610,7 +611,13 @@ class IOManager:
     @staticmethod
     def _write_project_json(file_path: str, data: dict[str, Any]) -> None:
         """Replace a project only after its complete JSON has been written."""
-        destination = os.path.abspath(file_path)
+        # Resolve symlinks so os.replace updates the linked project rather
+        # than swapping the link itself for a regular file.
+        destination = os.path.realpath(file_path)
+        try:
+            existing_mode = stat.S_IMODE(os.stat(destination).st_mode)
+        except FileNotFoundError:
+            existing_mode = None
         temporary_path = None
         try:
             with tempfile.NamedTemporaryFile(
@@ -625,6 +632,9 @@ class IOManager:
                 json.dump(data, stream, indent=2, ensure_ascii=False)
                 stream.flush()
                 os.fsync(stream.fileno())
+            if existing_mode is not None:
+                # NamedTemporaryFile is owner-only; keep the project's access.
+                os.chmod(temporary_path, existing_mode)
             os.replace(temporary_path, destination)
             temporary_path = None
         finally:

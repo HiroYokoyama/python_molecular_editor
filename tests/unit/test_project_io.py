@@ -988,10 +988,12 @@ def test_failed_json_save_preserves_existing_project(
     )
 
     def fail_write(data, stream, **kwargs):
+        """Write a truncated JSON prefix, then fail as a full disk would."""
         stream.write('{"partial":')
         raise OSError("Disk full")
 
     def fail_io(*args):
+        """Fail as an unavailable filesystem would."""
         raise OSError("Simulated I/O failure")
 
     if failure == "serialization":
@@ -1013,6 +1015,7 @@ def test_failed_json_save_preserves_existing_project(
 
 
 def test_atomic_json_save_replaces_project_and_cleans_temp_file(tmp_path):
+    """A save replaces the project and leaves no temporary file behind."""
     target = tmp_path / "existing.pmeprj"
     target.write_text("old project", encoding="utf-8")
     data = {"format": "PME Project", "note": "分子", "atoms": [1, 2]}
@@ -1021,6 +1024,35 @@ def test_atomic_json_save_replaces_project_and_cleans_temp_file(tmp_path):
 
     assert json.loads(target.read_text(encoding="utf-8")) == data
     assert list(tmp_path.iterdir()) == [target]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits")
+def test_atomic_json_save_preserves_existing_permissions(tmp_path):
+    """Replacing a project keeps its existing permission bits."""
+    target = tmp_path / "shared.pmeprj"
+    target.write_text("old project", encoding="utf-8")
+    os.chmod(target, 0o640)
+
+    IOManager._write_project_json(str(target), {"atoms": []})
+
+    assert os.stat(target).st_mode & 0o777 == 0o640
+
+
+def test_atomic_json_save_updates_symlink_target(tmp_path):
+    """Saving through a symlink updates the linked project and keeps the link."""
+    real = tmp_path / "real.pmeprj"
+    real.write_text("old project", encoding="utf-8")
+    link = tmp_path / "link.pmeprj"
+    try:
+        link.symlink_to(real)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symbolic links are not available")
+    data = {"atoms": [1]}
+
+    IOManager._write_project_json(str(link), data)
+
+    assert link.is_symlink()
+    assert json.loads(real.read_text(encoding="utf-8")) == data
 
 
 def test_failed_temp_cleanup_logs_and_preserves_original_save_error(
