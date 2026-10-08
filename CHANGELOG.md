@@ -16,6 +16,8 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- Preserve explicit wedge/dash stereochemistry adjacent to E/Z-labelled double bonds regardless of bond insertion order.
+
 - Undo and redo now mark the document as modified and update its title, so changing history after a save cannot bypass the unsaved-changes warning.
 - Project JSON saves now use an atomic replacement, preserving existing files if serialization, writing, or replacement fails.
 - The 2D rotation slider now supports the same ±360° range as the spinbox, preventing angles beyond ±180° from being clamped.
