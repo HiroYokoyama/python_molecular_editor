@@ -5,6 +5,7 @@ import json
 import sys
 import ast
 import zipfile
+import pytest
 import textwrap
 from moleditpy.plugins.plugin_manager import PluginManager
 from unittest.mock import MagicMock, patch
@@ -535,7 +536,9 @@ except BaseException:
         """install_plugin returns (False, message) when an unexpected exception is raised."""
         pm = PluginManager()
         pm.ensure_plugin_dir = MagicMock()
-        success, msg = pm.install_plugin("any")
+        with patch("moleditpy.plugins.plugin_manager.logging.warning") as warning:
+            success, msg = pm.install_plugin("any")
+            warning.assert_called_once()
         assert not success
         assert "Install err" in msg
 
@@ -1123,3 +1126,161 @@ raise RuntimeError("must not execute")
     assert plugins[0]["status"] == "Disabled"
     assert plugins[0]["module"] is None
     assert plugins[0]["disabled"] is True
+
+
+@pytest.mark.parametrize(
+    "member_name",
+    [
+        "../victim.py",
+        "..\\victim.py",
+        "./victim.py",
+        "/victim.py",
+        "C:/victim.py",
+        "C:victim.py",
+        "\\\\server\\share\\victim.py",
+        "Package/../../victim.py",
+        "Package/..\\victim.py",
+        "Package/.. /victim.py",
+        "Package./victim.py",
+        "Package/file.py:stream",
+        "CON/victim.py",
+        "Package/NUL.txt",
+    ],
+)
+@pytest.mark.parametrize("include_valid_member", [False, True])
+def test_unsafe_zip_is_rejected_before_any_cleanup(
+    tmp_path, member_name, include_valid_member
+):
+    """An unsafe member path aborts the install before anything is removed."""
+    manager = PluginManager()
+    manager.plugin_dir = str(tmp_path / "plugins")
+    installed = tmp_path / "plugins" / "Package"
+    installed.mkdir(parents=True)
+    sentinel = installed / "existing.py"
+    sentinel.write_text("keep existing plugin", encoding="utf-8")
+    outside = tmp_path / "victim.py"
+    outside.write_text("keep outside file", encoding="utf-8")
+    archive_path = tmp_path / "payload.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        if include_valid_member:
+            archive.writestr("Package/__init__.py", "replacement")
+        archive.writestr(member_name, "unsafe")
+
+    with patch("shutil.rmtree") as remove_tree, patch("os.remove") as remove_file:
+        success, message = manager.install_plugin(str(archive_path))
+        remove_tree.assert_not_called()
+        remove_file.assert_not_called()
+
+    assert not success
+    assert "Unsafe plugin path" in message
+    assert sentinel.read_text(encoding="utf-8") == "keep existing plugin"
+    assert outside.read_text(encoding="utf-8") == "keep outside file"
+    assert not (installed / "__init__.py").exists()
+
+
+def test_zip_symbolic_link_is_rejected_before_cleanup(tmp_path):
+    """A ZIP containing a symbolic link is rejected before cleanup."""
+    manager = PluginManager()
+    manager.plugin_dir = str(tmp_path / "plugins")
+    archive_path = tmp_path / "symlink.zip"
+    link = zipfile.ZipInfo("Package/link")
+    link.create_system = 3
+    link.external_attr = 0o120777 << 16
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("Package/__init__.py", "safe")
+        archive.writestr(link, "../../outside")
+
+    with patch("shutil.rmtree") as remove_tree:
+        success, message = manager.install_plugin(str(archive_path))
+        remove_tree.assert_not_called()
+
+    assert not success
+    assert "symbolic links" in message
+    assert list((tmp_path / "plugins").iterdir()) == []
+
+
+def test_zip_normalizes_windows_path_separators(tmp_path):
+    """Backslash-separated member names install into the right subdirectories."""
+    manager = PluginManager()
+    manager.plugin_dir = str(tmp_path / "plugins")
+    archive_path = tmp_path / "windows.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("Package\\__init__.py", "plugin contents")
+        archive.writestr("Package\\assets\\data.txt", "asset contents")
+
+    success, _ = manager.install_plugin(str(archive_path))
+
+    assert success
+    assert (
+        tmp_path / "plugins" / "Package" / "__init__.py"
+    ).read_text() == "plugin contents"
+    assert (
+        tmp_path / "plugins" / "Package" / "assets" / "data.txt"
+    ).read_text() == "asset contents"
+
+
+def test_zip_rejects_existing_link_outside_plugin_directory(tmp_path, monkeypatch):
+    """An existing link that resolves outside the plugin directory is rejected."""
+    manager = PluginManager()
+    manager.plugin_dir = str(tmp_path / "plugins")
+    archive_path = tmp_path / "package.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("Package/__init__.py", "replacement")
+    original_realpath = os.path.realpath
+    linked_package = os.path.normcase(str(tmp_path / "plugins" / "Package"))
+
+    def resolve_link(path):
+        """Pretend the installed package directory links outside the plugin directory."""
+        if os.path.normcase(str(path)).startswith(linked_package):
+            return str(tmp_path / "outside")
+        return original_realpath(path)
+
+    monkeypatch.setattr(os.path, "realpath", resolve_link)
+    with patch("shutil.rmtree") as remove_tree:
+        success, message = manager.install_plugin(str(archive_path))
+        remove_tree.assert_not_called()
+
+    assert not success
+    assert "escapes install directory" in message
+
+
+def test_empty_zip_preserves_installed_plugins(tmp_path):
+    """An empty ZIP is rejected without touching installed plugins."""
+    manager = PluginManager()
+    manager.plugin_dir = str(tmp_path / "plugins")
+    existing = tmp_path / "plugins" / "empty"
+    existing.mkdir(parents=True)
+    sentinel = existing / "__init__.py"
+    sentinel.write_text("existing plugin", encoding="utf-8")
+    archive_path = tmp_path / "empty.zip"
+    with zipfile.ZipFile(archive_path, "w"):
+        pass
+
+    with patch("shutil.rmtree") as remove_tree:
+        success, message = manager.install_plugin(str(archive_path))
+        remove_tree.assert_not_called()
+
+    assert not success
+    assert "empty" in message
+    assert sentinel.read_text(encoding="utf-8") == "existing plugin"
+
+
+def test_zip_explicit_directories_are_created_inside_package(tmp_path):
+    """Explicit directory entries are created inside the package directory."""
+    manager = PluginManager()
+    manager.plugin_dir = str(tmp_path / "plugins")
+    archive_path = tmp_path / "directories.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("Package/", "")
+        archive.writestr("Package/assets/", "")
+        archive.writestr("Package/__init__.py", "plugin contents")
+        archive.writestr("Package/assets/data.txt", "asset contents")
+
+    success, _ = manager.install_plugin(str(archive_path))
+
+    assert success
+    package = tmp_path / "plugins" / "Package"
+    assert (package / "assets").is_dir()
+    assert (package / "assets" / "data.txt").read_text() == "asset contents"
+    assert (package / "__init__.py").read_text() == "plugin contents"
+    assert list((tmp_path / "plugins").iterdir()) == [package]

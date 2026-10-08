@@ -93,7 +93,7 @@ class Rotate2DDialog(QDialog):
 
         # Slider
         self.slider = QSlider(Qt.Orientation.Horizontal)
-        self.slider.setRange(-180, 180)
+        self.slider.setRange(-360, 360)
         self.slider.setValue(int(initial_angle))
         self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.slider.setTickInterval(15)
@@ -240,6 +240,9 @@ class EditActionsManager:
             finally:
                 self.host.is_restoring_state = False
 
+            self.host.set_has_unsaved_changes(True)
+            self.host.state_manager.update_window_title()
+
             # Re-evaluate menu states based on 3D structure after Undo
             if (
                 self.host.view_3d_manager.current_mol
@@ -264,6 +267,9 @@ class EditActionsManager:
                 self.host.state_manager.set_state_from_data(state)
             finally:
                 self.host.is_restoring_state = False
+
+            self.host.set_has_unsaved_changes(True)
+            self.host.state_manager.update_window_title()
 
             # Re-evaluate menu states based on 3D structure after Redo
             if (
@@ -954,6 +960,8 @@ class EditActionsManager:
                 # Cancel if requested
                 return False
 
+        # Invalidate outstanding results before replacing the document.
+        self.host.compute_manager.halt_conversion()
         self.host.ui_manager.restore_ui_for_editing()
 
         # Reset 3D mode

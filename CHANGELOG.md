@@ -6,8 +6,35 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+---
 
+## [4.11.3] - 2026-10-08
 
+### Security
+
+- Reject unsafe plugin ZIP member paths and symbolic links before cleanup or extraction, and confine installation paths to the selected plugin directory.
+
+### Fixed
+
+- Halt pending calculations when resetting or opening a document so old results cannot replace its 3D structure; stale errors no longer reset a newer calculation's controls.
+
+- Preserve each submitted molecule's original atom IDs through 3D optimization, including reopened projects, without reusing a previous conversion's mapping.
+
+- Preserve explicit wedge/dash stereochemistry adjacent to E/Z-labelled double bonds regardless of bond insertion order.
+
+- Undo and redo now mark the document as modified and update its title, so changing history after a save cannot bypass the unsaved-changes warning.
+- Project JSON saves now use an atomic replacement, preserving existing files if serialization, writing, or replacement fails. Saving through a symbolic link updates the linked project, and an overwritten project keeps its file permissions.
+- The 2D rotation slider now supports the same ±360° range as the spinbox, preventing angles beyond ±180° from being clamped.
+
+### Tests & CI
+
+- Cover adjacent wedge/E/Z labels in both bond orders, atom ID restoration through the real calculation worker, and stale results after document reset or a new calculation.
+
+- Add plugin archive security regressions, full-range rotation and saved-document undo/redo regressions, and verify GUI project saving against a real temporary file.
+
+### Documentation
+
+- Record GPT-6 Astra and GPT-6.1 Sol assistance in `docs/AI_USAGE.md`.
 
 ---
 

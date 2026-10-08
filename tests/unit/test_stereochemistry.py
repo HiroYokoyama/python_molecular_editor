@@ -1,5 +1,7 @@
 """Unit tests for stereochemistry handling in MolecularData."""
 
+import pytest
+from moleditpy.core.stereo_check import drawn_chirality
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.core.molecular_data import MolecularData
@@ -180,3 +182,40 @@ def test_stereo_loss_on_planarize(qtbot):
         atom.SetChiralTag(Chem.ChiralType.CHI_UNSPECIFIED)
     Chem.AssignStereochemistry(mol, force=True, cleanIt=True)
     assert not mol.GetAtomWithIdx(1).HasProp("_CIPCode")
+
+
+@pytest.mark.parametrize("double_first", [False, True])
+@pytest.mark.parametrize("wedge", [1, 2])
+@pytest.mark.parametrize("ez", [3, 4])
+def test_ez_label_preserves_adjacent_explicit_chirality(double_first, wedge, ez):
+    """Assigning an E/Z label keeps explicit chirality on the adjacent atom."""
+    data = MolecularData()
+    for symbol, x, y in [
+        ("C", 0, 0),
+        ("F", -30, -40),
+        ("Cl", -30, 40),
+        ("C", -60, 0),
+        ("C", 60, 0),
+        ("C", 120, 0),
+        ("C", 180, -40),
+    ]:
+        data.add_atom(symbol, QPointF(x, y))
+    bonds = [
+        (0, 1, 1, 0),
+        (0, 2, 1, 0),
+        (0, 3, 1, 0),
+        (0, 4, 1, wedge),
+        (4, 5, 2, ez),
+        (5, 6, 1, 0),
+    ]
+    if double_first:
+        bonds.insert(0, bonds.pop(4))
+    for start, end, order, stereo in bonds:
+        data.add_bond(start, end, order=order, stereo=stereo)
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    expected_dir = Chem.BondDir.BEGINWEDGE if wedge == 1 else Chem.BondDir.BEGINDASH
+    assert mol.GetBondBetweenAtoms(0, 4).GetBondDir() == expected_dir
+    assert drawn_chirality(data) == {0: "S" if wedge == 1 else "R"}
+    assert mol.GetBondBetweenAtoms(4, 5).GetStereo() == (
+        Chem.BondStereo.STEREOZ if ez == 3 else Chem.BondStereo.STEREOE
+    )

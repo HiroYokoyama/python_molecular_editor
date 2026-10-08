@@ -1000,33 +1000,29 @@ def test_open_3d_edit_dialogs(window, qtbot, monkeypatch):
 
 
 @pytest.mark.gui
-def test_save_project_as(window, qtbot, monkeypatch):
-    """Project Save: Test for "Save Project As..."."""
-    # 1. Mock QFileDialog (configured in conftest.py)
+def test_save_project_as(window, qtbot, monkeypatch, tmp_path):
+    """Save the real project atomically and clear the unsaved-work warning."""
+    from PyQt6.QtWidgets import QFileDialog
 
-    # 2. Mock json.dump
-    mocker_json_dump = _mock.MagicMock()
-    monkeypatch.setattr(json, "dump", mocker_json_dump, raising=False)
-    # Patch `open` so writing to the fake path doesn't raise on Windows
-    monkeypatch.setattr("builtins.open", mock_open(), raising=False)
-
-    # 3. Create data to save
+    target = tmp_path / "saved.pmeprj"
+    monkeypatch.setattr(
+        QFileDialog, "getSaveFileName", lambda *a, **k: (str(target), "")
+    )
     scene = window.init_manager.scene
     window.ui_manager.set_mode("atom_C")
-    # Programmatically create an atom to avoid flaky view clicks in some CI environments
     scene.create_atom("C", QPointF(0, 0))
     window.edit_actions_manager.push_undo_state()
 
-    # 4. Directly call save_project_as
     window.save_project_as()
     qtbot.wait(50)
 
-    # 5. Verify json.dump was called
-    mocker_json_dump.assert_called_once()
-
-    # 6. Verify flag is reset after saving
+    saved = json.loads(target.read_text(encoding="utf-8"))
+    assert saved["format"] == "PME Project"
+    assert len(saved["2d_structure"]["atoms"]) == 1
+    assert saved["2d_structure"]["atoms"][0]["symbol"] == "C"
+    assert list(tmp_path.iterdir()) == [target]
     assert window.state_manager.has_unsaved_changes is False
-    assert window.init_manager.current_file_path == "/fake/save.pmeprj"
+    assert window.init_manager.current_file_path == str(target)
     assert "Project saved to" in window.statusBar().currentMessage()
 
 

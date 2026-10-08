@@ -12,6 +12,7 @@ AI assistance was applied to:
 
 - Code generation and refactoring
 - Test authoring
+- Bug investigation and security review
 - Documentation drafting
 
 Every change was reviewed by the author before being committed. Design decisions, the plugin API contract, and all scientific claims are the author's own.
@@ -35,7 +36,7 @@ Every change was reviewed by the author before being committed. Design decisions
 |---|---|
 | Anthropic | Claude Sonnet 4.5, Claude Sonnet 4.6, Claude Sonnet 5, Claude Opus 4.5, Claude Opus 4.6, Claude Opus 4.8, Claude Opus 5, Claude Opus 5.5, Claude Haiku 4.5, Claude Fable 5 |
 | Google | Gemini 3 Pro, Gemini 3 Flash, Gemini 3.1 Pro, Gemini 3.1 Flash, Gemini 3.5 Flash, Gemini 3.7 Flash, Gemini 3.8 Flash |
-| OpenAI | GPT-4o, GPT-4.1, GPT-5, GPT-5.1-Codex-Mini, GPT-5.2-Codex, GPT-5.3-Codex, GPT-5.4, GPT-5.4-Mini, GPT-5.5, GPT-5.6 Luna, GPT-5.6 Terra, GPT-6 Luna |
+| OpenAI | GPT-4o, GPT-4.1, GPT-5, GPT-5.1-Codex-Mini, GPT-5.2-Codex, GPT-5.3-Codex, GPT-5.4, GPT-5.4-Mini, GPT-5.5, GPT-5.6 Luna, GPT-5.6 Terra, GPT-6 Luna, GPT-6 Astra, GPT-6.1 Sol |
 
 ---
 
@@ -43,4 +44,4 @@ Every change was reviewed by the author before being committed. Design decisions
 
 Add new tools and models here as they are used.
 
-_Last updated: 2026-10-04._
+_Last updated: 2026-10-08._

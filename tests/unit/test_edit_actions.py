@@ -144,6 +144,7 @@ def test_clipboard_copy_serialization(mock_parser_host):
 
 class DummyHost:
     def __init__(self):
+        """Build a host stub with the attributes the edit actions read."""
         self.statusBar_mock = MagicMock()
         self.settings = {}
         self.is_xyz_derived = False
@@ -160,6 +161,7 @@ class DummyHost:
         self.edit_3d_manager = MagicMock()
         self.plugin_manager = MagicMock()
         self.edit_actions_manager = None
+        self.compute_manager = MagicMock()
 
         self.init_manager.scene = MagicMock()
         self.state_manager.data = MagicMock()
@@ -1218,3 +1220,108 @@ def test_update_implicit_hydrogens_empty_is_noop(mock_parser_host):
         editor.update_implicit_hydrogens()
 
     single_shot.assert_not_called()
+
+
+@pytest.mark.parametrize("action", ["undo", "redo"])
+def test_history_change_after_save_marks_document_dirty(mock_parser_host, action):
+    """Changing history after saving must restore the unsaved-work warning."""
+    host = mock_parser_host
+    host.state_manager.has_unsaved_changes = False
+    host.set_has_unsaved_changes.side_effect = lambda value: setattr(
+        host.state_manager, "has_unsaved_changes", value
+    )
+    manager = EditActionsManager(host)
+    manager.undo_stack = ["before", "saved"] if action == "undo" else ["saved"]
+    manager.redo_stack = ["after"] if action == "redo" else []
+
+    getattr(manager, action)()
+
+    assert host.state_manager.has_unsaved_changes is True
+    host.state_manager.update_window_title.assert_called_once()
+
+
+@pytest.mark.parametrize("action", ["undo", "redo"])
+def test_history_noop_preserves_saved_status(mock_parser_host, action):
+    """Undo/redo with nothing to apply leaves the saved status untouched."""
+    host = mock_parser_host
+    manager = EditActionsManager(host)
+    manager.undo_stack = ["saved"]
+    manager.redo_stack = []
+
+    getattr(manager, action)()
+
+    host.set_has_unsaved_changes.assert_not_called()
+    host.state_manager.update_window_title.assert_not_called()
+
+
+@pytest.mark.parametrize("angle", [-360, -270, -181, 181, 270, 360])
+@pytest.mark.parametrize("control", ["angle_spin", "slider"])
+def test_rotation_controls_preserve_full_angle_range(app, angle, control):
+    """Spin box and slider both accept angles across the full -360..360 range."""
+    dialog = Rotate2DDialog()
+    try:
+        getattr(dialog, control).setValue(angle)
+        assert dialog.get_angle() == angle
+        assert dialog.slider.value() == angle
+    finally:
+        dialog.destroy()
+
+
+@pytest.mark.parametrize("angle", [-360, -270, 270, 360])
+def test_rotation_dialog_restores_large_initial_angle(app, angle):
+    """An initial angle beyond +/-180 is restored unchanged in the dialog."""
+    dialog = Rotate2DDialog(initial_angle=angle)
+    try:
+        assert dialog.get_angle() == angle
+        assert dialog.slider.value() == angle
+    finally:
+        dialog.destroy()
+
+
+@pytest.mark.parametrize("resume", [False, True])
+def test_document_reset_ignores_previous_calculation_result(resume):
+    """Results and errors from a calculation halted by a reset are discarded."""
+    from moleditpy.ui.compute_logic import ComputeManager
+
+    host = DummyHost()
+    host.edit_3d_manager.measurement_mode = False
+    host.edit_3d_manager.is_3d_edit_mode = False
+    editor = EditActionsManager(host)
+    host.edit_actions_manager = editor
+    compute = ComputeManager(host)
+    host.compute_manager = compute
+    compute.active_worker_ids = {7}
+    compute._conversion_run_ids = {7}
+    compute._worker_atom_properties = {7: {0: 42}}
+    compute._pending_plugin_opt = {7: ("PLUGIN", {})}
+    assert editor.clear_all(skip_check=True)
+    assert compute.active_worker_ids == set()
+    assert 7 in compute.halt_ids
+    assert compute._conversion_run_ids == set()
+    assert compute._worker_atom_properties == {}
+    assert compute._pending_plugin_opt == {}
+    if resume:
+        compute.active_worker_ids.add(8)
+    with (
+        patch.object(compute, "_remove_calculating_text") as remove_overlay,
+        patch.object(compute, "_restore_button_ui") as restore_buttons,
+        patch.object(host, "set_current_molecule") as set_mol,
+    ):
+        compute.on_calculation_finished((7, Chem.MolFromSmiles("C")))
+        compute.on_calculation_error((7, "Halted"))
+    set_mol.assert_not_called()
+    remove_overlay.assert_not_called()
+    restore_buttons.assert_not_called()
+    assert host.view_3d_manager.current_mol is None
+    assert host.state_manager.data.atoms == {}
+    assert compute.active_worker_ids == ({8} if resume else set())
+
+
+def test_cancelled_document_reset_keeps_calculation_active():
+    """Cancelling the unsaved-changes prompt leaves the running calculation alone."""
+    host = DummyHost()
+    editor = EditActionsManager(host)
+    host.state_manager.check_unsaved_changes.return_value = False
+    assert editor.clear_all() is False
+    host.compute_manager.halt_conversion.assert_not_called()
+    host.ui_manager.restore_ui_for_editing.assert_not_called()

@@ -438,13 +438,16 @@ class MolecularData:
                     bond.SetStereo(Chem.BondStereo.STEREOE)
                 ez_wanted[bond_idx] = "Z" if stereo_type == 3 else "E"
 
-                # Clear BondDir (wedge/dash) of adjacent single bonds assigned via coordinates to avoid label conflicts
-                b1 = final_mol.GetBondBetweenAtoms(begin_atom_idx, neigh1_idx)
-                b2 = final_mol.GetBondBetweenAtoms(end_atom_idx, neigh2_idx)
-                if b1 is not None:
-                    b1.SetBondDir(Chem.BondDir.NONE)
-                if b2 is not None:
-                    b2.SetBondDir(Chem.BondDir.NONE)
+                # Preserve explicit wedge/dash labels, including those applied later.
+                for center_idx, neighbor_idx in (
+                    (begin_atom_idx, neigh1_idx),
+                    (end_atom_idx, neigh2_idx),
+                ):
+                    adjacent = final_mol.GetBondBetweenAtoms(center_idx, neighbor_idx)
+                    if adjacent is not None and bond_stereo_info.get(
+                        adjacent.GetIdx(), {}
+                    ).get("type") not in (1, 2):
+                        adjacent.SetBondDir(Chem.BondDir.NONE)
 
         # The labels are CIP E/Z; the neighbors picked above are not always
         # the CIP-higher ones.
