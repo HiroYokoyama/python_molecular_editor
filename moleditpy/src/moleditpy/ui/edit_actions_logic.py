@@ -960,6 +960,8 @@ class EditActionsManager:
                 # Cancel if requested
                 return False
 
+        # Invalidate outstanding results before replacing the document.
+        self.host.compute_manager.halt_conversion()
         self.host.ui_manager.restore_ui_for_editing()
 
         # Reset 3D mode

@@ -729,9 +729,7 @@ class ComputeManager:
             self._worker_atom_properties.pop(worker_id, None)
             getattr(self, "_conversion_run_ids", set()).discard(worker_id)
             if worker_id not in self.active_worker_ids:
-                # Still cleanup overlay/buttons even if stale
-                self._remove_calculating_text()
-                self._restore_button_ui()
+                # A stale worker must not reset the current calculation's UI.
                 # If it was a halt or error from a stale worker, show with ID
                 if msg == "Halt" or msg == "Halted":
                     self.host.statusBar().showMessage(  # type: ignore[union-attr]

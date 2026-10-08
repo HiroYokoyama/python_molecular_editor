@@ -160,6 +160,7 @@ class DummyHost:
         self.edit_3d_manager = MagicMock()
         self.plugin_manager = MagicMock()
         self.edit_actions_manager = None
+        self.compute_manager = MagicMock()
 
         self.init_manager.scene = MagicMock()
         self.state_manager.data = MagicMock()
@@ -1271,3 +1272,50 @@ def test_rotation_dialog_restores_large_initial_angle(app, angle):
         assert dialog.slider.value() == angle
     finally:
         dialog.destroy()
+
+
+@pytest.mark.parametrize("resume", [False, True])
+def test_document_reset_ignores_previous_calculation_result(resume):
+    from moleditpy.ui.compute_logic import ComputeManager
+
+    host = DummyHost()
+    host.edit_3d_manager.measurement_mode = False
+    host.edit_3d_manager.is_3d_edit_mode = False
+    editor = EditActionsManager(host)
+    host.edit_actions_manager = editor
+    compute = ComputeManager(host)
+    host.compute_manager = compute
+    compute.active_worker_ids = {7}
+    compute._conversion_run_ids = {7}
+    compute._worker_atom_properties = {7: {0: 42}}
+    compute._pending_plugin_opt = {7: ("PLUGIN", {})}
+    assert editor.clear_all(skip_check=True)
+    assert compute.active_worker_ids == set()
+    assert 7 in compute.halt_ids
+    assert compute._conversion_run_ids == set()
+    assert compute._worker_atom_properties == {}
+    assert compute._pending_plugin_opt == {}
+    if resume:
+        compute.active_worker_ids.add(8)
+    with (
+        patch.object(compute, "_remove_calculating_text") as remove_overlay,
+        patch.object(compute, "_restore_button_ui") as restore_buttons,
+        patch.object(host, "set_current_molecule") as set_mol,
+    ):
+        compute.on_calculation_finished((7, Chem.MolFromSmiles("C")))
+        compute.on_calculation_error((7, "Halted"))
+    set_mol.assert_not_called()
+    remove_overlay.assert_not_called()
+    restore_buttons.assert_not_called()
+    assert host.view_3d_manager.current_mol is None
+    assert host.state_manager.data.atoms == {}
+    assert compute.active_worker_ids == ({8} if resume else set())
+
+
+def test_cancelled_document_reset_keeps_calculation_active():
+    host = DummyHost()
+    editor = EditActionsManager(host)
+    host.state_manager.check_unsaved_changes.return_value = False
+    assert editor.clear_all() is False
+    host.compute_manager.halt_conversion.assert_not_called()
+    host.ui_manager.restore_ui_for_editing.assert_not_called()

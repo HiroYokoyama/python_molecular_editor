@@ -16,6 +16,8 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- Halt pending calculations when resetting or opening a document so old results cannot replace its 3D structure; stale errors no longer reset a newer calculation's controls.
+
 - Preserve each submitted molecule's original atom IDs through 3D optimization, including reopened projects, without reusing a previous conversion's mapping.
 
 - Preserve explicit wedge/dash stereochemistry adjacent to E/Z-labelled double bonds regardless of bond insertion order.
@@ -25,6 +27,8 @@ All notable changes to this project are recorded here. The format follows
 - The 2D rotation slider now supports the same ±360° range as the spinbox, preventing angles beyond ±180° from being clamped.
 
 ### Tests & CI
+
+- Cover adjacent wedge/E/Z labels in both bond orders, atom ID restoration through the real calculation worker, and stale results after document reset or a new calculation.
 
 - Add plugin archive security regressions, full-range rotation and saved-document undo/redo regressions, and verify GUI project saving against a real temporary file.
 
