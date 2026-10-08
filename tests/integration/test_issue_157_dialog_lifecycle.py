@@ -74,7 +74,10 @@ def test_replacing_molecule_invalidates_geometry_dialog(
     assert window.edit_actions_manager.undo_stack == history
 
 
-@pytest.mark.parametrize("outcome", ["close", "replace", "geometry_changed", "commit"])
+@pytest.mark.parametrize(
+    "outcome",
+    ["close", "replace", "unregistered_replace", "geometry_changed", "commit"],
+)
 def test_constrained_optimization_only_commits_valid_private_result(
     window, monkeypatch, outcome
 ):
@@ -82,7 +85,8 @@ def test_constrained_optimization_only_commits_valid_private_result(
     mol = install_molecule(window, monkeypatch)
     original = mol.GetConformer().GetPositions().copy()
     dialog = ConstrainedOptimizationDialog(mol, window, parent=window)
-    window.dialog_manager._open_3d_edit_dialog(dialog)
+    if outcome != "unregistered_replace":
+        window.dialog_manager._open_3d_edit_dialog(dialog)
     dialog.ff_combo.setCurrentText("UFF")
     threads = []
     monkeypatch.setattr(
@@ -95,7 +99,7 @@ def test_constrained_optimization_only_commits_valid_private_result(
     redraw.reset_mock()
     if outcome == "close":
         dialog.reject()
-    elif outcome == "replace":
+    elif outcome in ("replace", "unregistered_replace"):
         window.set_current_molecule(Chem.Mol(mol))
     elif outcome == "geometry_changed":
         mol.GetConformer().SetAtomPosition(0, (10, 20, 30))
@@ -155,3 +159,49 @@ def test_running_optimization_commits_on_gui_thread(window, monkeypatch, qtbot):
     np.testing.assert_allclose(
         window.current_mol.GetConformer().GetPositions(), original
     )
+
+
+def test_mirror_dialog_cannot_edit_replaced_molecule(window, monkeypatch):
+    """Replacement disables a real mirror dialog and preserves both conformers."""
+    mol = install_molecule(window, monkeypatch)
+    window.dialog_manager.open_mirror_dialog()
+    dialog = window.edit_3d_manager.active_3d_dialogs[0]
+    replacement = Chem.Mol(mol)
+    old_positions = mol.GetConformer().GetPositions().copy()
+    window.set_current_molecule(replacement)
+    assert dialog._invalidated
+    assert not dialog.isEnabled()
+    assert not dialog.isVisible()
+    history = list(window.edit_actions_manager.undo_stack)
+    window.view_3d_manager.draw_molecule_3d.reset_mock()
+    dialog.apply_mirror()
+    np.testing.assert_array_equal(mol.GetConformer().GetPositions(), old_positions)
+    np.testing.assert_array_equal(
+        replacement.GetConformer().GetPositions(), old_positions
+    )
+    assert window.edit_actions_manager.undo_stack == history
+    window.view_3d_manager.draw_molecule_3d.assert_not_called()
+
+
+def test_completed_optimization_can_restart_then_close(window, monkeypatch, qtbot):
+    """A new run retires the finished QThread, and a closed dialog cannot restart."""
+    mol = install_molecule(window, monkeypatch)
+    dialog = ConstrainedOptimizationDialog(mol, window, parent=window)
+    window.dialog_manager._open_3d_edit_dialog(dialog)
+    dialog.ff_combo.setCurrentText("UFF")
+    dialog.apply_optimization()
+    first_worker = dialog._opt_thread
+    qtbot.waitUntil(lambda: dialog.optimize_button.isEnabled(), timeout=5000)
+    first_worker.wait()
+    dialog.apply_optimization()
+    second_worker = dialog._opt_thread
+    assert second_worker is not first_worker
+    dialog.reject()
+    assert not second_worker.isRunning()
+    positions = mol.GetConformer().GetPositions().copy()
+    history = list(window.edit_actions_manager.undo_stack)
+    dialog.apply_optimization()
+    assert dialog._opt_thread is second_worker
+    assert not second_worker.isRunning()
+    np.testing.assert_array_equal(mol.GetConformer().GetPositions(), positions)
+    assert window.edit_actions_manager.undo_stack == history

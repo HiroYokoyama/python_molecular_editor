@@ -1106,3 +1106,60 @@ class TestKeyPressEvent:
         # An unrelated key must not raise and not remove anything
         dlg.keyPressEvent(self._key(Qt.Key.Key_A))
         assert dlg.constraints == []
+
+
+def test_worker_interruption_stops_before_next_minimization_chunk(qapp, qtbot):
+    """Cancellation between chunks prevents both further work and result delivery."""
+    from moleditpy.ui.constrained_optimization_dialog import (
+        ConstrainedOptimizationThread,
+    )
+
+    ff = MagicMock()
+    thread = ConstrainedOptimizationThread(ff, max_iters=400)
+    finished = MagicMock()
+    thread.optimization_finished.connect(finished)
+
+    def interrupt_after_first_chunk(maxIts):
+        thread.requestInterruption()
+        return 1
+
+    ff.Minimize.side_effect = interrupt_after_first_chunk
+    with qtbot.waitSignal(thread.finished, timeout=5000):
+        thread.start()
+    thread.wait()
+    ff.Minimize.assert_called_once_with(maxIts=200)
+    finished.assert_not_called()
+
+
+def test_running_optimization_cannot_start_duplicate_worker(make_dialog, qtbot):
+    """A second request cannot replace a worker while its minimization is active."""
+    from threading import Event
+    from moleditpy.ui.constrained_optimization_dialog import (
+        ConstrainedOptimizationThread,
+    )
+
+    dlg = make_dialog()
+    entered = Event()
+    release = Event()
+    ff = MagicMock()
+
+    def wait_for_release(maxIts):
+        entered.set()
+        if not release.wait(timeout=5):
+            raise RuntimeError("test failed to release the worker")
+        return 0
+
+    ff.Minimize.side_effect = wait_for_release
+    thread = ConstrainedOptimizationThread(ff, max_iters=200, parent=dlg)
+    dlg._opt_thread = thread
+    thread.start()
+    try:
+        qtbot.waitUntil(entered.is_set, timeout=5000)
+        dlg.apply_optimization()
+        assert dlg._opt_thread is thread
+        assert thread.isRunning()
+        assert not thread.isInterruptionRequested()
+    finally:
+        release.set()
+        dlg.reject()
+    assert not thread.isRunning()

@@ -23,7 +23,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Tests & CI
 
-- Add 29 regression cases for import cancellation and undo baselines, restored connectivity, scene reset, RDKit fallback embedding, stale geometry dialogs, constrained optimization cancellation and worker lifetime, and transactional template insertion.
+- Add 37 regression cases for import cancellation and undo baselines, restored connectivity, scene reset, RDKit fallback embedding, stale geometry dialogs, constrained optimization cancellation and worker lifetime, and transactional template insertion. Include real deferred refresh callbacks, mirror invalidation, optimization restart, duplicate-start prevention, and interruption between minimization chunks.
 
 ### Documentation
 
