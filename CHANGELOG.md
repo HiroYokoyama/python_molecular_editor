@@ -16,6 +16,8 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- Preserve each submitted molecule's original atom IDs through 3D optimization, including reopened projects, without reusing a previous conversion's mapping.
+
 - Preserve explicit wedge/dash stereochemistry adjacent to E/Z-labelled double bonds regardless of bond insertion order.
 
 - Undo and redo now mark the document as modified and update its title, so changing history after a save cannot bypass the unsaved-changes warning.

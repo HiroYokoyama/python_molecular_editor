@@ -1823,3 +1823,46 @@ def test_plugin_optimization_without_3d_structure_reports_failure(mock_parser_ho
         "needs a 3D structure"
         in (mock_parser_host.update_status_message.call_args.args[0])
     )
+
+
+@pytest.mark.parametrize("prior_ids", [{}, {0: 999, 1: 888}])
+def test_optimize_loaded_molecule_restores_its_own_atom_ids(
+    mock_parser_host, prior_ids
+):
+    from moleditpy.ui.calculation_worker import CalculationWorker
+
+    compute = ComputeManager(mock_parser_host)
+    compute.original_atom_properties = prior_ids
+    mock_parser_host.init_manager.opt3d_method_labels = {"UFF_RDKIT": "UFF"}
+    mock_parser_host.init_manager.settings = {}
+    mock_parser_host.plugin_manager.optimization_methods = {}
+    mol = Chem.MolFromSmiles("CO")
+    conf = Chem.Conformer(2)
+    conf.SetAtomPosition(0, (0, 0, 0))
+    conf.SetAtomPosition(1, (1.4, 0, 0))
+    mol.AddConformer(conf)
+    for atom, original_id in zip(mol.GetAtoms(), [10, 30]):
+        atom.SetIntProp("_original_atom_id", original_id)
+    mock_parser_host.view_3d_manager.current_mol = mol
+    mock_parser_host.set_current_molecule.side_effect = lambda value: setattr(
+        mock_parser_host.view_3d_manager, "current_mol", value
+    )
+    worker = CalculationWorker()
+    errors = []
+    worker.error.connect(errors.append)
+    worker.finished.connect(compute.on_calculation_finished)
+    with (
+        patch.object(compute, "_start_calculation_worker") as start,
+        patch.object(compute, "check_chirality_against_2d"),
+        patch("moleditpy.ui.calculation_worker._iterative_optimize", return_value=True),
+    ):
+        compute.optimize_3d_structure("UFF_RDKIT")
+        block, options, run_id = start.call_args.args
+        # A later submission must not change this worker's ID snapshot.
+        compute.original_atom_properties = {0: 123}
+        worker.run_calculation(block, options)
+    assert errors == []
+    result = mock_parser_host.view_3d_manager.current_mol
+    assert [a.GetIntProp("_original_atom_id") for a in result.GetAtoms()] == [10, 30]
+    assert mock_parser_host.atom_id_to_rdkit_idx_map == {10: 0, 30: 1}
+    assert run_id not in compute._worker_atom_properties

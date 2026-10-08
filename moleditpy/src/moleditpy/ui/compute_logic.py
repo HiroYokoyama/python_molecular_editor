@@ -58,6 +58,7 @@ class ComputeManager:
         """Initialize ComputeManager with reference to host window."""
         self._calculating_text_actor: Any = None
         self.original_atom_properties: Dict[int, int] = {}
+        self._worker_atom_properties: Dict[int, Dict[int, int]] = {}
         self.host = host
         self.last_successful_optimization_method: Optional[str] = None
         self._active_calc_threads: List[QThread] = []
@@ -270,6 +271,7 @@ class ComputeManager:
         self.next_conversion_id = run_id + 1
         self.active_worker_ids.add(run_id)
         self._conversion_run_ids.add(run_id)
+        self._worker_atom_properties[run_id] = self.original_atom_properties.copy()
 
         # The worker only runs built-in force fields. If the selected method is a
         # plugin optimizer, pre-optimize with MMFF (RDKit) in the worker (which
@@ -336,6 +338,7 @@ class ComputeManager:
             self.halt_ids.update(wids_to_halt)
         self.active_worker_ids.clear()
         self._pending_plugin_opt.clear()
+        self._worker_atom_properties.clear()
         getattr(self, "_conversion_run_ids", set()).clear()
 
         self._restore_button_ui()
@@ -394,6 +397,11 @@ class ComputeManager:
         run_id = int(getattr(self, "next_conversion_id", 1))
         self.next_conversion_id = run_id + 1
         options["worker_id"] = run_id
+        self._worker_atom_properties[run_id] = {
+            atom.GetIdx(): atom.GetIntProp("_original_atom_id")
+            for atom in self.host.view_3d_manager.current_mol.GetAtoms()
+            if atom.HasProp("_original_atom_id")
+        }
 
         self.active_worker_ids.add(run_id)
 
@@ -601,9 +609,14 @@ class ComputeManager:
         self.host.set_current_molecule(mol)
         self.host.is_xyz_derived = False
 
-        # Restore properties
+        # MOL blocks omit custom atom properties; restore the submitting molecule's IDs.
+        atom_properties = (
+            self._worker_atom_properties.pop(worker_id, {})
+            if worker_id is not None
+            else self.original_atom_properties
+        )
         if mol:
-            for i, orig_id in self.original_atom_properties.items():
+            for i, orig_id in atom_properties.items():
                 if i < mol.GetNumAtoms():
                     mol.GetAtomWithIdx(i).SetIntProp("_original_atom_id", orig_id)
 
@@ -713,6 +726,7 @@ class ComputeManager:
         # Accept either a string or (worker_id, message) tuple from the worker signal
         if isinstance(message, tuple) and len(message) == 2:
             worker_id, msg = message
+            self._worker_atom_properties.pop(worker_id, None)
             getattr(self, "_conversion_run_ids", set()).discard(worker_id)
             if worker_id not in self.active_worker_ids:
                 # Still cleanup overlay/buttons even if stale
