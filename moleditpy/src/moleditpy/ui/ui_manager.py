@@ -219,6 +219,8 @@ class UIManager(QObject):
         Handle application close logic.
         Returns True if close should proceed, False if it should be cancelled.
         """
+        if not self.host.edit_3d_manager.prepare_optimization_shutdown():
+            return False
         # 1. Persist settings
         try:
             modified = self.host.init_manager.settings_dirty or (

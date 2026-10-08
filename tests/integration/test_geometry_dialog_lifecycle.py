@@ -123,19 +123,20 @@ def test_constrained_optimization_only_commits_valid_private_result(
         assert len(window.edit_actions_manager.undo_stack) == history_size
         assert not window.state_manager.has_unsaved_changes
         redraw.assert_not_called()
+    worker.finished.emit()
     dialog.reject()
 
 
-def test_closing_running_optimization_joins_worker(window, monkeypatch):
+def test_closing_running_optimization_cancels_worker(window, monkeypatch, qtbot):
     """Closing a real running QThread cannot destroy a worker still minimizing."""
     mol = install_molecule(window, monkeypatch)
     original = mol.GetConformer().GetPositions().copy()
     dialog = ConstrainedOptimizationDialog(mol, window, parent=window)
     dialog.ff_combo.setCurrentText("UFF")
     dialog.apply_optimization()
-    worker = dialog._opt_thread
     dialog.reject()
-    assert not worker.isRunning()
+    qtbot.waitUntil(lambda: dialog._opt_thread is None, timeout=5000)
+    assert not window.edit_3d_manager._optimization_threads
     np.testing.assert_array_equal(mol.GetConformer().GetPositions(), original)
     assert not window.state_manager.has_unsaved_changes
 
@@ -154,7 +155,7 @@ def test_running_optimization_commits_on_gui_thread(window, monkeypatch, qtbot):
     assert not np.allclose(mol.GetConformer().GetPositions(), original)
     assert window.state_manager.has_unsaved_changes
     dialog.reject()
-    assert not dialog._opt_thread.isRunning()
+    qtbot.waitUntil(lambda: dialog._opt_thread is None, timeout=5000)
     window.edit_actions_manager.undo()
     np.testing.assert_allclose(
         window.current_mol.GetConformer().GetPositions(), original
@@ -191,17 +192,102 @@ def test_completed_optimization_can_restart_then_close(window, monkeypatch, qtbo
     dialog.ff_combo.setCurrentText("UFF")
     dialog.apply_optimization()
     first_worker = dialog._opt_thread
-    qtbot.waitUntil(lambda: dialog.optimize_button.isEnabled(), timeout=5000)
-    first_worker.wait()
+    assert first_worker.wait(5000)
+    held = []
+    monkeypatch.setattr(
+        ConstrainedOptimizationThread, "start", lambda worker: held.append(worker)
+    )
     dialog.apply_optimization()
     second_worker = dialog._opt_thread
     assert second_worker is not first_worker
+    qtbot.waitUntil(
+        lambda: first_worker not in window.edit_3d_manager._optimization_threads,
+        timeout=5000,
+    )
+    assert len(window.edit_actions_manager.undo_stack) == 1
+    assert dialog._opt_thread is second_worker
     dialog.reject()
-    assert not second_worker.isRunning()
     positions = mol.GetConformer().GetPositions().copy()
     history = list(window.edit_actions_manager.undo_stack)
     dialog.apply_optimization()
     assert dialog._opt_thread is second_worker
-    assert not second_worker.isRunning()
     np.testing.assert_array_equal(mol.GetConformer().GetPositions(), positions)
     assert window.edit_actions_manager.undo_stack == history
+    assert held == [second_worker]
+    second_worker.run()
+    second_worker.finished.emit()
+    qtbot.waitUntil(lambda: dialog._opt_thread is None, timeout=5000)
+
+
+@pytest.mark.parametrize(
+    "action", ["close", "delete_on_close", "undo", "application_close"]
+)
+def test_slow_optimization_close_keeps_gui_responsive_and_worker_alive(
+    window, monkeypatch, qtbot, action
+):
+    """A blocked minimization cannot freeze close/undo or die with its dialog."""
+    from threading import Event
+    from PyQt6 import sip
+    from PyQt6.QtCore import Qt, QTimer
+    from PyQt6.QtGui import QCloseEvent
+    from rdkit.Chem import rdForceFieldHelpers
+
+    mol = install_molecule(window, monkeypatch)
+    original = mol.GetConformer().GetPositions().copy()
+    if action == "undo":
+        mol.GetConformer().SetAtomPosition(0, (10, 20, 30))
+        window.edit_actions_manager.push_undo_state()
+    entered = Event()
+    release = Event()
+    pulse = Event()
+    ff = MagicMock()
+
+    def slow_minimization(maxIts):
+        entered.set()
+        if not release.wait(timeout=5):
+            raise RuntimeError("test did not release minimization")
+        return 0
+
+    ff.Minimize.side_effect = slow_minimization
+    monkeypatch.setattr(
+        rdForceFieldHelpers, "UFFGetMoleculeForceField", lambda *a, **k: ff
+    )
+    dialog = ConstrainedOptimizationDialog(mol, window, parent=window)
+    window.dialog_manager._open_3d_edit_dialog(dialog)
+    dialog.ff_combo.setCurrentText("UFF")
+    dialog.apply_optimization()
+    worker = dialog._opt_thread
+    retry_close = MagicMock()
+    try:
+        qtbot.waitUntil(entered.is_set, timeout=5000)
+        assert worker.parent() is window
+        if action == "delete_on_close":
+            dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+            dialog.close()
+            qtbot.waitUntil(lambda: sip.isdeleted(dialog), timeout=1000)
+        elif action == "undo":
+            window.edit_actions_manager.undo()
+        elif action == "application_close":
+            monkeypatch.setattr(window, "close", retry_close)
+            assert not window.ui_manager.handle_close_event(QCloseEvent())
+            retry_close.assert_not_called()
+        else:
+            dialog.close()
+        assert worker.isRunning()
+        assert worker in window.edit_3d_manager._optimization_threads
+        QTimer.singleShot(0, pulse.set)
+        qtbot.waitUntil(pulse.is_set, timeout=500)
+    finally:
+        release.set()
+        qtbot.waitUntil(
+            lambda: not window.edit_3d_manager._optimization_threads, timeout=5000
+        )
+    if action == "undo":
+        np.testing.assert_allclose(
+            window.current_mol.GetConformer().GetPositions(), original
+        )
+    else:
+        np.testing.assert_array_equal(mol.GetConformer().GetPositions(), original)
+        assert not window.state_manager.has_unsaved_changes
+    if action == "application_close":
+        qtbot.waitUntil(lambda: retry_close.call_count == 1, timeout=1000)

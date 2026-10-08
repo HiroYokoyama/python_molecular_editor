@@ -13,7 +13,7 @@ All notable changes to this project are recorded here. The format follows
 ### Fixed
 
 - Close molecule-bound geometry dialogs when undo, redo, import, or a calculation replaces their molecule, preventing obsolete geometry from being drawn or saved.
-- Run constrained optimization on a private molecule copy; discard canceled or stale results, join interrupted workers safely, and record accepted coordinates in undo history.
+- Run constrained optimization on a private molecule copy; discard canceled or stale results, retain interrupted workers until they finish without blocking dialog close or undo, and record accepted coordinates in undo history. Application close waits asynchronously for pending minimization.
 - Cancel deferred geometry label and rendering refreshes when their dialog closes.
 - Fuse templates using the actual directional wedge/dash bond key and roll back partial template edits when insertion fails.
 - Use RDKit's supported bounds-matrix embedding API when the initial 3D embedding fails.
@@ -23,7 +23,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Tests & CI
 
-- Add 37 regression cases for import cancellation and undo baselines, restored connectivity, scene reset, RDKit fallback embedding, stale geometry dialogs, constrained optimization cancellation and worker lifetime, and transactional template insertion. Include real deferred refresh callbacks, mirror invalidation, optimization restart, duplicate-start prevention, and interruption between minimization chunks.
+- Add 41 regression cases for import cancellation and undo baselines, restored connectivity, scene reset, RDKit fallback embedding, stale geometry dialogs, constrained optimization cancellation and worker lifetime, and transactional template insertion. Include real deferred refresh callbacks, mirror invalidation, optimization restart, duplicate-start prevention, interruption between minimization chunks, and responsive close/undo with a blocked worker, including dialog destruction and deferred application shutdown.
 
 ### Documentation
 

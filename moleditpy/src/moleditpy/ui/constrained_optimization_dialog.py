@@ -14,7 +14,7 @@ import logging
 from typing import Any, Optional
 
 import numpy as np
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -88,6 +88,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self._closed = False
         self._invalidated = False
         self._optimization_baseline: Optional[np.ndarray] = None
+        self._optimization_method = ""
         self.init_ui()
         self.enable_picking()
 
@@ -523,7 +524,6 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         if self._opt_thread is not None:
             if self._opt_thread.isRunning():
                 return
-            self._opt_thread.deleteLater()
             self._opt_thread = None
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(self, "Error", "No valid 3D molecule found.")
@@ -531,7 +531,6 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
         ff_name = self.ff_combo.currentText()
         optimization_mol = Chem.Mol(self.mol)
-        conf = optimization_mol.GetConformer()
         self._optimization_baseline = self.mol.GetConformer().GetPositions().copy()
 
         try:
@@ -622,17 +621,36 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             self.optimize_button.setEnabled(False)
 
             self._opt_thread = ConstrainedOptimizationThread(
-                ff, 20000, self, mol=optimization_mol
+                ff, 20000, mol=optimization_mol
             )
-            self._opt_thread.optimization_finished.connect(
-                lambda: self._on_optimization_finished(ff_name, conf)
-            )
+            self._optimization_method = ff_name
+            self._opt_thread.optimization_finished.connect(self._on_worker_result)
             self._opt_thread.error_occurred.connect(self._on_optimization_error)
+            self._opt_thread.finished.connect(self._on_worker_finished)
+            self.main_window.edit_3d_manager.register_optimization_thread(
+                self._opt_thread
+            )
             self._opt_thread.start()
 
         except Exception as e:
             logging.exception("Failed to start optimization: %s", e)
             self.optimize_button.setEnabled(True)
+
+    @pyqtSlot()
+    def _on_worker_result(self) -> None:
+        """Receive a private conformer on the GUI thread while the dialog exists."""
+        thread = self._opt_thread
+        if thread is None or self.sender() is not thread or thread.mol is None:
+            return
+        self._on_optimization_finished(
+            self._optimization_method, thread.mol.GetConformer()
+        )
+
+    @pyqtSlot()
+    def _on_worker_finished(self) -> None:
+        """Drop the completed worker reference before its owner deletes it."""
+        if self.sender() is self._opt_thread:
+            self._opt_thread = None
 
     def _on_optimization_error(self, err_msg: str) -> None:
         """Handle optimization thread failure callback."""
@@ -753,7 +771,6 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         self._closed = True
         if self._opt_thread is not None:
             self._opt_thread.requestInterruption()
-            self._opt_thread.wait()
         self.clear_constraint_labels()
         self.clear_selection_labels()
         self.disable_picking()

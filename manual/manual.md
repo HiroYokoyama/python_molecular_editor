@@ -330,7 +330,7 @@ Geometry dialogs close when Undo, Redo, importing a document, or a calculation r
 
 This is an advanced feature that performs a molecular structure optimization (force field calculation) while keeping the values of specific atomic distances, angles, or dihedral angles fixed (constrained).
 
-Closing the dialog while optimization is running discards its result without changing the molecule's coordinates. A result is also discarded if the molecule or its geometry changes before completion. Accepted results can be undone. Closing the dialog normally keeps changes made to the constraint list.
+Closing the dialog while optimization is running discards its result without changing the molecule's coordinates. A result is also discarded if the molecule or its geometry changes before completion. Accepted results can be undone. Closing the dialog normally keeps changes made to the constraint list. Closing a running optimization stays responsive; application shutdown completes after the worker exits.
 
   * **Adding Constraints:**
     1.  Select `3D Edit` \> `Constrained Optimization...` to open the dialog.

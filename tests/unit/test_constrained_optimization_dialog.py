@@ -1162,4 +1162,4 @@ def test_running_optimization_cannot_start_duplicate_worker(make_dialog, qtbot):
     finally:
         release.set()
         dlg.reject()
-    assert not thread.isRunning()
+    assert thread.wait(1000)
