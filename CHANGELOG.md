@@ -8,6 +8,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- Use RDKit's supported bounds-matrix embedding API when the initial 3D embedding fails.
 - Honor unsaved-change cancellation for XYZ file and text imports; viewer-only XYZ and MOL/SDF imports now initialize undo history with the imported geometry.
 - Rebuild atom connectivity when restoring undo states or projects, including isolated atoms.
 - Release deleted 2D scene items and drag references when clearing or replacing a document.

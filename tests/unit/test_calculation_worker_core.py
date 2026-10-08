@@ -38,6 +38,34 @@ def test_calculation_worker_init(worker):
     assert not getattr(worker, "halt_all", False)
 
 
+def test_rdkit_fallback_embedding_uses_real_bounds_api(worker, monkeypatch):
+    """Force the first embedding to fail, then embed with real RDKit bounds."""
+    from unittest.mock import MagicMock
+    from rdkit.Chem import rdDistGeom
+
+    mol = Chem.AddHs(Chem.MolFromSmiles("CC"))
+    embed = rdDistGeom.EmbedMolecule
+    calls = []
+
+    def fail_once(candidate, params):
+        calls.append(params)
+        return -1 if len(calls) == 1 else embed(candidate, params)
+
+    monkeypatch.setattr(rdDistGeom, "EmbedMolecule", fail_once)
+    finished = MagicMock()
+    success = worker._run_rdkit_workflow(
+        mol,
+        {},
+        {"worker_id": 157, "optimization_method": "UFF_RDKIT"},
+        {"check_halted": lambda: False, "status": lambda _: None, "finished": finished},
+    )
+    assert success
+    assert len(calls) == 2
+    assert mol.GetNumConformers() == 1
+    assert np.isfinite(mol.GetConformer().GetPositions()).all()
+    finished.assert_called_once_with((157, mol))
+
+
 def test_calculation_worker_explicit_stereo_m_cfg(worker):
     """M CFG stereo block in V2000 molfile is preserved through direct conversion."""
     mol_block = """

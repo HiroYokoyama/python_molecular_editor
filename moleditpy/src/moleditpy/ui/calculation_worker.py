@@ -1016,7 +1016,8 @@ class CalculationWorker(QObject):
                         t = 3.0 if s == Chem.BondStereo.STEREOZ else 5.0
                         bm[satoms[0]][satoms[1]] = bm[satoms[1]][satoms[0]] = t
                 DoTriangleSmoothing(bm)
-                conf_id = rdDistGeom.EmbedMolecule(mol, bm, params)
+                params.SetBoundsMat(bm)
+                conf_id = rdDistGeom.EmbedMolecule(mol, params)
 
         if conf_id == -1:
             return False
