@@ -12,7 +12,8 @@ DOI: 10.5281/zenodo.17268532
 
 from __future__ import annotations
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+import copy
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from PyQt6.QtCore import QEvent, QLineF, Qt, QPointF
 from PyQt6.QtGui import QPen
@@ -302,6 +303,34 @@ class MoleculeScene(
         for atom_item in self.atom_items.values():
             atom_item.update_style()
         self.update_all_items()
+
+    def add_molecule_fragment(
+        self,
+        points: List[Union[QPointF, Tuple[float, float]]],
+        bonds_info: List[Tuple[int, int, int]],
+        existing_items: Optional[List[AtomItem]] = None,
+        symbol: str = "C",
+    ) -> List[Optional[AtomItem]]:
+        """Insert a template, restoring model and scene if a Qt/model write fails."""
+        atoms = copy.deepcopy(self.data.atoms)
+        bonds = copy.deepcopy(self.data.bonds)
+        next_atom_id = self.data.next_atom_id
+        selected_ids = {i for i, item in self.atom_items.items() if item.isSelected()}
+        try:
+            return super().add_molecule_fragment(
+                points, bonds_info, existing_items, symbol
+            )
+        except (RuntimeError, ValueError, TypeError, KeyError, IndexError):
+            logging.exception("Template insertion failed; restoring the previous scene")
+            self.clear()
+            self.data.atoms.clear()
+            self.data.bonds.clear()
+            self.data.next_atom_id = next_atom_id
+            self.reinitialize_items()
+            self.restore_atoms_and_bonds(atoms, bonds)
+            for atom_id in selected_ids:
+                self.atom_items[atom_id].setSelected(True)
+            raise
 
     def clear(self) -> None:
         """Release item and interaction references before Qt deletes the scene."""

@@ -445,10 +445,10 @@ class TemplateMixin:
                     # policy, so an unchanged order means keep this bond
                     if order == exist_b.order:
                         continue
+                    key = (id1, id2) if (id1, id2) in self.data.bonds else (id2, id1)
+                    self.data.bonds[key].update(order=order, stereo=0)
                     exist_b.order = order
                     exist_b.stereo = 0
-                    self.data.bonds[(id1, id2)]["order"] = order
-                    self.data.bonds[(id1, id2)]["stereo"] = 0
                     exist_b.update()
                 else:
                     # Create new bond
