@@ -6,24 +6,27 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+---
+
+## [4.11.3] - 2026-10-08
+
 ### Security
 
 - Reject unsafe plugin ZIP member paths and symbolic links before cleanup or extraction, and confine installation paths to the selected plugin directory.
 
-### Tests & CI
-
-- Add full-range rotation and saved-document undo/redo regressions, and verify GUI project saving against a real temporary file.
-
 ### Fixed
 
+- Undo and redo now mark the document as modified and update its title, so changing history after a save cannot bypass the unsaved-changes warning.
+- Project JSON saves now use an atomic replacement, preserving existing files if serialization, writing, or replacement fails.
 - The 2D rotation slider now supports the same ±360° range as the spinbox, preventing angles beyond ±180° from being clamped.
 
-- Project JSON saves now use an atomic replacement, preserving existing files if serialization, writing, or replacement fails.
+### Tests & CI
 
-- Undo and redo now mark the document as modified and update its title, so changing history after a save cannot bypass the unsaved-changes warning.
+- Add plugin archive security regressions, full-range rotation and saved-document undo/redo regressions, and verify GUI project saving against a real temporary file.
 
+### Documentation
 
-
+- Record GPT-6 Astra and GPT-6.1 Sol assistance in `docs/AI_USAGE.md`.
 
 ---
 
