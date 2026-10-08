@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- Reject unsafe plugin ZIP member paths and symbolic links before cleanup or extraction, and confine installation paths to the selected plugin directory.
+
 ### Fixed
 
 - The 2D rotation slider now supports the same ±360° range as the spinbox, preventing angles beyond ±180° from being clamped.
