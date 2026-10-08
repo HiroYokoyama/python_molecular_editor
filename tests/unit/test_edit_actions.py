@@ -1218,3 +1218,34 @@ def test_update_implicit_hydrogens_empty_is_noop(mock_parser_host):
         editor.update_implicit_hydrogens()
 
     single_shot.assert_not_called()
+
+
+@pytest.mark.parametrize("action", ["undo", "redo"])
+def test_history_change_after_save_marks_document_dirty(mock_parser_host, action):
+    """Changing history after saving must restore the unsaved-work warning."""
+    host = mock_parser_host
+    host.state_manager.has_unsaved_changes = False
+    host.set_has_unsaved_changes.side_effect = lambda value: setattr(
+        host.state_manager, "has_unsaved_changes", value
+    )
+    manager = EditActionsManager(host)
+    manager.undo_stack = ["before", "saved"] if action == "undo" else ["saved"]
+    manager.redo_stack = ["after"] if action == "redo" else []
+
+    getattr(manager, action)()
+
+    assert host.state_manager.has_unsaved_changes is True
+    host.state_manager.update_window_title.assert_called_once()
+
+
+@pytest.mark.parametrize("action", ["undo", "redo"])
+def test_history_noop_preserves_saved_status(mock_parser_host, action):
+    host = mock_parser_host
+    manager = EditActionsManager(host)
+    manager.undo_stack = ["saved"]
+    manager.redo_stack = []
+
+    getattr(manager, action)()
+
+    host.set_has_unsaved_changes.assert_not_called()
+    host.state_manager.update_window_title.assert_not_called()

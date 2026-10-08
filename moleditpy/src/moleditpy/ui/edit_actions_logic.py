@@ -240,6 +240,9 @@ class EditActionsManager:
             finally:
                 self.host.is_restoring_state = False
 
+            self.host.set_has_unsaved_changes(True)
+            self.host.state_manager.update_window_title()
+
             # Re-evaluate menu states based on 3D structure after Undo
             if (
                 self.host.view_3d_manager.current_mol
@@ -264,6 +267,9 @@ class EditActionsManager:
                 self.host.state_manager.set_state_from_data(state)
             finally:
                 self.host.is_restoring_state = False
+
+            self.host.set_has_unsaved_changes(True)
+            self.host.state_manager.update_window_title()
 
             # Re-evaluate menu states based on 3D structure after Redo
             if (
