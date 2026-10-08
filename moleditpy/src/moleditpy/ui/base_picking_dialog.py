@@ -63,6 +63,9 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         self.mol = mol
         self.main_window = main_window
         self._invalidated = False
+        self._geometry_refresh_timer = QTimer(self)
+        self._geometry_refresh_timer.setSingleShot(True)
+        self._geometry_refresh_timer.timeout.connect(self._refresh_geometry_display)
         self._molecule_modified = (
             False  # Track if any modifications were made during this session
         )
@@ -88,18 +91,21 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
 
     def closeEvent(self, event: Optional[QCloseEvent]) -> None:
         """Cleanup on window close."""
+        self._geometry_refresh_timer.stop()
         self.clear_atom_labels()
         self.disable_picking()
         super().closeEvent(event)
 
     def reject(self) -> None:
         """Cleanup on cancel."""
+        self._geometry_refresh_timer.stop()
         self.clear_atom_labels()
         self.disable_picking()
         super().reject()
 
     def accept(self) -> None:
         """Cleanup on OK."""
+        self._geometry_refresh_timer.stop()
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()
@@ -148,26 +154,25 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         self._molecule_modified = True
 
         # 4. Refresh display (deferred to ensure stability)
-        is_dragging = getattr(self, "_slider_dragging", False)
-
-        if is_dragging and hasattr(self, "show_atom_labels"):
-            QTimer.singleShot(
-                200, lambda: self.show_atom_labels() if not self._invalidated else None
-            )
-        elif hasattr(self, "update_display"):
-            QTimer.singleShot(
-                200, lambda: self.update_display() if not self._invalidated else None
-            )
-
-        plotter = self.main_window.view_3d_manager.plotter
-        if plotter is not None:
-            QTimer.singleShot(
-                200,
-                lambda: plotter.render() if not self._invalidated else None,
-            )
+        self._geometry_refresh_timer.start(200)
 
         # 5. Refresh chiral/cis-trans labels if applicable
         self.main_window.view_3d_manager.update_chiral_labels()
+
+    def _refresh_geometry_display(self) -> None:
+        """Refresh labels and rendering while this dialog still owns its molecule."""
+        if self._invalidated:
+            return
+        is_dragging = getattr(self, "_slider_dragging", False)
+
+        if is_dragging and hasattr(self, "show_atom_labels"):
+            self.show_atom_labels()
+        elif hasattr(self, "update_display"):
+            self.update_display()
+
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is not None:
+            plotter.render()
 
     def _push_undo(self) -> None:
         """Centralized undo logic to push current state to the undo stack."""

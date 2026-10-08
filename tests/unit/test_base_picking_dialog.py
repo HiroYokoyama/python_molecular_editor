@@ -245,3 +245,17 @@ def test_done_skips_undo_if_not_modified(app):
     ):
         dlg.done(0)
     mock_undo.assert_not_called()
+
+
+@pytest.mark.parametrize("finish", ["reject", "accept", "close", "invalidate_molecule"])
+def test_closing_dialog_cancels_deferred_geometry_refresh(app, qtbot, finish):
+    """Queued label/render updates cannot outlive the dialog's editing session."""
+    dlg, mol, mw = _make_dlg(app)
+    dlg.update_display = MagicMock()
+    dlg._update_molecule_geometry(mol.GetConformer().GetPositions() + 1)
+    assert dlg._geometry_refresh_timer.isActive()
+    getattr(dlg, finish)()
+    assert not dlg._geometry_refresh_timer.isActive()
+    qtbot.wait(220)
+    dlg.update_display.assert_not_called()
+    mw.view_3d_manager.plotter.render.assert_not_called()

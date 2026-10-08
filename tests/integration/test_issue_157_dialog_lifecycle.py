@@ -134,3 +134,24 @@ def test_closing_running_optimization_joins_worker(window, monkeypatch):
     assert not worker.isRunning()
     np.testing.assert_array_equal(mol.GetConformer().GetPositions(), original)
     assert not window.state_manager.has_unsaved_changes
+
+
+def test_running_optimization_commits_on_gui_thread(window, monkeypatch, qtbot):
+    """An actual QThread result is applied and undoable through the Qt event loop."""
+    mol = install_molecule(window, monkeypatch)
+    original = mol.GetConformer().GetPositions().copy()
+    dialog = ConstrainedOptimizationDialog(mol, window, parent=window)
+    window.dialog_manager._open_3d_edit_dialog(dialog)
+    dialog.ff_combo.setCurrentText("UFF")
+    dialog.apply_optimization()
+    qtbot.waitUntil(
+        lambda: len(window.edit_actions_manager.undo_stack) == 2, timeout=5000
+    )
+    assert not np.allclose(mol.GetConformer().GetPositions(), original)
+    assert window.state_manager.has_unsaved_changes
+    dialog.reject()
+    assert not dialog._opt_thread.isRunning()
+    window.edit_actions_manager.undo()
+    np.testing.assert_allclose(
+        window.current_mol.GetConformer().GetPositions(), original
+    )
