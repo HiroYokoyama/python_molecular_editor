@@ -16,8 +16,10 @@ import hashlib
 import importlib.util
 import json
 import logging
+import ntpath
 import os
 import shutil
+import stat
 import sys
 import zipfile
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -164,6 +166,88 @@ class PluginManager:
         self.ensure_plugin_dir()
         QDesktopServices.openUrl(QUrl.fromLocalFile(self.plugin_dir))
 
+    @staticmethod
+    def _safe_install_path(root: str, name: str) -> str:
+        """Resolve a portable relative path strictly within an install directory."""
+        normalized = name.replace("\\", "/").rstrip("/")
+        parts = normalized.split("/")
+        reserved = {"CON", "PRN", "AUX", "NUL"} | {
+            f"{prefix}{number}" for prefix in ("COM", "LPT") for number in range(1, 10)
+        }
+        if (
+            not normalized
+            or normalized.startswith("/")
+            or ntpath.splitdrive(normalized)[0]
+            or any(
+                part in ("", ".", "..")
+                or part.endswith((".", " "))
+                or any(char in part for char in '<>:"|?*\0')
+                or part.split(".")[0].upper() in reserved
+                for part in parts
+            )
+        ):
+            raise ValueError(f"Unsafe plugin path: {name!r}")
+        destination = os.path.abspath(os.path.join(root, *parts))
+        resolved_root = os.path.normcase(os.path.realpath(root))
+        resolved_destination = os.path.normcase(os.path.realpath(destination))
+        if (
+            resolved_destination == resolved_root
+            or os.path.commonpath([resolved_root, resolved_destination])
+            != resolved_root
+        ):
+            raise ValueError(f"Plugin path escapes install directory: {name!r}")
+        return destination
+
+    def _install_zip(self, file_path: str, filename: str) -> str:
+        """Validate every archive member before removing or writing plugin files."""
+        with zipfile.ZipFile(file_path, "r") as archive:
+            members = []
+            for member in archive.infolist():
+                self._safe_install_path(self.plugin_dir, member.orig_filename)
+                if stat.S_ISLNK(member.external_attr >> 16):
+                    raise ValueError(
+                        "Plugin ZIP archives cannot contain symbolic links"
+                    )
+                members.append((member, member.filename.replace("\\", "/")))
+            if not members:
+                raise ValueError("Plugin ZIP archive is empty")
+
+            roots = {name.split("/")[0] for _, name in members}
+            nested = (
+                len(roots) == 1
+                and any("/" in name for _, name in members)
+                and next(iter(roots)) != "__init__.py"
+            )
+            folder = next(iter(roots)) if nested else os.path.splitext(filename)[0]
+            destination = self._safe_install_path(self.plugin_dir, folder)
+            relative_members = [
+                (member, name.partition("/")[2] if nested else name)
+                for member, name in members
+            ]
+            # Validate against the package boundary as well as the plugin root.
+            for _, name in relative_members:
+                if name:
+                    self._safe_install_path(destination, name)
+
+            if os.path.exists(destination):
+                if os.path.isdir(destination):
+                    shutil.rmtree(destination)
+                else:
+                    os.remove(destination)
+            os.makedirs(destination)
+            for member, name in relative_members:
+                if not name:
+                    continue
+                target = self._safe_install_path(destination, name)
+                if name.endswith("/"):
+                    os.makedirs(target, exist_ok=True)
+                else:
+                    os.makedirs(os.path.dirname(target), exist_ok=True)
+                    with archive.open(member) as source, open(target, "wb") as output:
+                        shutil.copyfileobj(source, output)
+            kind = "ZIP" if nested else "Flat ZIP"
+            return f"Installed package {folder} (from {kind})"
+
     def install_plugin(self, file_path: str) -> Tuple[bool, str]:
         """Copies a plugin file to the plugin directory. Supports .py and .zip."""
         self.ensure_plugin_dir()
@@ -174,7 +258,7 @@ class PluginManager:
 
             if os.path.isdir(file_path):
                 # Copy entire directory
-                dest_path = os.path.join(self.plugin_dir, filename)
+                dest_path = self._safe_install_path(self.plugin_dir, filename)
                 if os.path.exists(dest_path):
                     # Option 1: Overwrite (remove then copy) - safer for clean install
                     if os.path.isdir(dest_path):
@@ -190,63 +274,10 @@ class PluginManager:
                 )
                 msg = f"Installed package {filename}"
             elif filename.lower().endswith(".zip"):
-                # Extract ZIP contents
-                with zipfile.ZipFile(file_path, "r") as zf:
-                    # Smart Extraction: Check if ZIP has a single top-level folder
-                    # Fix for paths with backslashes on Windows if zip was created on Windows
-                    roots = set()
-                    root_is_dir = False
-                    for name in zf.namelist():
-                        # Normalize path separators to forward slash for consistent check
-                        name = name.replace("\\", "/")
-                        parts = name.split("/")
-                        if parts[0]:
-                            roots.add(parts[0])
-                            # Sub-entries prove the root is a folder
-                            if len(parts) > 1:
-                                root_is_dir = True
-
-                    is_nested = len(roots) == 1 and root_is_dir
-
-                    if is_nested:
-                        # Case A: ZIP contains a single folder (e.g. MyPlugin/init.py)
-                        top_folder = list(roots)[0]
-
-                        # A root named __init__.py always needs a wrapper folder
-                        if top_folder == "__init__.py":
-                            is_nested = False
-
-                    if is_nested:
-                        # Case A (Confirmed): Extract directly
-                        dest_path = os.path.join(self.plugin_dir, top_folder)
-
-                        # Clean Install: Remove existing folder to prevent stale files
-                        if os.path.exists(dest_path):
-                            if os.path.isdir(dest_path):
-                                shutil.rmtree(dest_path)
-                            else:
-                                os.remove(dest_path)
-
-                        zf.extractall(self.plugin_dir)
-                        msg = f"Installed package {top_folder} (from ZIP)"
-                    else:
-                        # Case B: ZIP is flat (e.g. file1.py, file2.py or just __init__.py)
-                        # Extract into a new folder named after the ZIP file
-                        folder_name = os.path.splitext(filename)[0]
-                        dest_path = os.path.join(self.plugin_dir, folder_name)
-
-                        if os.path.exists(dest_path):
-                            if os.path.isdir(dest_path):
-                                shutil.rmtree(dest_path)
-                            else:
-                                os.remove(dest_path)
-
-                        os.makedirs(dest_path)
-                        zf.extractall(dest_path)
-                        msg = f"Installed package {folder_name} (from Flat ZIP)"
+                msg = self._install_zip(file_path, filename)
             else:
                 # Standard file copy
-                dest_path = os.path.join(self.plugin_dir, filename)
+                dest_path = self._safe_install_path(self.plugin_dir, filename)
                 if os.path.exists(dest_path):
                     if os.path.isdir(dest_path):
                         shutil.rmtree(dest_path)
@@ -265,7 +296,9 @@ class PluginManager:
             OSError,
             ImportError,
             SyntaxError,
+            zipfile.BadZipFile,
         ) as e:
+            logging.warning("Plugin installation failed: %s", e, exc_info=True)
             return False, str(e)
 
     def discover_plugins(self, parent: Any = None) -> List[Dict[str, Any]]:
