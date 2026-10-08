@@ -40,15 +40,6 @@ Every change was reviewed by the author before being committed. Design decisions
 
 ---
 
-## 4.11.3 Patch Assistance (2026-10-08)
-
-- **GPT-6 Astra:** investigated and fixed undo/redo save warnings, failed JSON saves, and the 2D rotation angle range; authored initial regression tests and performed the security scan.
-- **GPT-6.1 Sol:** fixed unsafe plugin ZIP installation paths, expanded regression coverage, ran the headless test suite, and prepared the patch version and pull request documentation.
-
-Commit messages record the assisting model with an `assisted-by` trailer.
-
----
-
 ## Maintenance
 
 Add new tools and models here as they are used.
