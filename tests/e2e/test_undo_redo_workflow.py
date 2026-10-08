@@ -88,3 +88,31 @@ def test_undo_stack_capped_e2e(window):
     # Newest state is the last position pushed
     newest = mgr.undo_stack[-1]["atoms"][aid]["pos"]
     assert tuple(newest) == pytest.approx((float(UNDO_STACK_MAX_DEPTH + 5), 0.0))
+
+
+@pytest.mark.gui
+def test_saved_document_becomes_dirty_after_undo_and_redo(window, tmp_path):
+    """Real saves followed by history changes must re-enable save warnings."""
+    manager = window.edit_actions_manager
+    scene = window.init_manager.scene
+    scene.create_atom("C", QPointF(0, 0))
+    manager.reset_history()
+    scene.create_atom("O", QPointF(50, 0))
+    manager.push_undo_state()
+    window.set_current_file_path(str(tmp_path / "history.pmeprj"))
+
+    window.io_manager.save_project()
+    assert window.state_manager.has_unsaved_changes is False
+    assert not window.windowTitle().startswith("*")
+
+    manager.undo()
+    assert len(window.data.atoms) == 1
+    assert window.state_manager.has_unsaved_changes is True
+    assert window.windowTitle().startswith("*")
+
+    window.io_manager.save_project()
+    assert window.state_manager.has_unsaved_changes is False
+    manager.redo()
+    assert len(window.data.atoms) == 2
+    assert window.state_manager.has_unsaved_changes is True
+    assert window.windowTitle().startswith("*")

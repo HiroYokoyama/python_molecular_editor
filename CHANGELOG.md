@@ -10,6 +10,10 @@ All notable changes to this project are recorded here. The format follows
 
 - Reject unsafe plugin ZIP member paths and symbolic links before cleanup or extraction, and confine installation paths to the selected plugin directory.
 
+### Tests & CI
+
+- Add full-range rotation and saved-document undo/redo regressions, and verify GUI project saving against a real temporary file.
+
 ### Fixed
 
 - The 2D rotation slider now supports the same ±360° range as the spinbox, preventing angles beyond ±180° from being clamped.

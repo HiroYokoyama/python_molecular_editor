@@ -1249,3 +1249,25 @@ def test_history_noop_preserves_saved_status(mock_parser_host, action):
 
     host.set_has_unsaved_changes.assert_not_called()
     host.state_manager.update_window_title.assert_not_called()
+
+
+@pytest.mark.parametrize("angle", [-360, -270, -181, 181, 270, 360])
+@pytest.mark.parametrize("control", ["angle_spin", "slider"])
+def test_rotation_controls_preserve_full_angle_range(app, angle, control):
+    dialog = Rotate2DDialog()
+    try:
+        getattr(dialog, control).setValue(angle)
+        assert dialog.get_angle() == angle
+        assert dialog.slider.value() == angle
+    finally:
+        dialog.destroy()
+
+
+@pytest.mark.parametrize("angle", [-360, -270, 270, 360])
+def test_rotation_dialog_restores_large_initial_angle(app, angle):
+    dialog = Rotate2DDialog(initial_angle=angle)
+    try:
+        assert dialog.get_angle() == angle
+        assert dialog.slider.value() == angle
+    finally:
+        dialog.destroy()
