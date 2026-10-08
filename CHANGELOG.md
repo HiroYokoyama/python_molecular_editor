@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+---
+
+## [4.11.3] - 2026-10-08
+
 ### Security
 
 - Reject unsafe plugin ZIP member paths and symbolic links before cleanup or extraction, and confine installation paths to the selected plugin directory.
