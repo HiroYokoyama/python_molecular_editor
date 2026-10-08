@@ -93,7 +93,7 @@ class Rotate2DDialog(QDialog):
 
         # Slider
         self.slider = QSlider(Qt.Orientation.Horizontal)
-        self.slider.setRange(-180, 180)
+        self.slider.setRange(-360, 360)
         self.slider.setValue(int(initial_angle))
         self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.slider.setTickInterval(15)
