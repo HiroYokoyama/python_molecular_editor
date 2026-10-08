@@ -6,6 +6,11 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Rebuild atom connectivity when restoring undo states or projects, including isolated atoms.
+- Release deleted 2D scene items and drag references when clearing or replacing a document.
+
 ---
 
 ## [4.11.3] - 2026-10-08

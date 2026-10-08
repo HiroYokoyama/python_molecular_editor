@@ -216,6 +216,7 @@ class MoleculeScene(
         self, raw_atoms: Dict[int, Any], raw_bonds: Dict[Tuple[int, int], Any]
     ) -> None:
         """Restore scene items from undo/redo state (dict-of-dicts format)."""
+        self.data.adjacency_list = {atom_id: [] for atom_id in raw_atoms}
         for atom_id, data in raw_atoms.items():
             raw_pos = tuple(data["pos"])
             pos_q = QPointF(raw_pos[0], raw_pos[1])
@@ -245,6 +246,8 @@ class MoleculeScene(
                     "order": data.get("order", 1),
                     "stereo": data.get("stereo", 0),
                 }
+                self.data.adjacency_list[id1].append(id2)
+                self.data.adjacency_list[id2].append(id1)
                 self.bond_items[key_tuple] = bond_item
                 atom1_item.bonds.append(bond_item)
                 atom2_item.bonds.append(bond_item)
@@ -258,6 +261,7 @@ class MoleculeScene(
         self, atoms_2d: List[Dict[str, Any]], bonds_2d: List[Dict[str, Any]]
     ) -> None:
         """Restore scene items from PMEPRJ JSON (list-of-dicts format)."""
+        self.data.adjacency_list = {atom["id"]: [] for atom in atoms_2d}
         for atom_data in atoms_2d:
             atom_id = atom_data["id"]
             symbol = atom_data["symbol"]
@@ -290,12 +294,38 @@ class MoleculeScene(
                     "order": bond_order,
                     "stereo": stereo,
                 }
+                self.data.adjacency_list[atom1_id].append(atom2_id)
+                self.data.adjacency_list[atom2_id].append(atom1_id)
                 self.bond_items[(atom1_id, atom2_id)] = bond_item
                 self.addItem(bond_item)
 
         for atom_item in self.atom_items.values():
             atom_item.update_style()
         self.update_all_items()
+
+    def clear(self) -> None:
+        """Release item and interaction references before Qt deletes the scene."""
+        self.atom_items.clear()
+        self.bond_items.clear()
+        self._deleted_items.clear()
+        self.initial_positions_in_event.clear()
+        self.template_context.clear()
+        self.template_preview = None
+        self.template_preview_points = []
+        self.start_atom = None
+        self.temp_line = None
+        self.hovered_item = None
+        self.start_pos = None
+        self.press_pos = None
+        self.chain_start_atom = None
+        self.chain_end_atom = None
+        self.chain_anchor = None
+        self.chain_points = []
+        self.chain_active = False
+        self.data_changed_in_event = False
+        self.mouse_moved_since_press = False
+        self.was_selected_on_press = False
+        super().clear()
 
     def reinitialize_items(self) -> None:
         """Reset transient scene state including template preview and deleted-item list."""
