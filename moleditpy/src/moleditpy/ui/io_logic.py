@@ -16,6 +16,7 @@ import logging
 import os
 import json
 import pickle
+import tempfile
 import unicodedata
 from ..utils.suppress_log import suppress_log
 from typing import Any, Callable, List, Optional, Tuple
@@ -606,6 +607,33 @@ class IOManager:
 
         return len(bonds_added)
 
+    @staticmethod
+    def _write_project_json(file_path: str, data: dict[str, Any]) -> None:
+        """Replace a project only after its complete JSON has been written."""
+        destination = os.path.abspath(file_path)
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=os.path.dirname(destination),
+                prefix=f".{os.path.basename(destination)}.",
+                suffix=".tmp",
+                delete=False,
+            ) as stream:
+                temporary_path = stream.name
+                json.dump(data, stream, indent=2, ensure_ascii=False)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary_path, destination)
+            temporary_path = None
+        finally:
+            if temporary_path is not None:
+                try:
+                    os.unlink(temporary_path)
+                except OSError:
+                    logging.exception("Failed to remove temporary project file")
+
     def save_project(self) -> None:
         """Save (Ctrl+S) - Defaults to PMEPRJ format."""
         if (
@@ -627,8 +655,7 @@ class IOManager:
         if current_path and current_path.lower().endswith(".pmeprj"):
             try:
                 json_data = self.host.state_manager.create_json_data()
-                with open(current_path, "w", encoding="utf-8") as f:
-                    json.dump(json_data, f, indent=2, ensure_ascii=False)
+                self._write_project_json(current_path, json_data)
 
                 self.host.set_has_unsaved_changes(False)
                 self.host.state_manager.update_window_title()
@@ -669,8 +696,7 @@ class IOManager:
 
         try:
             json_data = self.host.state_manager.create_json_data()
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(json_data, f, indent=2, ensure_ascii=False)
+            self._write_project_json(file_path, json_data)
 
             self.host.set_has_unsaved_changes(False)
             self.host.set_current_file_path(file_path)
@@ -740,8 +766,7 @@ class IOManager:
                 file_path += ".pmeprj"
 
             json_data = self.host.state_manager.create_json_data()
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(json_data, f, indent=2, ensure_ascii=False)
+            self._write_project_json(file_path, json_data)
 
             self.host.set_has_unsaved_changes(False)
             self.host.set_current_file_path(file_path)

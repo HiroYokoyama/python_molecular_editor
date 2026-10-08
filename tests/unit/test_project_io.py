@@ -337,7 +337,10 @@ def test_save_project_io_error(mock_parser_host, tmp_path):
     io.host.init_manager.current_file_path = str(tmp_path / "readonly.pmeprj")
     io.host.state_manager.data.atoms = {1: "C"}
 
-    with patch("builtins.open", side_effect=IOError("Permission denied")):
+    with patch(
+        "moleditpy.ui.io_logic.tempfile.NamedTemporaryFile",
+        side_effect=IOError("Permission denied"),
+    ):
         with patch.object(
             io.host.state_manager,
             "create_json_data",
@@ -959,3 +962,62 @@ def test_load_raw_data_stops_when_clearing_is_refused(mock_parser_host, tmp_path
     ):
         io.load_raw_data(str(raw_file))
     apply_state.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "save_method", ["save_project", "save_project_as", "save_as_json"]
+)
+@pytest.mark.parametrize("failure", ["serialization", "write", "flush", "replace"])
+def test_failed_json_save_preserves_existing_project(
+    mock_parser_host, tmp_path, monkeypatch, save_method, failure
+):
+    """All project save routes preserve the original across partial-write failures."""
+    import moleditpy.ui.io_logic as io_module
+
+    target = tmp_path / "existing.pmeprj"
+    original = b'{"format": "PME Project", "note": "original"}'
+    target.write_bytes(original)
+    host = mock_parser_host
+    host.init_manager.current_file_path = str(target)
+    host.state_manager.data.atoms = {0: {"symbol": "C"}}
+    host.state_manager.has_unsaved_changes = True
+    host.state_manager.create_json_data.side_effect = None
+    host.state_manager.create_json_data.return_value = {"format": "PME Project"}
+    monkeypatch.setattr(
+        io_module.QFileDialog, "getSaveFileName", lambda *a: (str(target), "")
+    )
+
+    def fail_write(data, stream, **kwargs):
+        stream.write('{"partial":')
+        raise OSError("Disk full")
+
+    def fail_io(*args):
+        raise OSError("Simulated I/O failure")
+
+    if failure == "serialization":
+        host.state_manager.create_json_data.return_value["plugins"] = {"bad": object()}
+    elif failure == "write":
+        monkeypatch.setattr(io_module.json, "dump", fail_write)
+    elif failure == "flush":
+        monkeypatch.setattr(io_module.os, "fsync", fail_io)
+    else:
+        monkeypatch.setattr(io_module.os, "replace", fail_io)
+
+    getattr(IOManager(host), save_method)()
+
+    assert target.read_bytes() == original
+    assert list(tmp_path.iterdir()) == [target]
+    assert host.state_manager.has_unsaved_changes is True
+    host.set_has_unsaved_changes.assert_not_called()
+    host.save_state_snapshot.assert_not_called()
+
+
+def test_atomic_json_save_replaces_project_and_cleans_temp_file(tmp_path):
+    target = tmp_path / "existing.pmeprj"
+    target.write_text("old project", encoding="utf-8")
+    data = {"format": "PME Project", "note": "分子", "atoms": [1, 2]}
+
+    IOManager._write_project_json(str(target), data)
+
+    assert json.loads(target.read_text(encoding="utf-8")) == data
+    assert list(tmp_path.iterdir()) == [target]
