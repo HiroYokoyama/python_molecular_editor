@@ -11,9 +11,10 @@ DOI: 10.5281/zenodo.17268532
 """
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+import numpy as np
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -28,6 +29,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QVBoxLayout,
 )
+from rdkit import Chem
 from rdkit.Chem import rdForceFieldHelpers, rdMolTransforms
 
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
@@ -40,18 +42,32 @@ class ConstrainedOptimizationThread(QThread):
     optimization_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, ff: Any, max_iters: int = 20000, parent: Any = None) -> None:
+    def __init__(
+        self,
+        ff: Any,
+        max_iters: int = 20000,
+        parent: Any = None,
+        mol: Optional[Chem.Mol] = None,
+    ) -> None:
         """Initialize constrained optimization worker thread."""
         super().__init__(parent)
         self.ff = ff
         self.max_iters = max_iters
+        # Keep the private conformer backing the force field alive during minimization.
+        self.mol = mol
 
     def run(self) -> None:
         """Execute force-field minimization and emit finished or error signal."""
         try:
-            self.ff.Minimize(maxIts=self.max_iters)
-            self.optimization_finished.emit()
+            for offset in range(0, self.max_iters, 200):
+                if self.isInterruptionRequested():
+                    return
+                if self.ff.Minimize(maxIts=min(200, self.max_iters - offset)) == 0:
+                    break
+            if not self.isInterruptionRequested():
+                self.optimization_finished.emit()
         except Exception as e:
+            logging.exception("Constrained minimization failed")
             self.error_occurred.emit(str(e))
 
 
@@ -62,14 +78,17 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         """Initialize constrained force field optimization dialog."""
         QDialog.__init__(self, parent)
         Dialog3DPickingMixin.__init__(self)
-        self.mol = mol
+        self.mol: Chem.Mol = mol
         self.main_window = main_window
         self.selected_atoms: list[int] = []  # Using a list because order matters
         self.constraints: list[Any] = []  # (type, atoms_indices, value)
         self.constraint_labels: list[Any] = []  # 3D label actors
-        self._opt_thread: Any = None
+        self._opt_thread: Optional[ConstrainedOptimizationThread] = None
         # Closed dialogs must discard late optimization-thread results
         self._closed = False
+        self._invalidated = False
+        self._optimization_baseline: Optional[np.ndarray] = None
+        self._optimization_method = ""
         self.init_ui()
         self.enable_picking()
 
@@ -500,12 +519,19 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
     def apply_optimization(self) -> None:
         """Run force-field minimization with the configured constraints."""
+        if self._closed:
+            return
+        if self._opt_thread is not None:
+            if self._opt_thread.isRunning():
+                return
+            self._opt_thread = None
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(self, "Error", "No valid 3D molecule found.")
             return
 
         ff_name = self.ff_combo.currentText()
-        conf = self.mol.GetConformer()
+        optimization_mol = Chem.Mol(self.mol)
+        self._optimization_baseline = self.mol.GetConformer().GetPositions().copy()
 
         try:
             ignore_interfrag = not self.main_window.init_manager.settings.get(
@@ -513,10 +539,10 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             )
             if ff_name.startswith("MMFF"):
                 props = rdForceFieldHelpers.MMFFGetMoleculeProperties(
-                    self.mol, mmffVariant=ff_name
+                    optimization_mol, mmffVariant=ff_name
                 )
                 ff = rdForceFieldHelpers.MMFFGetMoleculeForceField(
-                    self.mol,
+                    optimization_mol,
                     props,
                     confId=0,
                     ignoreInterfragInteractions=ignore_interfrag,
@@ -526,7 +552,9 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
                 add_torsion_constraint = ff.MMFFAddTorsionConstraint
             else:  # UFF
                 ff = rdForceFieldHelpers.UFFGetMoleculeForceField(
-                    self.mol, confId=0, ignoreInterfragInteractions=ignore_interfrag
+                    optimization_mol,
+                    confId=0,
+                    ignoreInterfragInteractions=ignore_interfrag,
                 )
                 add_dist_constraint = ff.UFFAddDistanceConstraint
                 add_angle_constraint = ff.UFFAddAngleConstraint
@@ -592,16 +620,37 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
 
             self.optimize_button.setEnabled(False)
 
-            self._opt_thread = ConstrainedOptimizationThread(ff, 20000, self)
-            self._opt_thread.optimization_finished.connect(
-                lambda: self._on_optimization_finished(ff_name, conf)
+            self._opt_thread = ConstrainedOptimizationThread(
+                ff, 20000, mol=optimization_mol
             )
+            self._optimization_method = ff_name
+            self._opt_thread.optimization_finished.connect(self._on_worker_result)
             self._opt_thread.error_occurred.connect(self._on_optimization_error)
+            self._opt_thread.finished.connect(self._on_worker_finished)
+            self.main_window.edit_3d_manager.register_optimization_thread(
+                self._opt_thread
+            )
             self._opt_thread.start()
 
         except Exception as e:
             logging.exception("Failed to start optimization: %s", e)
             self.optimize_button.setEnabled(True)
+
+    @pyqtSlot()
+    def _on_worker_result(self) -> None:
+        """Receive a private conformer on the GUI thread while the dialog exists."""
+        thread = self._opt_thread
+        if thread is None or self.sender() is not thread or thread.mol is None:
+            return
+        self._on_optimization_finished(
+            self._optimization_method, thread.mol.GetConformer()
+        )
+
+    @pyqtSlot()
+    def _on_worker_finished(self) -> None:
+        """Drop the completed worker reference before its owner deletes it."""
+        if self.sender() is self._opt_thread:
+            self._opt_thread = None
 
     def _on_optimization_error(self, err_msg: str) -> None:
         """Handle optimization thread failure callback."""
@@ -622,7 +671,24 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             logging.info("Discarding constrained optimization result after close.")
             return
         self.optimize_button.setEnabled(True)
+        current_mol = self.main_window.view_3d_manager.current_mol
+        if current_mol is None or current_mol is not self.mol:
+            logging.info("Discarding constrained optimization for a replaced molecule.")
+            return
+        if self._optimization_baseline is not None and not np.array_equal(
+            self.mol.GetConformer().GetPositions(), self._optimization_baseline
+        ):
+            status_bar = self.main_window.statusBar()
+            if status_bar is not None:
+                status_bar.showMessage(
+                    "Optimization discarded: molecule geometry changed while running."
+                )
+            return
         try:
+            live_conf = self.mol.GetConformer()
+            for i in range(self.mol.GetNumAtoms()):
+                pos = conf.GetAtomPosition(i)
+                live_conf.SetAtomPosition(i, (float(pos.x), float(pos.y), float(pos.z)))
             # Apply optimized coordinates to the main window's numpy array
             cache = self.main_window.view_3d_manager.atom_positions_3d
             for i in range(self.mol.GetNumAtoms()):
@@ -670,6 +736,8 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
             self.main_window.view_3d_manager.update_chiral_labels()
             self.main_window.edit_actions_manager.push_undo_state()
+            self.main_window.state_manager.has_unsaved_changes = True
+            self.main_window.state_manager.update_window_title()
             status_bar = self.main_window.statusBar()
             if status_bar is not None:
                 status_bar.showMessage("Constrained optimization finished.")
@@ -687,6 +755,12 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.exception("Optimization failed: %s", e)
 
+    def invalidate_molecule(self) -> None:
+        """Discard pending work and constraints when the document is replaced."""
+        self._invalidated = True
+        self.setEnabled(False)
+        self.reject()
+
     def closeEvent(self, event: Any) -> None:
         """Delegate window close to reject."""
         self.reject()
@@ -695,9 +769,14 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
     def reject(self) -> None:
         """Clear labels, disable picking, and save constraints before closing."""
         self._closed = True
+        if self._opt_thread is not None:
+            self._opt_thread.requestInterruption()
         self.clear_constraint_labels()
         self.clear_selection_labels()
         self.disable_picking()
+        if self._invalidated:
+            super().reject()
+            return
 
         # Save constraints list to MainWindow when closing the dialog
         try:

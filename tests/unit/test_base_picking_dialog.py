@@ -245,3 +245,46 @@ def test_done_skips_undo_if_not_modified(app):
     ):
         dlg.done(0)
     mock_undo.assert_not_called()
+
+
+@pytest.mark.parametrize("finish", ["reject", "accept", "close", "invalidate_molecule"])
+def test_closing_dialog_cancels_deferred_geometry_refresh(app, qtbot, finish):
+    """Queued label/render updates cannot outlive the dialog's editing session."""
+    dlg, mol, mw = _make_dlg(app)
+    dlg.update_display = MagicMock()
+    dlg._update_molecule_geometry(mol.GetConformer().GetPositions() + 1)
+    assert dlg._geometry_refresh_timer.isActive()
+    getattr(dlg, finish)()
+    assert not dlg._geometry_refresh_timer.isActive()
+    qtbot.wait(220)
+    dlg.update_display.assert_not_called()
+    mw.view_3d_manager.plotter.render.assert_not_called()
+
+
+@pytest.mark.parametrize("dragging", [False, True])
+def test_deferred_refresh_updates_active_dialog_labels_and_render(app, qtbot, dragging):
+    """The real timer refreshes drag labels or the normal display, then renders."""
+    dlg, mol, mw = _make_dlg(app)
+    dlg._slider_dragging = dragging
+    dlg.show_atom_labels = MagicMock()
+    dlg.update_display = MagicMock()
+    with qtbot.waitSignal(dlg._geometry_refresh_timer.timeout, timeout=1000):
+        dlg._update_molecule_geometry(mol.GetConformer().GetPositions() + 1)
+    if dragging:
+        dlg.show_atom_labels.assert_called_once()
+        dlg.update_display.assert_not_called()
+    else:
+        dlg.update_display.assert_called_once()
+        dlg.show_atom_labels.assert_not_called()
+    mw.view_3d_manager.plotter.render.assert_called_once()
+    dlg.reject()
+
+
+def test_invalidated_dialog_ignores_already_queued_refresh(app):
+    """A timeout delivered after molecule invalidation cannot restore old labels."""
+    dlg, _, mw = _make_dlg(app)
+    dlg.update_display = MagicMock()
+    dlg.invalidate_molecule()
+    dlg._geometry_refresh_timer.timeout.emit()
+    dlg.update_display.assert_not_called()
+    mw.view_3d_manager.plotter.render.assert_not_called()

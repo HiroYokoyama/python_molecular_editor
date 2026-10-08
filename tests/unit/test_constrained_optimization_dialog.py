@@ -84,6 +84,7 @@ def make_dialog(qapp):
 
         _mol = mol if mol is not None else _make_ethane_mol()
         mw = _make_main_window(constraints=constraints, opt_method=opt_method)
+        mw.view_3d_manager.current_mol = _mol
         dlg = ConstrainedOptimizationDialog(_mol, mw)
         created.append(dlg)
         return dlg
@@ -1105,3 +1106,93 @@ class TestKeyPressEvent:
         # An unrelated key must not raise and not remove anything
         dlg.keyPressEvent(self._key(Qt.Key.Key_A))
         assert dlg.constraints == []
+
+
+def test_worker_interruption_stops_before_next_minimization_chunk(qapp, qtbot):
+    """Cancellation between chunks prevents both further work and result delivery."""
+    from moleditpy.ui.constrained_optimization_dialog import (
+        ConstrainedOptimizationThread,
+    )
+
+    ff = MagicMock()
+    thread = ConstrainedOptimizationThread(ff, max_iters=400)
+    finished = MagicMock()
+    thread.optimization_finished.connect(finished)
+
+    def interrupt_after_first_chunk(maxIts):
+        thread.requestInterruption()
+        return 1
+
+    ff.Minimize.side_effect = interrupt_after_first_chunk
+    with qtbot.waitSignal(thread.finished, timeout=5000):
+        thread.start()
+    thread.wait()
+    ff.Minimize.assert_called_once_with(maxIts=200)
+    finished.assert_not_called()
+
+
+def test_running_optimization_cannot_start_duplicate_worker(make_dialog, qtbot):
+    """A second request cannot replace a worker while its minimization is active."""
+    from threading import Event
+    from moleditpy.ui.constrained_optimization_dialog import (
+        ConstrainedOptimizationThread,
+    )
+
+    dlg = make_dialog()
+    entered = Event()
+    release = Event()
+    ff = MagicMock()
+
+    def wait_for_release(maxIts):
+        entered.set()
+        if not release.wait(timeout=5):
+            raise RuntimeError("test failed to release the worker")
+        return 0
+
+    ff.Minimize.side_effect = wait_for_release
+    thread = ConstrainedOptimizationThread(ff, max_iters=200, parent=dlg)
+    dlg._opt_thread = thread
+    thread.start()
+    try:
+        qtbot.waitUntil(entered.is_set, timeout=5000)
+        dlg.apply_optimization()
+        assert dlg._opt_thread is thread
+        assert thread.isRunning()
+        assert not thread.isInterruptionRequested()
+    finally:
+        release.set()
+        dlg.reject()
+    assert thread.wait(1000)
+
+
+def test_cancellation_before_scheduled_minimization_skips_force_field(qapp, qtbot):
+    """A real pending interruption prevents minimization from starting at all."""
+    from threading import Event
+    from moleditpy.ui.constrained_optimization_dialog import (
+        ConstrainedOptimizationThread,
+    )
+
+    ready = Event()
+    release = Event()
+
+    class ScheduledWorker(ConstrainedOptimizationThread):
+        def run(self):
+            ready.set()
+            if not release.wait(timeout=5):
+                raise RuntimeError("test did not release scheduled worker")
+
+    ff = MagicMock()
+    worker = ScheduledWorker(ff)
+    result = MagicMock()
+    worker.optimization_finished.connect(result)
+    worker.start()
+    try:
+        qtbot.waitUntil(ready.is_set, timeout=5000)
+        worker.requestInterruption()
+        assert worker.isInterruptionRequested()
+        ConstrainedOptimizationThread.run(worker)
+        ff.Minimize.assert_not_called()
+        result.assert_not_called()
+    finally:
+        release.set()
+        assert worker.wait(1000)

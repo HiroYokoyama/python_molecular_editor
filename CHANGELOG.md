@@ -8,6 +8,29 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [4.11.4] - 2026-10-09
+
+### Fixed
+
+- Close molecule-bound geometry dialogs when undo, redo, import, or a calculation replaces their molecule, preventing obsolete geometry from being drawn or saved.
+- Run constrained optimization on a private molecule copy; discard canceled or stale results, retain interrupted workers until they finish without blocking dialog close or undo, and record accepted coordinates in undo history. Application close waits asynchronously for pending minimization.
+- Cancel deferred geometry label and rendering refreshes when their dialog closes.
+- Fuse templates using the actual directional wedge/dash bond key and roll back partial template edits when insertion fails.
+- Use RDKit's supported bounds-matrix embedding API when the initial 3D embedding fails.
+- Honor unsaved-change cancellation for XYZ file and text imports; viewer-only XYZ and MOL/SDF imports now initialize undo history with the imported geometry.
+- Rebuild atom connectivity when restoring undo states or projects, including isolated atoms.
+- Release deleted 2D scene items and drag references when clearing or replacing a document.
+
+### Tests & CI
+
+- Add 42 regression cases for import cancellation and undo baselines, restored connectivity, scene reset, RDKit fallback embedding, stale geometry dialogs, constrained optimization cancellation and worker lifetime, and transactional template insertion. Include real deferred refresh callbacks, mirror invalidation, optimization restart, duplicate-start prevention, cancellation before and between minimization chunks, and responsive close/undo with a blocked worker, including dialog destruction and deferred application shutdown.
+
+### Documentation
+
+- Explain geometry dialog replacement and constrained optimization cancellation in the English and Japanese manuals and wiki.
+
+---
+
 ## [4.11.3] - 2026-10-08
 
 ### Security

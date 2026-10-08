@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pyvista as pv
-from PyQt6.QtCore import QPointF
+from PyQt6.QtCore import QPointF, QThread, QTimer
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import QGraphicsTextItem
 
@@ -53,6 +53,38 @@ class Edit3DManager:
         self.is_3d_edit_mode = False
         self.dragged_atom_info = None
         self.constraints_3d: list[Any] = []
+        self._optimization_threads: set[QThread] = set()
+        self._close_after_optimization = False
+
+    def register_optimization_thread(self, thread: QThread) -> None:
+        """Own minimization workers independently of their modeless dialogs."""
+        thread.setParent(self.host)
+        self._optimization_threads.add(thread)
+        thread.finished.connect(lambda: self._release_optimization_thread(thread))
+
+    def _release_optimization_thread(self, thread: QThread) -> None:
+        """Delete completed workers and resume a deferred application close."""
+        self._optimization_threads.discard(thread)
+        thread.deleteLater()
+        if self._close_after_optimization and not self._optimization_threads:
+            self._close_after_optimization = False
+            QTimer.singleShot(0, self.host.close)
+
+    def prepare_optimization_shutdown(self) -> bool:
+        """Cancel workers and defer window destruction while minimization exits."""
+        running = [
+            thread for thread in self._optimization_threads if thread.isRunning()
+        ]
+        if not running:
+            return True
+        self._close_after_optimization = True
+        self.close_all_3d_edit_dialogs()
+        for thread in running:
+            thread.requestInterruption()
+        self.host.update_status_message(
+            "Canceling constrained optimization before closing..."
+        )
+        return False
 
     def _label_kwargs(self, kind: str) -> Dict[str, Any]:
         """add_point_labels style arguments for one label kind, from settings."""
@@ -92,6 +124,13 @@ class Edit3DManager:
             )
         else:
             self.host.statusBar().showMessage("Measurement mode disabled.")
+
+    def invalidate_molecule_dialogs(self) -> None:
+        """Discard molecule-bound dialog sessions before replacing the document."""
+        for dialog in self.active_3d_dialogs.copy():
+            if not sip_isdeleted_safe(dialog):
+                dialog.invalidate_molecule()
+        self.active_3d_dialogs.clear()
 
     def close_all_3d_edit_dialogs(self) -> None:
         """Close all active 3D edit dialogs."""

@@ -62,9 +62,20 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
+        self._invalidated = False
+        self._geometry_refresh_timer = QTimer(self)
+        self._geometry_refresh_timer.setSingleShot(True)
+        self._geometry_refresh_timer.timeout.connect(self._refresh_geometry_display)
         self._molecule_modified = (
             False  # Track if any modifications were made during this session
         )
+
+    def invalidate_molecule(self) -> None:
+        """Close a dialog bound to a replaced molecule without recording an edit."""
+        self._invalidated = True
+        self._molecule_modified = False
+        self.setEnabled(False)
+        self.reject()
 
     def keyPressEvent(self, event: Optional[QKeyEvent]) -> None:
         """Standard keyboard handler: Enter/Return triggers 'Apply'."""
@@ -80,18 +91,21 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
 
     def closeEvent(self, event: Optional[QCloseEvent]) -> None:
         """Cleanup on window close."""
+        self._geometry_refresh_timer.stop()
         self.clear_atom_labels()
         self.disable_picking()
         super().closeEvent(event)
 
     def reject(self) -> None:
         """Cleanup on cancel."""
+        self._geometry_refresh_timer.stop()
         self.clear_atom_labels()
         self.disable_picking()
         super().reject()
 
     def accept(self) -> None:
         """Cleanup on OK."""
+        self._geometry_refresh_timer.stop()
         self.clear_atom_labels()
         self.disable_picking()
         super().accept()
@@ -103,6 +117,8 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         Update the molecule's conformer and the 3D position cache, then redraw.
         :param positions: A numpy array or dictionary of all atom positions.
         """
+        if self._invalidated:
+            return
         conf = self.mol.GetConformer()
         num_atoms = conf.GetNumAtoms()
 
@@ -138,24 +154,30 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         self._molecule_modified = True
 
         # 4. Refresh display (deferred to ensure stability)
-        is_dragging = getattr(self, "_slider_dragging", False)
-
-        if is_dragging and hasattr(self, "show_atom_labels"):
-            QTimer.singleShot(200, self.show_atom_labels)
-        elif hasattr(self, "update_display"):
-            QTimer.singleShot(200, self.update_display)
-
-        if (
-            hasattr(self.main_window.view_3d_manager, "plotter")
-            and self.main_window.view_3d_manager.plotter
-        ):
-            QTimer.singleShot(200, self.main_window.view_3d_manager.plotter.render)
+        self._geometry_refresh_timer.start(200)
 
         # 5. Refresh chiral/cis-trans labels if applicable
         self.main_window.view_3d_manager.update_chiral_labels()
 
+    def _refresh_geometry_display(self) -> None:
+        """Refresh labels and rendering while this dialog still owns its molecule."""
+        if self._invalidated:
+            return
+        is_dragging = getattr(self, "_slider_dragging", False)
+
+        if is_dragging and hasattr(self, "show_atom_labels"):
+            self.show_atom_labels()
+        elif hasattr(self, "update_display"):
+            self.update_display()
+
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is not None:
+            plotter.render()
+
     def _push_undo(self) -> None:
         """Centralized undo logic to push current state to the undo stack."""
+        if self._invalidated:
+            return
         self.main_window.edit_actions_manager.push_undo_state()
         self._molecule_modified = False
 
