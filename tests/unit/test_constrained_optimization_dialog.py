@@ -1163,3 +1163,36 @@ def test_running_optimization_cannot_start_duplicate_worker(make_dialog, qtbot):
         release.set()
         dlg.reject()
     assert thread.wait(1000)
+
+
+def test_cancellation_before_scheduled_minimization_skips_force_field(qapp, qtbot):
+    """A real pending interruption prevents minimization from starting at all."""
+    from threading import Event
+    from moleditpy.ui.constrained_optimization_dialog import (
+        ConstrainedOptimizationThread,
+    )
+
+    ready = Event()
+    release = Event()
+
+    class ScheduledWorker(ConstrainedOptimizationThread):
+        def run(self):
+            ready.set()
+            if not release.wait(timeout=5):
+                raise RuntimeError("test did not release scheduled worker")
+
+    ff = MagicMock()
+    worker = ScheduledWorker(ff)
+    result = MagicMock()
+    worker.optimization_finished.connect(result)
+    worker.start()
+    try:
+        qtbot.waitUntil(ready.is_set, timeout=5000)
+        worker.requestInterruption()
+        assert worker.isInterruptionRequested()
+        ConstrainedOptimizationThread.run(worker)
+        ff.Minimize.assert_not_called()
+        result.assert_not_called()
+    finally:
+        release.set()
+        assert worker.wait(1000)
