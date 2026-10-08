@@ -317,8 +317,8 @@ class MoleculeScene(
         next_atom_id = self.data.next_atom_id
         selected_ids = {i for i, item in self.atom_items.items() if item.isSelected()}
         try:
-            return super().add_molecule_fragment(
-                points, bonds_info, existing_items, symbol
+            return TemplateMixin.add_molecule_fragment(
+                self, points, bonds_info, existing_items, symbol
             )
         except (RuntimeError, ValueError, TypeError, KeyError, IndexError):
             logging.exception("Template insertion failed; restoring the previous scene")

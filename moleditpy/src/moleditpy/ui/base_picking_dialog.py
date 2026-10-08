@@ -62,9 +62,17 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
+        self._invalidated = False
         self._molecule_modified = (
             False  # Track if any modifications were made during this session
         )
+
+    def invalidate_molecule(self) -> None:
+        """Close a dialog bound to a replaced molecule without recording an edit."""
+        self._invalidated = True
+        self._molecule_modified = False
+        self.setEnabled(False)
+        self.reject()
 
     def keyPressEvent(self, event: Optional[QKeyEvent]) -> None:
         """Standard keyboard handler: Enter/Return triggers 'Apply'."""
@@ -103,6 +111,8 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         Update the molecule's conformer and the 3D position cache, then redraw.
         :param positions: A numpy array or dictionary of all atom positions.
         """
+        if self._invalidated:
+            return
         conf = self.mol.GetConformer()
         num_atoms = conf.GetNumAtoms()
 
@@ -141,21 +151,28 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         is_dragging = getattr(self, "_slider_dragging", False)
 
         if is_dragging and hasattr(self, "show_atom_labels"):
-            QTimer.singleShot(200, self.show_atom_labels)
+            QTimer.singleShot(
+                200, lambda: self.show_atom_labels() if not self._invalidated else None
+            )
         elif hasattr(self, "update_display"):
-            QTimer.singleShot(200, self.update_display)
+            QTimer.singleShot(
+                200, lambda: self.update_display() if not self._invalidated else None
+            )
 
-        if (
-            hasattr(self.main_window.view_3d_manager, "plotter")
-            and self.main_window.view_3d_manager.plotter
-        ):
-            QTimer.singleShot(200, self.main_window.view_3d_manager.plotter.render)
+        plotter = self.main_window.view_3d_manager.plotter
+        if plotter is not None:
+            QTimer.singleShot(
+                200,
+                lambda: plotter.render() if not self._invalidated else None,
+            )
 
         # 5. Refresh chiral/cis-trans labels if applicable
         self.main_window.view_3d_manager.update_chiral_labels()
 
     def _push_undo(self) -> None:
         """Centralized undo logic to push current state to the undo stack."""
+        if self._invalidated:
+            return
         self.main_window.edit_actions_manager.push_undo_state()
         self._molecule_modified = False
 

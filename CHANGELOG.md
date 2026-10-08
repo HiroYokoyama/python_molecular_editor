@@ -8,6 +8,8 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- Close molecule-bound geometry dialogs when undo, redo, import, or a calculation replaces their molecule, preventing obsolete geometry from being drawn or saved.
+- Run constrained optimization on a private molecule copy; discard canceled or stale results, join interrupted workers safely, and record accepted coordinates in undo history.
 - Fuse templates using the actual directional wedge/dash bond key and roll back partial template edits when insertion fails.
 - Use RDKit's supported bounds-matrix embedding API when the initial 3D embedding fails.
 - Honor unsaved-change cancellation for XYZ file and text imports; viewer-only XYZ and MOL/SDF imports now initialize undo history with the imported geometry.

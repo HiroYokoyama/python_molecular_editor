@@ -93,6 +93,13 @@ class Edit3DManager:
         else:
             self.host.statusBar().showMessage("Measurement mode disabled.")
 
+    def invalidate_molecule_dialogs(self) -> None:
+        """Discard molecule-bound dialog sessions before replacing the document."""
+        for dialog in self.active_3d_dialogs.copy():
+            if not sip_isdeleted_safe(dialog):
+                dialog.invalidate_molecule()
+        self.active_3d_dialogs.clear()
+
     def close_all_3d_edit_dialogs(self) -> None:
         """Close all active 3D edit dialogs."""
         dialogs_to_close = self.active_3d_dialogs.copy()

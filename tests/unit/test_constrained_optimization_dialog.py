@@ -84,6 +84,7 @@ def make_dialog(qapp):
 
         _mol = mol if mol is not None else _make_ethane_mol()
         mw = _make_main_window(constraints=constraints, opt_method=opt_method)
+        mw.view_3d_manager.current_mol = _mol
         dlg = ConstrainedOptimizationDialog(_mol, mw)
         created.append(dlg)
         return dlg
