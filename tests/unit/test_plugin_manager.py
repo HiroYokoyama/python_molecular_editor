@@ -1237,3 +1237,43 @@ def test_zip_rejects_existing_link_outside_plugin_directory(tmp_path, monkeypatc
 
     assert not success
     assert "escapes install directory" in message
+
+
+def test_empty_zip_preserves_installed_plugins(tmp_path):
+    manager = PluginManager()
+    manager.plugin_dir = str(tmp_path / "plugins")
+    existing = tmp_path / "plugins" / "empty"
+    existing.mkdir(parents=True)
+    sentinel = existing / "__init__.py"
+    sentinel.write_text("existing plugin", encoding="utf-8")
+    archive_path = tmp_path / "empty.zip"
+    with zipfile.ZipFile(archive_path, "w"):
+        pass
+
+    with patch("shutil.rmtree") as remove_tree:
+        success, message = manager.install_plugin(str(archive_path))
+        remove_tree.assert_not_called()
+
+    assert not success
+    assert "empty" in message
+    assert sentinel.read_text(encoding="utf-8") == "existing plugin"
+
+
+def test_zip_explicit_directories_are_created_inside_package(tmp_path):
+    manager = PluginManager()
+    manager.plugin_dir = str(tmp_path / "plugins")
+    archive_path = tmp_path / "directories.zip"
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr("Package/", "")
+        archive.writestr("Package/assets/", "")
+        archive.writestr("Package/__init__.py", "plugin contents")
+        archive.writestr("Package/assets/data.txt", "asset contents")
+
+    success, _ = manager.install_plugin(str(archive_path))
+
+    assert success
+    package = tmp_path / "plugins" / "Package"
+    assert (package / "assets").is_dir()
+    assert (package / "assets" / "data.txt").read_text() == "asset contents"
+    assert (package / "__init__.py").read_text() == "plugin contents"
+    assert list((tmp_path / "plugins").iterdir()) == [package]

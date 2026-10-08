@@ -1021,3 +1021,24 @@ def test_atomic_json_save_replaces_project_and_cleans_temp_file(tmp_path):
 
     assert json.loads(target.read_text(encoding="utf-8")) == data
     assert list(tmp_path.iterdir()) == [target]
+
+
+def test_failed_temp_cleanup_logs_and_preserves_original_save_error(
+    tmp_path, monkeypatch, caplog
+):
+    target = tmp_path / "existing.pmeprj"
+    original = b'{"note": "original project"}'
+    target.write_bytes(original)
+
+    def fail_unlink(path):
+        raise PermissionError("Temporary file is locked")
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr("moleditpy.ui.io_logic.os.unlink", fail_unlink)
+        with pytest.raises(TypeError, match="not JSON serializable"):
+            IOManager._write_project_json(str(target), {"plugin": object()})
+
+    assert target.read_bytes() == original
+    assert len(list(tmp_path.glob("*.tmp"))) == 1
+    assert "Failed to remove temporary project file" in caplog.text
+    assert "Temporary file is locked" in caplog.text
