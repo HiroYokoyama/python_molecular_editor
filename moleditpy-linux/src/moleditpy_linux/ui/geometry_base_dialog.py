@@ -118,6 +118,8 @@ class GeometryBaseDialog(BasePickingDialog):
     def on_slider_released(self) -> None:
         """Finalize a slider drag operation."""
         self._slider_dragging = False
+        if self._invalidated:
+            return
         # Snapshot is usually kept until selection changes to preserve turn direction,
         # but subclasses can override this behavior if needed.
         self.main_window.view_3d_manager.draw_molecule_3d(self.mol)

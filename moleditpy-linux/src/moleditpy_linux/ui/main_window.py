@@ -133,6 +133,8 @@ class MainWindow(QMainWindow):
 
     def set_current_molecule(self, mol: Optional[Chem.Mol]) -> None:
         """Set the current 3D molecule and trigger rendering updates."""
+        if mol is not self.view_3d_manager.current_mol:
+            self.edit_3d_manager.invalidate_molecule_dialogs()
         self.view_3d_manager.current_mol = mol
 
     def set_3d_atom_positions(self, positions: Any) -> None:
@@ -141,7 +143,7 @@ class MainWindow(QMainWindow):
 
     def clear_3d_view(self) -> None:
         """Clear 3D molecule state and plotter rendering."""
-        self.view_3d_manager.current_mol = None
+        self.set_current_molecule(None)
         if self.view_3d_manager.plotter:
             self.view_3d_manager.plotter.clear()
 
@@ -292,7 +294,7 @@ class MainWindow(QMainWindow):
     @current_mol.setter
     def current_mol(self, value: Any) -> None:
         """Proxy for current 3D molecule (read/write)."""
-        self.view_3d_manager.current_mol = value
+        self.set_current_molecule(value)
 
     @property
     def plotter(self) -> Optional[CustomQtInteractor]:

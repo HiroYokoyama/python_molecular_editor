@@ -466,6 +466,8 @@ class IOManager:
         self, xyz_text: str, source_name: str = "XYZ data"
     ) -> Optional[Any]:
         """Load XYZ text, set it as the current molecule, and draw it in 3D."""
+        if not self.host.state_manager.check_unsaved_changes():
+            return None
         try:
             mol = self.load_xyz_block(xyz_text)
             if mol is None:
@@ -490,6 +492,7 @@ class IOManager:
                 self.host.statusBar().showMessage(
                     f"3D Viewer Mode: Loaded {source_name}"
                 )
+            self.host.edit_actions_manager.reset_history()
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
             return mol
@@ -1055,6 +1058,8 @@ class IOManager:
 
     def load_xyz_for_3d_viewing(self, file_path: Optional[str] = None) -> None:
         """Load XYZ file and display in 3D viewer."""
+        if not self.host.state_manager.check_unsaved_changes():
+            return
         if not file_path:
             default_dir = (
                 os.path.dirname(self.host.init_manager.current_file_path)
@@ -1113,6 +1118,7 @@ class IOManager:
                     )
                 self.host.statusBar().showMessage(message)
             self.host.set_current_file_path(file_path)
+            self.host.edit_actions_manager.reset_history()
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
         except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
@@ -1160,6 +1166,7 @@ class IOManager:
             self.host.view_3d_manager.update_atom_id_menu_state()
             self.host.update_status_message(f"Loaded {file_path} in 3D viewer")
             self.host.set_current_file_path(file_path)
+            self.host.edit_actions_manager.reset_history()
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
         except SdfSelectionCancelled:

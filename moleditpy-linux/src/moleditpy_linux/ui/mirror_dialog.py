@@ -37,6 +37,7 @@ class MirrorDialog(QDialog):
         super().__init__(parent)
         self.mol = mol
         self.main_window = main_window
+        self._invalidated = False
         self.plane_group: Optional[QButtonGroup] = None
         self.xy_radio: Optional[QRadioButton] = None
         self.xz_radio: Optional[QRadioButton] = None
@@ -87,8 +88,16 @@ class MirrorDialog(QDialog):
 
         layout.addLayout(button_layout)
 
+    def invalidate_molecule(self) -> None:
+        """Close the mirror tool when its molecule is replaced."""
+        self._invalidated = True
+        self.setEnabled(False)
+        self.reject()
+
     def apply_mirror(self) -> None:
         """Apply mirror transformation across the selected plane."""
+        if self._invalidated:
+            return
         if not self.mol or self.mol.GetNumConformers() == 0:
             QMessageBox.warning(self, "Error", "No 3D coordinates available.")
             return
