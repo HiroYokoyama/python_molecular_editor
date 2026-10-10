@@ -22,7 +22,15 @@ exclude:
   - tests
   - scripts
   - htmlcov
-  - docs
+  - docs/AI_USAGE.md
+  - docs/ANALYSIS_AND_CALCULATIONS.md
+  - docs/ARCHITECTURE.md
+  - docs/CORE_DATA_STRUCTURES.md
+  - docs/DIALOGS_AND_UI.md
+  - docs/LOGGING.md
+  - docs/PLUGIN_SYSTEM_INTERNAL.md
+  - docs/README.md
+  - docs/old
   - "*.py"
   - "*.toml"
   - "*.cfg"
