@@ -356,6 +356,37 @@ class TestLoadXYZFor3DViewing:
 
         assert host.init_manager.current_file_path == str(xyz)
 
+    def test_unsaved_changes_checked_exactly_once(self, qapp, tmp_path):
+        """XYZ load must check unsaved changes exactly once across the full call chain."""
+        xyz = tmp_path / "mol.xyz"
+        xyz.write_text("2\ntest\nC  0.0  0.0  0.0\nO  1.2  0.0  0.0\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        mol = self._dummy_mol()
+        with (
+            patch.object(io, "_mol_from_xyz_lines", return_value=mol),
+            patch("moleditpy.ui.io_logic.QTimer"),
+        ):
+            # load_xyz_file is NOT mocked, so the real parser helper runs
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+
+        assert host.state_manager.check_unsaved_changes.call_count == 1
+
+    def test_load_xyz_file_parser_does_not_prompt_unsaved_changes(self, qapp, tmp_path):
+        """load_xyz_file() is a low-level parser helper and must never prompt."""
+        xyz = tmp_path / "mol.xyz"
+        xyz.write_text("2\ntest\nC  0.0  0.0  0.0\nO  1.2  0.0  0.0\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        mol = self._dummy_mol()
+        with patch.object(io, "_mol_from_xyz_lines", return_value=mol):
+            res = io.load_xyz_file(str(xyz))
+
+        assert res is mol
+        assert host.state_manager.check_unsaved_changes.call_count == 0
+
 
 class TestShowXYZData:
     """Tests for IOManager.show_xyz_data()."""
@@ -378,6 +409,29 @@ class TestShowXYZData:
         host.ui_manager.enter_3d_viewer_mode.assert_called_once()
         host.ui_manager.enable_3d_features.assert_called_once_with(True)
         assert host.is_xyz_derived is True
+
+    def test_unsaved_changes_checked_exactly_once(self, qapp):
+        """show_xyz_data checks unsaved changes exactly once."""
+        host = DummyHost()
+        io = IOManager(host)
+        mol = MagicMock()
+        mol.HasProp.return_value = False
+        mol.GetNumBonds.return_value = 0
+        with patch.object(io, "_mol_from_xyz_lines", return_value=mol):
+            io.show_xyz_data("2\ntest\nC 0 0 0\nO 1 0 0\n", "text")
+
+        assert host.state_manager.check_unsaved_changes.call_count == 1
+
+    def test_load_xyz_block_parser_does_not_prompt_unsaved_changes(self, qapp):
+        """load_xyz_block() is a low-level parser helper and must never prompt."""
+        host = DummyHost()
+        io = IOManager(host)
+        mol = MagicMock()
+        with patch.object(io, "_mol_from_xyz_lines", return_value=mol):
+            res = io.load_xyz_block("2\ntest\nC 0 0 0\nO 1 0 0\n")
+
+        assert res is mol
+        assert host.state_manager.check_unsaved_changes.call_count == 0
 
 
 # ===========================================================================
@@ -1058,6 +1112,20 @@ class TestLoadMolFileFor3DViewingEncoding:
         assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
         assert host.view_3d_manager.current_mol is not None
         assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+    def test_load_mol_file_for_3d_viewing_checks_unsaved_changes_once(
+        self, qapp, tmp_path
+    ):
+        """load_mol_file_for_3d_viewing checks unsaved changes exactly once."""
+        path = tmp_path / "water.mol"
+        path.write_text(self._water_mol_block())
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        assert host.state_manager.check_unsaved_changes.call_count == 1
 
 
 class TestFlexibleEncodingAndBlockLoader:
