@@ -445,9 +445,6 @@ class IOManager:
 
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
         """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
-        if not self.host.state_manager.check_unsaved_changes():
-            return None
-
         try:
             return self._mol_from_xyz_lines(self._read_text_lines_flexible(file_path))
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
