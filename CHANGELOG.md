@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Loading an XYZ file no longer shows the "unsaved changes" dialog twice. `load_xyz_file()` is a pure parser helper; the guard belongs only in its high-level callers (`load_xyz_for_3d_viewing`, `show_xyz_data`). The redundant check inside `load_xyz_file()` was introduced in PR #157 when the guard was promoted to the entry-point level.
+
 ---
 
 ## [4.11.4] - 2026-10-09
