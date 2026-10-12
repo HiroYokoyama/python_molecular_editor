@@ -331,6 +331,38 @@ def test_open_project_file_unsaved_check(mock_parser_host):
     clear_all.assert_not_called()
 
 
+def test_load_json_data_checks_unsaved_changes_once(mock_parser_host, tmp_path):
+    """load_json_data checks unsaved changes exactly once."""
+    payload = {"format": "PME Project", "version": "1.0", "atoms": {}, "bonds": {}}
+    path = tmp_path / "test.pmeprj"
+    path.write_text(json.dumps(payload))
+    io = DummyProjectIo(mock_parser_host)
+    with (
+        patch.object(
+            io.host.state_manager, "check_unsaved_changes", return_value=True
+        ) as mock_chk,
+        patch("moleditpy.ui.io_logic.QTimer"),
+    ):
+        io.load_json_data(file_path=str(path))
+    assert mock_chk.call_count == 1
+
+
+def test_load_raw_data_checks_unsaved_changes_once(mock_parser_host, tmp_path):
+    """load_raw_data checks unsaved changes exactly once."""
+    path = tmp_path / "test.pmeraw"
+    path.write_bytes(pickle.dumps({"atoms": {}, "bonds": {}}))
+    io = DummyProjectIo(mock_parser_host)
+    with (
+        patch.object(
+            io.host.state_manager, "check_unsaved_changes", return_value=True
+        ) as mock_chk,
+        patch.object(io, "_confirm_pickle_load", return_value=True),
+        patch("moleditpy.ui.io_logic.QTimer"),
+    ):
+        io.load_raw_data(file_path=str(path))
+    assert mock_chk.call_count == 1
+
+
 def test_save_project_io_error(mock_parser_host, tmp_path):
     """Verify handling of I/O errors during save."""
     io = DummyProjectIo(mock_parser_host)
