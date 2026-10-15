@@ -296,6 +296,21 @@ class AtomItem(QGraphicsItem):
         rect.moveCenter(QPointF(ux * distance, uy * distance))
         return rect
 
+    def _relayout_rs_labels(self) -> None:
+        """Re-place the R/S labels a move of this atom shifts.
+
+        A label sits opposite its atom's bonds, so moving this atom moves its
+        own label and those of its labelled neighbors.
+        """
+        if self.rs_label is not None:
+            self.prepareGeometryChange()
+        for bond in self.bonds:
+            partner = bond.atom2 if bond.atom1 is self else bond.atom1
+            if partner is None or sip_isdeleted_safe(partner):
+                continue
+            if getattr(partner, "rs_label", None) is not None:
+                partner.prepareGeometryChange()
+
     def _paint_rs_label(self, painter: QPainter) -> None:
         """Draw the user-set R/S label, outlined like the E/Z label."""
         rect = self._rs_label_rect()
@@ -479,6 +494,7 @@ class AtomItem(QGraphicsItem):
                 for bond in self.bonds:
                     if bond.scene():
                         bond.update_position()
+                self._relayout_rs_labels()
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneHasChanged:
             if self.scene() is not None:
                 self.update_style()

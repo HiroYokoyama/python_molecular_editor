@@ -776,3 +776,24 @@ def test_conversion_follows_label_alongside_an_ez_label(app):
 
     assert sc.actual_chirality(mol) == {center: wanted}
     assert sc.find_ez_mismatches(data, mol) == []
+
+
+def test_moving_atoms_relayouts_labels(mock_parser_host):
+    scene, items = _center_scene(mock_parser_host)
+    center, fluorine = items[0], items[1]
+    scene.apply_rs_label(center, "R")
+    # A neighbor moving shifts the label of the labelled center.
+    with patch.object(center, "prepareGeometryChange") as prepare:
+        fluorine.setPos(QPointF(60, 10))
+    prepare.assert_called()
+    # The labelled atom moving shifts its own label.
+    with patch.object(center, "prepareGeometryChange") as prepare:
+        center.setPos(QPointF(5, 5))
+    prepare.assert_called()
+
+
+def test_relayout_skips_missing_partners(mock_parser_host):
+    scene, items = _center_scene(mock_parser_host)
+    center = items[0]
+    center.bonds = [MagicMock(atom1=center, atom2=None)] + center.bonds
+    center._relayout_rs_labels()  # no label, no crash on the empty partner
