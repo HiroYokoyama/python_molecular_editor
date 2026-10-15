@@ -1935,13 +1935,18 @@ class View3DManager:
                         tp.ItalicOff()
                         tp.ShadowOff()
 
-                # Add orientation marker widget
-                self.axes_widget = vtk.vtkOrientationMarkerWidget()
-                self.axes_widget.SetOrientationMarker(axes)
-                self.axes_widget.SetInteractor(self.plotter.interactor)  # type: ignore[union-attr]
-                self.axes_widget.SetViewport(0.0, 0.0, 0.2, 0.2)
-                self.axes_widget.SetEnabled(True)
-                self.axes_widget.InteractiveOff()
+                # plotter.interactor is the Qt widget, which VTK rejects;
+                # iren.interactor is the underlying vtkRenderWindowInteractor.
+                # Publish the widget only once fully set up, so a failure here
+                # never leaves an interactor-less widget for the next call to
+                # SetEnabled(False) on.
+                axes_widget = vtk.vtkOrientationMarkerWidget()
+                axes_widget.SetOrientationMarker(axes)
+                axes_widget.SetInteractor(self.plotter.iren.interactor)  # type: ignore[union-attr]
+                axes_widget.SetViewport(0.0, 0.0, 0.2, 0.2)
+                axes_widget.SetEnabled(True)
+                axes_widget.InteractiveOff()
+                self.axes_widget = axes_widget
             else:
                 self.plotter.hide_axes()  # type: ignore[call-arg, union-attr]
 
