@@ -390,6 +390,78 @@ def resolve_wedge_chirality(mol: Chem.Mol) -> None:
         logging.warning("Resolving wedge stereochemistry failed: %s", e)
 
 
+RS_LABELS = ("R", "S")
+
+
+def _tag_for_label(
+    mol: Chem.Mol, center: int, label: str, tags: List[Chem.ChiralType]
+) -> Optional[Chem.ChiralType]:
+    """Chiral tag that gives *center* CIP *label*, or None if it has no R/S.
+
+    The other centers keep *tags* (their drawn configuration), since a
+    center's CIP label can depend on them.
+    """
+    for tag in (
+        Chem.ChiralType.CHI_TETRAHEDRAL_CW,
+        Chem.ChiralType.CHI_TETRAHEDRAL_CCW,
+    ):
+        probe = Chem.Mol(mol)
+        for atom, other in zip(probe.GetAtoms(), tags):
+            atom.SetChiralTag(other)
+        probe.GetAtomWithIdx(center).SetChiralTag(tag)
+        Chem.AssignStereochemistry(probe, cleanIt=True, force=True)
+        if probe.GetAtomWithIdx(center).GetChiralTag() != tag:
+            return None  # perception dropped it: not a stereocenter
+        rdCIPLabeler.AssignCIPLabels(probe)
+        atom = probe.GetAtomWithIdx(center)
+        if not atom.HasProp("_CIPCode"):
+            return None
+        if atom.GetProp("_CIPCode") == label:
+            return tag
+    return None
+
+
+def apply_rs_labels(mol: Chem.Mol, wanted: Dict[int, str]) -> None:
+    """Re-wedge each labelled center of *mol* so it reads as its R/S label.
+
+    *wanted* maps atom index to "R" or "S". A label is the user's explicit
+    choice, so it overrides whatever the wedges and hashes at that center
+    say; it is written back as wedges because that is what every later
+    reader (MOL block, 3D embedding, stereo check) takes chirality from.
+    Labels on atoms that are not stereocenters are ignored, and other
+    centers keep their drawn configuration.
+    """
+    if not wanted or mol.GetNumConformers() == 0:
+        return
+    try:
+        read = _rdkit_tags(mol)
+        fixes: Dict[int, Chem.ChiralType] = {}
+        for center, label in wanted.items():
+            tag = _tag_for_label(mol, center, label, read)
+            if tag is None:
+                logging.debug("R/S label on atom %d ignored: no stereocenter", center)
+            elif tag != read[center]:
+                fixes[center] = tag
+        if not fixes:
+            return
+        expected = [fixes.get(i, tag) for i, tag in enumerate(read)]
+        for rewedge in (_rdkit_rewedge, _clear_and_pick_wedges):
+            trial = Chem.Mol(mol)
+            rewedge(trial, fixes)
+            if _rdkit_tags(trial) == expected:
+                rewedge(mol, fixes)
+                return
+        logging.warning("Could not draw R/S labels on atoms %s", sorted(fixes))
+    except (RuntimeError, ValueError) as e:
+        logging.warning("Applying R/S labels failed: %s", e)
+
+
+def _clear_and_pick_wedges(mol: Chem.Mol, fixes: Dict[int, Chem.ChiralType]) -> None:
+    """Drop the wedges at *fixes* and pick one free bond per center afresh."""
+    _clear_own_wedges(mol, fixes)
+    _pick_wedges(mol, fixes)
+
+
 class MolecularData:
     """In-memory graph of atoms and bonds, independent of any UI framework."""
 
@@ -511,10 +583,14 @@ class MolecularData:
                 self.adjacency_list[id2].remove(id1)
             self.bonds.pop(key_to_remove, None)
 
-    def to_rdkit_mol(self, use_2d_stereo: bool = True) -> Optional[Chem.Mol]:
+    def to_rdkit_mol(
+        self, use_2d_stereo: bool = True, use_rs_labels: bool = True
+    ) -> Optional[Chem.Mol]:
         """
         use_2d_stereo: True estimates E/Z from 2D coordinates (as before). False prioritizes E/Z labels.
         Call with use_2d_stereo=False for 3D conversion.
+        use_rs_labels: True re-wedges atoms carrying an R/S label ("rs") so the
+        label wins over their drawn wedges; False reads the drawing alone.
         """
         if not self.atoms:
             return None
@@ -690,6 +766,17 @@ class MolecularData:
                         adjacent.SetBondDir(Chem.BondDir.NONE)
 
         resolve_wedge_chirality(final_mol)
+
+        # R/S labels are the user's explicit choice and override the wedges.
+        if use_rs_labels:
+            apply_rs_labels(
+                final_mol,
+                {
+                    atom_id_to_idx_map[atom_id]: data["rs"]
+                    for atom_id, data in self.atoms.items()
+                    if data.get("rs") in RS_LABELS and atom_id in atom_id_to_idx_map
+                },
+            )
 
         # The labels are CIP E/Z; the neighbors picked above are not always
         # the CIP-higher ones.
