@@ -1798,13 +1798,22 @@ class View3DManager:
 
     def fit_to_view(self) -> None:
         """Fit all items in the scene into the view"""
-        if not self.host.init_manager.scene.items():
+        try:
+            old_ta = self.host.init_manager.view_2d.transformationAnchor()
+            old_ra = self.host.init_manager.view_2d.resizeAnchor()
+            items = self.host.init_manager.scene.items()
+        except (AttributeError, RuntimeError, TypeError) as e:
+            # Deferred calls (QTimer.singleShot after a load) can land after
+            # the window is torn down; a deleted view cannot be fitted or reset.
+            logging.debug("fit_to_view skipped, 2D view unavailable: %s", e)
+            return
+        if not items:
             self.reset_zoom()
             return
 
         # Calculate total bounding rect of visible items
         visible_items_rect = QRectF()
-        for item in self.host.init_manager.scene.items():
+        for item in items:
             if item.isVisible() and not isinstance(item, TemplatePreviewItem):
                 if visible_items_rect.isEmpty():
                     visible_items_rect = item.sceneBoundingRect()
@@ -1826,15 +1835,6 @@ class View3DManager:
         padded = QRectF(cx - w / 2.0, cy - h / 2.0, w, h)
 
         # Temporarily set anchor to center before calling fitInView
-        try:
-            old_ta = self.host.init_manager.view_2d.transformationAnchor()
-            old_ra = self.host.init_manager.view_2d.resizeAnchor()
-        except (AttributeError, RuntimeError, TypeError) as e:
-            # Deferred calls (QTimer.singleShot after a load) can land after
-            # the window is torn down; the deleted view cannot be fitted.
-            logging.debug("fit_to_view skipped, 2D view unavailable: %s", e)
-            return
-
         try:
             self.host.init_manager.view_2d.setTransformationAnchor(
                 QGraphicsView.ViewportAnchor.AnchorViewCenter

@@ -817,9 +817,15 @@ def test_fit_to_view_after_view_deleted_is_a_no_op(mock_parser_host):
     view_2d.transformationAnchor.side_effect = deleted
     view_2d.setTransformationAnchor.side_effect = deleted
 
-    view3d.fit_to_view()
+    view3d.reset_zoom = MagicMock()
 
+    view3d.fit_to_view()
     view_2d.fitInView.assert_not_called()
+
+    # The empty-scene path would reset the zoom on the deleted view.
+    mock_parser_host.init_manager.scene.items.return_value = []
+    view3d.fit_to_view()
+    view3d.reset_zoom.assert_not_called()
 
 
 def test_setup_3d_hover_only_refreshes_when_mode_active(mock_parser_host):
