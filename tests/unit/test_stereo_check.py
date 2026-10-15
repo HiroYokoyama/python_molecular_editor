@@ -552,3 +552,96 @@ def test_find_ambiguous_centers_reports_the_3d_configuration(app):
     assert rows[0].atom_id == 0 and rows[0].drawn == "ambiguous"
     assert rows[0].actual in ("R", "S")
     assert find_ambiguous_centers(_cross(0), mol) == []
+
+
+def test_wedge_reading_declines_unreadable_centers():
+    """No conformer, wrong degree, overlapping atoms or no stereo bond: None."""
+    from moleditpy.core.molecular_data import wedge_reading
+
+    mol = _three_arm_center(90, 210, 330, 1).to_rdkit_mol(use_2d_stereo=False)
+    assert wedge_reading(_no_conf(mol), 0) is None
+    assert wedge_reading(mol, 1) is None  # Cl: one neighbor
+    assert wedge_reading(mol, 3) is None  # ethyl CH2: no wedge starts here
+
+    overlapping = Chem.Mol(mol)
+    overlapping.GetConformer().SetAtomPosition(2, (0.0, 0.0, 0.0))
+    assert wedge_reading(overlapping, 0) is None
+
+
+def _no_conf(mol):
+    copy = Chem.Mol(mol)
+    copy.RemoveAllConformers()
+    return copy
+
+
+def test_resolve_wedge_chirality_skips_a_molecule_without_coordinates():
+    """Without a conformer there is nothing to read; the wedges stay."""
+    from moleditpy.core.molecular_data import resolve_wedge_chirality
+
+    mol = _no_conf(_three_arm_center(90, 180, 0, 1).to_rdkit_mol(use_2d_stereo=False))
+    before = [b.GetBondDir() for b in mol.GetBonds()]
+    resolve_wedge_chirality(mol)
+    assert [b.GetBondDir() for b in mol.GetBonds()] == before
+
+
+def test_resolve_keeps_the_drawing_when_rewedging_does_not_hold(monkeypatch):
+    """If RDKit cannot be made to read the intended center, the user's wedges stay."""
+    import moleditpy.core.molecular_data as md
+
+    data = _three_arm_center(90, 180, 0, 1)
+    monkeypatch.setattr(md, "resolve_wedge_chirality", lambda mol: None)
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    monkeypatch.undo()
+    before = [(b.GetBeginAtomIdx(), b.GetBondDir()) for b in mol.GetBonds()]
+
+    monkeypatch.setattr(md.Chem, "WedgeMolBonds", lambda mol, conf: None)
+    md.resolve_wedge_chirality(mol)
+    assert [(b.GetBeginAtomIdx(), b.GetBondDir()) for b in mol.GetBonds()] == before
+
+
+def test_resolve_wedge_chirality_logs_rdkit_failure(monkeypatch, caplog):
+    """An RDKit error while resolving is logged, not raised."""
+    import moleditpy.core.molecular_data as md
+
+    def boom(mol):
+        raise RuntimeError("boom")
+
+    mol = _three_arm_center(90, 180, 0, 1).to_rdkit_mol(use_2d_stereo=False)
+    monkeypatch.setattr(md.Chem, "AssignChiralTypesFromBondDirs", boom)
+    with caplog.at_level("WARNING"):
+        md.resolve_wedge_chirality(mol)
+    assert "Resolving wedge stereochemistry failed" in caplog.text
+
+
+def test_ambiguous_check_skips_an_unbuildable_drawing(monkeypatch):
+    """If the drawing cannot be built, nothing is reported."""
+    from moleditpy.core.stereo_check import ambiguous_wedge_centers
+
+    data = _cross(2)
+    monkeypatch.setattr(data, "to_rdkit_mol", lambda use_2d_stereo=True: None)
+    assert ambiguous_wedge_centers(data) == []
+
+
+def test_ambiguous_check_survives_an_rdkit_failure(monkeypatch, caplog):
+    """An RDKit error in the ambiguity check is logged and reports nothing."""
+    import moleditpy.core.stereo_check as sc
+
+    def boom(data):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(sc, "ambiguous_wedge_centers", boom)
+    with caplog.at_level("WARNING"):
+        assert sc.find_ambiguous_centers(_cross(2), Chem.Mol()) == []
+    assert "Ambiguous wedge check failed" in caplog.text
+
+
+def test_wedge_reading_needs_a_net_wedge_on_three_neighbors():
+    """No stereo bond, or a wedge and a hash that cancel, leave the center unread."""
+    from moleditpy.core.molecular_data import wedge_reading
+
+    plain = _three_arm_center(90, 210, 330, 0).to_rdkit_mol(use_2d_stereo=False)
+    assert wedge_reading(plain, 0) is None
+
+    data = _three_arm_center(90, 210, 330, 1)
+    data.add_bond(0, 2, 1, 2)
+    assert wedge_reading(data.to_rdkit_mol(use_2d_stereo=False), 0) is None
