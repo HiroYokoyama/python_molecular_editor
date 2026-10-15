@@ -37,6 +37,7 @@ _CENTER_ATOMS = [
 
 
 def _center_data():
+    """MolecularData of the single-stereocenter test molecule, plain bonds only."""
     data = MolecularData()
     ids = [data.add_atom(sym, pos) for sym, pos in _CENTER_ATOMS]
     for other in ids[1:]:
@@ -45,6 +46,7 @@ def _center_data():
 
 
 def _cip_of_mol_block(block, idx=0):
+    """CIP label of atom *idx* after reading *block* back as a MOL file."""
     mol = Chem.MolFromMolBlock(block)
     rdCIPLabeler.AssignCIPLabels(mol)
     atom = mol.GetAtomWithIdx(idx)
@@ -57,6 +59,7 @@ def _cip_of_mol_block(block, idx=0):
 
 
 def test_rs_entry_only_for_valid_labels():
+    """rs_entry yields the field only for R or S."""
     assert rs_entry({"rs": "R"}) == {"rs": "R"}
     assert rs_entry({"rs": "S"}) == {"rs": "S"}
     assert rs_entry({"rs": "x"}) == {}
@@ -65,6 +68,7 @@ def test_rs_entry_only_for_valid_labels():
 
 @pytest.mark.parametrize("label", ["R", "S"])
 def test_label_alone_sets_configuration(label):
+    """A label on a center drawn with plain bonds sets its configuration."""
     data = _center_data()
     assert drawn_chirality(data) == {}
     data.atoms[0]["rs"] = label
@@ -75,6 +79,7 @@ def test_label_alone_sets_configuration(label):
 
 
 def test_label_overrides_a_contradicting_wedge():
+    """A label wins over a wedge that reads the other way."""
     data = _center_data()
     data.bonds[(0, 1)]["stereo"] = 1
     drawn = drawn_chirality(data)[0]
@@ -88,6 +93,7 @@ def test_label_overrides_a_contradicting_wedge():
 
 
 def test_label_that_agrees_with_the_wedge_changes_nothing():
+    """A label matching the drawn wedge triggers no re-wedging."""
     data = _center_data()
     data.bonds[(0, 1)]["stereo"] = 1
     drawn = drawn_chirality(data)[0]
@@ -98,12 +104,14 @@ def test_label_that_agrees_with_the_wedge_changes_nothing():
 
 
 def test_label_on_a_non_stereocenter_is_ignored():
+    """A label on an atom that is not a stereocenter has no effect."""
     data = _center_data()
     data.atoms[1]["rs"] = "R"  # fluorine
     assert drawn_chirality(data) == {}
 
 
 def test_apply_rs_labels_skips_empty_and_conformerless():
+    """No labels, or no 2D conformer, leaves the molecule untouched."""
     mol = Chem.MolFromSmiles("FC(Cl)(Br)O")
     apply_rs_labels(mol, {})
     apply_rs_labels(mol, {1: "R"})  # no conformer: nothing to wedge against
@@ -111,6 +119,7 @@ def test_apply_rs_labels_skips_empty_and_conformerless():
 
 
 def test_tag_for_label_none_without_cip_code():
+    """Without a CIP code the center gets no tag for a label."""
     mol = _center_data().to_rdkit_mol(use_rs_labels=False)
     tags = md._rdkit_tags(mol)
     with (
@@ -121,6 +130,7 @@ def test_tag_for_label_none_without_cip_code():
 
 
 def test_apply_rs_labels_falls_back_to_picking_wedges():
+    """If RDKit's re-wedge fails, a free bond is wedged instead."""
     data = _center_data()
     data.atoms[0]["rs"] = "R"
     with patch.object(md, "_rdkit_rewedge"):  # first strategy does nothing
@@ -128,6 +138,7 @@ def test_apply_rs_labels_falls_back_to_picking_wedges():
 
 
 def test_apply_rs_labels_warns_when_no_drawing_holds(caplog):
+    """A warning is logged when no wedge drawing gives the label."""
     data = _center_data()
     data.atoms[0]["rs"] = "R"
     with (
@@ -140,6 +151,7 @@ def test_apply_rs_labels_warns_when_no_drawing_holds(caplog):
 
 
 def test_apply_rs_labels_logs_rdkit_errors(caplog):
+    """RDKit errors while applying labels are logged, not raised."""
     data = _center_data()
     data.atoms[0]["rs"] = "R"
     with (
@@ -156,22 +168,26 @@ def test_apply_rs_labels_logs_rdkit_errors(caplog):
 
 
 def test_align_without_wedges_keeps_plain_bonds():
+    """A center drawn without wedges keeps its plain bonds."""
     assert align_wedges_to_label(_center_data(), 0, "R") == {}
 
 
 def test_align_rejects_unknown_label():
+    """Only R and S are accepted for alignment."""
     data = _center_data()
     data.bonds[(0, 1)]["stereo"] = 1
     assert align_wedges_to_label(data, 0, "X") == {}
 
 
 def test_align_when_drawing_already_agrees():
+    """Wedges that already read as the label are left alone."""
     data = _center_data()
     data.bonds[(0, 1)]["stereo"] = 1
     assert align_wedges_to_label(data, 0, drawn_chirality(data)[0]) == {}
 
 
 def test_align_swaps_wedges_to_hashes():
+    """Wedges reading the other way are swapped to hashes; data stays unchanged."""
     data = _center_data()
     data.bonds[(0, 1)]["stereo"] = 1
     data.bonds[(0, 2)]["stereo"] = 1
@@ -187,6 +203,7 @@ def test_align_swaps_wedges_to_hashes():
 
 
 def test_align_redraws_one_bond_when_swapping_does_not_help():
+    """When swapping fails, one bond is redrawn and the others made plain."""
     data = _center_data()
     data.bonds[(0, 1)]["stereo"] = 1
     data.bonds[(0, 2)]["stereo"] = 2
@@ -202,6 +219,7 @@ def test_align_redraws_one_bond_when_swapping_does_not_help():
 
 
 def test_align_gives_up_when_nothing_reads_as_label():
+    """No change is proposed when no drawing gives the label."""
     data = _center_data()
     data.bonds[(0, 1)]["stereo"] = 1
     with (
@@ -212,6 +230,7 @@ def test_align_gives_up_when_nothing_reads_as_label():
 
 
 def test_wedge_for_label_guards():
+    """Unknown bonds, labels and ends give no wedge."""
     data = _center_data()
     assert wedge_for_label(data, (9, 9), "R") is None
     assert wedge_for_label(data, (0, 1), "X") is None
@@ -220,6 +239,7 @@ def test_wedge_for_label_guards():
 
 
 def test_wedge_for_label_clears_conflicting_hashes():
+    """Hashes that fight the requested label are listed for clearing."""
     data = _center_data()
     data.bonds[(0, 2)]["stereo"] = 2
     data.bonds[(0, 3)]["stereo"] = 2
@@ -231,6 +251,7 @@ def test_wedge_for_label_clears_conflicting_hashes():
 
 
 def test_wedge_for_label_logs_and_restores_on_error(caplog):
+    """An error mid-search is logged and the bonds are restored."""
     data = _center_data()
     before = list(data.bonds.items())
     with (
@@ -267,6 +288,7 @@ def _release_scenes():
 
 
 def _scene(host):
+    """Real MoleculeScene on *host* with a mocked view, kept alive until teardown."""
     scene = MoleculeScene(host.data, host)
     _LIVE_SCENES.append(scene)
     view = MagicMock()
@@ -278,6 +300,7 @@ def _scene(host):
 
 
 def _center_scene(host):
+    """Scene holding the single-stereocenter test molecule; returns (scene, atom items)."""
     scene = _scene(host)
     items = [
         scene.atom_items[scene.create_atom(sym, QPointF(*pos))]
@@ -289,6 +312,7 @@ def _center_scene(host):
 
 
 def _event(pos, button=Qt.MouseButton.LeftButton):
+    """Mock mouse event at *pos* with *button*."""
     event = MagicMock()
     event.scenePos.return_value = pos
     event.button.return_value = button
@@ -296,12 +320,14 @@ def _event(pos, button=Qt.MouseButton.LeftButton):
 
 
 def test_next_rs_label_cycle():
+    """The click cycle is none -> R -> S -> none."""
     assert next_rs_label(None) == "R"
     assert next_rs_label("R") == "S"
     assert next_rs_label("S") is None
 
 
 def test_apply_rs_label_sets_and_clears(mock_parser_host):
+    """Labels are set, changed and cleared on data and item together."""
     scene, items = _center_scene(mock_parser_host)
     center = items[0]
     assert scene.apply_rs_label(center, "R") is True
@@ -316,6 +342,7 @@ def test_apply_rs_label_sets_and_clears(mock_parser_host):
 
 
 def test_apply_rs_label_refuses_non_stereocenter(mock_parser_host):
+    """A non-stereocenter gets no label and a status-bar note."""
     scene, items = _center_scene(mock_parser_host)
     fluorine = items[1]
     assert scene.apply_rs_label(fluorine, "R") is False
@@ -324,6 +351,7 @@ def test_apply_rs_label_refuses_non_stereocenter(mock_parser_host):
 
 
 def test_apply_rs_label_refusal_keeps_previous_label(mock_parser_host):
+    """A refused change keeps the label the atom already had."""
     scene, items = _center_scene(mock_parser_host)
     center = items[0]
     scene.apply_rs_label(center, "R")
@@ -333,6 +361,7 @@ def test_apply_rs_label_refusal_keeps_previous_label(mock_parser_host):
 
 
 def test_apply_rs_label_ignores_unknown_atoms(mock_parser_host):
+    """Atoms missing from the data model are ignored."""
     scene = _scene(mock_parser_host)
     stray = MagicMock(atom_id=999)
     assert scene.apply_rs_label(stray, "R") is False
@@ -341,6 +370,7 @@ def test_apply_rs_label_ignores_unknown_atoms(mock_parser_host):
 
 
 def test_apply_rs_label_redraws_existing_wedges(mock_parser_host):
+    """Existing wedges that disagree are redrawn on the canvas."""
     scene, items = _center_scene(mock_parser_host)
     center, fluorine = items[0], items[1]
     key = (center.atom_id, fluorine.atom_id)
@@ -357,6 +387,7 @@ def test_apply_rs_label_redraws_existing_wedges(mock_parser_host):
 
 
 def test_set_bond_stereo_by_key_rekeys_plain_bonds(mock_parser_host):
+    """A bond made plain is re-keyed in sorted order, item included."""
     scene = _scene(mock_parser_host)
     a = scene.atom_items[scene.create_atom("C", QPointF(0, 0))]
     b = scene.atom_items[scene.create_atom("C", QPointF(50, 0))]
@@ -374,6 +405,7 @@ def test_set_bond_stereo_by_key_rekeys_plain_bonds(mock_parser_host):
 
 
 def test_set_bond_stereo_by_key_without_item_or_data(mock_parser_host):
+    """Missing bonds and bonds without a scene item are handled."""
     scene = _scene(mock_parser_host)
     scene._set_bond_stereo_by_key((1, 2), 1)  # no such bond
     scene.data.bonds[(5, 3)] = {"order": 1, "stereo": 1}
@@ -385,6 +417,7 @@ def test_set_bond_stereo_by_key_without_item_or_data(mock_parser_host):
 @patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_click_cycles_label(mock_drag, mock_release, mock_press, mock_parser_host):
+    """Clicks in R/S mode cycle the label, one undo step each."""
     scene, items = _center_scene(mock_parser_host)
     center = items[0]
     scene.mode = "rs_label"
@@ -410,6 +443,7 @@ def test_click_cycles_label(mock_drag, mock_release, mock_press, mock_parser_hos
 def test_click_on_non_stereocenter_pushes_no_undo(
     mock_drag, mock_release, mock_press, mock_parser_host
 ):
+    """Clicking a non-stereocenter changes nothing and adds no undo step."""
     scene, items = _center_scene(mock_parser_host)
     scene.mode = "rs_label"
     push = mock_parser_host.edit_actions_manager.push_undo_state
@@ -426,6 +460,7 @@ def test_click_on_non_stereocenter_pushes_no_undo(
 
 
 def test_double_click_advances_label(mock_parser_host):
+    """A double-click advances the cycle once more."""
     scene, items = _center_scene(mock_parser_host)
     center = items[0]
     scene.mode = "rs_label"
@@ -439,6 +474,7 @@ def test_double_click_advances_label(mock_parser_host):
 
 @patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_right_click_clears_label_without_deleting(mock_drag, mock_parser_host):
+    """Right-click in R/S mode clears the label and never deletes the atom."""
     scene, items = _center_scene(mock_parser_host)
     center = items[0]
     scene.apply_rs_label(center, "S")
@@ -454,6 +490,7 @@ def test_right_click_clears_label_without_deleting(mock_drag, mock_parser_host):
 
 
 def _key_event(key, modifiers=Qt.KeyboardModifier.NoModifier):
+    """Mock key event for *key* with *modifiers*."""
     event = MagicMock()
     event.key.return_value = key
     event.modifiers.return_value = modifiers
@@ -461,6 +498,7 @@ def _key_event(key, modifiers=Qt.KeyboardModifier.NoModifier):
 
 
 def test_r_key_cycles_hovered_atom(mock_parser_host):
+    """R on a hovered atom cycles its label without changing its element."""
     scene, items = _center_scene(mock_parser_host)
     center = items[0]
     with (
@@ -485,6 +523,7 @@ def test_r_key_cycles_hovered_atom(mock_parser_host):
 
 
 def test_atom_item_label_geometry_and_paint(mock_parser_host):
+    """The label widens the bounding rect and paints outline and text."""
     scene, items = _center_scene(mock_parser_host)
     center = items[0]
     assert center._rs_label_rect() is None
@@ -510,6 +549,7 @@ def test_atom_item_label_geometry_and_paint(mock_parser_host):
 
 
 def test_atom_item_label_without_bonds_sits_upper_right(mock_parser_host):
+    """An atom without bonds puts its label upper right."""
     scene = _scene(mock_parser_host)
     lone = scene.atom_items[scene.create_atom("C", QPointF(0, 0))]
     lone.rs_label = "S"
@@ -518,6 +558,7 @@ def test_atom_item_label_without_bonds_sits_upper_right(mock_parser_host):
 
 
 def test_atom_item_label_skips_bad_partners(mock_parser_host):
+    """Broken or missing bond partners do not break label placement."""
     scene, items = _center_scene(mock_parser_host)
     center = items[0]
     center.rs_label = "R"
@@ -537,6 +578,7 @@ def test_atom_item_label_skips_bad_partners(mock_parser_host):
 
 
 def _state_manager(host):
+    """StateManager sharing *host*'s data model."""
     from moleditpy.ui.app_state import StateManager
 
     sm = StateManager(host)
@@ -545,6 +587,7 @@ def _state_manager(host):
 
 
 def test_project_roundtrip_keeps_labels(mock_parser_host):
+    """Labels survive a project save and load; unlabelled atoms gain no field."""
     sm = _state_manager(mock_parser_host)
     labelled = sm.data.add_atom("C", QPointF(0, 0))
     plain = sm.data.add_atom("O", QPointF(50, 0))
@@ -570,6 +613,7 @@ def test_project_roundtrip_keeps_labels(mock_parser_host):
 
 
 def test_project_from_an_earlier_version_loads(mock_parser_host):
+    """A project written by 4.12 (no labels) loads unchanged."""
     sm = _state_manager(mock_parser_host)
     legacy = {
         "format": "PME Project",
@@ -589,6 +633,7 @@ def test_project_from_an_earlier_version_loads(mock_parser_host):
 
 
 def test_undo_state_keeps_labels(mock_parser_host):
+    """Undo snapshots carry the labels."""
     sm = _state_manager(mock_parser_host)
     aid = sm.data.add_atom("C", QPointF(0, 0))
     sm.data.atoms[aid]["rs"] = "R"
@@ -597,6 +642,7 @@ def test_undo_state_keeps_labels(mock_parser_host):
 
 
 def test_scene_restore_sets_item_labels(mock_parser_host):
+    """Restoring an undo state puts labels on data and items."""
     scene = _scene(mock_parser_host)
     scene.restore_atoms_and_bonds(
         {
@@ -612,6 +658,7 @@ def test_scene_restore_sets_item_labels(mock_parser_host):
 
 
 def test_scene_restore_from_json_sets_item_labels(mock_parser_host):
+    """Loading a project restores labels and drops invalid ones."""
     scene = _scene(mock_parser_host)
     scene.restore_atoms_and_bonds_from_json(
         [
@@ -626,6 +673,7 @@ def test_scene_restore_from_json_sets_item_labels(mock_parser_host):
 
 
 def test_label_only_change_is_its_own_undo_step(monkeypatch):
+    """Changing only a label is not deduplicated away from undo."""
     from moleditpy.ui.edit_actions_logic import EditActionsManager
 
     host = MagicMock()
@@ -653,6 +701,7 @@ def test_label_only_change_is_its_own_undo_step(monkeypatch):
 
 
 def test_copy_writes_label_from_data_model(mock_parser_host):
+    """Copy writes each atom's label from the data model."""
     from moleditpy.ui.edit_actions_logic import EditActionsManager
 
     scene, items = _center_scene(mock_parser_host)
@@ -745,12 +794,14 @@ def _convert(data):
 
 @pytest.mark.parametrize("label", ["R", "S"])
 def test_conversion_follows_a_label_on_plain_bonds(app, label):
+    """3D conversion gives the labelled configuration on plain bonds."""
     data = _center_data()
     data.atoms[0]["rs"] = label
     assert sc.actual_chirality(_convert(data)) == {0: label}
 
 
 def test_conversion_follows_labels_over_every_drawn_wedge(app):
+    """Labels flipping all nine tetrodotoxin centers win in 3D."""
     data = _draw(_TETRODOTOXIN)
     drawn = drawn_chirality(data)
     assert len(drawn) == 9
@@ -765,6 +816,7 @@ def test_conversion_follows_labels_over_every_drawn_wedge(app):
 
 
 def test_conversion_follows_label_alongside_an_ez_label(app):
+    """An R/S label and an E/Z label on one molecule both hold in 3D."""
     data = _draw("C/C=C/[C@H](F)Cl")
     center = next(aid for aid in drawn_chirality(data))
     wanted = "R" if drawn_chirality(data)[center] == "S" else "S"
@@ -779,6 +831,7 @@ def test_conversion_follows_label_alongside_an_ez_label(app):
 
 
 def test_moving_atoms_relayouts_labels(mock_parser_host):
+    """Moving an atom or its neighbor re-places the label."""
     scene, items = _center_scene(mock_parser_host)
     center, fluorine = items[0], items[1]
     scene.apply_rs_label(center, "R")
@@ -793,6 +846,7 @@ def test_moving_atoms_relayouts_labels(mock_parser_host):
 
 
 def test_relayout_skips_missing_partners(mock_parser_host):
+    """Re-placing labels skips bonds without a partner."""
     scene, items = _center_scene(mock_parser_host)
     center = items[0]
     center.bonds = [MagicMock(atom1=center, atom2=None)] + center.bonds

@@ -771,6 +771,7 @@ def test_paste_fragment_recreates_atoms_and_bonds(mock_parser_host):
 
 
 def test_paste_keeps_rs_labels(mock_parser_host):
+    """A pasted atom gets the R/S label it was copied with."""
     payload = _json.dumps(
         {
             "atoms": [
@@ -787,6 +788,7 @@ def test_paste_keeps_rs_labels(mock_parser_host):
 
 
 def test_paste_rejects_bad_rs_label(mock_parser_host):
+    """Clipboard data with an R/S label other than R or S is rejected."""
     payload = _json.dumps(
         {"atoms": [{"symbol": "C", "rel_pos": [0.0, 0.0], "rs": "Q"}], "bonds": []}
     ).encode("utf-8")

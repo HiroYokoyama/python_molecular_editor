@@ -260,6 +260,7 @@ def test_set_mode_radical_status():
 
 
 def test_set_mode_rs_label_status():
+    """R/S mode shows its status-bar hint."""
     ui = _make_ui_manager()
     ui.set_mode("rs_label")
     ui.host.update_status_message.assert_any_call(
