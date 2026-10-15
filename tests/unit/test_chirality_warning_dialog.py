@@ -403,3 +403,42 @@ def test_dialog_explains_ambiguous_centers(app):
         assert "The 3D structure is wrong" not in text
     finally:
         dlg.close()
+
+
+@pytest.mark.parametrize(
+    "rows, flip",
+    [
+        (MISMATCHES, "Please flip these manually"),
+        (
+            MISMATCHES
+            + [
+                ChiralityMismatch(
+                    atom_id=0, symbol="C", rdkit_index=0, drawn="ambiguous", actual="R"
+                )
+            ],
+            "Please flip the wrong ones manually",
+        ),
+        (
+            [
+                ChiralityMismatch(
+                    atom_id=0, symbol="C", rdkit_index=0, drawn="ambiguous", actual="R"
+                )
+            ],
+            None,
+        ),
+    ],
+)
+def test_dialog_hint_matches_the_listed_rows(app, rows, flip):
+    """Flipping is suggested only for wrong rows; ambiguous ones need a redraw."""
+    from PyQt6.QtWidgets import QLabel
+
+    dlg = ChiralityWarningDialog(_main_window(), rows, 9, parent=None)
+    try:
+        text = " ".join(lbl.text() for lbl in dlg.findChildren(QLabel))
+        if flip is None:
+            assert "flip" not in text
+        else:
+            assert flip in text
+        assert "listed ones in red" in text
+    finally:
+        dlg.close()

@@ -109,6 +109,20 @@ class ChiralityWarningDialog(QDialog):
             )
         return "<br><br>".join(parts)
 
+    def _hint_text(self, row_count: int) -> str:
+        """What to do next; flipping applies only to wrong, not ambiguous, rows."""
+        ambiguous = sum(1 for m in self.mismatches if m.drawn == "ambiguous")
+        labels = (
+            "While this window is open, the 3D view shows chiral and E/Z labels: "
+            "listed ones in red, the others in the usual color."
+        )
+        if row_count == ambiguous:
+            return labels
+        flip = "Please flip the wrong ones manually in the 3D structure."
+        if not ambiguous:
+            flip = "Please flip these manually in the 3D structure."
+        return f"{flip} {labels}"
+
     def _build_ui(self, total: int) -> None:
         """Lay out the summary, the per-item table and the close button."""
         layout = QVBoxLayout(self)
@@ -132,11 +146,7 @@ class ChiralityWarningDialog(QDialog):
             header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         layout.addWidget(table)
 
-        hint = QLabel(
-            "Please flip these manually in the 3D structure. While this window "
-            "is open, the 3D view shows chiral and E/Z labels: wrong ones in "
-            "red, correct ones in the usual color."
-        )
+        hint = QLabel(self._hint_text(len(rows)))
         hint.setWordWrap(True)
         layout.addWidget(hint)
 

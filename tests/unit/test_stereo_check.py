@@ -645,3 +645,25 @@ def test_wedge_reading_needs_a_net_wedge_on_three_neighbors():
     data = _three_arm_center(90, 210, 330, 1)
     data.add_bond(0, 2, 1, 2)
     assert wedge_reading(data.to_rdkit_mol(use_2d_stereo=False), 0) is None
+
+
+def test_resolve_rejects_rewedging_that_touches_other_bonds(monkeypatch):
+    """A re-wedge that alters a bond away from the fixed center is not applied."""
+    import moleditpy.core.molecular_data as md
+
+    data = _three_arm_center(90, 180, 0, 1)
+    monkeypatch.setattr(md, "resolve_wedge_chirality", lambda mol: None)
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    monkeypatch.undo()
+    before = [(b.GetBeginAtomIdx(), b.GetBondDir()) for b in mol.GetBonds()]
+
+    real_wedge = md.Chem.WedgeMolBonds
+
+    def wedge_and_stray(target, conf):
+        real_wedge(target, conf)
+        # C3-C4 does not touch the T-shaped center (atom 0).
+        target.GetBondBetweenAtoms(3, 4).SetBondDir(md.Chem.BondDir.BEGINWEDGE)
+
+    monkeypatch.setattr(md.Chem, "WedgeMolBonds", wedge_and_stray)
+    md.resolve_wedge_chirality(mol)
+    assert [(b.GetBeginAtomIdx(), b.GetBondDir()) for b in mol.GetBonds()] == before

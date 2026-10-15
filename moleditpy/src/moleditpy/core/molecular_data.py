@@ -296,12 +296,24 @@ def resolve_wedge_chirality(mol: Chem.Mol) -> None:
                     Chem.ChiralType.CHI_UNSPECIFIED
                 )
 
+        def untouched_bonds(target: Chem.Mol) -> List[Tuple[int, int, Any]]:
+            """Endpoints and direction of every bond away from the fixed centers."""
+            return [
+                (b.GetBeginAtomIdx(), b.GetEndAtomIdx(), b.GetBondDir())
+                for b in target.GetBonds()
+                if b.GetBeginAtomIdx() not in fixes and b.GetEndAtomIdx() not in fixes
+            ]
+
         # WedgeMolBonds may reverse bonds, which cannot be undone, so try it
-        # on a copy and touch the real molecule only once it reads right.
+        # on a copy and touch the real molecule only once it reads right and
+        # has left every other bond as the user drew it.
+        before = untouched_bonds(mol)
         trial = Chem.Mol(mol)
         rewedge(trial)
         Chem.AssignChiralTypesFromBondDirs(trial)
-        if any(trial.GetAtomWithIdx(c).GetChiralTag() != t for c, t in fixes.items()):
+        if untouched_bonds(trial) != before or any(
+            trial.GetAtomWithIdx(c).GetChiralTag() != t for c, t in fixes.items()
+        ):
             logging.debug("Re-wedging stereocenters %s did not hold", sorted(fixes))
             return
         rewedge(mol)
