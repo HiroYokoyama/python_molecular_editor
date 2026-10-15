@@ -411,24 +411,20 @@ def _tag_for_label(
     The other centers keep *tags* (their drawn configuration), since a
     center's CIP label can depend on them.
     """
-    for tag in (
-        Chem.ChiralType.CHI_TETRAHEDRAL_CW,
-        Chem.ChiralType.CHI_TETRAHEDRAL_CCW,
-    ):
-        probe = Chem.Mol(mol)
-        for atom, other in zip(probe.GetAtoms(), tags):
-            atom.SetChiralTag(other)
-        probe.GetAtomWithIdx(center).SetChiralTag(tag)
-        Chem.AssignStereochemistry(probe, cleanIt=True, force=True)
-        if probe.GetAtomWithIdx(center).GetChiralTag() != tag:
-            return None  # perception dropped it: not a stereocenter
-        rdCIPLabeler.AssignCIPLabels(probe)
-        atom = probe.GetAtomWithIdx(center)
-        if not atom.HasProp("_CIPCode"):
-            return None
-        if atom.GetProp("_CIPCode") == label:
-            return tag
-    return None
+    cw, ccw = Chem.ChiralType.CHI_TETRAHEDRAL_CW, Chem.ChiralType.CHI_TETRAHEDRAL_CCW
+    probe = Chem.Mol(mol)
+    for atom, other in zip(probe.GetAtoms(), tags):
+        atom.SetChiralTag(other)
+    probe.GetAtomWithIdx(center).SetChiralTag(cw)
+    Chem.AssignStereochemistry(probe, cleanIt=True, force=True)
+    if probe.GetAtomWithIdx(center).GetChiralTag() != cw:
+        return None  # perception dropped it: not a stereocenter
+    rdCIPLabeler.AssignCIPLabels(probe)
+    atom = probe.GetAtomWithIdx(center)
+    if not atom.HasProp("_CIPCode"):
+        return None
+    # The mirror tag gives the mirror label.
+    return cw if atom.GetProp("_CIPCode") == label else ccw
 
 
 def apply_rs_labels(mol: Chem.Mol, wanted: Dict[int, str]) -> None:

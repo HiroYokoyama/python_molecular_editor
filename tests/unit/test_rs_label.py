@@ -247,8 +247,28 @@ def test_wedge_for_label_logs_and_restores_on_error(caplog):
 # ---------------------------------------------------------------------------
 
 
+_LIVE_SCENES = []
+
+
+@pytest.fixture(autouse=True)
+def _release_scenes():
+    """Keep each test's scenes alive until Qt has processed their events.
+
+    A scene freed while its index still holds pending geometry changes makes
+    Qt call boundingRect() on already-deleted items, which aborts PyQt.
+    """
+    yield
+    from PyQt6.QtWidgets import QApplication
+
+    for scene in _LIVE_SCENES:
+        scene.clear()
+    QApplication.processEvents()
+    _LIVE_SCENES.clear()
+
+
 def _scene(host):
     scene = MoleculeScene(host.data, host)
+    _LIVE_SCENES.append(scene)
     view = MagicMock()
     view.transform.return_value = QTransform()
     view.mapToScene.return_value = QPointF(0, 0)
@@ -307,9 +327,7 @@ def test_apply_rs_label_refusal_keeps_previous_label(mock_parser_host):
     scene, items = _center_scene(mock_parser_host)
     center = items[0]
     scene.apply_rs_label(center, "R")
-    with patch(
-        "moleditpy.ui.molecular_scene_handler.drawn_chirality", return_value={}
-    ):
+    with patch("moleditpy.ui.molecular_scene_handler.drawn_chirality", return_value={}):
         assert scene.apply_rs_label(center, "S") is False
     assert scene.data.atoms[center.atom_id]["rs"] == "R"
 
@@ -335,9 +353,7 @@ def test_apply_rs_label_redraws_existing_wedges(mock_parser_host):
 
     assert scene.data.bonds[key]["stereo"] == 2
     assert scene.find_bond_between(center, fluorine).stereo == 2
-    assert drawn_chirality(scene.data, use_rs_labels=False) == {
-        center.atom_id: wanted
-    }
+    assert drawn_chirality(scene.data, use_rs_labels=False) == {center.atom_id: wanted}
 
 
 def test_set_bond_stereo_by_key_rekeys_plain_bonds(mock_parser_host):
@@ -487,8 +503,10 @@ def test_atom_item_label_geometry_and_paint(mock_parser_host):
     fake_scene = MagicMock()
     fake_scene.get_setting.side_effect = lambda key, default=None: default
     fake_scene.backgroundBrush.side_effect = RuntimeError("gone")
-    with patch.object(AtomItem, "scene", return_value=fake_scene):
-        center._paint_rs_label(MagicMock(spec=QPainter))
+    lone = AtomItem(99, "C", QPointF(0, 0))  # never added to a scene
+    lone.rs_label = "R"
+    with patch.object(lone, "scene", return_value=fake_scene):
+        lone._paint_rs_label(MagicMock(spec=QPainter))
 
 
 def test_atom_item_label_without_bonds_sits_upper_right(mock_parser_host):
@@ -511,3 +529,250 @@ def test_atom_item_label_skips_bad_partners(mock_parser_host):
     stacked.atom2.pos.return_value = center.pos()
     center.bonds = [broken, missing, stacked]
     assert center._rs_label_rect() is not None
+
+
+# ---------------------------------------------------------------------------
+# persistence and compatibility with files from earlier versions
+# ---------------------------------------------------------------------------
+
+
+def _state_manager(host):
+    from moleditpy.ui.app_state import StateManager
+
+    sm = StateManager(host)
+    sm.data = host.state_manager.data
+    return sm
+
+
+def test_project_roundtrip_keeps_labels(mock_parser_host):
+    sm = _state_manager(mock_parser_host)
+    labelled = sm.data.add_atom("C", QPointF(0, 0))
+    plain = sm.data.add_atom("O", QPointF(50, 0))
+    sm.data.atoms[labelled]["rs"] = "S"
+
+    json_data = sm.create_json_data()
+    atoms = {a["id"]: a for a in json_data["2d_structure"]["atoms"]}
+    assert atoms[labelled]["rs"] == "S"
+    assert "rs" not in atoms[plain]  # unlabelled atoms written as before
+
+    # Load through the real scene restore (the fixture's stub predates labels).
+    scene = MoleculeScene(sm.data, mock_parser_host)
+    _LIVE_SCENES.append(scene)
+    mock_parser_host.scene.restore_atoms_and_bonds_from_json.side_effect = (
+        scene.restore_atoms_and_bonds_from_json
+    )
+    sm.data.atoms.clear()
+    sm.data.bonds.clear()
+    sm.load_from_json_data(json_data)
+    assert sm.data.atoms[labelled]["rs"] == "S"
+    assert "rs" not in sm.data.atoms[plain]
+    assert scene.atom_items[labelled].rs_label == "S"
+
+
+def test_project_from_an_earlier_version_loads(mock_parser_host):
+    sm = _state_manager(mock_parser_host)
+    legacy = {
+        "format": "PME Project",
+        "version": "1.0",
+        "application_version": "4.12.1",
+        "2d_structure": {
+            "atoms": [
+                {"id": 0, "symbol": "C", "x": 0.0, "y": 0.0, "charge": 0, "radical": 0}
+            ],
+            "bonds": [],
+            "next_atom_id": 1,
+        },
+    }
+    sm.load_from_json_data(legacy)
+    assert sm.data.atoms[0]["symbol"] == "C"
+    assert "rs" not in sm.data.atoms[0]
+
+
+def test_undo_state_keeps_labels(mock_parser_host):
+    sm = _state_manager(mock_parser_host)
+    aid = sm.data.add_atom("C", QPointF(0, 0))
+    sm.data.atoms[aid]["rs"] = "R"
+    state = sm.get_current_state()
+    assert state["atoms"][aid]["rs"] == "R"
+
+
+def test_scene_restore_sets_item_labels(mock_parser_host):
+    scene = _scene(mock_parser_host)
+    scene.restore_atoms_and_bonds(
+        {
+            0: {"symbol": "C", "pos": (0.0, 0.0), "rs": "R"},
+            1: {"symbol": "O", "pos": (50.0, 0.0)},
+        },
+        {},
+    )
+    assert scene.atom_items[0].rs_label == "R"
+    assert scene.data.atoms[0]["rs"] == "R"
+    assert scene.atom_items[1].rs_label is None
+    assert "rs" not in scene.data.atoms[1]
+
+
+def test_scene_restore_from_json_sets_item_labels(mock_parser_host):
+    scene = _scene(mock_parser_host)
+    scene.restore_atoms_and_bonds_from_json(
+        [
+            {"id": 0, "symbol": "C", "x": 0.0, "y": 0.0, "rs": "S"},
+            {"id": 1, "symbol": "O", "x": 50.0, "y": 0.0, "rs": "bogus"},
+        ],
+        [],
+    )
+    assert scene.atom_items[0].rs_label == "S"
+    assert scene.atom_items[1].rs_label is None
+    assert "rs" not in scene.data.atoms[1]
+
+
+def test_label_only_change_is_its_own_undo_step(monkeypatch):
+    from moleditpy.ui.edit_actions_logic import EditActionsManager
+
+    host = MagicMock()
+    host.is_restoring_state = False
+    host.view_3d_manager.current_mol = None
+    host.state_manager.data.bonds = {}
+    host.state_manager.data.next_atom_id = 1
+    host.edit_3d_manager.constraints_3d = []
+    atom = {"symbol": "C", "pos": (0.0, 0.0), "charge": 0, "radical": 0}
+    host.state_manager.data.atoms = {0: atom}
+    mgr = EditActionsManager(host)
+    monkeypatch.setattr(mgr, "update_implicit_hydrogens", lambda: None)
+    monkeypatch.setattr(mgr, "update_undo_redo_actions", lambda: None)
+    host.state_manager.get_current_state.side_effect = lambda: {
+        "atoms": {0: dict(atom)},
+        "bonds": {},
+        "_next_atom_id": 1,
+        "constraints_3d": [],
+    }
+
+    mgr.push_undo_state()
+    atom["rs"] = "R"
+    mgr.push_undo_state()
+    assert len(mgr.undo_stack) == 2
+
+
+def test_copy_writes_label_from_data_model(mock_parser_host):
+    from moleditpy.ui.edit_actions_logic import EditActionsManager
+
+    scene, items = _center_scene(mock_parser_host)
+    scene.apply_rs_label(items[0], "R")
+    mock_parser_host.state_manager.data = scene.data
+    mock_parser_host.init_manager.scene.selectedItems.return_value = items[:2]
+    mgr = EditActionsManager(mock_parser_host)
+    clipboard = MagicMock()
+    with patch(
+        "moleditpy.ui.edit_actions_logic.QApplication.clipboard",
+        return_value=clipboard,
+    ):
+        mgr.copy_selection()
+    mime = clipboard.setMimeData.call_args.args[0]
+    import json
+
+    payload = json.loads(bytes(mime.data(mime.formats()[0])).decode("utf-8"))
+    assert [a.get("rs") for a in payload["atoms"]] == ["R", None]
+
+
+# ---------------------------------------------------------------------------
+# real 2D -> 3D conversion follows the labels
+# ---------------------------------------------------------------------------
+
+_TETRODOTOXIN = (
+    "C([C@@]1([C@H]2[C@@H]3[C@H](N=C(N[C@@]34[C@@H]([C@@H]1O[C@]"
+    "([C@H]4O)(O2)O)O)N)O)O)O"
+)
+
+
+def _draw(smiles):
+    """Lay out *smiles* in 2D with wedges, as a user would draw it."""
+    from rdkit.Chem import rdDepictor
+
+    from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
+
+    mol = Chem.MolFromSmiles(smiles)
+    rdDepictor.Compute2DCoords(mol)
+    Chem.WedgeMolBonds(mol, mol.GetConformer())
+    data = MolecularData()
+    ids = []
+    for atom in mol.GetAtoms():
+        p = mol.GetConformer().GetAtomPosition(atom.GetIdx())
+        ids.append(
+            data.add_atom(
+                atom.GetSymbol(), (p.x / ANGSTROM_PER_PIXEL, -p.y / ANGSTROM_PER_PIXEL)
+            )
+        )
+    wedge = {Chem.BondDir.BEGINWEDGE: 1, Chem.BondDir.BEGINDASH: 2}
+    for bond in mol.GetBonds():
+        data.add_bond(
+            ids[bond.GetBeginAtomIdx()],
+            ids[bond.GetEndAtomIdx()],
+            int(bond.GetBondTypeAsDouble()),
+            wedge.get(bond.GetBondDir(), 0),
+        )
+    return data
+
+
+def _convert(data):
+    """Run the real 2D->3D pipeline and restore editor atom IDs, as the app does."""
+    from types import SimpleNamespace
+
+    from moleditpy.ui.calculation_worker import CalculationWorker
+    from moleditpy.ui.compute_logic import ComputeManager
+
+    compute = ComputeManager.__new__(ComputeManager)
+    compute.host = SimpleNamespace(state_manager=SimpleNamespace(data=data))
+    block = ComputeManager._setup_mol_block_for_worker(
+        compute, data.to_rdkit_mol(use_2d_stereo=False)
+    )
+    worker = CalculationWorker()
+    results = []
+    worker.finished.connect(results.append)
+    worker.error.connect(lambda e: results.append(("error", e)))
+    worker.run_calculation(
+        block,
+        {
+            "conversion_mode": "rdkit",
+            "worker_id": 1,
+            "optimization_method": "MMFF_RDKIT",
+        },
+    )
+    _, mol = results[-1]
+    assert isinstance(mol, Chem.Mol), results[-1]
+    for idx, atom_id in enumerate(data.atoms):
+        mol.GetAtomWithIdx(idx).SetIntProp("_original_atom_id", atom_id)
+    return mol
+
+
+@pytest.mark.parametrize("label", ["R", "S"])
+def test_conversion_follows_a_label_on_plain_bonds(app, label):
+    data = _center_data()
+    data.atoms[0]["rs"] = label
+    assert sc.actual_chirality(_convert(data)) == {0: label}
+
+
+def test_conversion_follows_labels_over_every_drawn_wedge(app):
+    data = _draw(_TETRODOTOXIN)
+    drawn = drawn_chirality(data)
+    assert len(drawn) == 9
+    flipped = {aid: "R" if lab == "S" else "S" for aid, lab in drawn.items()}
+    for aid, lab in flipped.items():
+        data.atoms[aid]["rs"] = lab
+
+    mol = _convert(data)
+
+    assert sc.actual_chirality(mol) == flipped
+    assert sc.find_chirality_mismatches(data, mol) == []
+
+
+def test_conversion_follows_label_alongside_an_ez_label(app):
+    data = _draw("C/C=C/[C@H](F)Cl")
+    center = next(aid for aid in drawn_chirality(data))
+    wanted = "R" if drawn_chirality(data)[center] == "S" else "S"
+    data.atoms[center]["rs"] = wanted
+    double = next(k for k, b in data.bonds.items() if b["order"] == 2)
+    data.bonds[double]["stereo"] = 3  # Z label, against the drawn E
+
+    mol = _convert(data)
+
+    assert sc.actual_chirality(mol) == {center: wanted}
+    assert sc.find_ez_mismatches(data, mol) == []

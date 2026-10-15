@@ -770,6 +770,30 @@ def test_paste_fragment_recreates_atoms_and_bonds(mock_parser_host):
     mock_parser_host.ui_manager.activate_select_mode.assert_called_once()
 
 
+def test_paste_keeps_rs_labels(mock_parser_host):
+    payload = _json.dumps(
+        {
+            "atoms": [
+                {"symbol": "C", "rel_pos": [0.0, 0.0], "rs": "S"},
+                {"symbol": "O", "rel_pos": [50.0, 0.0]},
+            ],
+            "bonds": [],
+        }
+    ).encode("utf-8")
+    scene = mock_parser_host.init_manager.scene
+    _paste_with(mock_parser_host, _FakeMime(payload))
+    assert scene.set_atom_rs_label.call_count == 1
+    assert scene.set_atom_rs_label.call_args.args[1] == "S"
+
+
+def test_paste_rejects_bad_rs_label(mock_parser_host):
+    payload = _json.dumps(
+        {"atoms": [{"symbol": "C", "rel_pos": [0.0, 0.0], "rs": "Q"}], "bonds": []}
+    ).encode("utf-8")
+    editor = _paste_with(mock_parser_host, _FakeMime(payload))
+    assert len(editor.data.atoms) == 0
+
+
 def test_paste_invalid_json_reports_error(mock_parser_host):
     editor = _paste_with(mock_parser_host, _FakeMime(b"{broken"))
     assert len(editor.data.atoms) == 0
