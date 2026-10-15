@@ -25,6 +25,8 @@ from .bond_item import BondItem
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 from ..core.mol_geometry import is_problematic_valence
+from ..core.molecular_data import RS_LABELS
+from ..core.stereo_check import align_wedges_to_label, drawn_chirality
 from ..utils.constants import DEFAULT_BOND_LENGTH, SUM_TOLERANCE
 
 
@@ -893,6 +895,7 @@ class KeyboardMixin:
     # Provided by the composed MoleculeScene at runtime
     _calculate_polygon_from_edge: Any
     add_molecule_fragment: Any
+    apply_rs_label: Any
     atom_items: Any
     clear: Any
     create_atom: Any
@@ -1200,6 +1203,20 @@ class KeyboardMixin:
                     self.window.edit_actions_manager.push_undo_state()
                     event.accept()
                     return
+
+            # --- 0c. R/S label (R cycles the hovered atom: R -> S -> none) ---
+            if (
+                key == Qt.Key.Key_R
+                and modifiers == Qt.KeyboardModifier.NoModifier
+                and isinstance(item_at_cursor, AtomItem)
+            ):
+                if self.apply_rs_label(
+                    item_at_cursor, next_rs_label(item_at_cursor.rs_label)
+                ):
+                    self.update_all_items()
+                    self.window.edit_actions_manager.push_undo_state()
+                event.accept()
+                return
 
             # --- 1. Atom operations (change symbol) ---
             if isinstance(item_at_cursor, AtomItem):
@@ -1851,3 +1868,79 @@ class SceneQueryMixin:
             )
             self.window.statusBar().showMessage(f"Error: {e}", 5000)
             self.update_all_items()
+
+    def set_atom_rs_label(self, atom_item: Any, label: Optional[str]) -> None:
+        """Store R/S *label* (None clears it) on the atom's data and item."""
+        record = self.data.atoms.get(atom_item.atom_id)
+        if record is None:
+            return
+        if label in RS_LABELS:
+            record["rs"] = label
+        else:
+            record.pop("rs", None)
+            label = None
+        atom_item.prepareGeometryChange()
+        atom_item.rs_label = label
+        atom_item.update()
+
+    def apply_rs_label(self, atom_item: Any, label: Optional[str]) -> bool:
+        """Give *atom_item* R/S *label* (None clears it); True if anything changed.
+
+        A label overrides the wedges at its center. Where the center already
+        has wedges or hashes, they are redrawn to agree with the label; a
+        center without them keeps its plain bonds. An atom that cannot be R/S
+        (not a stereocenter) is left alone with a status-bar note.
+        """
+        if atom_item is None or atom_item.atom_id not in self.data.atoms:
+            return False
+        if getattr(atom_item, "rs_label", None) == label:
+            return False
+        atom_id = atom_item.atom_id
+        if label is None:
+            self.set_atom_rs_label(atom_item, None)
+            return True
+        record = self.data.atoms[atom_id]
+        previous = record.get("rs")
+        record["rs"] = label
+        try:
+            reachable = drawn_chirality(self.data).get(atom_id) == label
+        finally:
+            if previous is None:
+                record.pop("rs", None)
+            else:
+                record["rs"] = previous
+        if not reachable:
+            self.window.statusBar().showMessage(
+                f"{atom_item.symbol}{atom_id} is not a stereocenter; no R/S label set.",
+                4000,
+            )
+            return False
+        bond_changes = align_wedges_to_label(self.data, atom_id, label)
+        self.set_atom_rs_label(atom_item, label)
+        for key, stereo in bond_changes.items():
+            self._set_bond_stereo_by_key(key, stereo)
+        return True
+
+    def _set_bond_stereo_by_key(self, key: Tuple[int, int], stereo: int) -> None:
+        """Set a bond's stereo in data and scene, keeping plain-bond keys sorted."""
+        bond_data = self.data.bonds.get(key)
+        bond_item = self.bond_items.get(key)
+        if bond_data is None:
+            return
+        bond_data["stereo"] = stereo
+        new_key = key
+        if stereo == 0 and key[0] > key[1]:
+            new_key = (key[1], key[0])
+            self.data.bonds[new_key] = self.data.bonds.pop(key)
+        if bond_item is None:
+            return
+        if new_key != key:
+            self.rekey_bond_item(bond_item, new_key)
+            bond_item.atom1, bond_item.atom2 = bond_item.atom2, bond_item.atom1
+            bond_item.update_position()
+        bond_item.set_stereo(stereo)
+
+
+def next_rs_label(current: Optional[str]) -> Optional[str]:
+    """The R/S tool's click cycle: none -> R -> S -> none."""
+    return {None: "R", "R": "S"}.get(current)

@@ -14,12 +14,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, FrozenSet, List, Optional, Tuple
+from typing import Any, Dict, FrozenSet, List, Optional, Tuple
 
 from rdkit import Chem
 from rdkit.Chem import rdCIPLabeler
 
-from .molecular_data import MolecularData
+from .molecular_data import RS_LABELS, MolecularData
 
 
 @dataclass(frozen=True)
@@ -55,17 +55,144 @@ def _cip_labels_by_atom_id(mol: Chem.Mol) -> Dict[int, str]:
     return labels
 
 
-def drawn_chirality(data: MolecularData) -> Dict[int, str]:
-    """CIP labels of the stereocenters the 2D drawing specifies with wedges."""
-    # Nothing is specified without a wedge or hash; skip CIP labelling.
-    if not any(bond.get("stereo") in (1, 2) for bond in data.bonds.values()):
+def drawn_chirality(data: MolecularData, use_rs_labels: bool = True) -> Dict[int, str]:
+    """CIP labels of the stereocenters the 2D drawing specifies.
+
+    These come from the wedges and hashes and, unless *use_rs_labels* is
+    False, the atoms' R/S labels, which override the wedges at their center.
+    """
+    # Nothing is specified without a wedge, hash or label; skip CIP labelling.
+    has_wedge = any(bond.get("stereo") in (1, 2) for bond in data.bonds.values())
+    has_label = use_rs_labels and any(
+        atom.get("rs") in RS_LABELS for atom in data.atoms.values()
+    )
+    if not has_wedge and not has_label:
         return {}
-    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    mol = data.to_rdkit_mol(use_2d_stereo=False, use_rs_labels=use_rs_labels)
     if mol is None:
         return {}
     Chem.AssignChiralTypesFromBondDirs(mol)
     Chem.AssignStereochemistry(mol, cleanIt=True, force=True)
     return _cip_labels_by_atom_id(mol)
+
+
+@dataclass(frozen=True)
+class WedgeForLabel:
+    """How to draw a bond so that the stereocenter at its narrow end reads as R/S."""
+
+    key: Tuple[int, int]  # (stereocenter, other end): data.bonds key, narrow end first
+    stereo: int  # 1 = wedge, 2 = hash
+    cleared: Tuple[Tuple[int, int], ...]  # other wedges at the center to make plain
+
+
+def wedge_for_label(
+    data: MolecularData,
+    bond_key: Tuple[int, int],
+    label: str,
+    centers: Optional[List[int]] = None,
+) -> Optional[WedgeForLabel]:
+    """Wedge or hash on *bond_key* that makes one of its ends CIP *label*.
+
+    *centers* is the order in which the bond's ends are tried (default: the
+    key order). Each end is tried first with the other wedges kept; if they
+    make *label* unreachable, then with this center's other wedges and hashes
+    made plain, so the requested label wins. Returns None when neither end
+    can be *label* (not a stereocenter). *data* is left unchanged.
+    """
+    if bond_key not in data.bonds or label not in RS_LABELS:
+        return None
+    ends = list(centers) if centers else list(bond_key)
+    original = list(data.bonds.items())
+    template = dict(data.bonds[bond_key], order=1)
+    trial_bonds = {k: dict(v) for k, v in original if k != bond_key}
+    try:
+        for center in ends:
+            if center not in bond_key:
+                continue
+            other = bond_key[1] if center == bond_key[0] else bond_key[0]
+            own = tuple(
+                k
+                for k, v in trial_bonds.items()
+                if k[0] == center and v.get("stereo") in (1, 2)
+            )
+            for cleared in ((), own) if own else ((),):
+                stereo = _stereo_reading_as(
+                    data, trial_bonds, (center, other), template, cleared, label
+                )
+                if stereo is not None:
+                    return WedgeForLabel((center, other), stereo, cleared)
+        return None
+    except (RuntimeError, ValueError, TypeError) as e:
+        logging.warning("R/S wedge search failed: %s", e)
+        return None
+    finally:
+        data.bonds.clear()
+        data.bonds.update(original)
+
+
+def _stereo_reading_as(
+    data: MolecularData,
+    base: Dict[Tuple[int, int], Dict[str, Any]],
+    key: Tuple[int, int],
+    template: Dict[str, Any],
+    cleared: Tuple[Tuple[int, int], ...],
+    label: str,
+) -> Optional[int]:
+    """Wedge (1) or hash (2) on *key* that makes its narrow end read *label*.
+
+    Tried on *data* rebuilt from *base* with the *cleared* bonds made plain;
+    the caller restores *data*.
+    """
+    for stereo in (1, 2):
+        data.bonds.clear()
+        for k, v in base.items():
+            data.bonds[k] = dict(v, stereo=0) if k in cleared else dict(v)
+        data.bonds[key] = dict(template, stereo=stereo)
+        if drawn_chirality(data, use_rs_labels=False).get(key[0]) == label:
+            return stereo
+    return None
+
+
+def align_wedges_to_label(
+    data: MolecularData, center: int, label: str
+) -> Dict[Tuple[int, int], int]:
+    """Stereo changes that make the wedges at *center* draw R/S *label*.
+
+    Only the wedges and hashes starting at *center* are touched, and only when
+    there are some: a center drawn without them keeps its plain bonds (its
+    label alone carries the configuration). If the drawing already reads as
+    *label*, nothing changes. Otherwise every stereo bond at the center is
+    swapped (wedge <-> hash), which mirrors it; if that still does not read
+    as *label* (an ambiguous drawing), one of them is redrawn and the rest
+    made plain. Returns {data.bonds key: new stereo}; empty when nothing
+    needs to change or no drawing gives *label*.
+    """
+    own = [
+        key
+        for key, bond in data.bonds.items()
+        if key[0] == center and bond.get("stereo") in (1, 2)
+    ]
+    if not own or label not in RS_LABELS:
+        return {}
+    if drawn_chirality(data, use_rs_labels=False).get(center) == label:
+        return {}
+    original = {key: data.bonds[key]["stereo"] for key in own}
+    swapped = {key: 3 - stereo for key, stereo in original.items()}
+    try:
+        for key, stereo in swapped.items():
+            data.bonds[key]["stereo"] = stereo
+        if drawn_chirality(data, use_rs_labels=False).get(center) == label:
+            return swapped
+    finally:
+        for key, stereo in original.items():
+            data.bonds[key]["stereo"] = stereo
+    for key in own:
+        found = wedge_for_label(data, key, label, centers=[center])
+        if found is not None:
+            changes = dict.fromkeys(found.cleared, 0)
+            changes[key] = found.stereo
+            return changes
+    return {}
 
 
 def actual_chirality(mol_3d: Chem.Mol) -> Dict[int, str]:

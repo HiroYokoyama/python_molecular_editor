@@ -817,7 +817,7 @@ class ComputeManager:
     def update_aromatic_rings(self) -> None:
         """Update aromatic ring visualization."""
         try:
-            mol = self.host.state_manager.data.to_rdkit_mol()
+            mol = self.host.state_manager.data.to_rdkit_mol(use_rs_labels=False)
             if not mol:
                 return
             Chem.SanitizeMol(mol)
