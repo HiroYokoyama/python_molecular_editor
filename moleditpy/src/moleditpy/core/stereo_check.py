@@ -113,6 +113,75 @@ def find_chirality_mismatches(
     ]
 
 
+def ambiguous_wedge_centers(data: MolecularData) -> List[int]:
+    """Atom IDs of stereocenters whose wedges/hashes specify no configuration.
+
+    These are drawings RDKit rejects as ambiguous (for example a wedge and a
+    hash on opposite bonds), so the 3D structure gets an arbitrary
+    configuration there. Atoms that are not stereocenters are not reported.
+    """
+    if not any(bond.get("stereo") in (1, 2) for bond in data.bonds.values()):
+        return []
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    if mol is None:
+        return []
+    probe = Chem.Mol(mol)
+    Chem.AssignChiralTypesFromBondDirs(probe)
+    centers = {
+        bond.GetBeginAtomIdx()
+        for bond in mol.GetBonds()
+        if bond.GetBondDir() in (Chem.BondDir.BEGINWEDGE, Chem.BondDir.BEGINDASH)
+    }
+    found: List[int] = []
+    for idx in sorted(centers):
+        atom = probe.GetAtomWithIdx(idx)
+        if atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED:
+            continue
+        # A stereocenter keeps an arbitrary tag through perception.
+        trial = Chem.Mol(mol)
+        trial.GetAtomWithIdx(idx).SetChiralTag(Chem.ChiralType.CHI_TETRAHEDRAL_CW)
+        Chem.AssignStereochemistry(trial, cleanIt=True, force=True)
+        trial_atom = trial.GetAtomWithIdx(idx)
+        if trial_atom.GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED and (
+            trial_atom.HasProp("_original_atom_id")
+        ):
+            found.append(trial_atom.GetIntProp("_original_atom_id"))
+    return found
+
+
+def find_ambiguous_centers(
+    data: MolecularData, mol_3d: Chem.Mol
+) -> List[ChiralityMismatch]:
+    """Ambiguously wedged stereocenters, with ``drawn`` set to "ambiguous".
+
+    ``actual`` is the configuration the 3D structure happened to get.
+    """
+    try:
+        atom_ids = ambiguous_wedge_centers(data)
+        if not atom_ids:
+            return []
+        actual = actual_chirality(mol_3d)
+    except (RuntimeError, ValueError) as e:
+        logging.warning("Ambiguous wedge check failed: %s", e)
+        return []
+    index_of = {
+        atom.GetIntProp("_original_atom_id"): atom.GetIdx()
+        for atom in mol_3d.GetAtoms()
+        if atom.HasProp("_original_atom_id")
+    }
+    return [
+        ChiralityMismatch(
+            atom_id=atom_id,
+            symbol=str(data.atoms[atom_id]["symbol"]),
+            rdkit_index=index_of.get(atom_id),
+            drawn="ambiguous",
+            actual=actual.get(atom_id),
+        )
+        for atom_id in atom_ids
+        if atom_id in data.atoms
+    ]
+
+
 def _bond_cip_by_atom_ids(
     mol: Chem.Mol,
 ) -> Dict[FrozenSet[int], Tuple[int, str]]:

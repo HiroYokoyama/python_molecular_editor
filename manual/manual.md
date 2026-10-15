@@ -227,7 +227,7 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 *   **Open Babel Mode**: Uses Open Babel's `make3D()` coordinate generator run in a secure, isolated background subprocess to prevent application hangs or crashes.
 *   **Direct Mode**: Bypasses 3D conformer embedding to retain your exact 2D layout. Atoms are placed on the $Z = 0.0$ plane, with missing hydrogen atoms added geometrically. Stereochemistry is preserved by adding offset Z-coordinates ($Z = \pm 1.5$ Å) to wedge/dash atoms.
 
-**Stereo Check:** After each conversion, every stereocenter you drew with a wedge or hash (R/S) and every double bond you labelled E or Z is compared with the 3D result. If any of them comes out inverted or lost, a **Stereochemistry Check** window lists each one with its drawn and 3D configuration. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral and E/Z labels, with the wrong ones in red and the correct ones in the usual color; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Flip the listed stereocenters and double bonds manually in the 3D structure. The check can be turned off in `Settings` \> `Settings...` \> **3D Scene** (Check After 3D Conversion). It can also be run after `Optimize 3D` (Check After 3D Optimization, off by default).
+**Stereo Check:** After each conversion, every stereocenter you drew with a wedge or hash (R/S) and every double bond you labelled E or Z is compared with the 3D result. If any of them comes out inverted or lost, a **Stereochemistry Check** window lists each one with its drawn and 3D configuration. It also lists stereocenters whose wedges are drawn ambiguously, for example a wedge and a hash on opposite bonds, with "ambiguous" as the drawn configuration: such a drawing specifies no configuration, so the 3D one is arbitrary. Redraw them with a single wedge or hash, or with the wedge and hash on adjacent bonds. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral and E/Z labels, with the wrong ones in red and the correct ones in the usual color; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Flip the listed stereocenters and double bonds manually in the 3D structure. The check can be turned off in `Settings` \> `Settings...` \> **3D Scene** (Check After 3D Conversion). It can also be run after `Optimize 3D` (Check After 3D Optimization, off by default).
 
 ### 5.2. 3D Structure Optimization
 
@@ -571,7 +571,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 4.11
+  * **Version:** 4.12
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

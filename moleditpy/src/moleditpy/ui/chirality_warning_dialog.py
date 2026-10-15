@@ -88,16 +88,33 @@ class ChiralityWarningDialog(QDialog):
             )
         return rows
 
+    def _summary_text(self, row_count: int, total: int) -> str:
+        """Rich-text summary: wrong elements, then ambiguously drawn centers."""
+        ambiguous = sum(1 for m in self.mismatches if m.drawn == "ambiguous")
+        wrong = row_count - ambiguous
+        parts = []
+        if wrong:
+            parts.append(
+                f"<b>The 3D structure is wrong.</b><br>"
+                f"{wrong} of {total} stereo element(s) drawn in 2D (R/S centers, "
+                f"E/Z double bonds) have a different configuration in 3D."
+            )
+        if ambiguous:
+            parts.append(
+                f"<b>{ambiguous} stereocenter(s) are drawn ambiguously</b> "
+                f"(for example a wedge and a hash on opposite bonds), so the "
+                f"wedges do not specify a configuration and the 3D one shown is "
+                f"arbitrary. Redraw them with one wedge or hash, or with the "
+                f"wedge and hash on adjacent bonds."
+            )
+        return "<br><br>".join(parts)
+
     def _build_ui(self, total: int) -> None:
         """Lay out the summary, the per-item table and the close button."""
         layout = QVBoxLayout(self)
 
         rows = self._rows()
-        summary = QLabel(
-            f"<b>The 3D structure is wrong.</b><br>"
-            f"{len(rows)} of {total} stereo element(s) drawn in 2D (R/S centers, "
-            f"E/Z double bonds) have a different configuration in 3D."
-        )
+        summary = QLabel(self._summary_text(len(rows), total))
         summary.setWordWrap(True)
         layout.addWidget(summary)
 

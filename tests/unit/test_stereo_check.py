@@ -419,3 +419,136 @@ def test_ez_check_skips_labels_on_atoms_no_longer_drawn():
     mol = _convert(data)
     with patch.object(sc, "drawn_ez", return_value={(998, 999): "E"}):
         assert sc.find_ez_mismatches(data, mol) == []
+
+
+def _three_arm_center(cl_angle, c1_angle, c3_angle, stereo):
+    """CH(Cl)(CH3)(C2H5) with Cl wedged (1) or hashed (2), arms at the given angles."""
+    import math
+
+    data = MolecularData()
+    center = data.add_atom("C", (0.0, 0.0))
+
+    def arm(symbol, angle):
+        rad = math.radians(angle)
+        return data.add_atom(symbol, (75 * math.cos(rad), -75 * math.sin(rad)))
+
+    cl, c1, c3 = arm("Cl", cl_angle), arm("C", c1_angle), arm("C", c3_angle)
+    x, y = data.atoms[c3]["pos"]
+    c4 = data.add_atom("C", (x + 75, y))
+    data.add_bond(center, cl, 1, stereo)
+    data.add_bond(center, c1)
+    data.add_bond(center, c3)
+    data.add_bond(c3, c4)
+    return data
+
+
+@pytest.mark.parametrize("stereo", [1, 2])
+@pytest.mark.parametrize("bend", [0.0, 2.0, -2.0])
+def test_t_shaped_center_reads_like_the_bent_drawing(stereo, bend):
+    """Plain bonds in a straight line read the same as the usual 120-degree layout.
+
+    RDKit alone flags the straight (snapped) drawing as ambiguous or inverts
+    it, while bending the plain bonds by two degrees reads correctly.
+    """
+    usual = drawn_chirality(_three_arm_center(90, 210, 330, stereo))
+    t_shape = drawn_chirality(_three_arm_center(90, 180 + bend, 360 - bend, stereo))
+
+    assert usual == {0: "R" if stereo == 1 else "S"}
+    assert t_shape == usual
+
+
+@pytest.mark.parametrize("stereo", [1, 2])
+def test_t_shaped_center_converts_to_the_drawn_isomer(app, stereo):
+    """The 3D structure from a T-shaped wedge drawing has the drawn configuration."""
+    data = _three_arm_center(90, 180, 0, stereo)
+    mol = _convert(data)
+
+    assert find_chirality_mismatches(data, mol) == []
+    assert actual_chirality(mol) == {0: "R" if stereo == 1 else "S"}
+
+
+def test_wedge_inside_a_narrow_fan_is_left_to_rdkit():
+    """A wedge between two plain bonds less than 180 degrees apart keeps RDKit's reading."""
+    from moleditpy.core.molecular_data import wedge_reading
+
+    data = _three_arm_center(90, 150, 30, 1)
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    assert wedge_reading(mol, 0) is None
+    probe = Chem.Mol(mol)
+    Chem.AssignChiralTypesFromBondDirs(probe)
+    assert drawn_chirality(data) == {0: "S"}
+
+
+@pytest.mark.parametrize("smiles", [TETRODOTOXIN, "C[C@](F)(Cl)Br", "C[S@](=O)CC"])
+def test_rdkit_wedged_drawings_are_left_unchanged(smiles):
+    """Wedges RDKit places itself read the same before and after the fix."""
+    from moleditpy.core.molecular_data import wedge_reading
+
+    data = _draw(smiles)
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    before = {
+        (b.GetBeginAtomIdx(), b.GetEndAtomIdx(), b.GetBondDir()) for b in mol.GetBonds()
+    }
+    probe = Chem.Mol(mol)
+    Chem.AssignChiralTypesFromBondDirs(probe)
+    for begin, _, direction in before:
+        if direction in (Chem.BondDir.BEGINWEDGE, Chem.BondDir.BEGINDASH):
+            reading = wedge_reading(mol, begin)
+            assert reading in (None, probe.GetAtomWithIdx(begin).GetChiralTag())
+    assert {(i, j) for i, j, _ in before} == {
+        (b.GetBeginAtomIdx(), b.GetEndAtomIdx()) for b in mol.GetBonds()
+    }
+
+
+def _cross(down_stereo, symbols=("F", "Br", "Cl")):
+    """C(CH3)(F)(Br)(Cl): methyl and F left/right, Br wedged up, Cl down."""
+    data = MolecularData()
+    center = data.add_atom("C", (0.0, 0.0))
+    me = data.add_atom("C", (-75.0, 0.0))
+    right = data.add_atom(symbols[0], (75.0, 0.0))
+    up = data.add_atom(symbols[1], (0.0, -75.0))
+    down = data.add_atom(symbols[2], (0.0, 75.0))
+    data.add_bond(center, me)
+    data.add_bond(center, right)
+    data.add_bond(center, up, 1, 1)
+    data.add_bond(center, down, 1, down_stereo)
+    return data
+
+
+def test_opposite_wedge_and_hash_is_reported_as_ambiguous():
+    """A wedge and a hash on opposite bonds specify nothing and are flagged."""
+    from moleditpy.core.stereo_check import ambiguous_wedge_centers
+
+    data = _cross(2)
+    assert drawn_chirality(data) == {}
+    assert ambiguous_wedge_centers(data) == [0]
+
+
+def test_single_wedge_cross_is_not_ambiguous():
+    """One wedge on a four-arm cross is a readable drawing."""
+    from moleditpy.core.stereo_check import ambiguous_wedge_centers
+
+    data = _cross(0)
+    assert drawn_chirality(data) == {0: "S"}
+    assert ambiguous_wedge_centers(data) == []
+
+
+def test_ambiguous_wedges_on_a_non_stereocenter_are_ignored():
+    """Two identical substituents: no configuration to lose, nothing to report."""
+    from moleditpy.core.stereo_check import ambiguous_wedge_centers
+
+    assert ambiguous_wedge_centers(_cross(2, symbols=("C", "C", "Cl"))) == []
+
+
+def test_find_ambiguous_centers_reports_the_3d_configuration(app):
+    """The row carries "ambiguous" as drawn and whatever the 3D structure got."""
+    from moleditpy.core.stereo_check import find_ambiguous_centers
+
+    data = _cross(2)
+    mol = _convert(data)
+    rows = find_ambiguous_centers(data, mol)
+
+    assert len(rows) == 1
+    assert rows[0].atom_id == 0 and rows[0].drawn == "ambiguous"
+    assert rows[0].actual in ("R", "S")
+    assert find_ambiguous_centers(_cross(0), mol) == []

@@ -385,3 +385,21 @@ def test_failed_redraw_is_logged_not_raised(app):
     dlg = ChiralityWarningDialog(mw, MISMATCHES, 3, parent=None)
     assert mw.view_3d_manager.show_chiral_labels is True
     dlg.reject()
+
+
+def test_dialog_explains_ambiguous_centers(app):
+    """Ambiguously drawn centers are explained, not called a wrong 3D result."""
+    from PyQt6.QtWidgets import QLabel
+
+    rows = [
+        ChiralityMismatch(
+            atom_id=0, symbol="C", rdkit_index=0, drawn="ambiguous", actual="S"
+        )
+    ]
+    dlg = ChiralityWarningDialog(_main_window(), rows, 0, parent=None)
+    try:
+        text = " ".join(lbl.text() for lbl in dlg.findChildren(QLabel))
+        assert "drawn ambiguously" in text
+        assert "The 3D structure is wrong" not in text
+    finally:
+        dlg.close()

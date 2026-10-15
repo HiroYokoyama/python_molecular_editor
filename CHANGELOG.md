@@ -8,6 +8,18 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [4.12.0] - 2026-10-15
+
+### Added
+
+- The Stereochemistry Check after 3D conversion now also lists stereocenters whose wedges are drawn ambiguously (for example a wedge and a hash on opposite bonds), marked "ambiguous". RDKit ignores such wedges with only a console warning, so the 3D configuration was silently arbitrary.
+
+### Fixed
+
+- A stereocenter with an implicit H whose two plain bonds are drawn in a straight line (a T-shape, as angle snapping produces, e.g. a wedged Cl on the middle carbon of a straight C-C-C) no longer converts to the wrong isomer. RDKit read this drawing as "ambiguous stereochemistry" or inverted it, while the same drawing bent by a few degrees read correctly. Wedges and hashes are now read as a chemist reads them (plain bonds in the plane, a wedge toward the viewer, the implicit H opposite); when that reading is unambiguous and RDKit disagrees, the center is re-wedged for RDKit on the same coordinates. Drawings RDKit already reads correctly are unchanged.
+
+---
+
 ## [4.11.5] - 2026-10-12
 
 ### Fixed
