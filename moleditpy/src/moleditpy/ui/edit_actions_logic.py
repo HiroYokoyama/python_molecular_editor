@@ -324,7 +324,9 @@ class EditActionsManager:
                         "rel_pos": atom.pos() - center,
                         "charge": atom.charge,
                         "radical": atom.radical,
-                        **rs_entry({"rs": atom.rs_label}),
+                        **rs_entry(
+                            self.host.state_manager.data.atoms.get(atom.atom_id, {})
+                        ),
                     }
                 )
 
