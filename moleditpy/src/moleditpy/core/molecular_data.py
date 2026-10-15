@@ -247,6 +247,71 @@ def wedge_reading(mol: Chem.Mol, center: int) -> Optional[Chem.ChiralType]:
     return readings.pop() if len(readings) == 1 else None
 
 
+def _bond_states(mol: Chem.Mol, indices: List[int]) -> List[Tuple[int, int, Any]]:
+    """Begin, end and direction of the bonds at *indices*."""
+    return [
+        (
+            mol.GetBondWithIdx(i).GetBeginAtomIdx(),
+            mol.GetBondWithIdx(i).GetEndAtomIdx(),
+            mol.GetBondWithIdx(i).GetBondDir(),
+        )
+        for i in indices
+    ]
+
+
+def _rdkit_tags(mol: Chem.Mol) -> List[Chem.ChiralType]:
+    """Chiral tag RDKit's wedge perception gives each atom of *mol*."""
+    probe = Chem.Mol(mol)
+    for atom in probe.GetAtoms():
+        atom.SetChiralTag(Chem.ChiralType.CHI_UNSPECIFIED)
+    Chem.AssignChiralTypesFromBondDirs(probe)
+    return [atom.GetChiralTag() for atom in probe.GetAtoms()]
+
+
+def _clear_own_wedges(mol: Chem.Mol, centers: Dict[int, Chem.ChiralType]) -> None:
+    """Remove the wedges/hashes that start at *centers*."""
+    for center in centers:
+        for bond in mol.GetAtomWithIdx(center).GetBonds():
+            if bond.GetBeginAtomIdx() == center and bond.GetBondDir() in _WEDGE_Z:
+                bond.SetBondDir(Chem.BondDir.NONE)
+
+
+def _rdkit_rewedge(mol: Chem.Mol, fixes: Dict[int, Chem.ChiralType]) -> None:
+    """Let RDKit wedge each fixed center for its wanted tag (may reverse bonds)."""
+    _clear_own_wedges(mol, fixes)
+    for center, tag in fixes.items():
+        mol.GetAtomWithIdx(center).SetChiralTag(tag)
+    Chem.WedgeMolBonds(mol, mol.GetConformer())
+    for center in fixes:
+        mol.GetAtomWithIdx(center).SetChiralTag(Chem.ChiralType.CHI_UNSPECIFIED)
+
+
+def _pick_wedges(mol: Chem.Mol, fixes: Dict[int, Chem.ChiralType]) -> None:
+    """Wedge or hash one free bond per fixed center so it reads its wanted tag.
+
+    A candidate counts only when RDKit and wedge_reading() agree on it.
+    """
+    for center, tag in fixes.items():
+        for bond in mol.GetAtomWithIdx(center).GetBonds():
+            if (
+                bond.GetBeginAtomIdx() != center
+                or bond.GetBondDir() != Chem.BondDir.NONE
+                or bond.GetBondType() != Chem.BondType.SINGLE
+            ):
+                continue
+            for direction in _WEDGE_Z:
+                bond.SetBondDir(direction)
+                if (
+                    _rdkit_tags(mol)[center] == tag
+                    and wedge_reading(mol, center) == tag
+                ):
+                    break
+                bond.SetBondDir(Chem.BondDir.NONE)
+            else:
+                continue
+            break
+
+
 def resolve_wedge_chirality(mol: Chem.Mol) -> None:
     """Re-wedge stereocenters whose drawn wedges RDKit reads differently.
 
@@ -257,8 +322,11 @@ def resolve_wedge_chirality(mol: Chem.Mol) -> None:
     bent by a few degrees reads correctly. Where wedge_reading() gives a
     definite answer that RDKit's perception does not reproduce, the wedges at
     that center are replaced by ones RDKit picks for the intended
-    configuration on the same coordinates, so every later reader (MOL block,
-    3D embedding, stereo check) gets the drawn isomer.
+    configuration on the same coordinates (or, where RDKit declines, a wedge
+    or hash on a free bond of the center that both readings agree on), so
+    every later reader (MOL block, 3D embedding, stereo check) gets the drawn
+    isomer. Nothing is changed unless every other stereocenter and every
+    bond away from the fixed centers stays exactly as drawn.
     """
     if mol.GetNumConformers() == 0:
         return
@@ -268,55 +336,56 @@ def resolve_wedge_chirality(mol: Chem.Mol) -> None:
     if not centers:
         return
     try:
-        probe = Chem.Mol(mol)
-        Chem.AssignChiralTypesFromBondDirs(probe)
+        read = _rdkit_tags(mol)
         fixes: Dict[int, Chem.ChiralType] = {}
         for center in centers:
             wanted = wedge_reading(mol, center)
-            if (
-                wanted is not None
-                and wanted != probe.GetAtomWithIdx(center).GetChiralTag()
-            ):
+            if wanted is not None and wanted != read[center]:
                 fixes[center] = wanted
         if not fixes:
             return
 
-        def rewedge(target: Chem.Mol) -> None:
-            for center, tag in fixes.items():
-                for bond in target.GetAtomWithIdx(center).GetBonds():
-                    if (
-                        bond.GetBeginAtomIdx() == center
-                        and bond.GetBondDir() in _WEDGE_Z
-                    ):
-                        bond.SetBondDir(Chem.BondDir.NONE)
-                target.GetAtomWithIdx(center).SetChiralTag(tag)
-            Chem.WedgeMolBonds(target, target.GetConformer())
-            for center in fixes:
-                target.GetAtomWithIdx(center).SetChiralTag(
-                    Chem.ChiralType.CHI_UNSPECIFIED
-                )
+        # Bonds the re-wedge must not touch: everything away from the fixed
+        # centers, and any wedge/hash an adjacent center draws onto a bond it
+        # shares with a fixed center.
+        protected = [
+            b.GetIdx()
+            for b in mol.GetBonds()
+            if b.GetBeginAtomIdx() not in fixes
+            and (b.GetEndAtomIdx() not in fixes or b.GetBondDir() in _WEDGE_Z)
+        ]
+        before = _bond_states(mol, protected)
+        expected = [fixes.get(i, tag) for i, tag in enumerate(read)]
 
-        def untouched_bonds(target: Chem.Mol) -> List[Tuple[int, int, Any]]:
-            """Endpoints and direction of every bond away from the fixed centers."""
-            return [
-                (b.GetBeginAtomIdx(), b.GetEndAtomIdx(), b.GetBondDir())
-                for b in target.GetBonds()
-                if b.GetBeginAtomIdx() not in fixes and b.GetEndAtomIdx() not in fixes
-            ]
+        def holds(trial: Chem.Mol) -> bool:
+            """Fixed centers read right; every other center and bond is as drawn."""
+            return (
+                _bond_states(trial, protected) == before
+                and _rdkit_tags(trial) == expected
+            )
 
         # WedgeMolBonds may reverse bonds, which cannot be undone, so try it
-        # on a copy and touch the real molecule only once it reads right and
-        # has left every other bond as the user drew it.
-        before = untouched_bonds(mol)
+        # on a copy and touch the real molecule only once it holds.
         trial = Chem.Mol(mol)
-        rewedge(trial)
-        Chem.AssignChiralTypesFromBondDirs(trial)
-        if untouched_bonds(trial) != before or any(
-            trial.GetAtomWithIdx(c).GetChiralTag() != t for c, t in fixes.items()
-        ):
-            logging.debug("Re-wedging stereocenters %s did not hold", sorted(fixes))
+        _rdkit_rewedge(trial, fixes)
+        if holds(trial):
+            _rdkit_rewedge(mol, fixes)
             return
-        rewedge(mol)
+        # WedgeMolBonds declines some centers, e.g. a T-shape whose one
+        # unambiguous bond already carries a neighbor's hash. Try each free
+        # bond of the center instead; this never reverses a bond.
+        trial = Chem.Mol(mol)
+        _clear_own_wedges(trial, fixes)
+        _pick_wedges(trial, fixes)
+        if holds(trial):
+            for center in fixes:
+                for bond in mol.GetAtomWithIdx(center).GetBonds():
+                    if bond.GetBeginAtomIdx() == center:
+                        bond.SetBondDir(
+                            trial.GetBondWithIdx(bond.GetIdx()).GetBondDir()
+                        )
+            return
+        logging.debug("Re-wedging stereocenters %s did not hold", sorted(fixes))
     except (RuntimeError, ValueError) as e:
         logging.warning("Resolving wedge stereochemistry failed: %s", e)
 

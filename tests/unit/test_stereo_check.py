@@ -595,6 +595,7 @@ def test_resolve_keeps_the_drawing_when_rewedging_does_not_hold(monkeypatch):
     before = [(b.GetBeginAtomIdx(), b.GetBondDir()) for b in mol.GetBonds()]
 
     monkeypatch.setattr(md.Chem, "WedgeMolBonds", lambda mol, conf: None)
+    monkeypatch.setattr(md, "_pick_wedges", lambda mol, fixes: None)
     md.resolve_wedge_chirality(mol)
     assert [(b.GetBeginAtomIdx(), b.GetBondDir()) for b in mol.GetBonds()] == before
 
@@ -648,14 +649,16 @@ def test_wedge_reading_needs_a_net_wedge_on_three_neighbors():
 
 
 def test_resolve_rejects_rewedging_that_touches_other_bonds(monkeypatch):
-    """A re-wedge that alters a bond away from the fixed center is not applied."""
+    """A re-wedge that alters a bond away from the fixed center is not applied.
+
+    The fallback then fixes the center without touching that bond.
+    """
     import moleditpy.core.molecular_data as md
 
     data = _three_arm_center(90, 180, 0, 1)
     monkeypatch.setattr(md, "resolve_wedge_chirality", lambda mol: None)
     mol = data.to_rdkit_mol(use_2d_stereo=False)
     monkeypatch.undo()
-    before = [(b.GetBeginAtomIdx(), b.GetBondDir()) for b in mol.GetBonds()]
 
     real_wedge = md.Chem.WedgeMolBonds
 
@@ -666,4 +669,69 @@ def test_resolve_rejects_rewedging_that_touches_other_bonds(monkeypatch):
 
     monkeypatch.setattr(md.Chem, "WedgeMolBonds", wedge_and_stray)
     md.resolve_wedge_chirality(mol)
-    assert [(b.GetBeginAtomIdx(), b.GetBondDir()) for b in mol.GetBonds()] == before
+    assert mol.GetBondBetweenAtoms(3, 4).GetBondDir() == md.Chem.BondDir.NONE
+    assert md._rdkit_tags(mol)[0] == md.wedge_reading(mol, 0)
+
+
+def test_resolve_keeps_an_adjacent_centers_wedge_on_the_shared_bond(monkeypatch):
+    """A neighbor's hash drawn on the bond it shares with the fixed center survives.
+
+    Atom 3 is a stereocenter of its own whose hash points at the T-shaped
+    center (atom 0); a re-wedge that drops it would silently lose atom 3.
+    """
+    import moleditpy.core.molecular_data as md
+
+    data = _three_arm_center(90, 180, 0, 1)
+    x, y = data.atoms[3]["pos"]
+    f = data.add_atom("F", (x, y - 75))
+    data.add_bond(3, f)
+    data.add_bond(3, 0, 1, 2)
+
+    monkeypatch.setattr(md, "resolve_wedge_chirality", lambda mol: None)
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    monkeypatch.undo()
+    shared = mol.GetBondBetweenAtoms(0, 3)
+    assert shared.GetBeginAtomIdx() == 3
+    assert shared.GetBondDir() == md.Chem.BondDir.BEGINDASH
+    neighbor_tag = md._rdkit_tags(mol)[3]
+
+    real_wedge = md.Chem.WedgeMolBonds
+
+    def wedge_dropping_neighbor(target, conf):
+        real_wedge(target, conf)
+        target.GetBondBetweenAtoms(0, 3).SetBondDir(md.Chem.BondDir.NONE)
+
+    monkeypatch.setattr(md.Chem, "WedgeMolBonds", wedge_dropping_neighbor)
+    md.resolve_wedge_chirality(mol)
+    shared = mol.GetBondBetweenAtoms(0, 3)
+    assert shared.GetBeginAtomIdx() == 3
+    assert shared.GetBondDir() == md.Chem.BondDir.BEGINDASH
+    tags = md._rdkit_tags(mol)
+    assert tags[3] == neighbor_tag
+    assert tags[0] == md.wedge_reading(mol, 0)
+
+
+def test_resolve_fixes_a_t_shape_next_to_another_stereocenter():
+    """With the real RDKit, the T-shape is fixed and the neighbor keeps its reading."""
+    data = _three_arm_center(90, 180, 0, 1)
+    x, y = data.atoms[3]["pos"]
+    f = data.add_atom("F", (x, y - 75))
+    data.add_bond(3, f)
+    data.add_bond(3, 0, 1, 2)
+    usual = _three_arm_center(90, 210, 330, 1)
+
+    drawn = drawn_chirality(data)
+    assert drawn[0] == drawn_chirality(usual)[0]
+    assert 3 in drawn
+
+
+def test_pick_wedges_leaves_existing_wedges_alone():
+    """Only free single bonds starting at the center are tried."""
+    import moleditpy.core.molecular_data as md
+
+    data = _three_arm_center(90, 180, 0, 1)
+    mol = data.to_rdkit_mol(use_2d_stereo=False)
+    cl_bond = mol.GetBondBetweenAtoms(0, 1)
+    cl_dir = cl_bond.GetBondDir()
+    md._pick_wedges(mol, {0: md.Chem.ChiralType.CHI_TETRAHEDRAL_CW})
+    assert mol.GetBondBetweenAtoms(0, 1).GetBondDir() == cl_dir
