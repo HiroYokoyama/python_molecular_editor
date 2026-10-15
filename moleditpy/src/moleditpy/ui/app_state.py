@@ -333,7 +333,7 @@ class StateManager:
 
         if self.data:
             try:
-                mol = self.data.to_rdkit_mol()
+                mol = self.data.to_rdkit_mol(use_rs_labels=False)
                 if mol:
                     mol_with_hs = Chem.AddHs(mol)
                     mol_formula = rdMolDescriptors.CalcMolFormula(mol)

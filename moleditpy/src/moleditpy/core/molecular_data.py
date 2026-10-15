@@ -421,10 +421,11 @@ def _tag_for_label(
         return None  # perception dropped it: not a stereocenter
     rdCIPLabeler.AssignCIPLabels(probe)
     atom = probe.GetAtomWithIdx(center)
-    if not atom.HasProp("_CIPCode"):
-        return None
+    code = atom.GetProp("_CIPCode") if atom.HasProp("_CIPCode") else None
+    if code not in RS_LABELS:
+        return None  # no CIP label, or pseudo-asymmetric (r/s)
     # The mirror tag gives the mirror label.
-    return cw if atom.GetProp("_CIPCode") == label else ccw
+    return cw if code == label else ccw
 
 
 def apply_rs_labels(mol: Chem.Mol, wanted: Dict[int, str]) -> None:

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, FrozenSet, List, Optional, Tuple
+from typing import Any, Dict, FrozenSet, List, Optional, Tuple
 
 from rdkit import Chem
 from rdkit.Chem import rdCIPLabeler
@@ -99,7 +99,7 @@ def wedge_for_label(
     made plain, so the requested label wins. Returns None when neither end
     can be *label* (not a stereocenter). *data* is left unchanged.
     """
-    if bond_key not in data.bonds or label not in ("R", "S"):
+    if bond_key not in data.bonds or label not in RS_LABELS:
         return None
     ends = list(centers) if centers else list(bond_key)
     original = list(data.bonds.items())
@@ -116,13 +116,11 @@ def wedge_for_label(
                 if k[0] == center and v.get("stereo") in (1, 2)
             )
             for cleared in ((), own) if own else ((),):
-                for stereo in (1, 2):
-                    data.bonds.clear()
-                    for k, v in trial_bonds.items():
-                        data.bonds[k] = dict(v, stereo=0) if k in cleared else dict(v)
-                    data.bonds[(center, other)] = dict(template, stereo=stereo)
-                    if drawn_chirality(data, use_rs_labels=False).get(center) == label:
-                        return WedgeForLabel((center, other), stereo, cleared)
+                stereo = _stereo_reading_as(
+                    data, trial_bonds, (center, other), template, cleared, label
+                )
+                if stereo is not None:
+                    return WedgeForLabel((center, other), stereo, cleared)
         return None
     except (RuntimeError, ValueError, TypeError) as e:
         logging.warning("R/S wedge search failed: %s", e)
@@ -130,6 +128,29 @@ def wedge_for_label(
     finally:
         data.bonds.clear()
         data.bonds.update(original)
+
+
+def _stereo_reading_as(
+    data: MolecularData,
+    base: Dict[Tuple[int, int], Dict[str, Any]],
+    key: Tuple[int, int],
+    template: Dict[str, Any],
+    cleared: Tuple[Tuple[int, int], ...],
+    label: str,
+) -> Optional[int]:
+    """Wedge (1) or hash (2) on *key* that makes its narrow end read *label*.
+
+    Tried on *data* rebuilt from *base* with the *cleared* bonds made plain;
+    the caller restores *data*.
+    """
+    for stereo in (1, 2):
+        data.bonds.clear()
+        for k, v in base.items():
+            data.bonds[k] = dict(v, stereo=0) if k in cleared else dict(v)
+        data.bonds[key] = dict(template, stereo=stereo)
+        if drawn_chirality(data, use_rs_labels=False).get(key[0]) == label:
+            return stereo
+    return None
 
 
 def align_wedges_to_label(

@@ -1221,7 +1221,7 @@ class EditActionsManager:
 
             mol = None
             try:
-                mol = self.host.state_manager.data.to_rdkit_mol()
+                mol = self.host.state_manager.data.to_rdkit_mol(use_rs_labels=False)
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 logging.debug(f"to_rdkit_mol failed during H-update: {e}")
                 mol = None

@@ -25,6 +25,8 @@ from PyQt6.QtWidgets import (
     QGraphicsSceneMouseEvent,
 )
 
+from ..core.molecular_data import rs_entry
+
 if TYPE_CHECKING:
     from ..core.molecular_data import MolecularData
     from .main_window import MainWindow
@@ -34,7 +36,6 @@ from .bond_item import BondItem
 from .template_preview_item import TemplatePreviewItem
 
 
-from ..core.molecular_data import rs_entry
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 from .molecular_scene_handler import (
@@ -132,7 +133,7 @@ class MoleculeScene(
             return
 
         # 1. Generate RDKit molecule for topology analysis
-        mol = self.data.to_rdkit_mol(use_2d_stereo=False)
+        mol = self.data.to_rdkit_mol(use_2d_stereo=False, use_rs_labels=False)
         if not mol:
             # Fallback: reset all ring info if molecule generation fails
             for bond_item in self.bond_items.values():
