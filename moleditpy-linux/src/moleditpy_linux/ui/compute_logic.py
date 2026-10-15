@@ -41,6 +41,7 @@ from ..core.mol_geometry import (
 from ..core.stereo_check import (
     drawn_chirality,
     drawn_ez,
+    find_ambiguous_centers,
     find_chirality_mismatches,
     find_ez_mismatches,
 )
@@ -703,6 +704,7 @@ class ComputeManager:
             return
 
         mismatches = find_chirality_mismatches(data, mol)
+        mismatches += find_ambiguous_centers(data, mol)
         ez_mismatches = find_ez_mismatches(data, mol)
         if not mismatches and not ez_mismatches:
             return
@@ -718,7 +720,8 @@ class ComputeManager:
         count = len(mismatches) + len(ez_mismatches)
         if report_status:
             self.host.update_status_message(
-                f"Warning: {count} stereo element(s) differ from the 2D drawing."
+                f"Warning: {count} stereo element(s) differ from the 2D drawing "
+                "or are drawn ambiguously."
             )
 
     def on_calculation_error(self, message: Union[str, Tuple[int, str]]) -> None:
