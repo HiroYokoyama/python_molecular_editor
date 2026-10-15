@@ -1829,8 +1829,11 @@ class View3DManager:
         try:
             old_ta = self.host.init_manager.view_2d.transformationAnchor()
             old_ra = self.host.init_manager.view_2d.resizeAnchor()
-        except (AttributeError, RuntimeError, TypeError):
-            old_ta = old_ra = None
+        except (AttributeError, RuntimeError, TypeError) as e:
+            # Deferred calls (QTimer.singleShot after a load) can land after
+            # the window is torn down; the deleted view cannot be fitted.
+            logging.debug("fit_to_view skipped, 2D view unavailable: %s", e)
+            return
 
         try:
             self.host.init_manager.view_2d.setTransformationAnchor(

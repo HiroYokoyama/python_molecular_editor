@@ -17,6 +17,7 @@ All notable changes to this project are recorded here. The format follows
 ### Fixed
 
 - A stereocenter with an implicit H whose two plain bonds are drawn in a straight line (a T-shape, as angle snapping produces, e.g. a wedged Cl on the middle carbon of a straight C-C-C) no longer converts to the wrong isomer. RDKit read this drawing as "ambiguous stereochemistry" or inverted it, while the same drawing bent by a few degrees read correctly. Wedges and hashes are now read as a chemist reads them (plain bonds in the plane, a wedge toward the viewer, the implicit H opposite); when that reading is unambiguous and RDKit disagrees, the center is re-wedged for RDKit on the same coordinates. Drawings RDKit already reads correctly are unchanged.
+- A deferred fit-to-view (scheduled after loading a file or project) that fires after the window has closed no longer raises `RuntimeError: wrapped C/C++ object ... has been deleted`; it is skipped.
 
 ---
 
