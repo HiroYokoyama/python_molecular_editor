@@ -171,7 +171,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
     1.  Select the 'Toggle R/S' button (R⇌S icon) from the toolbar.
     2.  Click a stereocenter atom to set its label in the order R -\> S -\> (unspecified). Right-click removes the label.
     3.  Alternatively, hover the mouse cursor over the atom and press the 'R' key (same order).
-    4.  The label takes priority over the wedges and hashes at that atom: 3D conversion, the Stereo Check and MOL/SDF export all use the labelled configuration. If the atom already has wedges or hashes that read the other way, they are redrawn to match; an atom drawn with plain bonds keeps them, and the label alone sets the configuration.
+    4.  The label takes priority over the wedges and hashes at that atom: 3D conversion, the Stereo Check and MOL export all use the labelled configuration. If the atom already has wedges or hashes that read the other way, they are redrawn to match; an atom drawn with plain bonds keeps them, and the label alone sets the configuration.
     5.  The label is shown next to the atom as "(R)" or "(S)" and is saved in project files. Clicking an atom that is not a stereocenter shows a message and sets nothing.
   * **E/Z Configuration of Double Bonds:**
     1.  Select the 'Toggle E/Z' button (Z⇌E icon) from the toolbar.
