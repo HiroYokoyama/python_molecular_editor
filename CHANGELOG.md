@@ -12,7 +12,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
-- The 3D orientation axes are drawn again, and the console no longer logs `vtkOrientationMarkerWidget: The interactor must be set prior to enabling/disabling widget`. The axes widget was attached to the Qt widget rather than its VTK interactor, which current VTK rejects; the failure was swallowed, leaving a widget with no interactor that the next settings apply tried to disable.
+- The 3D orientation axes are drawn, and the console no longer logs `vtkOrientationMarkerWidget: The interactor must be set prior to enabling/disabling widget`. The axes widget was attached to the Qt widget rather than its VTK interactor, which current VTK rejects; the failure was swallowed, leaving a widget with no interactor that the next settings apply tried to disable.
 
 ---
 
