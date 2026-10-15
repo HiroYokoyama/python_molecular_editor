@@ -803,6 +803,31 @@ def test_fit_to_view_fits_visible_items(mock_parser_host):
     assert padded.height() == pytest.approx(55.0)
 
 
+def test_fit_to_view_after_view_deleted_is_a_no_op(mock_parser_host):
+    """A deferred fit landing after window teardown does nothing and raises nothing."""
+    from PyQt6.QtCore import QRectF
+
+    view3d = _make_view3d(mock_parser_host)
+    item = MagicMock()
+    item.isVisible.return_value = True
+    item.sceneBoundingRect.return_value = QRectF(0, 0, 100, 50)
+    mock_parser_host.init_manager.scene.items.return_value = [item]
+    view_2d = mock_parser_host.init_manager.view_2d
+    deleted = RuntimeError("wrapped C/C++ object of type ZoomableView has been deleted")
+    view_2d.transformationAnchor.side_effect = deleted
+    view_2d.setTransformationAnchor.side_effect = deleted
+
+    view3d.reset_zoom = MagicMock()
+
+    view3d.fit_to_view()
+    view_2d.fitInView.assert_not_called()
+
+    # The empty-scene path would reset the zoom on the deleted view.
+    mock_parser_host.init_manager.scene.items.return_value = []
+    view3d.fit_to_view()
+    view3d.reset_zoom.assert_not_called()
+
+
 def test_setup_3d_hover_only_refreshes_when_mode_active(mock_parser_host):
     """setup_3d_hover() redraws atom info only when a display mode is active."""
     view3d = _make_view3d(mock_parser_host)
