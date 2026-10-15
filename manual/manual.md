@@ -153,7 +153,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
   * **Moving:**
     1.  In 'Select' mode, drag the selected atom or bond. When an atom is moved, its connected bonds follow.
   * **Deleting:**
-    1.  In 'Select' mode or any drawing mode (except template, charge, or radical), **right-click** the atom or bond you want to delete.
+    1.  In 'Select' mode or any drawing mode (except template, charge, radical, or R/S), **right-click** the atom or bond you want to delete.
     2.  In 'Select' mode, select items and press the `Delete` or `Backspace` key.
   * **Changing an Element:**
     1.  Select the button for the element you want to change to from the toolbar.
@@ -167,6 +167,12 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
     1.  Select the Wedge (solid) or Dash (dashed) button from the toolbar.
     2.  Click an existing single bond to set the stereo display. Click again to reverse the direction.
     3.  Alternatively, in 'Select' mode, select a single bond and press 'W' (Wedge) or 'D' (Dash).
+  * **R/S Configuration of Stereocenters:**
+    1.  Select the 'Toggle R/S' button (R⇌S icon) from the toolbar.
+    2.  Click a stereocenter atom to set its label in the order R -\> S -\> (unspecified). Right-click removes the label.
+    3.  Alternatively, hover the mouse cursor over the atom and press the 'R' key (same order).
+    4.  The label takes priority over the wedges and hashes at that atom: 3D conversion, the Stereo Check and MOL/SDF export all use the labelled configuration. If the atom already has wedges or hashes that read the other way, they are redrawn to match; an atom drawn with plain bonds keeps them, and the label alone sets the configuration.
+    5.  The label is shown next to the atom as "(R)" or "(S)" and is saved in project files. Clicking an atom that is not a stereocenter shows a message and sets nothing.
   * **E/Z Configuration of Double Bonds:**
     1.  Select the 'Toggle E/Z' button (Z⇌E icon) from the toolbar.
     2.  Click an existing double bond to toggle its stereo configuration in the order Z -\> E -\> (unspecified).
@@ -227,7 +233,7 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 *   **Open Babel Mode**: Uses Open Babel's `make3D()` coordinate generator run in a secure, isolated background subprocess to prevent application hangs or crashes.
 *   **Direct Mode**: Bypasses 3D conformer embedding to retain your exact 2D layout. Atoms are placed on the $Z = 0.0$ plane, with missing hydrogen atoms added geometrically. Stereochemistry is preserved by adding offset Z-coordinates ($Z = \pm 1.5$ Å) to wedge/dash atoms.
 
-**Stereo Check:** After each conversion, every stereocenter you drew with a wedge or hash (R/S) and every double bond you labelled E or Z is compared with the 3D result. If any of them comes out inverted or lost, a **Stereochemistry Check** window lists each one with its drawn and 3D configuration. It also lists stereocenters whose wedges are drawn ambiguously, for example a wedge and a hash on opposite bonds, with "ambiguous" as the drawn configuration: such a drawing specifies no configuration, so the 3D one is arbitrary. Redraw them with a single wedge or hash, or with the wedge and hash on adjacent bonds. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral and E/Z labels, with the wrong ones in red and the correct ones in the usual color; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Flip the listed stereocenters and double bonds manually in the 3D structure. The check can be turned off in `Settings` \> `Settings...` \> **3D Scene** (Check After 3D Conversion). It can also be run after `Optimize 3D` (Check After 3D Optimization, off by default).
+**Stereo Check:** After each conversion, every stereocenter you drew with a wedge or hash or labelled R or S, and every double bond you labelled E or Z is compared with the 3D result. If any of them comes out inverted or lost, a **Stereochemistry Check** window lists each one with its drawn and 3D configuration. It also lists stereocenters whose wedges are drawn ambiguously, for example a wedge and a hash on opposite bonds, with "ambiguous" as the drawn configuration: such a drawing specifies no configuration, so the 3D one is arbitrary. Redraw them with a single wedge or hash, or with the wedge and hash on adjacent bonds. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral and E/Z labels, with the wrong ones in red and the correct ones in the usual color; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Flip the listed stereocenters and double bonds manually in the 3D structure. The check can be turned off in `Settings` \> `Settings...` \> **3D Scene** (Check After 3D Conversion). It can also be run after `Optimize 3D` (Check After 3D Optimization, off by default).
 
 ### 5.2. 3D Structure Optimization
 
@@ -534,6 +540,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 | `W` | Wedge bond draw mode / Change selected or hovered bond to Wedge (click to reverse) | Wedge bond draw mode |
 | `D` | Dash bond draw mode / Change selected or hovered bond to Dash (click to reverse) | Dash bond draw mode |
 | `Z` / `E` | (On hovered double bond) Set Z / E configuration | (On hovered double bond) Set Z / E configuration |
+| `R` | (On hovered stereocenter) Cycle R/S label (R -\> S -\> none) | (On hovered stereocenter) Cycle R/S label (R -\> S -\> none) |
 | `.` (Period) | Toggle radical on selected or hovered atom (0-\>1-\>2-\>0) | Toggle radical on selected or hovered atom (0-\>1-\>2-\>0) |
 | `+` / `-` | Increase/Decrease charge on selected or hovered atom | Increase/Decrease charge on selected or hovered atom |
 | `Alt` | (In 3D view) Hold to drag atoms (3D Drag shortcut) | (In 2D view) Hold during template placement to bypass atom fusing |
@@ -571,7 +578,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 4.12
+  * **Version:** 4.13
   * **Author:** Hiromichi Yokoyama
   * **License:** GPL-3.0 license
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

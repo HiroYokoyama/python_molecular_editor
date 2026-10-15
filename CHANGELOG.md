@@ -8,6 +8,17 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [4.13.0] - 2026-10-15
+
+### Added
+
+- **R/S labels for stereocenters.** A new 'Toggle R/S' tool (R⇌S icon, between Dash and E/Z in the toolbar) sets the configuration of a stereocenter directly: click an atom to cycle R -> S -> unspecified, right-click to remove the label, or hover the atom and press `R` in any mode. The label is drawn next to the atom as "(R)"/"(S)".
+- The label takes priority over the wedges and hashes at that atom, the same way E/Z labels take priority over the 2D geometry of a double bond. 3D conversion, the Stereochemistry Check and MOL/SDF export all use the labelled configuration; it is written out as wedges, so other programs read it too.
+- Where the labelled atom already has wedges or hashes that read the other way, they are redrawn to match the label (swapped wedge <-> hash, or for an ambiguous drawing one redrawn and the rest made plain). An atom drawn with plain bonds keeps them; the label alone sets its configuration. Atoms that are not stereocenters cannot be labelled.
+- Labels are kept by undo/redo, copy/paste and project files (`.pmeprj`). Only labelled atoms gain an `"rs"` field, so files without labels are written exactly as before; earlier versions open files with labels and ignore them.
+
+---
+
 ## [4.12.1] - 2026-10-15
 
 ### Fixed
