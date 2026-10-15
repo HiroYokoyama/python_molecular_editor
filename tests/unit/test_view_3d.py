@@ -1152,6 +1152,46 @@ def test_apply_3d_settings_axes_on_builds_orientation_widget(mock_parser_host):
     assert view3d.axes_widget is not None
 
 
+def test_apply_3d_settings_axes_widget_uses_vtk_interactor(mock_parser_host):
+    """The widget is attached to the VTK interactor, not the Qt widget.
+
+    VTK rejects plotter.interactor (the Qt widget) with a TypeError, which
+    left the axes undrawn.
+    """
+    view3d = _settings_view(mock_parser_host, show_3d_axes=True)
+    with (
+        patch.object(view3d, "draw_molecule_3d"),
+        patch("moleditpy.ui.view_3d_logic.vtk") as mock_vtk,
+    ):
+        view3d.apply_3d_settings(redraw=False)
+
+    widget = mock_vtk.vtkOrientationMarkerWidget.return_value
+    widget.SetInteractor.assert_called_once_with(view3d.plotter.iren.interactor)
+    widget.SetEnabled.assert_called_once_with(True)
+
+
+def test_apply_3d_settings_failed_axes_setup_leaves_no_widget(mock_parser_host):
+    """A failed setup does not publish a half-built widget.
+
+    Otherwise the next apply calls SetEnabled(False) on a widget with no
+    interactor, and VTK logs "The interactor must be set prior to
+    enabling/disabling widget".
+    """
+    view3d = _settings_view(mock_parser_host, show_3d_axes=True)
+    with (
+        patch.object(view3d, "draw_molecule_3d"),
+        patch("moleditpy.ui.view_3d_logic.vtk") as mock_vtk,
+    ):
+        widget = mock_vtk.vtkOrientationMarkerWidget.return_value
+        widget.SetInteractor.side_effect = TypeError("SetInteractor argument 1")
+        view3d.apply_3d_settings(redraw=False)
+        assert view3d.axes_widget is None
+
+        view3d.apply_3d_settings(redraw=False)
+
+    widget.SetEnabled.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # update_chiral_labels / toggle_chiral_labels_display
 # ---------------------------------------------------------------------------
