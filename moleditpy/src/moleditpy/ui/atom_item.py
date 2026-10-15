@@ -22,6 +22,7 @@ from PyQt6.QtGui import (
     QFontMetricsF,
     QPainter,
     QPainterPath,
+    QPainterPathStroker,
     QPen,
 )
 from PyQt6.QtWidgets import (
@@ -34,6 +35,7 @@ from PyQt6.QtWidgets import (
 from ..utils.constants import (
     ATOM_RADIUS,
     CPK_COLORS,
+    EZ_LABEL_TEXT_OUTLINE,
     FONT_FAMILY,
     FONT_WEIGHT_BOLD,
 )
@@ -86,6 +88,8 @@ class AtomItem(QGraphicsItem):
         self.radical: int = radical
         self.bonds: List[BondItem] = []
         self.chiral_label: Optional[str] = None
+        # User-set R/S label ("R"/"S"); mirrors data.atoms[atom_id]["rs"].
+        self.rs_label: Optional[str] = None
 
         self.setPos(pos)
         self.implicit_h_count: int = 0
@@ -250,9 +254,76 @@ class AtomItem(QGraphicsItem):
     def boundingRect(self) -> QRectF:
         """Return the drawn rect plus the hit shape, which Qt requires it to cover."""
         hit_r = self.hit_radius()
-        return self.visual_rect().united(
+        rect = self.visual_rect().united(
             QRectF(-hit_r, -hit_r, hit_r * 2.0, hit_r * 2.0)
         )
+        rs_rect = self._rs_label_rect()
+        if rs_rect is not None:
+            rect = rect.united(rs_rect.adjusted(-2, -2, 2, 2))
+        return rect
+
+    def _rs_label_font(self) -> QFont:
+        """Italic font of the R/S label, sized from the atom label font."""
+        base = self._label_font()
+        font = QFont(
+            base.family(), max(8, int(base.pointSize() * 0.7)), FONT_WEIGHT_BOLD
+        )
+        font.setItalic(True)
+        return font
+
+    def _rs_label_rect(self) -> Optional[QRectF]:
+        """Where the "(R)"/"(S)" label goes: beside the atom, away from its bonds."""
+        if self.rs_label not in ("R", "S"):
+            return None
+        rect = QFontMetricsF(self._rs_label_font()).boundingRect(f"({self.rs_label})")
+        dx = dy = 0.0
+        for bond in self.bonds:
+            try:
+                partner = bond.atom2 if bond.atom1 is self else bond.atom1
+                if partner is None or sip_isdeleted_safe(partner):
+                    continue
+                vec = partner.pos() - self.pos()
+                length = (vec.x() ** 2 + vec.y() ** 2) ** 0.5
+                if length > 1e-6:
+                    dx += vec.x() / length
+                    dy += vec.y() / length
+            except (AttributeError, RuntimeError, TypeError):
+                continue
+        length = (dx**2 + dy**2) ** 0.5
+        # Opposite the bonds; upper right when they balance out or there are none.
+        ux, uy = (-dx / length, -dy / length) if length > 0.3 else (0.71, -0.71)
+        distance = 14.0 + max(rect.width(), rect.height()) / 2.0
+        rect.moveCenter(QPointF(ux * distance, uy * distance))
+        return rect
+
+    def _paint_rs_label(self, painter: QPainter) -> None:
+        """Draw the user-set R/S label, outlined like the E/Z label."""
+        rect = self._rs_label_rect()
+        if rect is None:
+            return
+        painter.save()
+        font = self._rs_label_font()
+        text = f"({self.rs_label})"
+        path = QPainterPath()
+        fm = QFontMetricsF(font)
+        path.addText(QPointF(rect.left(), rect.top() + fm.ascent()), font, text)
+        outline_color = QColor(255, 255, 255)
+        scene: Any = self.scene()
+        try:
+            if scene is not None:
+                outline_color = scene.backgroundBrush().color()
+        except (AttributeError, RuntimeError, TypeError):
+            logging.debug("R/S label outline color fallback", exc_info=True)
+        stroker = QPainterPathStroker()
+        stroker.setWidth(EZ_LABEL_TEXT_OUTLINE)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(outline_color)
+        painter.drawPath(stroker.createStroke(path))
+        text_color = QColor("gray")
+        painter.setBrush(text_color)
+        painter.setPen(text_color)
+        painter.drawPath(path)
+        painter.restore()
 
     def get_bg_ellipse_path(self) -> QPainterPath:
         """Return the elliptical background path used for bond endpoint clipping."""
@@ -380,6 +451,9 @@ class AtomItem(QGraphicsItem):
                     painter.drawEllipse(
                         QPointF(text_rect.center().x() + 5, radical_pos_y), 3, 3
                     )
+
+        # Drawn even on a skeletal carbon, which has no symbol of its own.
+        self._paint_rs_label(painter)
 
         # --- Selection highlights etc. ---
         if self.has_problem:

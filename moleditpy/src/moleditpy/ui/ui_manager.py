@@ -85,7 +85,7 @@ class UIManager(QObject):
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
         elif mode_str.startswith(("atom", "bond", "template", "chain")):
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.CrossCursor)
-        elif mode_str.startswith(("charge", "radical")):
+        elif mode_str.startswith(("charge", "radical", "rs_label")):
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.CrossCursor)
         else:
             self.host.init_manager.view_2d.setCursor(Qt.CursorShape.ArrowCursor)
@@ -138,6 +138,11 @@ class UIManager(QObject):
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
         elif mode_str == "radical":
             self.host.update_status_message("Mode: Toggle Radical (Click on Atom)")
+            self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
+        elif mode_str == "rs_label":
+            self.host.update_status_message(
+                "Mode: Toggle R/S (Click on a stereocenter: R -> S -> none)"
+            )
             self.host.init_manager.view_2d.setDragMode(QGraphicsView.DragMode.NoDrag)
 
         else:  # Select mode

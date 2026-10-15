@@ -44,7 +44,7 @@ from rdkit import Chem
 from .atom_item import AtomItem
 from .bond_item import BondItem
 from ..utils.constants import CLIPBOARD_MIME_TYPE, UNDO_STACK_MAX_DEPTH
-from ..core.molecular_data import MolecularData
+from ..core.molecular_data import RS_LABELS, MolecularData, rs_entry
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
 
@@ -159,6 +159,7 @@ class EditActionsManager:
                     v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1],
                     v.get("charge", 0),
                     v.get("radical", 0),
+                    v.get("rs"),
                 )
                 for k, v in self.host.state_manager.data.atoms.items()
             },
@@ -196,6 +197,7 @@ class EditActionsManager:
                         v["pos"].y() if hasattr(v["pos"], "y") else v["pos"][1],
                         v.get("charge", 0),
                         v.get("radical", 0),
+                        v.get("rs"),
                     )
                     for k, v in last_atoms.items()
                 },
@@ -322,6 +324,7 @@ class EditActionsManager:
                         "rel_pos": atom.pos() - center,
                         "charge": atom.charge,
                         "radical": atom.radical,
+                        **rs_entry({"rs": atom.rs_label}),
                     }
                 )
 
@@ -350,6 +353,7 @@ class EditActionsManager:
                         "rel_pos": [a["rel_pos"].x(), a["rel_pos"].y()],
                         "charge": a["charge"],
                         "radical": a["radical"],
+                        **rs_entry(a),
                     }
                     for a in fragment_atoms
                 ],
@@ -441,12 +445,15 @@ class EditActionsManager:
                     raise TypeError(
                         "Clipboard atom charge and radical must be integers"
                     )
+                if atom_data.get("rs") not in (None, *RS_LABELS):
+                    raise ValueError("Clipboard atom R/S label must be R or S")
                 validated_atoms.append(
                     {
                         "symbol": symbol,
                         "rel_pos": (rel_x, rel_y),
                         "charge": charge,
                         "radical": radical,
+                        **rs_entry(atom_data),
                     }
                 )
 
@@ -500,6 +507,10 @@ class EditActionsManager:
                     radical=atom_data.get("radical", 0),
                 )
                 new_item = self.host.init_manager.scene.atom_items[new_id]
+                if atom_data.get("rs"):
+                    self.host.init_manager.scene.set_atom_rs_label(
+                        new_item, atom_data["rs"]
+                    )
                 new_atoms.append(new_item)
                 new_item.setSelected(True)
 

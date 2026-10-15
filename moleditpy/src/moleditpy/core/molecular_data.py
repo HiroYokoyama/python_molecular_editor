@@ -393,6 +393,16 @@ def resolve_wedge_chirality(mol: Chem.Mol) -> None:
 RS_LABELS = ("R", "S")
 
 
+def rs_entry(atom: Dict[str, Any]) -> Dict[str, str]:
+    """{"rs": label} when *atom* carries a valid R/S label, else {}.
+
+    Spread into serialized atom records so an unlabelled atom is written
+    exactly as before the label existed.
+    """
+    label = atom.get("rs")
+    return {"rs": label} if label in RS_LABELS else {}
+
+
 def _tag_for_label(
     mol: Chem.Mol, center: int, label: str, tags: List[Chem.ChiralType]
 ) -> Optional[Chem.ChiralType]:

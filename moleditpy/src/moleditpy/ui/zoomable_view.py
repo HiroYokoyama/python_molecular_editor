@@ -127,7 +127,7 @@ class ZoomableView(QGraphicsView):
                 self.setCursor(Qt.CursorShape.ArrowCursor)
             elif current_mode.startswith(("atom", "bond", "template", "chain")):
                 self.setCursor(Qt.CursorShape.CrossCursor)
-            elif current_mode.startswith(("charge", "radical")):
+            elif current_mode.startswith(("charge", "radical", "rs_label")):
                 self.setCursor(Qt.CursorShape.CrossCursor)
             else:
                 self.setCursor(Qt.CursorShape.ArrowCursor)

@@ -848,6 +848,7 @@ class MainInitManager:
             ("Triple Bond", "bond_3_0", "3", "triple"),
             ("Wedge Bond", "bond_1_1", "W", "wedge"),
             ("Dash Bond", "bond_1_2", "D", "dash"),
+            ("Toggle R/S", "rs_label", "R", "rs_toggle"),
             ("Toggle E/Z", "bond_2_5", "E/Z", "ez_toggle"),
         ]
 
@@ -1038,6 +1039,18 @@ class MainInitManager:
             painter.setFont(font)
             painter.drawText(
                 QRectF(0, 0, size, size * 0.6), Qt.AlignmentFlag.AlignCenter, "Z⇌E"
+            )
+        elif bond_type == "rs_toggle":
+            p1r, p2r = QPointF(6, size * 0.75), QPointF(size - 6, size * 0.75)
+            normal = QLineF(p1r, p2r).unitVector().normalVector()
+            offset = QPointF(normal.dx(), normal.dy()) * 3.0
+            painter.drawPolygon(QPolygonF([p1r, p2r + offset, p2r - offset]))
+            font = painter.font()
+            font.setPointSize(10)
+            font.setBold(True)
+            painter.setFont(font)
+            painter.drawText(
+                QRectF(0, 0, size, size * 0.6), Qt.AlignmentFlag.AlignCenter, "R⇌S"
             )
 
         painter.end()
