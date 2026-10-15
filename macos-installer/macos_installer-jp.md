@@ -1,5 +1,10 @@
 # MoleditPy macOS アプリバンドル
 
+[English](./macos_installer) · [日本語](./macos_installer-jp)
+
+**プラグインや追加の Python 依存パッケージを使う場合:** [Python 版のクイックスタート](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Quick-Start-JP) を使ってください。この単体版には pip と Open Babel が含まれません。Python 版インストーラーは `python -m pip install moleditpy-installer` の後、推奨の `python -m moleditpy_installer` で起動します。`moleditpy-installer` も利用できます。
+
+
 ## 概要
 
 MoleditPyは、Pythonで構築された、クロスプラットフォームでシンプルかつ直感的な分子エディタです。

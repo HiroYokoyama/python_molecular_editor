@@ -1831,3 +1831,13 @@ body[data-lang="ja"] .lang-en {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* OS-specific installation commands */
+.install-platforms { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 auto 1rem; max-width: 800px; }
+.install-platforms button { font: inherit; padding: .55rem 1rem; color: var(--text-main); background: var(--bg-white); border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; }
+.install-platforms button[aria-pressed="true"] { color: var(--accent-dark); background: var(--accent-light); border-color: var(--accent-color); }
+.install-platforms button:focus-visible, .copy-btn:focus-visible { outline: 3px solid var(--accent-color); outline-offset: 3px; }
+#install-commands pre { overflow-x: auto; white-space: pre; margin: .8rem 0 0; background: transparent; padding: 0; }
+#install-commands .terminal-comment { white-space: normal; line-height: 1.6; }
+[hidden] { display: none !important; }

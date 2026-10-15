@@ -318,38 +318,29 @@
           </p>
         </div>
 
-        <!-- Install Terminal with Steps (1. Install, 2. Shortcut) -->
+        <p class="home-install-note"><span class="lang-en">Requires Python 3.9–3.14. Choose your OS, then run each line in order from the folder where you want to keep the environment. No environment activation is needed.</span><span class="lang-ja">Python 3.9～3.14 が必要です。OSを選び、環境を保存したいフォルダで各行を順番に実行してください。環境の有効化は不要です。</span></p>
+        <div class="install-platforms" role="group" aria-label="Operating system" id="install-platforms">
+          <button type="button" data-install-os="windows" aria-pressed="true" onclick="setInstallOS('windows')">Windows</button>
+          <button type="button" data-install-os="macos" aria-pressed="false" onclick="setInstallOS('macos')">macOS</button>
+          <button type="button" data-install-os="linux" aria-pressed="false" onclick="setInstallOS('linux')">Linux</button>
+        </div>
         <div class="install-terminal">
           <div class="install-terminal-header">
-            <span class="terminal-label">Recommended: Python / pip</span>
-            <button type="button" class="copy-btn" id="copy-btn" onclick="copyInstallCmd()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              <span id="copy-text">Copy commands</span>
-            </button>
+            <span class="terminal-label" id="install-shell">Windows · PowerShell</span>
+            <button type="button" class="copy-btn" id="copy-btn" onclick="copyInstallCmd()"><span id="copy-text" aria-live="polite">Copy commands</span></button>
           </div>
-          <div class="install-terminal-body">
-            <div class="terminal-line">
-              <span class="terminal-comment">
-                <span class="lang-en"># 1. Install MoleditPy</span>
-                <span class="lang-ja"># 1. MoleditPyをインストール</span>
-              </span>
-            </div>
-            <div class="terminal-line">
-              <span class="prompt">$</span>
-              <code>pip install moleditpy-installer</code>
-            </div>
-            <div class="terminal-line" style="margin-top: 0.75rem;">
-              <span class="terminal-comment">
-                <span class="lang-en"># 2. Create an application shortcut</span>
-                <span class="lang-ja"># 2. アプリケーションショートカットを作成</span>
-              </span>
-            </div>
-            <div class="terminal-line">
-              <span class="prompt">$</span>
-              <code>python -m moleditpy_installer</code>
-            </div>
+          <div class="install-terminal-body" id="install-commands">
+            <p class="terminal-comment"><span class="lang-en"># 1. Create an environment · 2. Install · 3. Configure shortcuts · 4. Launch</span><span class="lang-ja"># 1. 環境作成 · 2. インストール · 3. ショートカット設定 · 4. 起動</span></p>
+            <pre><code class="install-command">python -m venv .venv</code>
+<code class="install-command">.\.venv\Scripts\python.exe -m pip install moleditpy-installer</code>
+<code class="install-command">.\.venv\Scripts\python.exe -m moleditpy_installer</code>
+<code class="install-command">.\.venv\Scripts\moleditpy.exe</code></pre>
           </div>
         </div>
+        <p class="home-install-note"><span class="lang-en">Prefer <code>python -m moleditpy_installer</code> to avoid console-script PATH issues. <code>moleditpy-installer</code> is also supported. Use the same Python for <code>-m pip</code> and the installer. The terminal installer opens component selection; choose <strong>Install</strong>, then launch the app. Keep the environment folder so its shortcuts continue to work.</span><span class="lang-ja">PATHの問題を避けるため <code>python -m moleditpy_installer</code> を推奨します。<code>moleditpy-installer</code> も利用できます。<code>-m pip</code> とインストーラーには同じPythonを使ってください。端末の設定画面で <strong>Install</strong> を選び、その後アプリを起動します。ショートカットが参照する環境フォルダは残してください。</span></p>
+        <p class="home-install-note" id="linux-install-note" hidden><span class="lang-en">Linux uses <code>moleditpy-linux</code> automatically. On Debian/Ubuntu, Qt may need <code>sudo apt install libxcb-cursor0</code>. If venv is missing, install your distribution's Python venv package first.</span><span class="lang-ja">Linuxでは <code>moleditpy-linux</code> を自動選択します。Debian/UbuntuではQt用に <code>sudo apt install libxcb-cursor0</code> が必要な場合があります。venvがない場合はディストリビューションのPython venvパッケージを導入してください。</span></p>
+        <p class="home-install-note"><a id="link-quick-start" href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Quick-Start"><span class="lang-en">Detailed setup and updates</span><span class="lang-ja">詳しい導入・更新手順</span></a> · <a id="link-first-molecule" href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Your-First-Molecule"><span class="lang-en">Your first molecule, in pictures</span><span class="lang-ja">画像付きの操作入門</span></a></p>
+        <noscript><p class="home-install-note">The commands above are for Windows PowerShell. For macOS/Linux, use the linked installation guides. 上記はWindows用です。macOS/Linuxは下の導入ガイドをご覧ください。</p></noscript>
 
         <p class="home-install-note lang-en">Need help? Step-by-step guides for <a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-Windows" target="_blank" rel="noopener">Windows</a>, <a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-macOS" target="_blank" rel="noopener">macOS</a>, and <a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-Linux" target="_blank" rel="noopener">Linux</a>, plus <a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Troubleshooting-Common-Issues" target="_blank" rel="noopener">troubleshooting</a>, are on the wiki.</p>
         <p class="home-install-note lang-ja">お困りの場合は、Wikiの<a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-Windows-JP" target="_blank" rel="noopener">Windows</a>・<a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-macOS-JP" target="_blank" rel="noopener">macOS</a>・<a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-Linux-JP" target="_blank" rel="noopener">Linux</a>向けインストール手順と<a href="https://github.com/HiroYokoyama/python_molecular_editor/wiki/Troubleshooting-Common-Issues-JP" target="_blank" rel="noopener">トラブルシューティング</a>をご覧ください。</p>
@@ -437,6 +428,14 @@
       if (navManual) navManual.href = manualPath;
       if (btnManual) btnManual.href = manualPath;
       if (footerManual) footerManual.href = manualPath;
+      document.getElementById('link-win').href = 'windows-installer/windows_installer' + (lang === 'ja' ? '-jp' : '');
+      document.getElementById('link-mac').href = 'macos-installer/macos_installer' + (lang === 'ja' ? '-jp' : '');
+      ['quick-start', 'first-molecule'].forEach(function(id) {
+        var page = id === 'quick-start' ? 'Quick-Start' : 'Your-First-Molecule';
+        document.getElementById('link-' + id).href = 'https://github.com/HiroYokoyama/python_molecular_editor/wiki/' + page + (lang === 'ja' ? '-JP' : '');
+      });
+      resetCopyLabel();
+      document.getElementById('install-platforms').setAttribute('aria-label', lang === 'ja' ? 'オペレーティングシステム' : 'Operating system');
       document.getElementById('language-switch').setAttribute('aria-label', lang === 'ja' ? '言語選択' : 'Language selection');
 
       try {
@@ -444,44 +443,56 @@
       } catch (e) {}
     }
 
-    function copyInstallCmd() {
-      var cmd = "pip install moleditpy-installer\npython -m moleditpy_installer";
-      var btn = document.getElementById('copy-btn');
-      var text = document.getElementById('copy-text');
-      var lang = document.body.getAttribute('data-lang');
-      var copiedLabel = lang === 'ja' ? 'コピーしました' : 'Copied';
-      var defaultLabel = lang === 'ja' ? 'コマンドをコピー' : 'Copy commands';
+    var copyResetTimer;
+    var copyRequest = 0;
 
-      function finishCopy() {
-        btn.classList.add('copied');
-        text.textContent = copiedLabel;
-        setTimeout(function() {
-          btn.classList.remove('copied');
-          text.textContent = defaultLabel;
-        }, 2000);
+    function resetCopyLabel() {
+      clearTimeout(copyResetTimer);
+      copyRequest += 1;
+      document.getElementById('copy-btn').classList.remove('copied');
+      document.getElementById('copy-text').textContent = document.body.getAttribute('data-lang') === 'ja' ? 'コマンドをコピー' : 'Copy commands';
+    }
+
+    function setInstallOS(os) {
+      var unix = os !== 'windows';
+      var python = unix ? '.venv/bin/python' : '.\\.venv\\Scripts\\python.exe';
+      var commands = [
+        (unix ? 'python3' : 'python') + ' -m venv .venv',
+        python + ' -m pip install moleditpy-installer',
+        python + ' -m moleditpy_installer',
+        unix ? '.venv/bin/moleditpy' : '.\\.venv\\Scripts\\moleditpy.exe'
+      ];
+      document.querySelectorAll('.install-command').forEach(function(el, i) { el.textContent = commands[i]; });
+      document.querySelectorAll('[data-install-os]').forEach(function(btn) { btn.setAttribute('aria-pressed', btn.getAttribute('data-install-os') === os ? 'true' : 'false'); });
+      document.getElementById('install-shell').textContent = os === 'windows' ? 'Windows · PowerShell' : (os === 'macos' ? 'macOS · Terminal' : 'Linux · Terminal');
+      document.getElementById('linux-install-note').hidden = os !== 'linux';
+      resetCopyLabel();
+    }
+
+    async function copyInstallCmd() {
+      var cmd = Array.from(document.querySelectorAll('.install-command')).map(function(el) { return el.textContent; }).join('\n');
+      var request = ++copyRequest;
+      var copied = false;
+      if (navigator.clipboard && window.isSecureContext) {
+        try { await navigator.clipboard.writeText(cmd); copied = true; } catch (e) {}
       }
-
-      function fallbackCopy() {
+      if (!copied) {
         var textarea = document.createElement('textarea');
+        var previousFocus = document.activeElement;
         textarea.value = cmd;
         textarea.setAttribute('readonly', '');
         textarea.style.position = 'fixed';
         textarea.style.opacity = '0';
         document.body.appendChild(textarea);
-        textarea.select();
-        var copied = document.execCommand('copy');
-        textarea.remove();
-        return copied;
+        try { textarea.select(); copied = document.execCommand('copy'); } catch (e) {}
+        finally { textarea.remove(); if (previousFocus) previousFocus.focus(); }
       }
-
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(cmd).then(finishCopy).catch(function() {
-          if (fallbackCopy()) finishCopy();
-        });
-        return;
-      }
-
-      if (fallbackCopy()) finishCopy();
+      if (request !== copyRequest) return;
+      var japanese = document.body.getAttribute('data-lang') === 'ja';
+      document.getElementById('copy-btn').classList.toggle('copied', copied);
+      document.getElementById('copy-text').textContent = copied ? (japanese ? 'コピーしました' : 'Copied') : (japanese ? '各行を選択してコピーしてください' : 'Select and copy the lines manually');
+      clearTimeout(copyResetTimer);
+      copyResetTimer = setTimeout(resetCopyLabel, 3000);
     }
 
     (function() {

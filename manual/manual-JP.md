@@ -1,5 +1,8 @@
 # MoleditPy ユーザーマニュアル
 
+初めて使う場合は [画像付き入門](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Your-First-Molecule-JP) と [クイックスタート](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Quick-Start-JP) を参照してください。`python -m moleditpy_installer` を推奨します。`moleditpy-installer` も利用できますが、モジュール形式は指定した Python を使い、実行ファイルの PATH 問題を避けられます。導入も同じ環境の `python -m pip` を使ってください。
+
+
 ## 目次
 
 - [1. はじめに](#1-はじめに)
@@ -64,7 +67,7 @@ MoleditPy は、Python で開発された分子編集ソフトウェアです。
     このコマンドを実行すると、お使いのOS（Windows/macOSまたはLinux）に適した `moleditpy` 本体が自動的にインストールされます。
 
     ```bash
-    pip install moleditpy-installer
+    python -m pip install moleditpy-installer
     ```
 
 2.  **ショートカットの作成**
@@ -573,3 +576,25 @@ MoleditPyは、Pythonスクリプトによる機能の拡張をサポートし�
 
 -----
 
+
+## 操作の画像ガイド
+
+各画像は標準機能の操作例です。測定は番号順、拘束は表の Value と Force、出力は 2D/3D の区別を確認してください。
+
+![2D benzene drawing / ベンゼンの 2D 描画](img/guide-first-molecule-2d.png)
+
+![Generated 3D structure / 生成した 3D 構造](img/guide-first-molecule-3d.png)
+
+![Two-atom distance measurement / 2 原子の距離測定](img/guide-measure-distance.png)
+
+![Four-atom angle and dihedral measurement / 4 原子の角度・二面角測定](img/guide-measure-dihedral.png)
+
+![Dihedral target and force constant / 二面角の目標値と力の定数](img/guide-constrained-optimization.png)
+
+![3D drag and stereo-check settings / 3D ドラッグと立体チェックの設定](img/guide-settings-3d-scene.png)
+
+![S configuration in 2D and 3D / 2D と 3D の S 配置](img/guide-stereochemistry.png)
+
+![Export current 3D coordinates / 現在の 3D 座標を出力](img/guide-export-3d.png)
+
+拘束の例はエタンの二面角 0° を指定したもので、安定配座の推奨ではありません。Force は有限なので最終値を確認します。測定の 1.395 Å は C–C、1.087 Å は H–C の例です。

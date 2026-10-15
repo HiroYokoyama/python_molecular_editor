@@ -1,5 +1,10 @@
 # MoleditPy Windows Installer
 
+[English](./windows_installer) · [日本語](./windows_installer-jp)
+
+**Need plugins with additional Python dependencies?** Use the [Python quick start](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Quick-Start). This standalone distribution omits pip and Open Babel. For the Python installer, run `python -m pip install moleditpy-installer`, then the recommended `python -m moleditpy_installer`; `moleditpy-installer` is also supported.
+
+
 ## Overview
 
 MoleditPy is a cross-platform, simple, and intuitive molecular editor built in Python.

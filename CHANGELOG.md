@@ -6,6 +6,11 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Documentation
+
+- Add bilingual illustrated wiki workflows for installation, drawing, measurements, stereochemistry, constraints, and export; align the published manuals.
+- Recommend the Python module invocation for the installer, retain the supported console command, and show OS-specific environment-bound commands on the homepage. Fix Japanese installer links and clipboard feedback.
+
 ---
 
 ## [4.13.0] - 2026-10-15

@@ -1,5 +1,8 @@
 # MoleditPy User Manual
 
+For a first session, follow the [illustrated tutorial](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Your-First-Molecule) and [Quick start](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Quick-Start). Prefer `python -m moleditpy_installer`; `moleditpy-installer` is also supported, but the module form selects the intended Python and avoids console-script PATH problems. Install with the same environment’s `python -m pip`.
+
+
 ## Table of Contents
 
 - [1. Introduction](#1-introduction)
@@ -64,7 +67,7 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
     This will automatically install the correct `moleditpy` (for Win/Mac) or `moleditpy-linux` (for Linux) as a dependency.
 
     ```bash
-    pip install moleditpy-installer
+    python -m pip install moleditpy-installer
     ```
 
 2.  **Create the Shortcut**
@@ -589,3 +592,25 @@ You can check the version information from the `Help` \> `About` menu.
 -----
 
 
+
+## Illustrated workflow reference
+
+These examples use built-in tools. Follow the numbered picks for measurements, inspect Value and Force for constraints, and distinguish 2D from 3D exports.
+
+![2D benzene drawing / ベンゼンの 2D 描画](img/guide-first-molecule-2d.png)
+
+![Generated 3D structure / 生成した 3D 構造](img/guide-first-molecule-3d.png)
+
+![Two-atom distance measurement / 2 原子の距離測定](img/guide-measure-distance.png)
+
+![Four-atom angle and dihedral measurement / 4 原子の角度・二面角測定](img/guide-measure-dihedral.png)
+
+![Dihedral target and force constant / 二面角の目標値と力の定数](img/guide-constrained-optimization.png)
+
+![3D drag and stereo-check settings / 3D ドラッグと立体チェックの設定](img/guide-settings-3d-scene.png)
+
+![S configuration in 2D and 3D / 2D と 3D の S 配置](img/guide-stereochemistry.png)
+
+![Export current 3D coordinates / 現在の 3D 座標を出力](img/guide-export-3d.png)
+
+The constraint example targets an ethane dihedral of 0°; it demonstrates the controls rather than a stable conformation. Check the final value because Force is finite. The measurement examples show 1.395 Å for C–C and 1.087 Å for H–C.

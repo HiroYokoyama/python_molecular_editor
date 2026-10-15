@@ -27,9 +27,11 @@ See the [user manual](https://hiroyokoyama.github.io/python_molecular_editor/man
 ## Installation
 
 ```bash
-pip install moleditpy-installer
+python -m pip install moleditpy-installer
 python -m moleditpy_installer
 ```
+
+Prefer `python -m moleditpy_installer` to use the selected Python environment and avoid console-script PATH issues. `moleditpy-installer` is also supported. Use the same interpreter for `-m pip`. See the [Quick start](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Quick-Start) ([日本語](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Quick-Start-JP)) and [illustrated first-molecule tutorial](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Your-First-Molecule) ([日本語](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Your-First-Molecule-JP)).
 
 The first command installs the right package for your platform (`moleditpy`, or `moleditpy-linux` on Linux); the second creates an application shortcut. Start the app from the shortcut or with:
 
