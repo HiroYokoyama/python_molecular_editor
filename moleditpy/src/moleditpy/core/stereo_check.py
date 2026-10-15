@@ -68,6 +68,70 @@ def drawn_chirality(data: MolecularData) -> Dict[int, str]:
     return _cip_labels_by_atom_id(mol)
 
 
+@dataclass(frozen=True)
+class WedgeForLabel:
+    """How to draw a bond so that the stereocenter at its narrow end reads as R/S."""
+
+    key: Tuple[int, int]  # (stereocenter, other end): data.bonds key, narrow end first
+    stereo: int  # 1 = wedge, 2 = hash
+    cleared: Tuple[Tuple[int, int], ...]  # other wedges at the center to make plain
+
+
+def wedge_for_label(
+    data: MolecularData,
+    bond_key: Tuple[int, int],
+    label: str,
+    centers: Optional[List[int]] = None,
+) -> Optional[WedgeForLabel]:
+    """Wedge or hash on *bond_key* that makes one of its ends CIP *label*.
+
+    *centers* is the order in which the bond's ends are tried (default: the
+    key order). Each end is tried first with the other wedges kept; if they
+    make *label* unreachable, then with this center's other wedges and hashes
+    made plain, so the requested label wins. Returns None when neither end
+    can be *label* (not a stereocenter). *data* is left unchanged.
+    """
+    if bond_key not in data.bonds or label not in ("R", "S"):
+        return None
+    ends = list(centers) if centers else list(bond_key)
+    original = list(data.bonds.items())
+    template = dict(data.bonds[bond_key], order=1)
+    trial_bonds = {k: dict(v) for k, v in original if k != bond_key}
+    try:
+        for center in ends:
+            if center not in bond_key:
+                continue
+            other = bond_key[1] if center == bond_key[0] else bond_key[0]
+            own = tuple(
+                k
+                for k, v in trial_bonds.items()
+                if k[0] == center and v.get("stereo") in (1, 2)
+            )
+            for cleared in ((), own) if own else ((),):
+                for stereo in (1, 2):
+                    data.bonds.clear()
+                    for k, v in trial_bonds.items():
+                        data.bonds[k] = dict(v, stereo=0) if k in cleared else dict(v)
+                    data.bonds[(center, other)] = dict(template, stereo=stereo)
+                    if drawn_chirality(data).get(center) == label:
+                        return WedgeForLabel((center, other), stereo, cleared)
+        return None
+    except (RuntimeError, ValueError, TypeError) as e:
+        logging.warning("R/S wedge search failed: %s", e)
+        return None
+    finally:
+        data.bonds.clear()
+        data.bonds.update(original)
+
+
+def bond_label(data: MolecularData, bond_key: Tuple[int, int]) -> Optional[str]:
+    """CIP label the wedge/hash *bond_key* gives the center at its narrow end."""
+    bond = data.bonds.get(bond_key)
+    if bond is None or bond.get("stereo") not in (1, 2):
+        return None
+    return drawn_chirality(data).get(bond_key[0])
+
+
 def actual_chirality(mol_3d: Chem.Mol) -> Dict[int, str]:
     """CIP labels of the stereocenters in a 3D structure, read from coordinates."""
     if mol_3d.GetNumConformers() == 0:
