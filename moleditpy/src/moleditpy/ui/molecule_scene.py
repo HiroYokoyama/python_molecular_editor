@@ -25,6 +25,8 @@ from PyQt6.QtWidgets import (
     QGraphicsSceneMouseEvent,
 )
 
+from ..core.molecular_data import rs_entry
+
 if TYPE_CHECKING:
     from ..core.molecular_data import MolecularData
     from .main_window import MainWindow
@@ -36,7 +38,12 @@ from .template_preview_item import TemplatePreviewItem
 
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
-from .molecular_scene_handler import TemplateMixin, KeyboardMixin, SceneQueryMixin
+from .molecular_scene_handler import (
+    KeyboardMixin,
+    SceneQueryMixin,
+    TemplateMixin,
+    next_rs_label,
+)
 from .chain_mixin import ChainMixin
 
 
@@ -126,7 +133,7 @@ class MoleculeScene(
             return
 
         # 1. Generate RDKit molecule for topology analysis
-        mol = self.data.to_rdkit_mol(use_2d_stereo=False)
+        mol = self.data.to_rdkit_mol(use_2d_stereo=False, use_rs_labels=False)
         if not mol:
             # Fallback: reset all ring info if molecule generation fails
             for bond_item in self.bond_items.values():
@@ -231,7 +238,9 @@ class MoleculeScene(
                 "pos": raw_pos,
                 "charge": charge,
                 "radical": radical,
+                **rs_entry(data),
             }
+            atom_item.rs_label = self.data.atoms[atom_id].get("rs")
             self.atom_items[atom_id] = atom_item
             self.addItem(atom_item)
 
@@ -276,7 +285,9 @@ class MoleculeScene(
                 "pos": raw_pos,
                 "charge": charge,
                 "radical": radical,
+                **rs_entry(atom_data),
             }
+            atom_item.rs_label = self.data.atoms[atom_id].get("rs")
             self.atom_items[atom_id] = atom_item
             self.addItem(atom_item)
 
@@ -439,7 +450,9 @@ class MoleculeScene(
             if (
                 len(selected_items) > 1
                 and item in selected_items
-                and not self.mode.startswith(("template", "charge", "radical"))
+                and not self.mode.startswith(
+                    ("template", "charge", "radical", "rs_label")
+                )
             ):
                 # Delete the entire rectangular selection
                 data_changed = self.delete_items(set(selected_items))
@@ -484,6 +497,9 @@ class MoleculeScene(
                     self.data.atoms[item.atom_id]["radical"] = 0
                     item.update_style()
                     data_changed = True
+                # Clear the R/S label if in R/S mode
+                elif self.mode == "rs_label" and item.rs_label is not None:
+                    data_changed = self.apply_rs_label(item, None)
                 # Set charge to 0 if in charge mode
                 elif self.mode in ["charge_plus", "charge_minus"] and item.charge != 0:
                     item.prepareGeometryChange()
@@ -492,11 +508,15 @@ class MoleculeScene(
                     item.update_style()
                     data_changed = True
                 # Delete atom in modes other than those above (excluding template, charge, radical)
-                elif not self.mode.startswith(("template", "charge", "radical")):
+                elif not self.mode.startswith(
+                    ("template", "charge", "radical", "rs_label")
+                ):
                     data_changed = self.delete_items({item})
             elif isinstance(item, BondItem):
                 # Delete bond in modes other than template, charge, radical
-                if not self.mode.startswith(("template", "charge", "radical")):
+                if not self.mode.startswith(
+                    ("template", "charge", "radical", "rs_label")
+                ):
                     data_changed = self.delete_items({item})
 
             if data_changed:
@@ -691,6 +711,19 @@ class MoleculeScene(
             self.start_pos = None
             self.press_pos = None
             self.window.edit_actions_manager.push_undo_state()
+            return
+        elif (
+            self.mode == "rs_label" and is_click and isinstance(released_item, AtomItem)
+        ):
+            changed = self.apply_rs_label(
+                released_item, next_rs_label(released_item.rs_label)
+            )
+            self.start_atom = None
+            self.start_pos = None
+            self.press_pos = None
+            if changed:
+                self.update_all_items()
+                self.window.edit_actions_manager.push_undo_state()
             return
         elif (
             (self.mode == "charge_plus" or self.mode == "charge_minus")
@@ -922,6 +955,13 @@ class MoleculeScene(
         """Handle double click events."""
         item = self.itemAt(event.scenePos(), self.views()[0].transform())
 
+        if self.mode == "rs_label" and isinstance(item, AtomItem):
+            # The second click of a double-click advances the cycle once more.
+            if self.apply_rs_label(item, next_rs_label(item.rs_label)):
+                self.update_all_items()
+                self.window.edit_actions_manager.push_undo_state()
+            event.accept()
+            return
         if self.mode in ["charge_plus", "charge_minus", "radical"] and isinstance(
             item, AtomItem
         ):

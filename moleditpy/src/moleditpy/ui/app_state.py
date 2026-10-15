@@ -33,7 +33,7 @@ from PyQt6.QtCore import QDateTime, Qt
 from PyQt6.QtWidgets import QMessageBox
 
 from ..utils.constants import VERSION
-from ..core.molecular_data import MolecularData
+from ..core.molecular_data import MolecularData, rs_entry
 
 
 from typing import TYPE_CHECKING
@@ -90,6 +90,7 @@ class StateManager:
                 "pos": data["pos"],  # Already a tuple (x, y)
                 "charge": data.get("charge", 0),
                 "radical": data.get("radical", 0),
+                **rs_entry(data),
             }
             for atom_id, data in self.data.atoms.items()
         }
@@ -332,7 +333,7 @@ class StateManager:
 
         if self.data:
             try:
-                mol = self.data.to_rdkit_mol()
+                mol = self.data.to_rdkit_mol(use_rs_labels=False)
                 if mol:
                     mol_with_hs = Chem.AddHs(mol)
                     mol_formula = rdMolDescriptors.CalcMolFormula(mol)
@@ -370,6 +371,7 @@ class StateManager:
                     "y": pos[1],
                     "charge": data.get("charge", 0),
                     "radical": data.get("radical", 0),
+                    **rs_entry(data),
                 }
                 atoms_2d.append(atom_data)
 

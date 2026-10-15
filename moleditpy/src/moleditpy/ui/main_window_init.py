@@ -848,6 +848,7 @@ class MainInitManager:
             ("Triple Bond", "bond_3_0", "3", "triple"),
             ("Wedge Bond", "bond_1_1", "W", "wedge"),
             ("Dash Bond", "bond_1_2", "D", "dash"),
+            ("Toggle R/S", "rs_label", "R", "rs_toggle"),
             ("Toggle E/Z", "bond_2_5", "E/Z", "ez_toggle"),
         ]
 
@@ -1032,16 +1033,27 @@ class MainInitManager:
             offset = QPointF(v.dx(), v.dy()) * 2.0
             painter.drawLine(linez.translated(offset))
             painter.drawLine(linez.translated(-offset))
-            font = painter.font()
-            font.setPointSize(10)
-            font.setBold(True)
-            painter.setFont(font)
-            painter.drawText(
-                QRectF(0, 0, size, size * 0.6), Qt.AlignmentFlag.AlignCenter, "Z⇌E"
-            )
+            self._draw_icon_caption(painter, size, "Z⇌E")
+        elif bond_type == "rs_toggle":
+            p1z, p2z = QPointF(6, size * 0.75), QPointF(size - 6, size * 0.75)
+            normal = QLineF(p1z, p2z).unitVector().normalVector()
+            offset = QPointF(normal.dx(), normal.dy()) * 3.0
+            painter.drawPolygon(QPolygonF([p1z, p2z + offset, p2z - offset]))
+            self._draw_icon_caption(painter, size, "R⇌S")
 
         painter.end()
         return QIcon(pixmap)
+
+    @staticmethod
+    def _draw_icon_caption(painter: QPainter, size: int, text: str) -> None:
+        """Bold caption across the top of a toolbar icon (e.g. "Z⇌E")."""
+        font = painter.font()
+        font.setPointSize(10)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(
+            QRectF(0, 0, size, size * 0.6), Qt.AlignmentFlag.AlignCenter, text
+        )
 
     def _create_chain_icon(self, size: int = 32) -> QIcon:
         """Generate the -(-)n- repeat-unit icon for the alkyl chain tool."""
