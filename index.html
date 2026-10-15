@@ -438,9 +438,6 @@
       document.getElementById('install-platforms').setAttribute('aria-label', lang === 'ja' ? 'オペレーティングシステム' : 'Operating system');
       document.getElementById('language-switch').setAttribute('aria-label', lang === 'ja' ? '言語選択' : 'Language selection');
 
-      try {
-        localStorage.setItem('moleditpy_lang_preference', lang);
-      } catch (e) {}
     }
 
     var copyResetTimer;
@@ -495,20 +492,7 @@
       copyResetTimer = setTimeout(resetCopyLabel, 3000);
     }
 
-    (function() {
-      var savedLang = null;
-      var requestedLang = new URLSearchParams(window.location.search).get('lang');
-      try {
-        savedLang = localStorage.getItem('moleditpy_lang_preference');
-      } catch (e) {}
-
-      if (requestedLang === 'en' || requestedLang === 'ja') {
-        savedLang = requestedLang;
-      } else if (window.location.hash === '#ja' || window.location.hash === '#japanese') {
-        savedLang = 'ja';
-      }
-      setLang(savedLang === 'ja' ? 'ja' : 'en');
-    })();
+    setLang('en');
   </script>
 
 </body>
