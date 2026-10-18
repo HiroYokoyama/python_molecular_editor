@@ -71,7 +71,6 @@ def app():
             pass
 
     q_app.quit()
-    q_app.shutdown()
 
 
 @pytest.fixture

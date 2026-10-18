@@ -606,13 +606,13 @@ class TestClearAllPluginActions:
         tagged.data.return_value = "plugin_managed"
         tagged.menu.return_value = None
 
-        sub_menu = MagicMock()
+        sub_menu = MagicMock(spec=QMenu)
         sub_menu.actions.return_value = [tagged]
         sub_action = MagicMock()
         sub_action.data.return_value = None
         sub_action.menu.return_value = sub_menu
 
-        top_menu = MagicMock()
+        top_menu = MagicMock(spec=QMenu)
         top_menu.actions.return_value = [sub_action]
         top_action = MagicMock()
         top_action.menu.return_value = top_menu

@@ -641,7 +641,6 @@ def app(request):
             pass
 
     q_app.quit()
-    q_app.shutdown()
 
 
 _CACHED_MAIN_WINDOW_CLASS = None

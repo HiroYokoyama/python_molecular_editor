@@ -652,7 +652,8 @@ class TemplateMixin:
 
         target_length = edge_length if use_existing_length else DEFAULT_BOND_LENGTH
 
-        v_edge = (v_edge / edge_length) * target_length
+        scale = target_length / edge_length
+        v_edge = QPointF(v_edge.x() * scale, v_edge.y() * scale)
 
         if not use_existing_length:
             p1 = p0 + v_edge

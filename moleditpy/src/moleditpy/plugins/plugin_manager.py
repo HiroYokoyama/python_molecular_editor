@@ -550,7 +550,7 @@ class PluginManager:
         for path in paths:
             with tokenize.open(path) as source:
                 tree = ast.parse(source.read(), filename=path)
-            imports = []
+            imports: List[str] = []
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
                     imports.extend(alias.name for alias in node.names)
@@ -561,11 +561,14 @@ class PluginManager:
                     dynamic_import = (
                         isinstance(function, ast.Name) and function.id == "__import__"
                     ) or (
-                        isinstance(function, ast.Attribute) and function.attr == "import_module"
+                        isinstance(function, ast.Attribute)
+                        and function.attr == "import_module"
                     )
                     if dynamic_import and isinstance(node.args[0], ast.Constant):
                         imports.append(str(node.args[0].value))
-            legacy = next((name for name in imports if name.split(".")[0] in unsupported), None)
+            legacy = next(
+                (name for name in imports if name.split(".")[0] in unsupported), None
+            )
             if legacy:
                 raise ImportError(
                     f"Plugin requires migration to PySide6: unsupported Qt binding {legacy} in {os.path.basename(path)}. "

@@ -212,7 +212,6 @@ def app():
     q_app = QApplication.instance() or QApplication(sys.argv)
     yield q_app
     q_app.quit()
-    q_app.shutdown()
 
 
 @pytest.fixture

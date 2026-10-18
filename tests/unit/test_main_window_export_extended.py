@@ -295,7 +295,7 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
         window.init_manager.scene.items.return_value = [atom_instance]
 
         window.export_2d_png()
-    mock_image.save.assert_called_with("/path/to/image.png")
+        mock_image.save.assert_called_with("/path/to/image.png")
         window.statusBar().showMessage.assert_any_call(
             "2D view exported to /path/to/image.png"
         )

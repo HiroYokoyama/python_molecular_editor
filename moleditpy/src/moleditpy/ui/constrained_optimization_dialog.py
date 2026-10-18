@@ -14,7 +14,7 @@ import logging
 from typing import Any, Optional
 
 import numpy as np
-from PySide6.QtCore import Qt, QThread, Signal, Slot
+from PySide6.QtCore import QEvent, QObject, Qt, QThread, Signal, Slot
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -71,8 +71,12 @@ class ConstrainedOptimizationThread(QThread):
             self.error_occurred.emit(str(e))
 
 
-class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
+class ConstrainedOptimizationDialog(QDialog, Dialog3DPickingMixin):
     """Dialog for constrained optimization."""
+
+    def eventFilter(self, obj: Optional[QObject], event: Optional[QEvent]) -> bool:
+        """Forward picking events to the shared mixin."""
+        return Dialog3DPickingMixin.eventFilter(self, obj, event)
 
     def __init__(self, mol: Any, main_window: Any, parent: Any = None) -> None:
         """Initialize constrained force field optimization dialog."""
