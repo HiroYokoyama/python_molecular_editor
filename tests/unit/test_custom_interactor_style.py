@@ -8,7 +8,7 @@ from moleditpy.ui.custom_interactor_style import (
     _REALTIME_DRAG_MAX_ATOMS,
     CustomInteractorStyle,
 )
-from PyQt6.QtCore import Qt
+from PySide6.QtCore import Qt
 
 _VTK_BASE = "vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera"
 

@@ -6,6 +6,15 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Migrate the application, plugin examples and test/build tooling from PyQt6 to PySide6-Essentials, with GUI-thread delivery of calculation results.
+- License the core under LGPL-3.0-or-later and explicitly permit independently developed plugins under any license; preserve existing plugin licenses.
+- Keep replaceable Qt shared libraries and ship license notices, source/build manifests and replacement instructions with frozen bundles.
+
+### Removed
+- Remove Open Babel dependencies, bundled libraries, conversion fallback and built-in force fields from the core; Fallback now tries RDKit then Direct mode.
+
+
 ---
 
 ## [5.0.0a1] - 2026-10-18

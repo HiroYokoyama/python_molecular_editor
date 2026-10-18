@@ -2,8 +2,8 @@
 
 from unittest.mock import patch
 
-from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QLabel
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QLabel
 
 from moleditpy.ui.settings_tabs.settings_labels_tab import SettingsLabelsTab
 from moleditpy.utils.default_settings import DEFAULT_SETTINGS

@@ -1,7 +1,7 @@
 """Unit tests for SettingsTabBase slider helpers."""
 
 from unittest.mock import MagicMock
-from PyQt6.QtWidgets import QFrame, QSlider, QHBoxLayout
+from PySide6.QtWidgets import QFrame, QSlider, QHBoxLayout
 from moleditpy.ui.settings_tabs.settings_tab_base import SettingsTabBase
 from moleditpy.utils.default_settings import DEFAULT_SETTINGS
 
@@ -83,7 +83,7 @@ def test_wrap_layout_returns_layout_with_children(app):
 
 def test_create_slider_expanding_policy(app):
     """_create_slider sets the slider to an expanding horizontal policy to ensure full width on macOS."""
-    from PyQt6.QtWidgets import QSizePolicy
+    from PySide6.QtWidgets import QSizePolicy
 
     tab = ConcreteTab(DEFAULT_SETTINGS)
     slider, spin = tab._create_slider(10, 200, 10.0)
@@ -92,7 +92,7 @@ def test_create_slider_expanding_policy(app):
 
 def test_create_form_layout(app):
     """_create_form_layout returns a QFormLayout configured with AllNonFixedFieldsGrow."""
-    from PyQt6.QtWidgets import QFormLayout
+    from PySide6.QtWidgets import QFormLayout
 
     tab = ConcreteTab(DEFAULT_SETTINGS)
     form_layout = tab._create_form_layout()

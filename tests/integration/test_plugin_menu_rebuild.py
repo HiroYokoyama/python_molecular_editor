@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 from moleditpy.ui.plugin_menu_manager import PluginMenuManager
 
 
-# QAction(text, MagicMock) fails because PyQt6 strictly validates parent type.
+# QAction(text, MagicMock) fails because PySide6 strictly validates parent type.
 # Patch it to parent actions to a real QObject instead of the mock. Parenting
 # (rather than dropping the parent) gives the QActions a deterministic owner, so
 # Qt destroys them in order with the holder while QApplication is still alive —
@@ -20,8 +20,8 @@ from moleditpy.ui.plugin_menu_manager import PluginMenuManager
 # this file runs in isolation.
 @pytest.fixture(autouse=True)
 def _patch_qaction(monkeypatch, app):
-    from PyQt6.QtCore import QObject
-    from PyQt6.QtGui import QAction as _RealQAction
+    from PySide6.QtCore import QObject
+    from PySide6.QtGui import QAction as _RealQAction
 
     holder = QObject()
 
@@ -469,7 +469,7 @@ class TestAnalysisToolEndToEnd:
 
 class TestTopLevelMenuCleanup:
     def _make_im_with_real_menubar(self, pm):
-        from PyQt6.QtWidgets import QMenuBar
+        from PySide6.QtWidgets import QMenuBar
 
         bar = QMenuBar()
         im = _make_im(pm)

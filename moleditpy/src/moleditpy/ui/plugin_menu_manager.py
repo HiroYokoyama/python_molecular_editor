@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -16,8 +16,8 @@ import logging
 import os
 from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
-from PyQt6.QtGui import QAction, QIcon, QKeySequence
-from PyQt6.QtWidgets import QFileDialog, QMenu, QMessageBox
+from PySide6.QtGui import QAction, QIcon, QKeySequence
+from PySide6.QtWidgets import QFileDialog, QMenu, QMessageBox
 
 if TYPE_CHECKING:
     from .main_window_init import MainInitManager
@@ -217,7 +217,7 @@ class PluginMenuManager:
         """
         for action in menu.actions():
             submenu = action.menu()
-            if submenu is not None:
+            if isinstance(submenu, QMenu):
                 self._retire_menu_tree(submenu, keep)
                 submenu.deleteLater()
             elif action is not keep:
@@ -238,7 +238,7 @@ class PluginMenuManager:
         """
         for action in list(menu.actions()):
             submenu = action.menu()
-            if submenu is not None:
+            if isinstance(submenu, QMenu):
                 self._strip_plugin_actions(submenu)
                 if action.data() == self._PLUGIN_ACTION_TAG and not any(
                     not a.isSeparator() for a in submenu.actions()

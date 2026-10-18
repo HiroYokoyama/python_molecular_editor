@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from PyQt6.QtCore import Qt
+from PySide6.QtCore import Qt
 
 from moleditpy.ui.about_dialog import AboutDialog
 

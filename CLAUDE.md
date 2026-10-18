@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MoleditPy is a Python-based molecular editor (v4.x — see moleditpy/pyproject.toml for the current version) built with PyQt6, RDKit, and PyVista. It provides 2D editing + 3D visualization of molecules with a plugin system.
+MoleditPy is a Python-based molecular editor (v4.x — see moleditpy/pyproject.toml for the current version) built with PySide6, RDKit, and PyVista. It provides 2D editing + 3D visualization of molecules with a plugin system.
 
 ## Development Setup
 
@@ -85,7 +85,7 @@ The `--pylint` flag on `run_all_tests.py` runs pylint automatically after all te
 
 ## Scope
 
-Application source lives in `moleditpy/`, the single package for Windows, macOS, and Linux. MoleditPy 5 requires Python 3.10–3.14 and official Open Babel wheels. There is no separate Linux source tree or synchronization step.
+Application source lives in `moleditpy/`, the single package for Windows, macOS, and Linux. MoleditPy 5 requires Python 3.10–3.14 and PySide6-Essentials. Open Babel is not a core dependency. There is no separate Linux source tree or synchronization step.
 
 ## Code Quality Standards
 
@@ -131,7 +131,7 @@ Plugins are discovered and loaded by `plugins/plugin_manager.py`. The public API
 
 ### e2e Tests: One Package on Every Platform
 
-`tests/e2e/` and `tests/full_gui/` use `moleditpy` on every platform. Set `MOLEDITPY_USE_INSTALLED=1` to test the installed package instead of adding local source directories. Keep RDKit imports before Open Babel imports: the reverse order can cause a native-library crash on Linux.
+`tests/e2e/` and `tests/full_gui/` use `moleditpy` on every platform. Set `MOLEDITPY_USE_INSTALLED=1` to test the installed package instead of adding local source directories. PySide6 is the sole supported Qt binding. Plugin optimization methods use the existing documented callback API.
 
 ## Environment Variables
 

@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence
 
 import numpy as np
 
-from PyQt6.QtGui import QCloseEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QHBoxLayout,
@@ -283,7 +283,8 @@ class AlignmentDialog(Dialog3DPickingMixin, QDialog):
         """Clean up when the dialog is closed."""
         self.clear_selection_labels()
         self.disable_picking()
-        super().closeEvent(event)
+        if event is not None:
+            super().closeEvent(event)
 
     def reject(self) -> None:
         """Handle dialog rejection/cancellation."""

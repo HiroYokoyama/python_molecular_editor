@@ -195,7 +195,7 @@ def test_core_has_no_ui_dependency(filename):
     path = os.path.join(os.path.dirname(core_pkg.__file__), filename)
     with open(path, encoding="utf-8") as f:
         tree = ast.parse(f.read())
-    forbidden = ("PyQt6", "PyQt5", "PySide6", "pyvista", "pyvistaqt", "vtk")
+    forbidden = ("PySide6", "PyQt5", "PySide6", "pyvista", "pyvistaqt", "vtk")
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             names = [a.name for a in node.names]

@@ -175,9 +175,9 @@ pvqt = force_mock_module("pyvistaqt")
 pvqt.BackgroundPlotter = DummyPlotterMinimal
 # Handle QWidget inheritance safely for mocking
 _parent_class = object
-if "PyQt6.QtWidgets" in sys.modules:
+if "PySide6.QtWidgets" in sys.modules:
     try:
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
 
         _parent_class = QWidget
     except ImportError:
@@ -205,7 +205,7 @@ class DummyQtInteractorMock(_parent_class):
 
 pvqt.QtInteractor = DummyQtInteractorMock
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 
 # 3. Minimal cleanup to avoid COM crashes
@@ -298,6 +298,7 @@ def app():
             pass
 
     q_app.quit()
+    q_app.shutdown()
 
 
 @pytest.fixture
@@ -305,7 +306,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
     """
     Create a MainWindow instance with necessary mocks for integration tests.
     """
-    from PyQt6.QtWidgets import QWidget, QMessageBox
+    from PySide6.QtWidgets import QWidget, QMessageBox
 
     # Pre-patch init_worker_thread to avoid QThread creation
     monkeypatch.setattr(
@@ -395,7 +396,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
     def sync_trigger_conversion(self_compute):
         from rdkit import Chem
         from rdkit.Chem import AllChem
-        from PyQt6.QtCore import QTimer
+        from PySide6.QtCore import QTimer
 
         mol = self_compute.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
         if mol and mol.GetNumAtoms() > 0:
@@ -428,7 +429,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
         QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes
     )
 
-    from PyQt6.QtWidgets import QFileDialog
+    from PySide6.QtWidgets import QFileDialog
 
     monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: ("", ""))
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: ("", ""))

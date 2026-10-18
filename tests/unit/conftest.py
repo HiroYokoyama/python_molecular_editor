@@ -1,8 +1,8 @@
 import os
 import sys
 import pytest
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import QPointF
+from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QPointF
 
 # Minimal path setup to ensure moleditpy is discoverable
 src_path = os.path.abspath(
@@ -71,6 +71,7 @@ def app():
             pass
 
     q_app.quit()
+    q_app.shutdown()
 
 
 @pytest.fixture

@@ -3,14 +3,14 @@
 import pytest
 from typing import Optional
 from unittest.mock import MagicMock
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMenu
 
 from moleditpy.ui.plugin_menu_manager import PluginMenuManager
 
 
 # ---------------------------------------------------------------------------
-# Module-level patch: QAction(text, MagicMock) fails because PyQt6 strictly
+# Module-level patch: QAction(text, MagicMock) fails because PySide6 strictly
 # validates the parent type. Strip the mock parent so tests stay lightweight.
 # ---------------------------------------------------------------------------
 
@@ -24,8 +24,8 @@ def _patch_qaction(monkeypatch, app):
     Windows when this file runs in isolation. The holder gives them an owner
     destroyed in order while the app is alive.
     """
-    from PyQt6.QtCore import QObject
-    from PyQt6.QtGui import QAction as _RealQAction
+    from PySide6.QtCore import QObject
+    from PySide6.QtGui import QAction as _RealQAction
 
     holder = QObject()
 
@@ -704,7 +704,7 @@ TAG = PluginMenuManager._PLUGIN_ACTION_TAG
 
 def _menubar_with_tools(im, app):
     """Give *im* a real menu bar holding a native 'Tools' menu with two entries."""
-    from PyQt6.QtWidgets import QMenuBar
+    from PySide6.QtWidgets import QMenuBar
 
     bar = QMenuBar()
     tools = bar.addMenu("Tools")
@@ -797,7 +797,7 @@ class TestPluginSeparatorPlacement:
 
 def _menubar_with_plugin_top_level(im):
     """Build a bar holding a native menu plus a tagged divider and plugin menu."""
-    from PyQt6.QtWidgets import QMenuBar
+    from PySide6.QtWidgets import QMenuBar
 
     bar = QMenuBar()
     bar.addMenu("Tools").addAction("Native A")
@@ -841,7 +841,7 @@ class TestClearPluginMenubarEntries:
 
     def test_native_top_level_menu_is_never_removed(self, im, pmm, app):
         """An untagged top-level menu survives even when it is empty."""
-        from PyQt6.QtWidgets import QMenuBar
+        from PySide6.QtWidgets import QMenuBar
 
         bar = QMenuBar()
         bar.addMenu("Empty Native")
@@ -868,7 +868,7 @@ class TestClearPluginMenubarEntries:
 
 def _menubar_with_plugin_menu(im):
     """Give *im* a real menu bar whose only menu is the Plugin menu."""
-    from PyQt6.QtWidgets import QMenuBar
+    from PySide6.QtWidgets import QMenuBar
 
     bar = QMenuBar()
     plugin_menu = bar.addMenu("&Plugin")
@@ -1083,7 +1083,7 @@ class TestHeaderPin:
 
     def test_pin_outside_the_plugin_menu_is_ignored(self, im, pmm, app):
         """A pin request only means anything inside the Plugin menu."""
-        from PyQt6.QtWidgets import QMenuBar
+        from PySide6.QtWidgets import QMenuBar
 
         bar = QMenuBar()
         tools = bar.addMenu("Tools")
@@ -1106,7 +1106,7 @@ class TestHeaderPin:
 
 def _drain_deferred_deletes(app):
     """Run the event-loop turn that deleteLater() waits for."""
-    from PyQt6.QtCore import QCoreApplication, QEvent
+    from PySide6.QtCore import QCoreApplication, QEvent
 
     app.processEvents()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

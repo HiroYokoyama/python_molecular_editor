@@ -18,9 +18,9 @@ import sys
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtCore import QEvent, Qt
-from PyQt6.QtGui import QKeyEvent
-from PyQt6.QtWidgets import QApplication, QTableWidgetItem
+from PySide6.QtCore import QEvent, Qt
+from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QApplication, QTableWidgetItem
 
 # ---------------------------------------------------------------------------
 # Path setup

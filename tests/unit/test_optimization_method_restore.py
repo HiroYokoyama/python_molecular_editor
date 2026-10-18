@@ -6,9 +6,9 @@ silently fell back to MMFF_RDKIT. add_optimization_method must reconcile the
 newly added method with the saved default.
 """
 
-from PyQt6.QtCore import QObject
-from PyQt6.QtGui import QAction, QActionGroup
-from PyQt6.QtWidgets import QMenu
+from PySide6.QtCore import QObject
+from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtWidgets import QMenu
 
 from moleditpy.ui.main_window_init import MainInitManager
 
@@ -18,7 +18,7 @@ def _make_init_manager(saved_opt):
     simulating the post-menu-init state where MMFF_RDKIT is the checked fallback.
     """
     im = MainInitManager.__new__(MainInitManager)
-    # Real QObject so QAction accepts it as parent (PyQt6 validates parent type);
+    # Real QObject so QAction accepts it as parent (PySide6 validates parent type);
     # the triggered lambda is only stored, never invoked here.
     im.host = QObject()
     im.settings = {"optimization_method": saved_opt}

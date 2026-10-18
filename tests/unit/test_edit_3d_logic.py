@@ -3,8 +3,8 @@
 import pytest
 import numpy as np
 from moleditpy.ui.edit_3d_logic import Edit3DManager
-from PyQt6.QtCore import QPointF, QRectF
-from PyQt6.QtWidgets import QGraphicsTextItem
+from PySide6.QtCore import QPointF, QRectF
+from PySide6.QtWidgets import QGraphicsTextItem
 from unittest.mock import MagicMock, patch
 
 

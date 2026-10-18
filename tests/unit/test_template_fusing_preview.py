@@ -2,8 +2,8 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtWidgets import QApplication
 from moleditpy.ui.molecular_scene_handler import TemplateMixin
 
 
@@ -77,7 +77,7 @@ def test_update_template_preview_snaps_points_for_fusing(qapp):
 
     # Call update_template_preview (simulating mouse move)
     with patch(
-        "PyQt6.QtWidgets.QApplication.keyboardModifiers",
+        "PySide6.QtWidgets.QApplication.keyboardModifiers",
         return_value=Qt.KeyboardModifier.NoModifier,
     ):
         scene.update_template_preview(QPointF(5, 5))

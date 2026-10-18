@@ -5,7 +5,7 @@ import json
 import pickle
 import pytest
 from moleditpy.ui.io_logic import IOManager
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 
 
@@ -221,7 +221,7 @@ def test_load_json_data_invalid_format(mock_parser_host, tmp_path):
     with open(json_file, "w") as f:
         json.dump({"format": "Unknown"}, f)
 
-    with patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warn:
+    with patch("PySide6.QtWidgets.QMessageBox.warning") as mock_warn:
         io.load_json_data(json_file)
         assert mock_warn.called
 
@@ -234,7 +234,7 @@ def test_load_json_data_bad_file_keeps_document(mock_parser_host, tmp_path, cont
     json_file.write_text(content, encoding="utf-8")
 
     with (
-        patch("PyQt6.QtWidgets.QMessageBox.warning"),
+        patch("PySide6.QtWidgets.QMessageBox.warning"),
         patch.object(io.host.edit_actions_manager, "clear_all") as clear_all,
     ):
         io.load_json_data(str(json_file))
@@ -277,7 +277,7 @@ def test_save_as_json_trigger(mock_parser_host, tmp_path):
 
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(save_path, "*.pmeprj"),
         ),
         patch.object(
@@ -391,7 +391,7 @@ def test_load_json_data_version_mismatch(mock_parser_host, tmp_path):
     with open(json_path, "w") as f:
         json.dump({"format": "PME Project", "version": "2.0"}, f)
 
-    with patch("PyQt6.QtWidgets.QMessageBox.information") as mock_info:
+    with patch("PySide6.QtWidgets.QMessageBox.information") as mock_info:
         io.load_json_data(str(json_path))
         assert mock_info.called
         assert "version 2.0" in mock_info.call_args[0][2]
@@ -405,7 +405,7 @@ def test_project_save_load_full_cycle(mock_parser_host, tmp_path):
     project_file = str(tmp_path / "full_cycle.pmeprj")
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(project_file, "*.pmeprj"),
     ):
         io.save_as_json()
@@ -433,7 +433,7 @@ def test_save_project_default_filename(mock_parser_host, tmp_path):
     )
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
     ) as mock_save:
         io.save_project_as()
 
@@ -444,7 +444,7 @@ def test_save_project_default_filename(mock_parser_host, tmp_path):
 
     io.host.init_manager.current_file_path = None
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
     ) as mock_save:
         io.save_project_as()
         args, _ = mock_save.call_args
@@ -461,7 +461,7 @@ def test_save_project_extension_enforcement(mock_parser_host, tmp_path):
 
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(save_path_input, "PME Project Files (*.pmeprj)"),
         ),
         patch.object(io.host.state_manager, "create_json_data", return_value={}),
@@ -482,7 +482,8 @@ def test_save_project_success_state_update(mock_parser_host, tmp_path):
 
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "")
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(save_path, ""),
         ),
         patch.object(io.host.state_manager, "create_json_data", return_value={}),
         patch.object(
@@ -606,7 +607,7 @@ def test_save_raw_data_success(io, tmp_path):
     save_path = str(tmp_path / "test.pmeraw")
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(save_path, "Project Files (*.pmeraw)"),
     ):
         io.save_raw_data()
@@ -624,7 +625,7 @@ def test_save_raw_data_success(io, tmp_path):
 def test_save_raw_data_cancel(io):
     """Verify that nothing happens if the user cancels the save dialog."""
     io.data.atoms = {1: "C"}
-    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
+    with patch("PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         io.save_raw_data()
         io.statusBar().showMessage.assert_not_called()
 
@@ -638,7 +639,7 @@ def test_load_raw_data_dialog_success(io, tmp_path):
 
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
+            "PySide6.QtWidgets.QFileDialog.getOpenFileName",
             return_value=(load_path, "Project Files (*.pmeraw)"),
         ),
         patch.object(io, "_confirm_pickle_load", return_value=True),
@@ -655,7 +656,7 @@ def test_load_raw_data_dialog_success(io, tmp_path):
 
 def test_load_raw_data_cancel(io):
     """Verify that nothing happens if the user cancels the load dialog."""
-    with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
+    with patch("PySide6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
         io.load_raw_data()
         io.host.state_manager.set_state_from_data.assert_not_called()
 
@@ -700,7 +701,7 @@ M  END
 
 def test_load_mol_file_no_path_cancelled_dialog(mock_parser_host):
     io = DummyProjectIo(mock_parser_host)
-    with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
+    with patch("PySide6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
         io.load_mol_file()
     mock_parser_host.init_manager.scene.create_atom.assert_not_called()
 
@@ -764,7 +765,7 @@ def test_save_as_mol_writes_file(mock_parser_host, tmp_path):
     mock_parser_host.init_manager.scene.create_atom("C", QPointF(0, 0))
     out_path = tmp_path / "out.mol"
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(out_path), ""),
     ):
         io.save_as_mol()
@@ -776,7 +777,7 @@ def test_save_as_mol_writes_file(mock_parser_host, tmp_path):
 def test_save_as_mol_cancelled_dialog_writes_nothing(mock_parser_host, tmp_path):
     io = DummyProjectIo(mock_parser_host)
     mock_parser_host.init_manager.scene.create_atom("C", QPointF(0, 0))
-    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
+    with patch("PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         io.save_as_mol()
     assert list(tmp_path.iterdir()) == []
 
@@ -786,7 +787,7 @@ def test_save_as_mol_io_error_reports_message(mock_parser_host, tmp_path):
     mock_parser_host.init_manager.scene.create_atom("C", QPointF(0, 0))
     bad_path = tmp_path / "no_such_dir" / "out.mol"
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(bad_path), ""),
     ):
         io.save_as_mol()
@@ -800,7 +801,7 @@ def test_save_as_mol_io_error_reports_message(mock_parser_host, tmp_path):
 
 def test_load_mol_file_3d_no_path_cancelled(mock_parser_host):
     io = DummyProjectIo(mock_parser_host)
-    with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
+    with patch("PySide6.QtWidgets.QFileDialog.getOpenFileName", return_value=("", "")):
         io.load_mol_file_for_3d_viewing()
     mock_parser_host.view_3d_manager.draw_molecule_3d.assert_not_called()
 
@@ -856,7 +857,7 @@ def test_save_as_xyz_cancelled_dialog_writes_nothing(mock_parser_host, tmp_path)
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, randomSeed=1)
     mock_parser_host.view_3d_manager.current_mol = mol
-    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
+    with patch("PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         io.save_as_xyz()
     assert list(tmp_path.iterdir()) == []
 
@@ -870,7 +871,7 @@ def test_save_as_xyz_writes_charge_and_multiplicity(mock_parser_host, tmp_path):
     mock_parser_host.view_3d_manager.current_mol = mol
     out_path = tmp_path / "out.xyz"
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(out_path), ""),
     ):
         io.save_as_xyz()
@@ -888,7 +889,7 @@ def test_save_as_xyz_io_error_reports_message(mock_parser_host, tmp_path):
     mock_parser_host.view_3d_manager.current_mol = mol
     bad_path = tmp_path / "no_such_dir" / "out.xyz"
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(bad_path), ""),
     ):
         io.save_as_xyz()

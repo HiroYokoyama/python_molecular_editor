@@ -19,8 +19,8 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtCore import QEvent
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QEvent
+from PySide6.QtWidgets import QApplication
 
 # ---------------------------------------------------------------------------
 # Path setup
@@ -800,8 +800,8 @@ class TestMoveGroupDeselectToggle:
 # eventFilter — 3D mouse handling
 # ---------------------------------------------------------------------------
 
-from PyQt6.QtCore import QPointF, Qt
-from PyQt6.QtGui import QMouseEvent
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QMouseEvent
 
 _PICK = "moleditpy.ui.move_group_dialog.pick_atom_index_from_screen"
 

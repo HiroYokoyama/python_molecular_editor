@@ -7,7 +7,7 @@ re-reads the produced file with RDKit / plain parsing to prove it is valid.
 """
 
 import pytest
-from PyQt6.QtCore import QPointF, Qt
+from PySide6.QtCore import QPointF, Qt
 from rdkit import Chem
 
 _PKG = "moleditpy"

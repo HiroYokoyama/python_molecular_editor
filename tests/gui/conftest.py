@@ -2,7 +2,7 @@
 import os
 import sys
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 import importlib
 import importlib.util
 
@@ -221,7 +221,7 @@ try:
         # Create a lightweight QWidget-like interactor compatible with the
         # minimal set of methods the app expects in tests.
         try:
-            from PyQt6.QtWidgets import QWidget
+            from PySide6.QtWidgets import QWidget
 
             class DummyQtInteractor(QWidget):
                 def __init__(self, parent=None, *a, **k):
@@ -330,7 +330,7 @@ try:
         pvqt = types.ModuleType("pyvistaqt")
         # Try to use real QWidget so it works in layouts
         try:
-            from PyQt6.QtWidgets import QWidget
+            from PySide6.QtWidgets import QWidget
 
             class DummyQtInteractor(QWidget):
                 def __init__(self, parent=None, *a, **k):
@@ -641,6 +641,7 @@ def app(request):
             pass
 
     q_app.quit()
+    q_app.shutdown()
 
 
 _CACHED_MAIN_WINDOW_CLASS = None
@@ -830,7 +831,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
         cls.halt_all_calculations = lambda self: self.compute_manager.halt_conversion()
 
         # Method proxies
-        from PyQt6.QtWidgets import QMainWindow as _QMainWindow
+        from PySide6.QtWidgets import QMainWindow as _QMainWindow
 
         _orig_statusBar = _QMainWindow.statusBar
         cls.statusBar = lambda self: (
@@ -1243,7 +1244,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
     # widget that provides the plotting API used by the app to avoid real GL calls.
     # We do this patch BEFORE instantiating MainWindow in either Headless or GUI mode.
     try:
-        from PyQt6.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
         from unittest import mock as _mock
 
         class DummyPlotter(QWidget):
@@ -1314,7 +1315,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
         traceback.print_exc()
     # Mock QMessageBox to prevent tests from getting stuck
     try:
-        from PyQt6.QtWidgets import QMessageBox
+        from PySide6.QtWidgets import QMessageBox
 
         monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: None)
         monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
@@ -1502,7 +1503,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
         traceback.print_exc()
 
     # Patch common dialogs & file dialogs to be deterministic and non-blocking
-    from PyQt6.QtWidgets import (
+    from PySide6.QtWidgets import (
         QDialog,
         QMessageBox,
     )
@@ -1510,12 +1511,12 @@ def window(app, qtbot, monkeypatch, tmp_path):
     try:
         # exec() and show() of dialogs are MagicMocks so tests can assert calls
         monkeypatch.setattr(
-            "PyQt6.QtWidgets.QDialog.exec",
+            "PySide6.QtWidgets.QDialog.exec",
             _mock.MagicMock(return_value=QDialog.DialogCode.Accepted),
             raising=False,
         )
         monkeypatch.setattr(
-            "PyQt6.QtWidgets.QDialog.show", _mock.MagicMock(), raising=False
+            "PySide6.QtWidgets.QDialog.show", _mock.MagicMock(), raising=False
         )
     except Exception:
         import traceback
@@ -1523,15 +1524,17 @@ def window(app, qtbot, monkeypatch, tmp_path):
         traceback.print_exc()
     try:
         monkeypatch.setattr(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             lambda *a, **k: QMessageBox.StandardButton.Yes,
             raising=False,
         )
         monkeypatch.setattr(
-            "PyQt6.QtWidgets.QMessageBox.warning", _mock.MagicMock(), raising=False
+            "PySide6.QtWidgets.QMessageBox.warning", _mock.MagicMock(), raising=False
         )
         monkeypatch.setattr(
-            "PyQt6.QtWidgets.QMessageBox.information", _mock.MagicMock(), raising=False
+            "PySide6.QtWidgets.QMessageBox.information",
+            _mock.MagicMock(),
+            raising=False,
         )
     except Exception:
         import traceback
@@ -1539,12 +1542,12 @@ def window(app, qtbot, monkeypatch, tmp_path):
         traceback.print_exc()
     try:
         monkeypatch.setattr(
-            "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
+            "PySide6.QtWidgets.QFileDialog.getOpenFileName",
             lambda *a, **k: ("/fake/path.mol", "*.mol"),
             raising=False,
         )
         monkeypatch.setattr(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             lambda *a, **k: ("/fake/save.pmeprj", "*.pmeprj"),
             raising=False,
         )
@@ -1554,7 +1557,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
         traceback.print_exc()
     try:
         monkeypatch.setattr(
-            "PyQt6.QtWidgets.QInputDialog.getText",
+            "PySide6.QtWidgets.QInputDialog.getText",
             lambda *a, **k: ("test", True),
             raising=False,
         )
@@ -1564,7 +1567,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
         traceback.print_exc()
     try:
         monkeypatch.setattr(
-            "PyQt6.QtWidgets.QColorDialog.getColor",
+            "PySide6.QtWidgets.QColorDialog.getColor",
             _mock.MagicMock(isValid=lambda: True, name=lambda: "#FF0000"),
             raising=False,
         )
@@ -1739,7 +1742,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
     # conditionally omit actions; tests rely on these items so add simple
     # fallback actions if missing. We use findChildren to be robust to nested
     # submenus (searches recursively).
-    from PyQt6.QtGui import QAction
+    from PySide6.QtGui import QAction
 
     def _find_action(menu_bar, text):
         for act in menu_bar.findChildren(QAction):

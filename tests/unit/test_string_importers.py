@@ -4,7 +4,7 @@ import pytest
 from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
 from moleditpy.ui.string_importers import StringImporterManager
-from PyQt6.QtCore import QPointF, QTimer
+from PySide6.QtCore import QPointF, QTimer
 from unittest.mock import patch
 
 

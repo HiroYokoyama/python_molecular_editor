@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -14,9 +14,9 @@ from __future__ import annotations
 
 from typing import Optional, cast
 
-from PyQt6.QtCore import QEvent, QPointF, Qt, QTimer
-from PyQt6.QtGui import QMouseEvent, QWheelEvent, QNativeGestureEvent
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QWidget
+from PySide6.QtCore import QEvent, QPointF, Qt, QTimer
+from PySide6.QtGui import QMouseEvent, QWheelEvent, QNativeGestureEvent
+from PySide6.QtWidgets import QGraphicsScene, QGraphicsView, QWidget
 
 
 # Zoom bounds shared by Ctrl+wheel and trackpad pinch.
@@ -115,6 +115,8 @@ class ZoomableView(QGraphicsView):
 
     def mouseReleaseEvent(self, event: Optional[QMouseEvent]) -> None:
         """End panning mode and restore cursor when the relevant button is released"""
+        if event is None:
+            return
         # Check if the middle or left button used for panning was released
         is_middle_button_release = event.button() == Qt.MouseButton.MiddleButton  # type: ignore[union-attr]
         is_left_button_release = event.button() == Qt.MouseButton.LeftButton  # type: ignore[union-attr]
@@ -122,7 +124,7 @@ class ZoomableView(QGraphicsView):
         if self._is_panning and (is_middle_button_release or is_left_button_release):
             self._is_panning = False
             # Restore cursor based on the current scene mode
-            current_mode = self.scene().mode if self.scene() else "select"  # type: ignore[union-attr]
+            current_mode = getattr(self.scene(), "mode", "select")
             if current_mode == "select":
                 self.setCursor(Qt.CursorShape.ArrowCursor)
             elif current_mode.startswith(("atom", "bond", "template", "chain")):
@@ -160,7 +162,7 @@ class ZoomableView(QGraphicsView):
     def viewportEvent(self, event: Optional[QEvent]) -> bool:
         """Handle native gestures (like pinch zoom on trackpads)"""
         if event is None:
-            return super().viewportEvent(event)
+            return False
         if event.type() == QEvent.Type.NativeGesture:
             gesture = cast(QNativeGestureEvent, event)
             # Detect pinch zoom gestures

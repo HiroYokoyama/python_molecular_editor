@@ -4,8 +4,8 @@ import os
 import sys
 import pytest
 import numpy as np
-from PyQt6.QtWidgets import QDialog
-from PyQt6.QtCore import QPointF
+from PySide6.QtWidgets import QDialog
+from PySide6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 
 from moleditpy.ui.edit_actions_logic import EditActionsManager
@@ -117,7 +117,7 @@ def test_update_implicit_hydrogens_main_logic(mock_parser_host):
         func()
 
     with patch.object(editor.data, "to_rdkit_mol", return_value=mol):
-        with patch("PyQt6.QtCore.QTimer.singleShot", side_effect=mock_single_shot):
+        with patch("PySide6.QtCore.QTimer.singleShot", side_effect=mock_single_shot):
             editor.update_implicit_hydrogens()
 
     assert a_item.implicit_h_count == 4
@@ -132,7 +132,7 @@ def test_clipboard_copy_serialization(mock_parser_host):
     editor.scene.selectedItems.return_value = [a_item]
 
     mock_clipboard = MagicMock()
-    with patch("PyQt6.QtWidgets.QApplication.clipboard", return_value=mock_clipboard):
+    with patch("PySide6.QtWidgets.QApplication.clipboard", return_value=mock_clipboard):
         editor.copy_selection()
         assert mock_clipboard.setMimeData.called
 
@@ -348,7 +348,7 @@ class TestEditActionsExtended:
         mock_clipboard.mimeData.return_value = mock_mime
 
         with patch(
-            "PyQt6.QtWidgets.QApplication.clipboard", return_value=mock_clipboard
+            "PySide6.QtWidgets.QApplication.clipboard", return_value=mock_clipboard
         ):
             manager.update_edit_menu_actions()
 
@@ -614,7 +614,7 @@ def test_push_undo_state_detects_constraint_change(monkeypatch):
 
 import json as _json
 
-from PyQt6.QtCore import QByteArray
+from PySide6.QtCore import QByteArray
 
 from moleditpy.ui.edit_actions_logic import Rotate2DDialog, EditActionsManager
 from moleditpy.utils.constants import CLIPBOARD_MIME_TYPE
@@ -1242,7 +1242,7 @@ def test_update_implicit_hydrogens_empty_is_noop(mock_parser_host):
     """With no atoms, update_implicit_hydrogens returns without scheduling work."""
     editor = DummyEditActions(mock_parser_host)
 
-    with patch("PyQt6.QtCore.QTimer.singleShot") as single_shot:
+    with patch("PySide6.QtCore.QTimer.singleShot") as single_shot:
         editor.update_implicit_hydrogens()
 
     single_shot.assert_not_called()

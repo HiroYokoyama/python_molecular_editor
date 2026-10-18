@@ -31,7 +31,7 @@ def worker():
 
 def test_calculation_worker_init(worker):
     """CalculationWorker initialises as a QObject with halt attributes unset."""
-    from PyQt6.QtCore import QObject
+    from PySide6.QtCore import QObject
 
     assert isinstance(worker, QObject)
     assert getattr(worker, "halt_ids", None) is None
@@ -272,38 +272,6 @@ def test_iterative_optimize_halt(worker):
         _iterative_optimize(mol, "MMFF94s", check_halted, safe_status)
 
 
-def test_obabel_optimization_flow(worker):
-    """optimize_only with UFF_OBABEL calls the obabel optimization helper."""
-    mol = Chem.MolFromSmiles("C")
-    mol = Chem.AddHs(mol)
-    AllChem.EmbedMolecule(mol)
-    mol_block = Chem.MolToMolBlock(mol)
-
-    finish_captor = SignalCaptor()
-    worker.finished.connect(finish_captor.capture)
-
-    options = {
-        "conversion_mode": "optimize_only",
-        "optimization_method": "UFF_OBABEL",
-        "worker_id": 3,
-    }
-
-    with (
-        patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", True),
-        patch(
-            "moleditpy.ui.calculation_worker._iterative_optimize_obabel",
-            return_value=True,
-        ) as mock_opt,
-    ):
-        worker.run_calculation(mol_block, options)
-
-    assert mock_opt.called
-    assert len(finish_captor.emitted_values) > 0
-    result = finish_captor.emitted_values[0]
-    res_mol = result[1] if isinstance(result, tuple) else result
-    assert res_mol.GetProp("_pme_optimization_method") == "UFF_OBABEL"
-
-
 # ---------------------------------------------------------------------------
 # Intermolecular interaction tests
 # ---------------------------------------------------------------------------
@@ -481,7 +449,6 @@ from moleditpy.ui.calculation_worker import (
     _resolve_method_key,
     _parse_explicit_stereo,
     _apply_explicit_stereo,
-    _iterative_optimize_obabel,
 )
 
 
@@ -490,8 +457,8 @@ from moleditpy.ui.calculation_worker import (
     [
         ("UFF", "UFF"),
         ("uff optimize", "UFF"),
-        ("GAFF", "GAFF"),
-        ("Ghemical", "GHEMICAL"),
+        ("GAFF", "MMFF94s"),
+        ("Ghemical", "MMFF94s"),
         ("MMFF94", "MMFF94"),
         ("MMFF94S", "MMFF94s"),
         ("mmff94s", "MMFF94s"),
@@ -548,18 +515,3 @@ def test_apply_explicit_stereo_skips_single_bond():
     mol = Chem.MolFromSmiles("CCC")  # only single bonds
     _apply_explicit_stereo(mol, {0: Chem.BondStereo.STEREOZ})
     assert mol.GetBondWithIdx(0).GetStereo() == Chem.BondStereo.STEREONONE
-
-
-def test_iterative_optimize_obabel_unavailable_reports_and_returns_false():
-    mol = Chem.MolFromSmiles("CC")
-    AllChem.EmbedMolecule(Chem.AddHs(mol), randomSeed=1)
-    messages = []
-    with patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", False):
-        result = _iterative_optimize_obabel(
-            mol,
-            "UFF",
-            check_halted_cb=lambda: False,
-            safe_status_cb=messages.append,
-        )
-    assert result is False
-    assert any("OpenBabel" in m for m in messages)

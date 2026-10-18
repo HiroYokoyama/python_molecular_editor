@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -18,12 +18,12 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-# PyQt6 Modules
+# PySide6 Modules
 import pyvista as pv
-from PyQt6.QtCore import QRectF, QSize, Qt
-from PyQt6.QtGui import QBrush, QImage, QPainter
-from PyQt6.QtSvg import QSvgGenerator
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtCore import QRectF, QSize, Qt
+from PySide6.QtGui import QBrush, QImage, QPainter
+from PySide6.QtSvg import QSvgGenerator
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 
 from .atom_item import AtomItem
@@ -790,7 +790,7 @@ class ExportManager:
             finally:
                 painter.end()
 
-            saved = image.save(filePath, "PNG")
+            saved = image.save(filePath)
             if saved:
                 self.host.statusBar().showMessage(f"2D view exported to {filePath}")
             else:

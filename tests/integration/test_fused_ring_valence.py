@@ -3,7 +3,7 @@
 import math
 
 import pytest
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 from rdkit import Chem
 
 BOND_LEN = 75.0  # the app's default 2D bond length

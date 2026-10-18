@@ -208,7 +208,7 @@ jobs:
         run: |
           OUTPUT="$(dist/pyinstaller/MoleditPy.app/Contents/MacOS/MoleditPy --version)"
           echo "$OUTPUT"
-          python scripts/check_frozen_openbabel.py dist/pyinstaller/MoleditPy.app/Contents/MacOS/MoleditPy --version "$APP_VERSION"
+          python scripts/check_frozen_app.py dist/pyinstaller/MoleditPy.app/Contents/MacOS/MoleditPy --version "$APP_VERSION"
           # Catches a broken freeze (missing imports) and a version that did not
           # survive into the bundle, which would otherwise ship as "Unknown".
           if [ "$OUTPUT" != "MoleditPy $APP_VERSION" ]; then

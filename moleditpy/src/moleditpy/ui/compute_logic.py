@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -25,13 +25,12 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from PyQt6.QtCore import QThread, QTimer, QPoint
-from PyQt6.QtGui import QAction, QColor
-from PyQt6.QtWidgets import QMenu, QMessageBox, QWidget
+from PySide6.QtCore import QObject, QThread, QTimer, QPoint, Slot
+from PySide6.QtGui import QAction, QColor
+from PySide6.QtWidgets import QMenu, QMessageBox, QWidget
 from rdkit import Chem
 from rdkit.Chem import rdDepictor
 
-from . import OBABEL_AVAILABLE
 
 from .calculation_worker import CalculationWorker
 from ..core.mol_geometry import (
@@ -52,6 +51,45 @@ if TYPE_CHECKING:
     from .main_window import MainWindow
 
 
+class _CalculationReceiver(QObject):
+    """Deliver calculation callbacks on the GUI thread with an explicit receiver."""
+
+    def __init__(
+        self, manager: ComputeManager, thread: QThread, worker: CalculationWorker
+    ) -> None:
+        super().__init__()
+        self.manager = manager
+        self.calculation_thread = thread
+        self.worker = worker
+
+    @Slot(str)
+    def status(self, message: str) -> None:
+        self.manager.host.ui_manager.update_status_bar(message)
+
+    @Slot(object)
+    def finished(self, result: Any) -> None:
+        try:
+            self.manager.on_calculation_finished(result)
+        finally:
+            self.worker.deleteLater()
+            self.calculation_thread.quit()
+
+    @Slot(object)
+    def error(self, message: Any) -> None:
+        try:
+            self.manager.on_calculation_error(message)
+        finally:
+            self.worker.deleteLater()
+            self.calculation_thread.quit()
+
+    @Slot()
+    def cleanup(self) -> None:
+        with suppress_log(ValueError):
+            self.manager._active_calc_threads.remove(self.calculation_thread)
+            self.manager._calc_receivers.remove(self)
+        self.deleteLater()
+
+
 class ComputeManager:
     """Independent manager for molecular computations, ported from MainWindowCompute mixin."""
 
@@ -63,6 +101,7 @@ class ComputeManager:
         self.host = host
         self.last_successful_optimization_method: Optional[str] = None
         self._active_calc_threads: List[QThread] = []
+        self._calc_receivers: List[_CalculationReceiver] = []
         self.halt_ids: Set[int] = set()
         self.next_conversion_id: int = 1
         self.active_worker_ids: Set[int] = set()
@@ -183,13 +222,10 @@ class ComputeManager:
         conv_options = [
             ("Fallback", "fallback"),
             ("RDKit only", "rdkit"),
-            ("Open Babel only", "obabel"),
             ("Direct", "direct"),
         ]
         for label, key in conv_options:
             a = QAction(label, self.host)
-            if key == "obabel" and not OBABEL_AVAILABLE:
-                a.setEnabled(False)
             a.triggered.connect(
                 lambda checked=False, k=key: self._trigger_conversion_with_temp_mode(k)
             )
@@ -562,32 +598,13 @@ class ComputeManager:
         worker = CalculationWorker()
         worker.halt_ids = self.halt_ids
         worker.moveToThread(thread)
-        worker.status_update.connect(self.host.ui_manager.update_status_bar)
-
-        def _cleanup() -> None:
-            """Clean up calculation worker thread references."""
-            thread.quit()
-            thread.finished.connect(thread.deleteLater)
-            worker.deleteLater()
-            with suppress_log(ValueError, AttributeError):
-                self._active_calc_threads.remove(thread)
-
-        def _on_finished(result: Any) -> None:
-            """Handle successful background calculation completion."""
-            try:
-                self.on_calculation_finished(result)
-            finally:
-                _cleanup()
-
-        def _on_error(msg: Any) -> None:
-            """Handle background calculation failure."""
-            try:
-                self.on_calculation_error(msg)
-            finally:
-                _cleanup()
-
-        worker.finished.connect(_on_finished)
-        worker.error.connect(_on_error)
+        receiver = _CalculationReceiver(self, thread, worker)
+        worker.status_update.connect(receiver.status)
+        worker.finished.connect(receiver.finished)
+        worker.error.connect(receiver.error)
+        thread.finished.connect(receiver.cleanup)
+        thread.finished.connect(thread.deleteLater)
+        self._calc_receivers.append(receiver)
         thread.start()
         QTimer.singleShot(10, lambda: worker.start_work.emit(mol_block, options))
         self._active_calc_threads.append(thread)

@@ -56,8 +56,7 @@ Ethane (2 C, 1 bond) is the minimal molecule that exercises the full
 | `test_ethane_molblock_roundtrip` | MOL-block produced by `MolecularData.to_mol_block()` is parseable by RDKit |
 | `test_ethane_conversion_rdkit` | `CalculationWorker` with `rdkit` mode returns a valid 3D mol |
 | `test_ethane_conversion_direct` | `direct` mode returns a valid 3D mol |
-| `test_ethane_conversion_fallback` | `fallback` mode (RDKit → obabel chain) returns a valid 3D mol |
-| `test_ethane_conversion_obabel` | `obabel` mode returns a valid 3D mol — **skipped** when Open Babel is absent |
+| `test_ethane_conversion_fallback` | `fallback` mode (RDKit → Direct chain) returns a valid 3D mol |
 | `test_main_package_is_active` | `moleditpy` is the active import on every platform |
 
 **Geometry assertion:** every conversion test checks that the 3D mol has exactly
@@ -67,9 +66,8 @@ Ethane (2 C, 1 bond) is the minimal molecule that exercises the full
 ## Requirements
 
 - **RDKit** — 3D embedding and geometry validation
-- **PyQt6** — `QApplication` instance required by `CalculationWorker` signals
+- **PySide6** — `QApplication` instance required by `CalculationWorker` signals
 - **pytest-qt** — `qtbot` fixture (used to satisfy the `app` fixture dependency)
-- **Open Babel** *(optional)* — required only for `test_ethane_conversion_obabel`;
   the test is automatically skipped when absent
 
 ## Workflow Test Files (added 2026-07)

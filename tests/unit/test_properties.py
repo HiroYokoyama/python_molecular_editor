@@ -3,7 +3,7 @@
 from rdkit import Chem
 from moleditpy.ui.analysis_window import AnalysisWindow
 from unittest.mock import MagicMock
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 
 
 def test_analysis_window_regular_mol(qtbot):
@@ -12,7 +12,7 @@ def test_analysis_window_regular_mol(qtbot):
     mol = Chem.MolFromSmiles("CCO")
     mol = Chem.AddHs(mol)
 
-    # Mock parent using a real QWidget to satisfy PyQt6 type check
+    # Mock parent using a real QWidget to satisfy PySide6 type check
     parent = QWidget()
     # We can still add attributes to it if needed
     parent.statusBar = MagicMock()

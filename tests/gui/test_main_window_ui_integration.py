@@ -1,8 +1,8 @@
 """GUI tests for MainWindow UI manager integration."""
 
 from unittest.mock import MagicMock, patch
-from PyQt6.QtGui import QAction, QActionGroup
-from PyQt6.QtWidgets import QMenu, QToolBar, QFileDialog, QToolButton
+from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtWidgets import QMenu, QToolBar, QFileDialog, QToolButton
 
 
 def test_plugin_menu_actions_population(window, qtbot):

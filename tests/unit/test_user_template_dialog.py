@@ -6,7 +6,7 @@ import os
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 from moleditpy.ui.user_template_dialog import UserTemplateDialog
 

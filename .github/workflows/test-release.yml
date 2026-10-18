@@ -144,8 +144,8 @@ jobs:
             exit 1
           }
 
-      - name: Smoke Test Frozen Open Babel
-        run: python scripts/check_frozen_openbabel.py dist/pyinstaller/MoleditPy/MoleditPy.exe --version "${{ env.APP_VERSION }}"
+      - name: Smoke Test Frozen Application
+        run: python scripts/check_frozen_app.py dist/pyinstaller/MoleditPy/MoleditPy.exe --version "${{ env.APP_VERSION }}"
 
       - name: Create Portable Package
         shell: pwsh

@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -15,9 +15,9 @@ import logging
 import copy
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-from PyQt6.QtCore import QEvent, QLineF, Qt, QPointF
-from PyQt6.QtGui import QPen
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QEvent, QLineF, Qt, QPointF
+from PySide6.QtGui import QPen
+from PySide6.QtWidgets import (
     QApplication,
     QGraphicsItem,
     QGraphicsLineItem,
@@ -1105,9 +1105,9 @@ class MoleculeScene(
 
     def refresh_mode_state(self) -> None:
         """Immediately update scene state and previews based on the current mouse position."""
-        import PyQt6.QtGui
+        import PySide6.QtGui
 
-        global_pos = PyQt6.QtGui.QCursor.pos()
+        global_pos = PySide6.QtGui.QCursor.pos()
 
         # Find the active view for this scene
         for view in self.views():

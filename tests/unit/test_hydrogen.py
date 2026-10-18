@@ -4,7 +4,7 @@ import pytest
 
 from moleditpy.core.molecular_data import MolecularData
 from moleditpy.ui.edit_actions_logic import EditActionsManager
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 from unittest.mock import patch
 
 Chem = pytest.importorskip("rdkit.Chem")

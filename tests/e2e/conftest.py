@@ -11,7 +11,7 @@ import sys
 import types
 import pytest
 from unittest import mock as _mock
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 # ---------------------------------------------------------------------------
 # Package selection: the unified package on every platform.
@@ -177,7 +177,7 @@ pyv.Box = _mock.MagicMock
 pvqt.BackgroundPlotter = _DummyPlotterBase
 
 # QtInteractor must be a QWidget subclass so it can be embedded in the splitter
-from PyQt6.QtWidgets import QWidget as _QWidget  # noqa: E402
+from PySide6.QtWidgets import QWidget as _QWidget  # noqa: E402
 
 
 class _DummyQtInteractor(_QWidget):
@@ -212,12 +212,13 @@ def app():
     q_app = QApplication.instance() or QApplication(sys.argv)
     yield q_app
     q_app.quit()
+    q_app.shutdown()
 
 
 @pytest.fixture
 def window(app, qtbot, monkeypatch, tmp_path):
     """Real MainWindow, headless, using the platform-appropriate package."""
-    from PyQt6.QtWidgets import QWidget, QMessageBox, QFileDialog
+    from PySide6.QtWidgets import QWidget, QMessageBox, QFileDialog
 
     # Sandbox the home dir so tests never read/write the real ~/.moleditpy
     # (settings.json, plugins). MainInitManager and PluginManager both build
@@ -310,7 +311,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
     def _sync_trigger(self_compute):
         from rdkit import Chem
         from rdkit.Chem import AllChem
-        from PyQt6.QtCore import QTimer
+        from PySide6.QtCore import QTimer
 
         mol = self_compute.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
         if mol and mol.GetNumAtoms() > 0:

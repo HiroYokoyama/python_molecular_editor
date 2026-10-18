@@ -21,7 +21,7 @@ The `CalculationWorker` inherits from `QObject` and is designed to run within a 
 ### Operations
 1.  **3D Embedding**: Uses RDKit's ETKDGv2 algorithm for primary conformer generation.
 2.  **Stereo Enforcement**: Explicitly applies E/Z and Wedge/Dash constraints to the 3D conformer.
-3.  **Fallback Logic**: Automatically switches to Open Babel's `make3D()` (running in an isolated subprocess) if RDKit embedding fails.
+3.  **Fallback Logic**: Falls back to Direct mode, which preserves the sketch coordinates and adds hydrogens, if RDKit embedding fails.
 4.  **Optimization**: Minimizes the molecule's potential energy using force fields (MMFF94, UFF).
 
 ---
@@ -30,8 +30,8 @@ The `CalculationWorker` inherits from `QObject` and is designed to run within a 
 
 Computational chemistry libraries (C++ extensions) can sometimes cause hard crashes. MoleditPy uses multiple isolation strategies:
 
-### Subprocess Isolation
-Open Babel's native libraries are loaded only in dedicated child processes. Both `make3D()` and force-field optimization run there, keeping Open Babel's native symbols out of the Qt/VTK GUI process. The child loads RDKit before Open Babel and resolves the wheel's bundled parameter files. Optimization cancellation kills and reaps the child; coordinates are applied only after a complete, successful response. Frozen executables use the same isolation through dedicated internal command-line entry points.
+### GUI thread delivery
+Workers emit PySide6 signals to a retained QObject receiver created on the GUI thread. Typed slots deliver status, completion and errors there; worker and thread references remain alive until the thread's finished signal. This avoids updating Qt widgets from calculation threads. The core uses RDKit and Direct mode; additional optimization engines belong to independently installed plugins.
 
 ### Exception Safety
 All background computations and their UI feedback loops are protected by a global exception hook in `main.py`. This ensures that even unexpected calculation failures are captured in the terminal logs (`ERROR`) without a silent application exit.

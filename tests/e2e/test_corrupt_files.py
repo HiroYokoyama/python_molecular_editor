@@ -7,7 +7,7 @@ alive. Added with the dev-4.3.1 fix for the empty-.pmeraw EOFError crash."""
 import pickle
 
 import pytest
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 _PKG = "moleditpy"
 

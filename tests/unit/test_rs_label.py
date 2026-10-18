@@ -3,9 +3,9 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import QPointF, Qt
-from PyQt6.QtGui import QPainter, QTransform
-from PyQt6.QtWidgets import QStyleOptionGraphicsItem
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QPainter, QTransform
+from PySide6.QtWidgets import QStyleOptionGraphicsItem
 from rdkit import Chem
 from rdkit.Chem import rdCIPLabeler
 
@@ -279,7 +279,7 @@ def _release_scenes():
     Qt call boundingRect() on already-deleted items, which aborts PyQt.
     """
     yield
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     for scene in _LIVE_SCENES:
         scene.clear()
@@ -413,8 +413,8 @@ def test_set_bond_stereo_by_key_without_item_or_data(mock_parser_host):
     assert scene.data.bonds[(3, 5)]["stereo"] == 0
 
 
-@patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_click_cycles_label(mock_drag, mock_release, mock_press, mock_parser_host):
     """Clicks in R/S mode cycle the label, one undo step each."""
@@ -437,8 +437,8 @@ def test_click_cycles_label(mock_drag, mock_release, mock_press, mock_parser_hos
     assert push.call_count == 3
 
 
-@patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_click_on_non_stereocenter_pushes_no_undo(
     mock_drag, mock_release, mock_press, mock_parser_host

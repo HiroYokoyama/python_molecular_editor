@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -15,9 +15,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QResizeEvent, QShowEvent
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QResizeEvent, QShowEvent
+from PySide6.QtWidgets import QGraphicsScene, QGraphicsView
 
 
 class TemplatePreviewView(QGraphicsView):
@@ -37,7 +37,8 @@ class TemplatePreviewView(QGraphicsView):
 
     def resizeEvent(self, event: Optional[QResizeEvent]) -> None:
         """Handle resize events to ensure the preview is properly fitted."""
-        super().resizeEvent(event)
+        if event is not None:
+            super().resizeEvent(event)
         if self.original_scene_rect and not self.original_scene_rect.isEmpty():
             # Delay the fitInView call to ensure proper widget sizing
             QTimer.singleShot(10, self.refit_view)
@@ -54,7 +55,8 @@ class TemplatePreviewView(QGraphicsView):
 
     def showEvent(self, event: Optional[QShowEvent]) -> None:
         """Handle the show event to ensure the preview fits correctly upon display."""
-        super().showEvent(event)
+        if event is not None:
+            super().showEvent(event)
         # Ensure proper fitting when widget becomes visible
         if self.original_scene_rect:
             QTimer.singleShot(50, self.refit_view)

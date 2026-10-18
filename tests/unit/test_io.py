@@ -4,7 +4,7 @@ import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.io_logic import IOManager
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 from unittest.mock import patch
 
 
@@ -70,7 +70,7 @@ def test_project_save_load_logic(mock_parser_host, tmp_path):
 
     project_file = str(tmp_path / "test.pmeprj")
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(project_file, "*.pmeprj"),
     ):
         io_handler.save_project_as()
@@ -95,7 +95,8 @@ def test_xyz_export_logic(mock_parser_host, tmp_path):
 
     xyz_file = str(tmp_path / "test.xyz")
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(xyz_file, "*.xyz")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(xyz_file, "*.xyz"),
     ):
         io_handler.save_as_xyz()
 

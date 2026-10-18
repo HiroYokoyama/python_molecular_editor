@@ -129,7 +129,7 @@ def test_fit_to_view_with_items(app, mock_parser_host):
     # Mock items in scene
     mock_item = MagicMock()
     mock_item.isVisible.return_value = True
-    from PyQt6.QtCore import QRectF
+    from PySide6.QtCore import QRectF
 
     mock_item.sceneBoundingRect.return_value = QRectF(10, 10, 50, 50)
 
@@ -785,7 +785,7 @@ def test_fit_to_view_empty_scene_resets_zoom(mock_parser_host):
 
 def test_fit_to_view_fits_visible_items(mock_parser_host):
     """Fit to view fits the visible items' bounds plus 10% padding."""
-    from PyQt6.QtCore import QRectF
+    from PySide6.QtCore import QRectF
 
     view3d = _make_view3d(mock_parser_host)
     item = MagicMock()
@@ -805,7 +805,7 @@ def test_fit_to_view_fits_visible_items(mock_parser_host):
 
 def test_fit_to_view_after_view_deleted_is_a_no_op(mock_parser_host):
     """A deferred fit landing after window teardown does nothing and raises nothing."""
-    from PyQt6.QtCore import QRectF
+    from PySide6.QtCore import QRectF
 
     view3d = _make_view3d(mock_parser_host)
     item = MagicMock()

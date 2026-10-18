@@ -6,8 +6,8 @@ import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.io_logic import IOManager
-from PyQt6.QtCore import QPointF, QTimer
-from PyQt6.QtWidgets import QApplication, QDialog
+from PySide6.QtCore import QPointF, QTimer
+from PySide6.QtWidgets import QApplication, QDialog
 from unittest.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
@@ -19,28 +19,28 @@ mock_rd_mod = MagicMock()
 sys.modules["rdkit.Chem.rdDetermineBonds"] = mock_rd_mod
 _rdkit_chem.rdDetermineBonds = mock_rd_mod
 
-import PyQt6.QtWidgets
+import PySide6.QtWidgets
 
 ACCEPTED_CODE = 1
 REJECTED_CODE = 0
 
-PyQt6.QtWidgets.QDialog.exec = lambda self: REJECTED_CODE
-PyQt6.QtWidgets.QDialog.exec_ = lambda self: REJECTED_CODE
-PyQt6.QtWidgets.QDialog.show = lambda self: None
-PyQt6.QtWidgets.QInputDialog.getText = lambda *args, **kwargs: ("0", False)
-PyQt6.QtWidgets.QFileDialog.getOpenFileName = lambda *args, **kwargs: ("", "")
-PyQt6.QtWidgets.QFileDialog.getSaveFileName = lambda *args, **kwargs: ("", "")
-PyQt6.QtWidgets.QMessageBox.critical = lambda *args, **kwargs: None
-PyQt6.QtWidgets.QMessageBox.warning = lambda *args, **kwargs: None
-PyQt6.QtWidgets.QMessageBox.information = lambda *args, **kwargs: None
-PyQt6.QtWidgets.QMessageBox.question = lambda *args, **kwargs: 65536  # No
+PySide6.QtWidgets.QDialog.exec = lambda self: REJECTED_CODE
+PySide6.QtWidgets.QDialog.exec_ = lambda self: REJECTED_CODE
+PySide6.QtWidgets.QDialog.show = lambda self: None
+PySide6.QtWidgets.QInputDialog.getText = lambda *args, **kwargs: ("0", False)
+PySide6.QtWidgets.QFileDialog.getOpenFileName = lambda *args, **kwargs: ("", "")
+PySide6.QtWidgets.QFileDialog.getSaveFileName = lambda *args, **kwargs: ("", "")
+PySide6.QtWidgets.QMessageBox.critical = lambda *args, **kwargs: None
+PySide6.QtWidgets.QMessageBox.warning = lambda *args, **kwargs: None
+PySide6.QtWidgets.QMessageBox.information = lambda *args, **kwargs: None
+PySide6.QtWidgets.QMessageBox.question = lambda *args, **kwargs: 65536  # No
 
 import moleditpy.ui.io_logic as mwm
 
-mwm.QDialog = PyQt6.QtWidgets.QDialog
-mwm.QInputDialog = PyQt6.QtWidgets.QInputDialog
-mwm.QFileDialog = PyQt6.QtWidgets.QFileDialog
-mwm.QMessageBox = PyQt6.QtWidgets.QMessageBox
+mwm.QDialog = PySide6.QtWidgets.QDialog
+mwm.QInputDialog = PySide6.QtWidgets.QInputDialog
+mwm.QFileDialog = PySide6.QtWidgets.QFileDialog
+mwm.QMessageBox = PySide6.QtWidgets.QMessageBox
 
 
 # ---------------------------------------------------------------------------
@@ -323,7 +323,8 @@ def test_save_as_mol_logic(mock_parser_host, tmp_path):
     save_path = str(tmp_path / "saved.mol")
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "*.mol")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(save_path, "*.mol"),
     ):
         parser.save_as_mol()
 

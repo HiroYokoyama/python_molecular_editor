@@ -3,7 +3,7 @@ Unit tests for ui/periodic_table_dialog.py.
 """
 
 import pytest
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 from moleditpy.ui.periodic_table_dialog import PeriodicTableDialog
 
 
@@ -69,7 +69,7 @@ def test_periodic_table_dialog_element_clicked(app, qtbot):
         assert h_button is not None
         # Simulate click
         qtbot.mouseClick(
-            h_button, pytest.importorskip("PyQt6.QtCore").Qt.MouseButton.LeftButton
+            h_button, pytest.importorskip("PySide6.QtCore").Qt.MouseButton.LeftButton
         )
 
     assert blocker.args == ["H"]

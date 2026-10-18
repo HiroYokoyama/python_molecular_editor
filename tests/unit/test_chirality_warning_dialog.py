@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from PyQt6.QtCore import Qt
+from PySide6.QtCore import Qt
 
 from moleditpy.core.stereo_check import ChiralityMismatch, EZMismatch
 from moleditpy.ui.chirality_warning_dialog import ChiralityWarningDialog
@@ -36,7 +36,7 @@ def test_dialog_is_non_modal_and_stays_on_top(app):
 
 def test_dialog_lists_every_mismatch(app):
     """One row per wrong center: atom, index, drawn and 3D configuration."""
-    from PyQt6.QtWidgets import QLabel, QTableWidget
+    from PySide6.QtWidgets import QLabel, QTableWidget
 
     dlg = ChiralityWarningDialog(_main_window(), MISMATCHES, 9, parent=None)
     try:
@@ -348,7 +348,7 @@ def test_plugin_optimizer_returns_true_after_completion(app, mock_parser_host):
 
 def test_dialog_lists_double_bonds(app):
     """E/Z rows read "C=C (ID a=b)", with RDKit atom indices joined by '='."""
-    from PyQt6.QtWidgets import QTableWidget
+    from PySide6.QtWidgets import QTableWidget
 
     dlg = ChiralityWarningDialog(
         _main_window(), [], 0, parent=None, ez_mismatches=EZ, total_double_bonds=2
@@ -389,7 +389,7 @@ def test_failed_redraw_is_logged_not_raised(app):
 
 def test_dialog_explains_ambiguous_centers(app):
     """Ambiguously drawn centers are explained, not called a wrong 3D result."""
-    from PyQt6.QtWidgets import QLabel
+    from PySide6.QtWidgets import QLabel
 
     rows = [
         ChiralityMismatch(
@@ -430,7 +430,7 @@ def test_dialog_explains_ambiguous_centers(app):
 )
 def test_dialog_hint_matches_the_listed_rows(app, rows, flip):
     """Flipping is suggested only for wrong rows; ambiguous ones need a redraw."""
-    from PyQt6.QtWidgets import QLabel
+    from PySide6.QtWidgets import QLabel
 
     dlg = ChiralityWarningDialog(_main_window(), rows, 9, parent=None)
     try:

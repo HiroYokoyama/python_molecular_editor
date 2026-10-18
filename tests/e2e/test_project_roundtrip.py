@@ -9,8 +9,8 @@ unsaved-changes prompt and Save-As extension handling.
 import json
 
 import pytest
-from PyQt6.QtCore import QPointF
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtCore import QPointF
+from PySide6.QtWidgets import QMessageBox
 
 _PKG = "moleditpy"
 

@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import MagicMock, Mock, patch, mock_open
 import numpy as np
-from PyQt6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow
 from moleditpy.ui.export_logic import ExportManager
-from PyQt6.QtCore import QRectF
+from PySide6.QtCore import QRectF
 
 
 # Create dummy classes for reliable isinstance checks

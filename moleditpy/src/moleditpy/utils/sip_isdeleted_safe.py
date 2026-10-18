@@ -5,37 +5,19 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-try:
-    from PyQt6 import sip as _sip
-
-    _sip_isdeleted = getattr(_sip, "isdeleted", None)
-except ImportError:
-    try:
-        import sip as _sip  # type: ignore[no-redef]
-
-        _sip_isdeleted = getattr(_sip, "isdeleted", None)
-    except ImportError:
-        _sip = None  # type: ignore[assignment]
-        _sip_isdeleted = None
+from shiboken6 import isValid
 
 
 def sip_isdeleted_safe(obj: object) -> bool:
-    """Return True if sip reports the given wrapper object as deleted.
-
-    This function is conservative: if SIP isn't available or any error
-    occurs while checking, it returns False (i.e. not deleted) so that the
-    caller can continue other lightweight guards (like checking scene()).
-    """
+    """Check PySide wrapper lifetime; retain the historical name for plugins."""
+    if obj is None:
+        return True
     try:
-        if obj is None:
-            return True
-        if _sip_isdeleted is None:
-            return False
-        return bool(_sip_isdeleted(obj))
+        return not isValid(obj)
     except (AttributeError, RuntimeError, TypeError):
         return False

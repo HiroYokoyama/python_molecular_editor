@@ -33,7 +33,7 @@ _render_probe_done = False
 _PROBE_CODE = """
 import os, sys
 os.environ.pop("QT_QPA_PLATFORM", None)
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 app = QApplication([sys.argv[0]])
 from pyvistaqt import QtInteractor
 w = QtInteractor()
@@ -95,7 +95,7 @@ def require_render_context():
 
 @pytest.fixture(scope="session")
 def app(require_render_context):
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     # Teardown emits a wall of wglMakeCurrent/glX errors that drown the summary.
     try:
@@ -112,7 +112,7 @@ def app(require_render_context):
 @pytest.fixture
 def full_window(app, qtbot, monkeypatch, tmp_path):
     """A really-launched MainWindow: real VTK widget, real worker thread, shown."""
-    from PyQt6.QtWidgets import QMessageBox, QFileDialog
+    from PySide6.QtWidgets import QMessageBox, QFileDialog
 
     fake_home = tmp_path / "home"
     fake_home.mkdir()

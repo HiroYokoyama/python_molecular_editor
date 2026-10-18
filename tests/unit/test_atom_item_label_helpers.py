@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 
 import pytest
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 
 from moleditpy.ui.atom_item import AtomItem
 

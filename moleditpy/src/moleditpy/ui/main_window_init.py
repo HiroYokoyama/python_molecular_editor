@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -20,9 +20,9 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
-# PyQt6 Modules
-from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt, QTimer, QUrl
-from PyQt6.QtGui import (
+# PySide6 Modules
+from PySide6.QtCore import QLineF, QPointF, QRectF, Qt, QTimer, QUrl
+from PySide6.QtGui import (
     QAction,
     QActionGroup,
     QBrush,
@@ -36,7 +36,7 @@ from PyQt6.QtGui import (
     QPixmap,
     QPolygonF,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLabel,
@@ -51,7 +51,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from .. import OBABEL_AVAILABLE
 from ..utils.default_settings import DEFAULT_SETTINGS
 from ..plugins.plugin_manager import PluginManager
 from ..utils.system_utils import detect_system_dark_mode
@@ -640,11 +639,13 @@ class MainInitManager:
                 loaded_settings["3d_conversion_mode"] = "rdkit"
             del loaded_settings["clean_up_2d_on_conversion"]
 
-        # Migrate old key 'use_obabel_optimization'
-        if "use_obabel_optimization" in loaded_settings:
-            if loaded_settings["use_obabel_optimization"]:
-                loaded_settings["optimization_method"] = "MMFF94_OBABEL"
-            del loaded_settings["use_obabel_optimization"]
+        # Retired built-in optimizers cannot be restored as active methods.
+        loaded_settings.pop("use_obabel_optimization", None)
+        method = str(loaded_settings.get("optimization_method", ""))
+        if method.upper().endswith("_OBABEL"):
+            loaded_settings["optimization_method"] = "MMFF_RDKIT"
+        if loaded_settings.get("3d_conversion_mode") == "obabel":
+            loaded_settings["3d_conversion_mode"] = "fallback"
 
     def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""
@@ -1704,15 +1705,12 @@ class MainInitManager:
         conv_options = [
             ("Fallback", "fallback"),
             ("RDKit only", "rdkit"),
-            ("Open Babel only", "obabel"),
             ("Direct (use 2D coords + add H)", "direct"),
         ]
         self.conv_actions = {}
         for label, key in conv_options:
             a = QAction(label, self.host)
             a.setCheckable(True)
-            if key == "obabel" and not OBABEL_AVAILABLE:
-                a.setEnabled(False)
             a.triggered.connect(lambda checked, m=key: _set_conv_mode(m))
             conversion_menu.addAction(a)
             conv_group.addAction(a)
@@ -1738,11 +1736,6 @@ class MainInitManager:
             ("MMFF94s (RDKit)", "MMFF_RDKIT"),
             ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
             ("UFF (RDKit)", "UFF_RDKIT"),
-            ("MMFF94s (Open Babel)", "MMFF94s_OBABEL"),
-            ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
-            ("UFF (Open Babel)", "UFF_OBABEL"),
-            ("GAFF (Open Babel)", "GAFF_OBABEL"),
-            ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
         ]
         self.opt3d_method_labels = {key.upper(): label for (label, key) in opt_methods}
         self.opt_group = QActionGroup(self.host)
@@ -1751,8 +1744,6 @@ class MainInitManager:
         for label, key in opt_methods:
             action = QAction(label, self.host)
             action.setCheckable(True)
-            if key.endswith("_OBABEL") and not OBABEL_AVAILABLE:
-                action.setEnabled(False)
             action.triggered.connect(
                 lambda checked, m=key: (
                     self.host.compute_manager.set_optimization_method(m)

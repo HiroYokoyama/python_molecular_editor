@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -14,9 +14,9 @@ import logging
 from typing import Any, List, Optional, Union, TYPE_CHECKING
 
 import numpy as np
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QCloseEvent, QKeyEvent
-from PyQt6.QtWidgets import QDialog, QWidget
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QCloseEvent, QKeyEvent
+from PySide6.QtWidgets import QDialog, QWidget
 from rdkit import Chem, Geometry
 
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
@@ -94,7 +94,8 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         self._geometry_refresh_timer.stop()
         self.clear_atom_labels()
         self.disable_picking()
-        super().closeEvent(event)
+        if event is not None:
+            super().closeEvent(event)
 
     def reject(self) -> None:
         """Cleanup on cancel."""

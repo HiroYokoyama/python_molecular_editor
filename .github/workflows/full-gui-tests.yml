@@ -53,9 +53,9 @@ jobs:
     - name: Report GL / Qt environment
       run: |
         xvfb-run -a --server-args="-screen 0 1600x1200x24" \
-          python -c "import vtk, pyvista, PyQt6.QtCore as c; \
+          python -c "import vtk, pyvista, PySide6.QtCore as c; \
             print('vtk', vtk.VTK_VERSION); print('pyvista', pyvista.__version__); \
-            print('qt', c.QT_VERSION_STR)"
+            print('qt', c.qVersion())"
         xvfb-run -a --server-args="-screen 0 1600x1200x24" glxinfo -B || true
 
     - name: Run Full GUI Tests
@@ -142,9 +142,9 @@ jobs:
         pip install pytest pytest-qt pytest-mock pytest-timeout
         pip install -e moleditpy/
 
-    - name: Show resolved PyQt6 version
+    - name: Show resolved PySide6 version
       shell: bash
-      run: python -c "from PyQt6.QtCore import QT_VERSION_STR, PYQT_VERSION_STR; print('PyQt6', PYQT_VERSION_STR, '/ Qt', QT_VERSION_STR)"
+      run: python -c "import PySide6; from PySide6.QtCore import qVersion; print('PySide6', PySide6.__version__, '/ Qt', qVersion())"
 
     - name: Launch probe (Linux)
       if: runner.os == 'Linux'

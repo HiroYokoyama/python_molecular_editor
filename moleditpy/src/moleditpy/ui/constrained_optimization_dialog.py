@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -14,8 +14,8 @@ import logging
 from typing import Any, Optional
 
 import numpy as np
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, QThread, Signal, Slot
+from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
     QDialog,
@@ -39,8 +39,8 @@ from ..utils.finite_float import finite_float
 class ConstrainedOptimizationThread(QThread):
     """QThread that runs a force-field minimization with atom constraints."""
 
-    optimization_finished = pyqtSignal()
-    error_occurred = pyqtSignal(str)
+    optimization_finished = Signal()
+    error_occurred = Signal(str)
 
     def __init__(
         self,
@@ -636,7 +636,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             logging.exception("Failed to start optimization: %s", e)
             self.optimize_button.setEnabled(True)
 
-    @pyqtSlot()
+    @Slot()
     def _on_worker_result(self) -> None:
         """Receive a private conformer on the GUI thread while the dialog exists."""
         thread = self._opt_thread
@@ -646,7 +646,7 @@ class ConstrainedOptimizationDialog(Dialog3DPickingMixin, QDialog):
             self._optimization_method, thread.mol.GetConformer()
         )
 
-    @pyqtSlot()
+    @Slot()
     def _on_worker_finished(self) -> None:
         """Drop the completed worker reference before its owner deletes it."""
         if self.sender() is self._opt_thread:

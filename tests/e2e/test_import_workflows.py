@@ -6,7 +6,7 @@ the resulting document state (2D scene data or 3D viewer mode).
 """
 
 import pytest
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 from rdkit import Chem
 from rdkit.Chem import AllChem
 

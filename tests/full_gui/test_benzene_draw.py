@@ -4,7 +4,7 @@
 import math
 
 import pytest
-from PyQt6.QtCore import QPoint, QPointF, Qt
+from PySide6.QtCore import QPoint, QPointF, Qt
 
 from benzene import (
     RING_RADIUS,

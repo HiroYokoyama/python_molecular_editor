@@ -1,5 +1,5 @@
 [MAIN]
-extension-pkg-allow-list=PyQt6,numpy,rdkit,pyvista,vtk
+extension-pkg-allow-list=PySide6,numpy,rdkit,pyvista,vtk
 
 # vtk resolves its members at import time, so pylint cannot see them.
 # Keep this pattern narrow: a bare ".*" here silently disables no-member (E1101)

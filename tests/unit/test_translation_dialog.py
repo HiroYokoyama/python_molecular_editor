@@ -26,7 +26,7 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 _src = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
@@ -438,7 +438,7 @@ class TestPreselectedAtoms:
 class TestEnterKey:
     def _enter(self):
         from unittest.mock import MagicMock
-        from PyQt6.QtCore import Qt
+        from PySide6.QtCore import Qt
 
         ev = MagicMock()
         ev.key.return_value = Qt.Key.Key_Return
@@ -479,7 +479,7 @@ def test_non_enter_key_is_passed_on(make_dialog):
     """Only Enter is intercepted; other keys reach the base handler."""
     from unittest.mock import MagicMock
 
-    from PyQt6.QtCore import Qt
+    from PySide6.QtCore import Qt
 
     from moleditpy.ui.base_picking_dialog import BasePickingDialog
 

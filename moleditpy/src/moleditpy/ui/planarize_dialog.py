@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -14,7 +14,7 @@ import logging
 import numpy as np
 from typing import Any, TYPE_CHECKING, Optional, Sequence
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMessageBox,

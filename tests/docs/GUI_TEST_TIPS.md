@@ -1,6 +1,6 @@
 # GUI Testing Tips & Troubleshooting
 
-This document contains best practices and solutions for common issues encountered during GUI testing with PyQt6 in MoleditPy, especially in headless environments.
+This document contains best practices and solutions for common issues encountered during GUI testing with PySide6 in MoleditPy, especially in headless environments.
 
 ## Infinite Recursion in CloseEvent (Headless Mode)
 

@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -13,8 +13,8 @@ DOI: 10.5281/zenodo.17268532
 import logging
 from typing import Any, Dict, Optional
 
-from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import (
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import (
     QApplication,
     QColorDialog,
     QDialog,
@@ -123,7 +123,9 @@ class ColorSettingsDialog(QDialog):
     def on_element_clicked(self) -> None:
         """Open a color picker for the clicked element button and update its swatch."""
         btn = self.sender()
-        symbol = btn.text()  # type: ignore[union-attr]
+        if not isinstance(btn, QPushButton):
+            return
+        symbol = btn.text()
         cur = self.current_settings.get("cpk_colors", {}).get(symbol)
         if not cur:
             cur = CPK_COLORS.get(symbol, CPK_COLORS["DEFAULT"]).name()

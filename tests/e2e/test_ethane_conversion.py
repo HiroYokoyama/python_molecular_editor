@@ -11,7 +11,7 @@ import platform
 import importlib
 import importlib.util
 import pytest
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 
 # ---------------------------------------------------------------------------
 # The unified package is used on every platform.
@@ -27,7 +27,6 @@ CalculationWorker = importlib.import_module(
     f"{_PKG}.ui.calculation_worker"
 ).CalculationWorker
 _pkg_mod = importlib.import_module(_PKG)
-OBABEL_AVAILABLE = getattr(_pkg_mod, "OBABEL_AVAILABLE", False)
 
 _OS_LABEL = platform.system()  # "Windows" / "Linux" / "Darwin"
 
@@ -122,19 +121,9 @@ def test_ethane_conversion_direct(app, qtbot):
 
 
 def test_ethane_conversion_fallback(app, qtbot):
-    """Fallback mode: RDKit → obabel chain must produce a valid 3D mol."""
+    """Fallback mode: RDKit → Direct chain must produce a valid 3D mol."""
     mol = _run_worker_sync(_build_ethane(), "fallback")
     _assert_ethane_3d(mol, "fallback")
-
-
-@pytest.mark.skipif(
-    not OBABEL_AVAILABLE,
-    reason="Open Babel not available on this platform",
-)
-def test_ethane_conversion_obabel(app, qtbot):
-    """Obabel mode: only runs when Open Babel is present."""
-    mol = _run_worker_sync(_build_ethane(), "obabel")
-    _assert_ethane_3d(mol, "obabel")
 
 
 def test_main_package_is_active():

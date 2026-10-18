@@ -6,9 +6,9 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.export_logic import ExportManager
 from moleditpy.ui.atom_item import AtomItem
-from PyQt6.QtCore import QPointF, QRectF
-from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtCore import QPointF, QRectF
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
 import numpy as np
 
@@ -67,10 +67,11 @@ def test_export_2d_png_basic_trigger(mock_parser_host, tmp_path):
     exporter.scene.backgroundBrush.return_value = QColor(255, 255, 255)
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "*.png")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(save_path, "*.png"),
     ):
         with patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Yes,
         ):
             exporter.export_2d_png()
@@ -91,10 +92,11 @@ def test_export_2d_svg_trigger(mock_parser_host, tmp_path):
     exporter.scene.items.return_value = [item]
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "*.svg")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(save_path, "*.svg"),
     ):
         with patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Yes,
         ):
             exporter.export_2d_svg()
@@ -110,7 +112,7 @@ def test_export_stl_allows_missing_current_mol(mock_parser_host):
     exporter.host.view_3d_manager.current_mol = None
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
     ) as mock_file_dialog:
         exporter.export_stl()
 
@@ -128,7 +130,7 @@ def test_export_obj_mtl_allows_missing_current_mol(mock_parser_host):
     exporter.host.view_3d_manager.current_mol = None
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
     ) as mock_file_dialog:
         exporter.export_obj_mtl()
 
@@ -152,7 +154,7 @@ def test_export_stl_success_trigger(mock_parser_host, tmp_path):
 
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(save_path, "*.stl"),
         ),
         patch.object(exporter, "export_from_3d_view_no_color", return_value=mesh),
@@ -174,7 +176,7 @@ def test_export_obj_mtl_success_trigger(mock_parser_host, tmp_path):
     save_path = str(tmp_path / "test.obj")
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(save_path, "*.obj"),
         ) as mock_file_dialog,
         patch.object(
@@ -198,10 +200,11 @@ def test_export_3d_png_logic(mock_parser_host, tmp_path):
     mock_plotter = MagicMock()
     exporter.host.view_3d_manager.plotter = mock_plotter
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "*.png")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(save_path, "*.png"),
     ):
         with patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Yes,
         ):
             exporter.export_3d_png()
@@ -214,7 +217,7 @@ def test_export_3d_png_allows_missing_current_mol(mock_parser_host):
     exporter.host.view_3d_manager.current_mol = None
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
     ) as mock_file_dialog:
         exporter.export_3d_png()
 
@@ -237,7 +240,7 @@ def test_export_color_stl_logic(mock_parser_host, tmp_path):
     mesh.n_points = 100
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(save_path, "*.stl"),
         ),
         patch.object(
@@ -256,7 +259,7 @@ def test_export_color_stl_allows_missing_current_mol(mock_parser_host):
     exporter.host.view_3d_manager.current_mol = None
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")
     ) as mock_file_dialog:
         exporter.export_color_stl()
 
@@ -343,14 +346,15 @@ def test_export_2d_png_hides_items(mock_parser_host, tmp_path):
 
     # We mock QFileDialog and render to avoid actual GUI dependency
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "*.png")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
+        return_value=(save_path, "*.png"),
     ):
         with patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Yes,
         ):
-            with patch("PyQt6.QtGui.QPainter"):  # Mock painter
-                with patch("PyQt6.QtGui.QImage"):  # Mock image
+            with patch("moleditpy.ui.export_logic.QPainter"):  # Mock painter
+                with patch("moleditpy.ui.export_logic.QImage"):  # Mock image
                     exporter.export_2d_png()
 
     # Verify other_item was process (hidden then restored)
@@ -414,7 +418,7 @@ def test_default_path_bare_basename_without_file(mock_parser_host):
 def test_export_stl_cancel_does_nothing(mock_parser_host):
     exporter = DummyExport(mock_parser_host)
     exporter.export_from_3d_view_no_color = MagicMock()
-    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
+    with patch("PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         exporter.export_stl()
     exporter.export_from_3d_view_no_color.assert_not_called()
 
@@ -423,7 +427,7 @@ def test_export_stl_no_geometry_message(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     exporter.export_from_3d_view_no_color = MagicMock(return_value=None)
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(tmp_path / "out.stl"), ""),
     ):
         exporter.export_stl()
@@ -437,7 +441,7 @@ def test_export_stl_appends_extension_and_saves_binary(mock_parser_host, tmp_pat
     exporter.export_from_3d_view_no_color = MagicMock(return_value=mesh)
     chosen = str(tmp_path / "model")  # no extension
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
     ):
         exporter.export_stl()
     mesh.save.assert_called_once_with(chosen + ".stl", binary=True)
@@ -451,7 +455,7 @@ def test_export_stl_save_error_reported(mock_parser_host, tmp_path):
     mesh.save.side_effect = RuntimeError("disk full")
     exporter.export_from_3d_view_no_color = MagicMock(return_value=mesh)
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(tmp_path / "out.stl"), ""),
     ):
         exporter.export_stl()
@@ -467,7 +471,7 @@ def test_export_color_stl_no_geometry_message(mock_parser_host, tmp_path):
     mesh.n_points = 0
     exporter.export_from_3d_view = MagicMock(return_value=mesh)
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(tmp_path / "out.stl"), ""),
     ):
         exporter.export_color_stl()
@@ -481,7 +485,7 @@ def test_export_color_stl_saves_with_extension(mock_parser_host, tmp_path):
     exporter.export_from_3d_view = MagicMock(return_value=mesh)
     chosen = str(tmp_path / "colored")
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
     ):
         exporter.export_color_stl()
     mesh.save.assert_called_once_with(chosen + ".stl", binary=True)
@@ -495,7 +499,7 @@ def test_export_color_stl_saves_with_extension(mock_parser_host, tmp_path):
 def test_export_obj_mtl_cancel_does_nothing(mock_parser_host):
     exporter = DummyExport(mock_parser_host)
     exporter.export_from_3d_view_with_colors = MagicMock()
-    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
+    with patch("PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         exporter.export_obj_mtl()
     exporter.export_from_3d_view_with_colors.assert_not_called()
 
@@ -504,7 +508,7 @@ def test_export_obj_mtl_empty_meshes_message(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     exporter.export_from_3d_view_with_colors = MagicMock(return_value=[])
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(tmp_path / "out.obj"), ""),
     ):
         exporter.export_obj_mtl()
@@ -519,7 +523,7 @@ def test_export_obj_mtl_derives_mtl_path_via_splitext(mock_parser_host, tmp_path
     exporter.create_multi_material_obj = MagicMock()
     chosen = str(tmp_path / "model.OBJ")
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
     ):
         exporter.export_obj_mtl()
     obj_path, mtl_path = exporter.create_multi_material_obj.call_args.args[1:3]
@@ -534,7 +538,7 @@ def test_export_obj_mtl_error_reported(mock_parser_host, tmp_path):
         side_effect=RuntimeError("no view")
     )
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(tmp_path / "out.obj"), ""),
     ):
         exporter.export_obj_mtl()
@@ -551,7 +555,7 @@ def test_export_obj_mtl_error_reported(mock_parser_host, tmp_path):
 
 def test_export_3d_png_cancel_dialog_does_nothing(mock_parser_host):
     exporter = DummyExport(mock_parser_host)
-    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
+    with patch("PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         exporter.export_3d_png()
     mock_parser_host.view_3d_manager.plotter.screenshot.assert_not_called()
 
@@ -560,11 +564,11 @@ def test_export_3d_png_cancel_background_question(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(str(tmp_path / "shot.png"), ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Cancel,
         ),
     ):
@@ -583,11 +587,11 @@ def test_export_3d_png_transparent_screenshot_appends_extension(
     chosen = str(tmp_path / "shot")  # no extension
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(chosen, ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Yes,
         ),
     ):
@@ -602,11 +606,11 @@ def test_export_3d_png_opaque_background_choice(mock_parser_host, tmp_path):
     chosen = str(tmp_path / "shot.png")
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(chosen, ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.No,
         ),
     ):
@@ -623,11 +627,11 @@ def test_export_3d_png_screenshot_error_reported(mock_parser_host, tmp_path):
     )
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(str(tmp_path / "shot.png"), ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Yes,
         ),
     ):
@@ -829,11 +833,11 @@ def test_export_2d_png_cancel_background_question(mock_parser_host, tmp_path):
     exporter.data.add_atom("C", QPointF(0, 0))
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(str(tmp_path / "out.png"), ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Cancel,
         ),
     ):
@@ -850,11 +854,11 @@ def test_export_2d_png_reports_unresolvable_bounds(mock_parser_host, tmp_path):
     mock_parser_host.init_manager.scene.items.return_value = []
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(str(tmp_path / "out.png"), ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.No,
         ),
     ):
@@ -879,7 +883,7 @@ def test_export_2d_svg_nothing_to_export(mock_parser_host):
 def test_export_2d_svg_cancel_file_dialog_writes_nothing(mock_parser_host, tmp_path):
     exporter = DummyExport(mock_parser_host)
     exporter.data.add_atom("C", QPointF(0, 0))
-    with patch("PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
+    with patch("PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=("", "")):
         exporter.export_2d_svg()
     assert list(tmp_path.iterdir()) == []
 
@@ -889,11 +893,11 @@ def test_export_2d_svg_cancel_background_question(mock_parser_host, tmp_path):
     exporter.data.add_atom("C", QPointF(0, 0))
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(str(tmp_path / "out.svg"), ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Cancel,
         ),
     ):
@@ -920,11 +924,11 @@ def test_export_2d_svg_appends_extension_and_hides_non_mol_items(
     no_ext = str(tmp_path / "drawing")  # no .svg suffix
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(no_ext, ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.No,
         ),
     ):
@@ -946,11 +950,11 @@ def test_export_2d_svg_unresolvable_bounds_reports_and_restores(
 
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(str(tmp_path / "out.svg"), ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Yes,
         ),
     ):
@@ -975,11 +979,11 @@ def test_export_2d_svg_reports_render_exception(mock_parser_host, tmp_path):
 
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(str(tmp_path / "out.svg"), ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.Yes,
         ),
     ):
@@ -1046,7 +1050,7 @@ def test_export_obj_mtl_reports_write_failure(mock_parser_host, tmp_path):
     chosen = str(tmp_path / "no_such_dir" / "model.obj")
 
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=(chosen, "")
     ):
         exporter.export_obj_mtl()
 
@@ -1064,7 +1068,7 @@ def test_export_stl_permission_error_reported(mock_parser_host, tmp_path):
     mesh.save.side_effect = PermissionError("read-only")
     exporter.export_from_3d_view_no_color = MagicMock(return_value=mesh)
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(tmp_path / "out.stl"), ""),
     ):
         exporter.export_stl()
@@ -1089,11 +1093,11 @@ def test_export_2d_svg_unwritable_path_is_not_reported_as_exported(
     target = tmp_path / "no_such_dir" / "out.svg"
     with (
         patch(
-            "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
             return_value=(str(target), ""),
         ),
         patch(
-            "PyQt6.QtWidgets.QMessageBox.question",
+            "PySide6.QtWidgets.QMessageBox.question",
             return_value=QMessageBox.StandardButton.No,
         ),
     ):
@@ -1113,7 +1117,7 @@ def test_export_color_stl_permission_error_reported(mock_parser_host, tmp_path):
     mesh.save.side_effect = PermissionError("read-only")
     exporter.export_from_3d_view = MagicMock(return_value=mesh)
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         return_value=(str(tmp_path / "out.stl"), ""),
     ):
         exporter.export_color_stl()

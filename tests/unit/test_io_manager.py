@@ -6,7 +6,7 @@ Covers:
   - save_3d_as_mol
 
 Follows the same conventions as test_edit_actions_extended.py:
-  - Real PyQt6 via a session-scoped QApplication
+  - Real PySide6 via a session-scoped QApplication
   - DummyHost with all required sub-managers
   - Module-level patch targets (no local imports in production code)
 """
@@ -17,8 +17,8 @@ from pathlib import Path
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtCore import QPointF
-from PyQt6.QtWidgets import QApplication, QDialog
+from PySide6.QtCore import QPointF
+from PySide6.QtWidgets import QApplication, QDialog
 
 # Make the local moleditpy package discoverable
 workspace_src_path = os.path.abspath(

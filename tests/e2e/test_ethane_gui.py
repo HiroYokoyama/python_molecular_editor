@@ -13,7 +13,7 @@ The conversion uses real RDKit embedding + MMFF optimisation — no mocked resul
 import platform
 import pytest
 import numpy as np
-from PyQt6.QtCore import QPointF, Qt
+from PySide6.QtCore import QPointF, Qt
 
 _OS_LABEL = platform.system()
 

@@ -5,7 +5,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.ui.app_state import StateManager
 from moleditpy.core.molecular_data import MolecularData
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 from unittest.mock import MagicMock
 
 
@@ -546,7 +546,7 @@ def test_legacy_version_handling(dummy_window):
 # =============================================================================
 
 from unittest.mock import patch
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 
 def test_check_unsaved_changes_no_changes_returns_true(mock_parser_host):

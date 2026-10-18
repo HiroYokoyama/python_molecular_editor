@@ -5,7 +5,7 @@ from moleditpy.core.stereo_check import drawn_chirality
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.core.molecular_data import MolecularData
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 
 
 def test_wedge_dash_mapping():
@@ -101,7 +101,7 @@ def test_chiral_r_s_consistency():
 from moleditpy.ui.mirror_dialog import MirrorDialog
 from unittest import mock as _mock
 from unittest.mock import MagicMock
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 
 
 def test_stereo_confirmation(qtbot):
@@ -173,7 +173,7 @@ def test_stereo_loss_on_planarize(qtbot):
     dialog = PlanarizeDialog(mol, main_window, preselected_atoms=selected)
     qtbot.addWidget(dialog)
 
-    with _mock.patch("PyQt6.QtWidgets.QMessageBox.information"):
+    with _mock.patch("PySide6.QtWidgets.QMessageBox.information"):
         dialog.apply_planarize()
 
     # 4. Verify chirality is lost

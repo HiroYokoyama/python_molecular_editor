@@ -3,8 +3,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QDialog
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog
 from rdkit import Chem, RDLogger
 
 from moleditpy.ui.io_logic import IOManager, SdfSelectionCancelled
@@ -101,7 +101,7 @@ def _dialog(app, text):
 
 def test_dialog_header_matches_plugin(app):
     """Same title and header line as the Open Babel Conversion Tool selector."""
-    from PyQt6.QtWidgets import QLabel
+    from PySide6.QtWidgets import QLabel
 
     dlg = _dialog(app, _sdf(_record("CCO", "ethanol"), _record("C", "methane")))
     assert dlg.windowTitle() == "Select Molecule"

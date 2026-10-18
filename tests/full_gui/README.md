@@ -54,7 +54,7 @@ disabling every test in this directory.
 | `MOLEDITPY_LAUNCH_TIMEOUT` | `180` | seconds the subprocess launch test waits before killing the app and failing |
 
 `MOLEDITPY_LAUNCH_TIMEOUT` exists because the failure mode worth catching is a
-launch that *never finishes* — reported on macOS with the PyQt6 range pinned
+launch that *never finishes* — reported on macOS with the PySide6 range pinned
 for Python 3.9. In-process that is undetectable: an event loop that never
 returns cannot be interrupted, and pytest-timeout's `signal` handler fires
 inside a Qt event handler where pyvistaqt catches it. A child process can be

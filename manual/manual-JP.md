@@ -43,7 +43,7 @@ MoleditPy は、Python で開発された分子編集ソフトウェアです。
 **主な機能:**
 
   * **2D 分子編集:** 原子や結合の追加・削除・変更、テンプレートを用いた構造作成。ユーザーが指定した構造を保存・利用できるユーザーテンプレートにも対応しています。
-  * **3D 構造生成:** RDKit や Open Babel (オプション) を利用した 2D 構造からの 3D 座標生成および構造最適化。
+  * **3D 構造生成:** RDKit または Direct モードを利用した 2D 構造からの 3D 座標生成および構造最適化。
   * **3D 分子表示:** Ball & Stick, CPK (空間充填), Wireframe, Stick など、複数のスタイルでの 3D 分子表示。
   * **ファイル操作:** 独自形式 (.pmeprj) でのプロジェクト保存・読み込み、標準的な化学ファイル形式 (MOL, SDF, XYZ) や SMILES, InChI 文字列のインポート・エクスポートに対応。エクスポートされたファイルは、DFT計算へ使用することができます。画像 (PNG) や 3D印刷用の3D モデル (STL, OBJ) としてのエクスポートも可能。
   * **分子分析:** SMILES, InChI, 分子式, 分子量, LogP, TPSA などの基本的な分子特性を表示。
@@ -60,7 +60,7 @@ MoleditPy は、Python で開発された分子編集ソフトウェアです。
 
 ## 2\. インストールと起動
 
-MoleditPy 5 は Python 3.10–3.14 に対応し、Windows・macOS・Linux のすべてで同じ `moleditpy` パッケージと公式 Open Babel wheel を使用します。更新時は、先に `python -m pip uninstall moleditpy-linux openbabel-wheel` で旧パッケージを削除し、`python -m pip install --upgrade moleditpy` を実行してください。インストーラーヘルパーはショートカットとファイルの関連付けを作成するもので、アプリケーションをバンドルするものではありません。
+MoleditPy 5 は Python 3.10–3.14 に対応し、Windows・macOS・Linux のすべてで同じ `moleditpy` パッケージとGUI には PySide6-Essentials を使用します。コアは Open Babel を必要としません。更新時は、先に `python -m pip uninstall moleditpy-linux openbabel-wheel` で旧パッケージを削除し、`python -m pip install --upgrade moleditpy` を実行してください。インストーラーヘルパーはショートカットとファイルの関連付けを作成するもので、アプリケーションをバンドルするものではありません。
 
 
 1.  **パッケージのインストール**
@@ -225,12 +225,11 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
 3.  計算が開始され、ステータスバーに進捗が表示されます。RDKit (ETKDGv2 アルゴリズム) を使用して 3D 座標が生成され、力場計算 (MMFF94 または UFF) によって簡単な構造最適化が行われます。
 4.  成功すると、3D 表示ビューに生成された 3D 構造が表示されます。
 
-**(設定):** メニューの `Settings` \> `3D Conversion` から、変換に使用するライブラリ (RDKit, Open Babel) の優先順位を設定できます。また、`Direct` モード（2D 座標をそのまま用い、水素原子を付加するモード）を選択することもできます。Open Babel がインストールされていない場合、関連するオプションは無効になります。
+**(設定):** `Settings` > `3D Conversion` で RDKit・Direct・Fallback を選択できます。Direct は描画座標を維持して水素を追加するため、埋め込みエンジンを必要としません。
 
 **変換モードの詳細:**
-*   **Fallback モード（デフォルト）**: RDKit $\rightarrow$ Open Babel（利用可能な場合） $\rightarrow$ Direct モードの順に自動で実行を試みます。
+*   **Fallback モード（デフォルト）**: RDKit を試し、埋め込みに失敗した場合は Direct モードへ切り替えます。
 *   **RDKit モード**: RDKit の ETKDGv2 (Experimental-Torsion Knowledge Distance Geometry) アルゴリズムを用いてコンフォーマーを生成します。生成に失敗した場合は、立体化学の制約を明示的に加えた距離限界マトリックスによるトライアングル・スムージングを適用し、再度埋め込みを試みます。
-*   **Open Babel モード**: Open Babel の `make3D()` 座標ジェネレーターを使用します。プログラムのハングアップやクラッシュを防ぐため、バックグラウンドの分離されたサブプロセスで安全に実行されます。
 *   **Direct モード**: 3Dコンフォーマー生成を行わず、2Dキャンバスの配置をそのまま保持します。重原子は $Z = 0.0$ 平面に配置され、不足している水素原子が幾何学的に追加されます。立体化学は、Wedge/Dash結合を持つ原子にZ座標のオフセット ($Z = \pm 1.5$ Å) を加えることで再現されます。
 
 **立体化学チェック:** 変換のたびに、Wedge/Dash で描いた、または R/S ラベルを付けたすべての不斉中心と E/Z ラベルを付けたすべての二重結合を 3D 構造と比較します。反転または消失したものがある場合は **Stereochemistry Check** ウィンドウが開き、それぞれについて 2D で描いた配置と 3D での配置を一覧表示します。 また、Wedge/Dash の描き方が曖昧な不斉中心 (例: Wedge と Dash が互いに反対側の結合にある) も、描いた配置を "ambiguous" として一覧表示します。このような描き方では配置が決まらないため、3D の配置は任意になります。Wedge または Dash を 1 本にするか、Wedge と Dash を隣り合う結合に描き直してください。このウィンドウは常に手前に表示されますがメインウィンドウの操作は妨げず、開いている間は 3D ビューに不斉ラベルと E/Z ラベルを表示し、誤ったものを赤、正しいものを通常の色で示します。閉じると `View` \> `Show Chiral Labels` の設定に戻ります。立体化学を確実には再現しない Direct モードで最も起こりやすい現象です。一覧の不斉中心と二重結合は 3D 構造上で手動で反転してください。このチェックは `Settings` \> `Settings...` \> **3D Scene** (Check After 3D Conversion) でオフにできます。`Optimize 3D` の後にも実行できます (Check After 3D Optimization、既定でオフ)。
@@ -242,13 +241,12 @@ MoleditPy は、描画した 2D 構造から 3D 構造を生成し、表示、�
   * 最適化手法が失敗した場合、一時的なUFFオーバーライドを提案するインタラクティブなフォールバックプロンプトが表示されることがあります。
   * 完了すると、最適化された構造が 3D ビューに再描画されます。
 
-**(設定):** メニューの `Settings` \> `3D Optimization Settings` から、使用する力場計算ライブラリとメソッド (RDKit MMFF94/MMFF94s/UFF, Open Babel MMFF94/MMFF94s/UFF/GAFF/Ghemical) を選択できます。
+**(設定):** メニューの `Settings` \> `3D Optimization Settings` から、使用する力場計算ライブラリとメソッド (RDKit MMFF94/MMFF94s/UFF、および導入したプラグインが登録する手法) を選択できます。
 
 **(クイック選択):** **Optimize 3D** ボタンを**右クリック**すると、デフォルトの選択を変更せずに、任意のメソッドで一度だけ最適化を実行できます。
 
 **構造最適化メソッドの詳細:**
 *   **RDKit バックエンド**: **MMFF94s** (分光学的/デフォルト), **MMFF94**, および **UFF** (Universal Force Field) をサポートします。遷移金属などの未サポート原子が含まれることで MMFF94/MMFF94s のセットアップが失敗した場合、クラッシュを防ぐために自動的に UFF にフォールバックします。
-*   **Open Babel バックエンド**: **MMFF94s**, **MMFF94**, **UFF**, **GAFF** (General Amber Force Field), および **Ghemical** をサポートします。原子間の重なりや衝突を解消するため、最急降下法 (Steepest Descent) を100反復実行した後に、共役勾配法 (Conjugate Gradients) でエネルギー最小化を実行します。
 *   **プラグインメソッド**: インストールされたプラグインは独自の最適化手法を追加できます。存在する場合、組み込みの力場と並んで `Settings` \> `3D Optimization Settings`（デフォルトとして選択可能）および **Optimize 3D** の右クリックメニューに表示されます。
 
 ### 5.3. 3D 表示スタイルの変更
@@ -568,7 +566,7 @@ MoleditPyは、Pythonスクリプトによる機能の拡張をサポートし�
 
   * **バージョン:** 5.0
   * **作者:** Hiromichi Yokoyama
-  * **ライセンス:** GPL-3.0 license
+  * **ライセンス:** LGPL-3.0-or-later
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
   * **DOI:** 10.5281/zenodo.17268532
 
@@ -576,3 +574,5 @@ MoleditPyは、Pythonスクリプトによる機能の拡張をサポートし�
 
 -----
 
+
+独立して開発されたプラグインは、プロプライエタリを含む任意のライセンスを選択できます。既存プラグインのライセンスは維持されます。コアの複製コードや第三者の依存ライブラリの義務はそのまま適用されます。[ライセンスポリシー](../LICENSING.md)と[バイナリ内ライブラリの交換手順](../DISTRIBUTION.md)を参照してください。

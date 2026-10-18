@@ -3,13 +3,13 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17268532.svg)](https://doi.org/10.5281/zenodo.17268532)
 [![PyPI version](https://badge.fury.io/py/MoleditPy.svg)](https://badge.fury.io/py/MoleditPy)
 [![Python Versions](https://img.shields.io/badge/python-3.10--3.14-blue.svg)](https://pypi.org/project/MoleditPy/)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: LGPL v3+](https://img.shields.io/badge/License-LGPLv3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Build Status](https://github.com/HiroYokoyama/python_molecular_editor/actions/workflows/tests.yml/badge.svg)](https://github.com/HiroYokoyama/python_molecular_editor/actions)
 [![codecov](https://codecov.io/gh/HiroYokoyama/python_molecular_editor/graph/badge.svg)](https://codecov.io/gh/HiroYokoyama/python_molecular_editor)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/moleditpy?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/moleditpy)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/HiroYokoyama)
 
-**MoleditPy** is a programmable, cross-platform molecular editor built with PyQt6, RDKit, and PyVista. It takes you from a 2D sketch to an editable 3D structure and out to input files for DFT calculations, and it can be extended with plain Python plugins.
+**MoleditPy** is a programmable, cross-platform molecular editor built with PySide6, RDKit, and PyVista. It takes you from a 2D sketch to an editable 3D structure and out to input files for DFT calculations, and it can be extended with plain Python plugins.
 
 **[Website](https://hiroyokoyama.github.io/python_molecular_editor/)** · **[User manual](https://hiroyokoyama.github.io/python_molecular_editor/manual/manual)** ([日本語](https://hiroyokoyama.github.io/python_molecular_editor/manual/manual-JP)) · **[Plugins](https://hiroyokoyama.github.io/moleditpy-plugins/)** · **[Wiki](https://github.com/HiroYokoyama/python_molecular_editor/wiki)**
 
@@ -31,7 +31,7 @@ pip install moleditpy-installer
 python -m moleditpy_installer
 ```
 
-The first command installs the same `moleditpy` package on Windows, macOS, and Linux; the second creates an application shortcut. MoleditPy 5 requires Python 3.10–3.14. For an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before upgrading to avoid overlapping package files. Start the app from the shortcut or with:
+The first command installs the same `moleditpy` package on Windows, macOS, and Linux; the second creates an application shortcut. MoleditPy 5 requires Python 3.10–3.14. For an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before upgrading. The core uses PySide6-Essentials and does not require Open Babel. Start the app from the shortcut or with:
 
 ```bash
 moleditpy
@@ -53,4 +53,6 @@ Please also cite the plugins you used; see [Citation in the plugin collection](h
 
 ## License & Disclaimer
 
-This project is licensed under the GNU General Public License v3.0 (GPLv3) - see the [LICENSE](https://github.com/HiroYokoyama/python_molecular_editor/blob/main/LICENSE) file for details. As open-source software, it is provided 'as is' without warranty of any kind, and the author assumes no responsibility or liability for the results. Although outputs have been carefully verified, users are strongly encouraged to independently check and validate them for critical applications (such as publications). If you encounter any bugs, please open an issue.
+This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPL-3.0-or-later) - see the [LICENSE](https://github.com/HiroYokoyama/python_molecular_editor/blob/main/LICENSE) file for details. As open-source software, it is provided 'as is' without warranty of any kind, and the author assumes no responsibility or liability for the results. Although outputs have been carefully verified, users are strongly encouraged to independently check and validate them for critical applications (such as publications). If you encounter any bugs, please open an issue.
+
+Independently developed plugins may use any license, including proprietary licenses. Existing plugins retain their licenses. See [licensing policy](https://github.com/HiroYokoyama/python_molecular_editor/blob/main/LICENSING.md) and [binary distribution instructions](https://github.com/HiroYokoyama/python_molecular_editor/blob/main/DISTRIBUTION.md).

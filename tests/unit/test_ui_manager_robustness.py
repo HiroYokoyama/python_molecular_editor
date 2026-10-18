@@ -163,8 +163,8 @@ from unittest.mock import patch
 # set_mode branches
 # ---------------------------------------------------------------------------
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QGraphicsView
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QGraphicsView
 
 
 def test_set_mode_tuple_becomes_bond_mode():

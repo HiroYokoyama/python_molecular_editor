@@ -2,9 +2,9 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import QPointF, QRectF, QLineF
-from PyQt6.QtGui import QPainterPath, QTransform
-from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
+from PySide6.QtCore import QPointF, QRectF, QLineF
+from PySide6.QtGui import QPainterPath, QTransform
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
 
@@ -26,7 +26,7 @@ def mock_scene():
 
 
 # Helper class to tolerate QPoint in moveCenter (fixing main code bug in test env)
-from PyQt6.QtCore import QPoint
+from PySide6.QtCore import QPoint
 
 
 class TolerantQRectF(QRectF):

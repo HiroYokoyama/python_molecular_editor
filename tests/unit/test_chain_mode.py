@@ -4,8 +4,8 @@ import math
 
 import pytest
 from unittest.mock import MagicMock
-from PyQt6.QtCore import QPointF
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import QPointF
+from PySide6.QtWidgets import QApplication
 
 from moleditpy.ui.chain_mixin import (
     CHAIN_ANGLE_SNAP_DEG,

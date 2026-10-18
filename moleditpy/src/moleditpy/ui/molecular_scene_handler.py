@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -15,9 +15,9 @@ import math
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from PyQt6.QtCore import Qt, QPointF, QLineF, QRectF
-from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QApplication
+from PySide6.QtCore import Qt, QPointF, QLineF, QRectF
+from PySide6.QtGui import QCursor
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsLineItem, QApplication
 
 from .atom_item import AtomItem
 from .bond_item import BondItem
@@ -1023,7 +1023,7 @@ class KeyboardMixin:
         """Handle keyboard events, delegating to the active view."""
         if not self.views():
             try:
-                from PyQt6.QtWidgets import QGraphicsScene
+                from PySide6.QtWidgets import QGraphicsScene
 
                 QGraphicsScene.keyPressEvent(self, event)  # type: ignore[arg-type]
             except (ImportError, AttributeError, TypeError, RuntimeError):
@@ -1563,7 +1563,7 @@ class KeyboardMixin:
 
             # Correctly delegate to the base class (QGraphicsScene) directly
             # to avoid MRO issues in complex Mixin inheritance structures.
-            from PyQt6.QtWidgets import QGraphicsScene
+            from PySide6.QtWidgets import QGraphicsScene
 
             QGraphicsScene.keyPressEvent(self, event)  # type: ignore[arg-type]
 

@@ -1,6 +1,6 @@
 """The shared periodic-table layout used by the element picker and CPK Colors."""
 
-from PyQt6.QtGui import QColor
+from PySide6.QtGui import QColor
 
 from moleditpy.ui.periodic_table_dialog import element_button_style
 from moleditpy.utils.constants import PERIODIC_TABLE_LAYOUT

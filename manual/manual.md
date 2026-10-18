@@ -42,7 +42,7 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
 **Main Features:**
 
   * **2D Molecular Editing:** Add, delete, or modify atoms and bonds; create structures using templates. Also supports user templates, allowing users to save and use their own specified structures.
-  * **3D Structure Generation:** Generate 3D coordinates from 2D structures and perform structure optimization using RDKit or Open Babel (optional).
+  * **3D Structure Generation:** Generate 3D coordinates from 2D structures and perform structure optimization using RDKit or Direct mode.
   * **3D Molecular Display:** Display 3D molecules in multiple styles, including Ball & Stick, CPK (Space-filling), Wireframe, and Stick.
   * **File Operations:** Save and load projects in a proprietary format (.pmeprj). Supports import and export of standard chemical file formats (MOL, SDF, XYZ) and SMILES, InChI strings. Exported files can be used for DFT calculations. Also supports exporting as images (PNG) or 3D models (STL, OBJ) for 3D printing.
   * **Molecular Analysis:** Display basic molecular properties such as SMILES, InChI, Molecular Formula, Molecular Weight, LogP, and TPSA.
@@ -59,7 +59,7 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
 
 ## 2\. Installation and Launch
 
-MoleditPy 5 requires Python 3.10–3.14 and uses the same `moleditpy` package on Windows, macOS, and Linux, including the official Open Babel wheels. When upgrading, first remove the old distributions with `python -m pip uninstall moleditpy-linux openbabel-wheel`, then run `python -m pip install --upgrade moleditpy`. The installer helper creates shortcuts and file associations; it does not bundle the application.
+MoleditPy 5 requires Python 3.10–3.14 and uses the same `moleditpy` package on Windows, macOS, and Linux, using PySide6-Essentials for the GUI. The core no longer requires Open Babel. When upgrading, first remove the old distributions with `python -m pip uninstall moleditpy-linux openbabel-wheel`, then run `python -m pip install --upgrade moleditpy`. The installer helper creates shortcuts and file associations; it does not bundle the application.
 
 
 
@@ -228,12 +228,11 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
 3.  The calculation begins, and progress is displayed in the status bar. 3D coordinates are generated using RDKit (ETKDGv2 algorithm), and a simple structure optimization is performed using a force field (MMFF94 or UFF).
 4.  Upon success, the generated 3D structure is displayed in the 3D View.
 
-**(Settings):** You can set the priority of libraries (RDKit, Open Babel) used for conversion, **or select the "Direct" mode (use 2D coords + add H)**, from the menu `Settings` \> `3D Conversion`. If Open Babel is not installed, related options will be disabled.
+**(Settings):** Choose RDKit, Direct, or Fallback from `Settings` > `3D Conversion`. Direct mode preserves the drawn coordinates and adds hydrogens without requiring an embedding engine.
 
 **Conversion Modes:**
-*   **Fallback Mode (Default)**: Automatically tries RDKit first, then Open Babel (if available), and finally falls back to Direct Mode.
+*   **Fallback Mode (Default)**: Tries RDKit first and falls back to Direct mode if embedding fails.
 *   **RDKit Mode**: Uses RDKit's ETKDGv2 (Experimental-Torsion Knowledge Distance Geometry) algorithm for conformer generation. If the initial embedding fails, it applies bounds matrix triangle smoothing with explicit stereochemistry constraints before trying again.
-*   **Open Babel Mode**: Uses Open Babel's `make3D()` coordinate generator run in a secure, isolated background subprocess to prevent application hangs or crashes.
 *   **Direct Mode**: Bypasses 3D conformer embedding to retain your exact 2D layout. Atoms are placed on the $Z = 0.0$ plane, with missing hydrogen atoms added geometrically. Stereochemistry is preserved by adding offset Z-coordinates ($Z = \pm 1.5$ Å) to wedge/dash atoms.
 
 **Stereo Check:** After each conversion, every stereocenter you drew with a wedge or hash or labelled R or S, and every double bond you labelled E or Z is compared with the 3D result. If any of them comes out inverted or lost, a **Stereochemistry Check** window lists each one with its drawn and 3D configuration. It also lists stereocenters whose wedges are drawn ambiguously, for example a wedge and a hash on opposite bonds, with "ambiguous" as the drawn configuration: such a drawing specifies no configuration, so the 3D one is arbitrary. Redraw them with a single wedge or hash, or with the wedge and hash on adjacent bonds. The window stays on top but does not block the main window, and while it is open the 3D view shows chiral and E/Z labels, with the wrong ones in red and the correct ones in the usual color; closing it restores the `View` \> `Show Chiral Labels` setting. This happens most often with Direct Mode, which does not reliably reproduce stereochemistry. Flip the listed stereocenters and double bonds manually in the 3D structure. The check can be turned off in `Settings` \> `Settings...` \> **3D Scene** (Check After 3D Conversion). It can also be run after `Optimize 3D` (Check After 3D Optimization, off by default).
@@ -245,13 +244,12 @@ MoleditPy provides functions to generate, display, measure, and edit 3D structur
   * If an optimization method fails, an interactive fallback prompt may appear, offering a temporary UFF override.
   * When completed, the optimized structure is redrawn in the 3D view.
 
-**(Settings):** You can select the force field calculation library and method (RDKit MMFF94/MMFF94s/UFF, Open Babel MMFF94/MMFF94s/UFF/GAFF/Ghemical) from the menu `Settings` \> `3D Optimization Settings`.
+**(Settings):** You can select the force field calculation library and method (RDKit MMFF94/MMFF94s/UFF, plus methods registered by installed plugins) from the menu `Settings` \> `3D Optimization Settings`.
 
 **(Quick select):** **Right-click** the **Optimize 3D** button to run any available method once, without changing your default selection.
 
 **Optimization Methods:**
 *   **RDKit Backend**: Supports **MMFF94s** (spectroscopic/default), **MMFF94**, and **UFF** (Universal Force Field). If MMFF94s fails setup due to unsupported elements (such as transition metals), the system automatically falls back to UFF to prevent crashes.
-*   **Open Babel Backend**: Supports **MMFF94s**, **MMFF94**, **UFF**, **GAFF** (General Amber Force Field), and **Ghemical**. It performs 100 iterations of Steepest Descent to clear major atomic collisions, followed by Conjugate Gradients minimization.
 *   **Plugin methods**: Installed plugins can add their own optimizers. When present, they appear in `Settings` \> `3D Optimization Settings` (selectable as the default) and in the **Optimize 3D** right-click menu, alongside the built-in force fields.
 
 ### 5.3. Changing 3D Display Style
@@ -583,7 +581,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
   * **Version:** 5.0
   * **Author:** Hiromichi Yokoyama
-  * **License:** GPL-3.0 license
+  * **License:** LGPL-3.0-or-later
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)
   * **DOI:** 10.5281/zenodo.17268532
 
@@ -592,3 +590,5 @@ You can check the version information from the `Help` \> `About` menu.
 -----
 
 
+
+Independently developed plugins may use any license, including proprietary licenses; existing plugins retain their licenses. Copied core code and third-party dependencies keep their own license obligations. See [licensing policy](../LICENSING.md) and [binary library replacement instructions](../DISTRIBUTION.md).
