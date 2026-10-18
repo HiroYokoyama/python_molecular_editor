@@ -13,18 +13,14 @@ This application bundle is built from the unified `moleditpy` package and uses P
 Note: As `pip` is not included in this package, plugins requiring external dependencies cannot be executed.
 
 
-This download is the 5.0.0a1 alpha prerelease.
-
 ## Download
 
-Please download the installer from the link below.
-The download will start upon clicking.
+Open the latest release page and choose the Windows installer or portable ZIP from its assets:
 
-[Download MoleditPy Windows Installer](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v5.0.0a1/MoleditPy_5.0.0a1_win64_setup.exe)
+[Latest MoleditPy release](https://github.com/HiroYokoyama/python_molecular_editor/releases/latest)
 
-A portable version is also available:
-
-[Download MoleditPy Windows Portable](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v5.0.0a1/MoleditPy_5.0.0a1_win64_portable.zip)
+- Installer: `MoleditPy_*_win64_setup.exe`
+- Portable: `MoleditPy_*_win64_portable.zip`
 
 ## Installation Steps
 

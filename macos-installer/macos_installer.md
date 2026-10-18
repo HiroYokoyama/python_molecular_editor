@@ -14,14 +14,11 @@ The bundle is built for **Apple Silicon (arm64)** only, and is ad-hoc signed rat
 
 Note: As `pip` is not included in this package, plugins requiring external dependencies cannot be executed. In addition, this bundle runs **without a terminal window**, so console output is only available through the log file. See [Limitations](#limitations) below.
 
-This download is the 5.0.0a1 alpha prerelease.
-
 ## Download
 
-Please download the app bundle from the link below.
-The download will start upon clicking.
+Open the latest release page and download the Apple Silicon app bundle asset, `MoleditPy_*_macos_arm64.zip`.
 
-[Download MoleditPy for macOS (Apple Silicon)](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v5.0.0a1/MoleditPy_5.0.0a1_macos_arm64.zip)
+[Latest MoleditPy release](https://github.com/HiroYokoyama/python_molecular_editor/releases/latest)
 
 ## Installation Steps
 
