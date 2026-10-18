@@ -1,8 +1,10 @@
 import os
 import sys
+import gc
 import pytest
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QPointF
+from PySide6.QtCore import QCoreApplication, QEvent, QPointF
+from shiboken6 import isValid
 
 # Minimal path setup to ensure moleditpy is discoverable
 src_path = os.path.abspath(
@@ -13,64 +15,18 @@ if os.path.isdir(src_path) and src_path not in sys.path:
 
 
 @pytest.fixture(scope="session")
-def app():
-    """QApplication session-wide instance with platform-aware teardown."""
-    is_headless = os.environ.get("MOLEDITPY_HEADLESS", "0") == "1"
-    is_offscreen = os.environ.get("QT_QPA_PLATFORM") == "offscreen"
+def app(qapp):
+    """Keep Qt alive until native widgets and Python callbacks are released."""
+    yield qapp
 
-    q_app = QApplication.instance()
-    if q_app is None:
-        q_app = QApplication(sys.argv)
-
-    yield q_app
-
-    # Platform-aware teardown: prevent 0x80010108 on Windows but avoid CI segfaults
-    if not (is_headless or is_offscreen):
-        try:
-            # Aggressively neutralize blocking dialogs/filters before bulk closure
-            # This prevents 0xc0000374 (heap corruption) on Windows during rapid teardown.
-            for widget in QApplication.topLevelWidgets():
-                try:
-                    # 1. Force has_unsaved_changes to False to skip "Save?" prompts
-                    if hasattr(widget, "state_manager"):
-                        try:
-                            widget.state_manager.has_unsaved_changes = False
-                        except Exception:
-                            pass
-                    elif hasattr(widget, "has_unsaved_changes"):
-                        widget.has_unsaved_changes = False
-
-                    # 2. Detach UIManager filters to prevent recursive/blocking logic
-                    if hasattr(widget, "ui_manager"):
-                        try:
-                            widget.removeEventFilter(widget.ui_manager)
-                        except Exception:
-                            pass
-
-                    # 3. Fast-path closeEvent
-                    widget.closeEvent = lambda event: event.accept()
-                except Exception:
-                    pass
-
-            q_app.closeAllWindows()
-            for _ in range(10):
-                q_app.processEvents()
-
-            import gc
-
-            gc.collect()
-            q_app.processEvents()
-
-            try:
-                import colorama
-
-                colorama.deinit()
-            except (ImportError, Exception):
-                pass
-        except Exception:
-            pass
-
-    q_app.quit()
+    # No exec() loop runs in unit tests, so deleteLater() needs explicit delivery.
+    # Do this while Python event filters still exist, before interpreter shutdown.
+    for widget in QApplication.topLevelWidgets():
+        if isValid(widget):
+            widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    gc.collect()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 @pytest.fixture
