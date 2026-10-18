@@ -94,6 +94,7 @@ mark("STAGE_QT_IMPORTED")
 main_mod = importlib.import_module("{PKG}.main")
 worker_mod = importlib.import_module("{PKG}.ui.calculation_worker")
 assert worker_mod.OBABEL_AVAILABLE, "Open Babel did not initialize during startup"
+assert "openbabel._openbabel" not in sys.modules, "Open Babel loaded in the GUI process"
 mark("STAGE_APP_IMPORTED")
 
 EXPOSE_DEADLINE_MS = 30000

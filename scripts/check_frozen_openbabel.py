@@ -1,6 +1,8 @@
 """Smoke-test a frozen MoleditPy executable and its isolated Open Babel child."""
 
 import argparse
+import json
+import math
 from pathlib import Path
 import subprocess
 
@@ -35,6 +37,25 @@ def main() -> None:
     assert converted is not None, result.stdout + result.stderr
     assert converted.GetNumAtoms() == 9
     assert converted.GetConformer().Is3D()
+    request = json.dumps(
+        {
+            "mol_block": result.stdout,
+            "method": "UFF",
+            "max_iters": 20,
+            "chunk_size": 10,
+        }
+    )
+    optimized = subprocess.run(
+        [executable, "--openbabel-optimize"],
+        input=request,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=120,
+    )
+    coordinates = json.loads(optimized.stdout)
+    assert len(coordinates) == 9
+    assert all(math.isfinite(value) for point in coordinates for value in point)
     print(f"MoleditPy {args.version}: frozen startup and Open Babel conversion passed")
 
 

@@ -12,6 +12,10 @@ if __name__ == "__main__":
         from moleditpy.utils.openbabel_worker import make3d_main
 
         make3d_main()
+    elif sys.argv[1:] == ["--openbabel-optimize"]:
+        from moleditpy.utils.openbabel_worker import optimize_main
+
+        optimize_main()
     else:
         from moleditpy.main import main
 

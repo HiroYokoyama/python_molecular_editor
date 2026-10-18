@@ -13,8 +13,7 @@ DOI: 10.5281/zenodo.17268532
 import logging
 from ..utils.suppress_log import suppress_log
 import math
-import os
-from pathlib import Path
+import json
 import re
 import numpy as np
 import sys
@@ -33,29 +32,8 @@ from ..core.molecular_data import align_ez_to_cip
 
 from .. import OBABEL_AVAILABLE
 
-# Only import pybel on demand
-pybel: Any = None
-if OBABEL_AVAILABLE:
-    # Suppress potential import errors if Open Babel is not correctly installed or configured
-    with suppress_log(ImportError, OSError, RuntimeError):
-        import openbabel
-        from openbabel import pybel as _pybel
-
-        pybel = _pybel
-
-        # The Windows wheel stores parameters in bin/data, although its initializer
-        # points BABEL_DATADIR at share/openbabel. Keep valid upstream paths intact.
-        datadir = os.environ.get("BABEL_DATADIR")
-        if not datadir or not (Path(datadir) / "UFF.prm").is_file():
-            ob_base = Path(openbabel.__file__).parent
-            candidates = [ob_base / "bin" / "data"]
-            candidates.extend((ob_base / "share" / "openbabel").glob("*"))
-            for candidate in candidates:
-                if (candidate / "UFF.prm").is_file():
-                    os.environ["BABEL_DATADIR"] = str(candidate)
-                    break
-    if pybel is None:
-        OBABEL_AVAILABLE = False
+# Open Babel's native libraries are loaded only in child processes so they
+# cannot conflict with Qt/VTK in the GUI process.
 
 
 class WorkerHaltError(Exception):
@@ -275,31 +253,62 @@ def _iterative_optimize_obabel(
 ) -> bool:
     """Perform force field optimization using OpenBabel in chunks."""
     try:
-        if not OBABEL_AVAILABLE or not pybel:
+        if not OBABEL_AVAILABLE:
             raise RuntimeError("OpenBabel is not available.")
-        ff = pybel.ob.OBForceField.FindForceField(method.lower())
-        if not ff:
-            raise ValueError(f"Forcefield '{method}' not found.")
-
-        ob_mol = pybel.readstring("mol", Chem.MolToMolBlock(mol))
-        if not ff.Setup(ob_mol.OBMol):
-            raise RuntimeError(f"Failed to load parameters for '{method}'.")
-
-        ff.SteepestDescent(100)
-        for _ in range(0, max_iters, chunk_size):
+        if check_halted_cb():
+            raise WorkerHaltError("Halted")
+        command = (
+            [sys.executable, "--openbabel-optimize"]
+            if getattr(sys, "frozen", False)
+            else [
+                sys.executable,
+                "-c",
+                "from moleditpy.utils.openbabel_worker import optimize_main; optimize_main()",
+            ]
+        )
+        payload: Optional[str] = json.dumps(
+            {
+                "mol_block": Chem.MolToMolBlock(mol),
+                "method": method,
+                "max_iters": max_iters,
+                "chunk_size": chunk_size,
+            }
+        )
+        with subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        ) as process:
+            while True:
+                if check_halted_cb():
+                    if process.poll() is None:
+                        process.kill()
+                    process.communicate()
+                    raise WorkerHaltError("Halted")
+                try:
+                    output, error = process.communicate(input=payload, timeout=0.1)
+                    break
+                except subprocess.TimeoutExpired:
+                    payload = None
+            if process.returncode:
+                raise RuntimeError(error.strip() or "Open Babel optimization failed.")
             if check_halted_cb():
                 raise WorkerHaltError("Halted")
-            ff.ConjugateGradients(chunk_size)
-
-        ff.GetCoordinates(ob_mol.OBMol)
+        coordinates = json.loads(output)
+        if len(coordinates) != mol.GetNumAtoms() or any(
+            len(point) != 3 or not all(math.isfinite(value) for value in point)
+            for point in coordinates
+        ):
+            raise ValueError("Open Babel produced invalid coordinates.")
         conf = mol.GetConformer()
-        for i in range(mol.GetNumAtoms()):
-            at = ob_mol.OBMol.GetAtom(i + 1)
-            conf.SetAtomPosition(i, [at.GetX(), at.GetY(), at.GetZ()])
+        for i, point in enumerate(coordinates):
+            conf.SetAtomPosition(i, point)
         return True
     except WorkerHaltError:
         raise
-    except (RuntimeError, ValueError, TypeError, ImportError) as e:
+    except (RuntimeError, ValueError, TypeError, ImportError, OSError) as e:
         safe_status_cb(f"Iterative optimization ({method}) error (OpenBabel): {e}")
         return False
 
@@ -706,7 +715,7 @@ def _perform_obabel_conversion(
     """Perform Open Babel 3D conversion and optimization."""
     _safe_status("Attempting Open Babel conversion...")
     try:
-        if not OBABEL_AVAILABLE or not pybel:
+        if not OBABEL_AVAILABLE:
             raise RuntimeError("Open Babel not available.")
 
         # Isolate make3D in a subprocess to prevent hard C++ aborts from crashing the main GUI

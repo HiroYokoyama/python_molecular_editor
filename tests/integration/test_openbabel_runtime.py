@@ -29,15 +29,16 @@ def _run_isolated(script):
     )
 
 
-def test_failed_openbabel_import_disables_worker_backend():
+def test_worker_does_not_load_openbabel_in_gui_process():
     result = _run_isolated("""
         import sys
         import moleditpy
         moleditpy.OBABEL_AVAILABLE = True
         sys.modules["openbabel"] = None
         from moleditpy.ui import calculation_worker
-        assert calculation_worker.pybel is None
-        assert calculation_worker.OBABEL_AVAILABLE is False
+        assert calculation_worker.OBABEL_AVAILABLE
+        assert sys.modules["openbabel"] is None
+        assert "openbabel._openbabel" not in sys.modules
     """)
     assert result.returncode == 0, result.stderr
 
@@ -47,7 +48,6 @@ def openbabel_backend():
     if importlib.util.find_spec("openbabel") is None:
         pytest.skip("Open Babel is not installed")
     assert worker.OBABEL_AVAILABLE
-    assert worker.pybel is not None
     return worker
 
 
@@ -58,8 +58,8 @@ def test_worker_configures_openbabel_runtime_paths(openbabel_backend):
         from rdkit import Chem
         from openbabel import pybel
         libdir = os.environ.get("BABEL_LIBDIR")
-        from moleditpy.ui import calculation_worker
-        assert calculation_worker.OBABEL_AVAILABLE
+        from moleditpy.utils.openbabel_worker import _load_pybel
+        pybel = _load_pybel()
         assert libdir == os.environ.get("BABEL_LIBDIR")
         assert (Path(os.environ["BABEL_DATADIR"]) / "UFF.prm").is_file()
         mol = pybel.readstring("smi", "CCO")
@@ -109,3 +109,38 @@ def test_openbabel_subprocess_conversion(openbabel_backend):
     assert converted.GetConformer().Is3D()
     positions = converted.GetConformer().GetPositions()
     assert all(math.isfinite(float(value)) for row in positions for value in row)
+
+
+def test_openbabel_cancellation_reaps_child(openbabel_backend, monkeypatch):
+    mol = Chem.AddHs(Chem.MolFromSmiles("CCO"))
+    assert rdDistGeom.EmbedMolecule(mol, randomSeed=42) >= 0
+    positions = mol.GetConformer().GetPositions().copy()
+    processes = []
+    real_popen = subprocess.Popen
+
+    def track_process(*args, **kwargs):
+        process = real_popen(*args, **kwargs)
+        processes.append(process)
+        return process
+
+    monkeypatch.setattr(worker.subprocess, "Popen", track_process)
+    checks = iter([False, True])
+    with pytest.raises(worker.WorkerHaltError):
+        openbabel_backend._iterative_optimize_obabel(
+            mol, "UFF", lambda: next(checks), lambda message: None
+        )
+    assert len(processes) == 1
+    assert processes[0].poll() is not None
+    assert (mol.GetConformer().GetPositions() == positions).all()
+
+
+def test_openbabel_child_failure_preserves_coordinates(openbabel_backend):
+    mol = Chem.AddHs(Chem.MolFromSmiles("CCO"))
+    assert rdDistGeom.EmbedMolecule(mol, randomSeed=42) >= 0
+    positions = mol.GetConformer().GetPositions().copy()
+    messages = []
+    assert not openbabel_backend._iterative_optimize_obabel(
+        mol, "unknown-forcefield", lambda: False, messages.append
+    )
+    assert messages
+    assert (mol.GetConformer().GetPositions() == positions).all()

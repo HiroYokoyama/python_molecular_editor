@@ -521,7 +521,6 @@ def test_calculation_worker_obabel_fallback_mocked(qtbot, app):
             return_value=-1,
         ),
         patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", True),
-        patch("moleditpy.ui.calculation_worker.pybel", spec=True),
         patch("moleditpy.ui.calculation_worker.subprocess.run") as mock_run,
         patch("moleditpy.ui.calculation_worker.Chem.MolFromMolBlock") as mock_rd_parse,
     ):
