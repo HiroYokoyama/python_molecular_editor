@@ -41,10 +41,10 @@ The first launch can take a while as RDKit and the other libraries initialize. A
 
 > **Security note:** the legacy `.pmeraw` project format uses Python pickle, which can execute arbitrary code when loaded. Only open `.pmeraw` files you created yourself, and use the JSON-based `.pmeprj` format for sharing.
 
-The MoleditPy 5 shortcut helper is available on its migration branch and has not been released to PyPI yet. To create shortcuts and file associations, install it explicitly (requires Git):
+To create shortcuts and file associations, install the optional helper from PyPI:
 
 ```bash
-python -m pip install "moleditpy-installer @ git+https://github.com/HiroYokoyama/python_molecular_editor_installer.git@migrate/unified-moleditpy-5#subdirectory=moleditpy-installer"
+python -m pip install moleditpy-installer
 python -m moleditpy_installer
 ```
 

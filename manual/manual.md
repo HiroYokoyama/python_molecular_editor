@@ -63,13 +63,13 @@ MoleditPy 5 requires Python 3.9–3.14 and uses the same `moleditpy` package on 
 
 
 
-Install the alpha app directly with `python -m pip install MoleditPy==5.0.0a1`. The following optional steps create shortcuts. The MoleditPy 5 helper is not published yet, so select its migration branch explicitly.
+Install the alpha app directly with `python -m pip install MoleditPy==5.0.0a1`. The following optional steps create shortcuts. Install the optional helper from PyPI with the command below.
 
 1.  **Install the Shortcut Helper**
     This installs the unified `moleditpy` package as a dependency.
 
     ```bash
-    python -m pip install "moleditpy-installer @ git+https://github.com/HiroYokoyama/python_molecular_editor_installer.git@migrate/unified-moleditpy-5#subdirectory=moleditpy-installer"
+    python -m pip install moleditpy-installer
     ```
 
 2.  **Create the Shortcut**
