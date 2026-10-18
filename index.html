@@ -318,7 +318,7 @@
           </p>
         </div>
 
-        <!-- Install Terminal with Steps (1. Install alpha, 2. Launch) -->
+        <!-- Install Terminal with Steps (1. Install helper, 2. Create shortcuts) -->
         <div class="install-terminal">
           <div class="install-terminal-header">
             <span class="terminal-label">Recommended: Python / pip</span>
@@ -330,23 +330,23 @@
           <div class="install-terminal-body">
             <div class="terminal-line">
               <span class="terminal-comment">
-                <span class="lang-en"># 1. Install MoleditPy</span>
-                <span class="lang-ja"># 1. MoleditPyをインストール</span>
+                <span class="lang-en"># 1. Install MoleditPy and the shortcut helper</span>
+                <span class="lang-ja"># 1. MoleditPyとショートカット用ヘルパーをインストール</span>
               </span>
             </div>
             <div class="terminal-line">
               <span class="prompt">$</span>
-              <code>python -m pip install MoleditPy==5.0.0a1</code>
+              <code>python -m pip install moleditpy-installer</code>
             </div>
             <div class="terminal-line" style="margin-top: 0.75rem;">
               <span class="terminal-comment">
-                <span class="lang-en"># 2. Launch the alpha</span>
-                <span class="lang-ja"># 2. alpha版を起動</span>
+                <span class="lang-en"># 2. Create shortcuts</span>
+                <span class="lang-ja"># 2. ショートカットを作成</span>
               </span>
             </div>
             <div class="terminal-line">
               <span class="prompt">$</span>
-              <code>moleditpy</code>
+              <code>python -m moleditpy_installer</code>
             </div>
           </div>
         </div>
@@ -445,7 +445,7 @@
     }
 
     function copyInstallCmd() {
-      var cmd = "python -m pip install MoleditPy==5.0.0a1\nmoleditpy";
+      var cmd = "python -m pip install moleditpy-installer\npython -m moleditpy_installer";
       var btn = document.getElementById('copy-btn');
       var text = document.getElementById('copy-text');
       var lang = document.body.getAttribute('data-lang');

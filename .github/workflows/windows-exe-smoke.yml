@@ -21,7 +21,20 @@ jobs:
       - name: Build executable from moleditpy
         run: pyinstaller --clean --noconfirm --distpath dist/pyinstaller windows-installer/script/MoleditPy.spec
       - name: Check executable startup, Qt libraries, and excluded dependencies
-        run: python scripts/check_frozen_app.py dist/pyinstaller/MoleditPy/MoleditPy.exe --version 5.0.0a1
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          import sys
+          import tomllib
+
+          metadata = tomllib.loads(Path("moleditpy/pyproject.toml").read_text(encoding="utf-8"))
+          subprocess.run(
+              [sys.executable, "scripts/check_frozen_app.py",
+               "dist/pyinstaller/MoleditPy/MoleditPy.exe",
+               "--version", metadata["project"]["version"]],
+              check=True,
+          )
       - name: Upload tested executable
         uses: actions/upload-artifact@v4
         with:

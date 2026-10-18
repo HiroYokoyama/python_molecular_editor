@@ -27,11 +27,11 @@ See the [user manual](https://hiroyokoyama.github.io/python_molecular_editor/man
 ## Installation
 
 ```bash
-python -m pip install MoleditPy==5.0.0a1
-moleditpy
+python -m pip install moleditpy-installer
+python -m moleditpy_installer
 ```
 
-The first command installs the published alpha directly; the second launches it. The same `moleditpy` package is used on Windows, macOS, and Linux. MoleditPy 5 requires Python 3.9–3.14. For an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before upgrading. The core uses PySide6-Essentials and does not require Open Babel. Start the app from the shortcut or with:
+The first command installs MoleditPy and the shortcut helper; the second creates shortcuts and file associations. The same `moleditpy` package is used on Windows, macOS, and Linux. MoleditPy 5 requires Python 3.9–3.14. For an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before upgrading. The core uses PySide6-Essentials and does not require Open Babel. Start the app from the shortcut or with:
 
 ```bash
 moleditpy
@@ -41,14 +41,11 @@ The first launch can take a while as RDKit and the other libraries initialize. A
 
 > **Security note:** the legacy `.pmeraw` project format uses Python pickle, which can execute arbitrary code when loaded. Only open `.pmeraw` files you created yourself, and use the JSON-based `.pmeprj` format for sharing.
 
-To create shortcuts and file associations, install the optional helper from PyPI:
+To install the application directly without the shortcut helper:
 
 ```bash
-python -m pip install moleditpy-installer
-python -m moleditpy_installer
+python -m pip install MoleditPy
 ```
-
-GUI plugins also need their PySide6 migration versions; existing published plugin assets may still target MoleditPy 4. See the [migration guide](https://github.com/HiroYokoyama/python_molecular_editor/blob/migrate/pyside6-without-openbabel/docs/MIGRATING_TO_V5.md).
 
 ## Citation
 

@@ -1,10 +1,10 @@
 # MoleditPy 5 への移行
 
-MoleditPy 5.0.0a1 は Windows・macOS・Linux で共通の `moleditpy` パッケージを使用します。Python 3.9–3.14、PySide6-Essentials、RDKit、PyVista が必要です。コアは Open Babel をインストール・読み込み・バンドルしません。個別の Linux パッケージとビルド・公開処理は廃止しました。
+MoleditPy 5 は Windows・macOS・Linux で共通の `moleditpy` パッケージを使用します。Python 3.9–3.14、PySide6-Essentials、RDKit、PyVista が必要です。コアは Open Babel をインストール・読み込み・バンドルしません。個別の Linux パッケージとビルド・公開処理は廃止しました。
 
 ```sh
 python -m pip uninstall moleditpy-linux openbabel-wheel
-python -m pip install --upgrade --pre 'moleditpy>=5.0.0a1,<6'
+python -m pip install --upgrade MoleditPy
 ```
 
 PyQt6 からの移行は新しい仮想環境を推奨します。同一プロセスで Qt バインディングを混在させないでください。Open Babel は他のプラグインやアプリが必要としていなければ削除できます。
@@ -13,6 +13,6 @@ Fallback は RDKit の後に Direct を試します。Direct は描画した座�
 
 プラグインは PySide6 の `Signal`・`Slot`・`Property` と Shiboken6 の有効性確認へ移行してください。ワーカースレッドから UI を更新する場合は GUI スレッドに属する QObject と型付きスロットを使用します。
 
-コアは LGPL-3.0-or-later です。独立したプラグインは任意のライセンスを選択でき、既存プラグインのライセンスは変更しません。詳細は [LICENSING.md](../LICENSING.md) と [DISTRIBUTION.md](../DISTRIBUTION.md) を参照してください。5.0.0a1 は移行ブランチから GitHub と PyPI に alpha 版として公開済みです。旧 Linux 配布の既存ダウンロードは引き続き利用できます。ショートカット用ヘルパーと移行済みプラグインの各 PR は未マージで、各パッケージの新バージョンは未公開です。
+コアは LGPL-3.0-or-later です。独立したプラグインは任意のライセンスを選択でき、既存プラグインのライセンスは変更しません。詳細は [LICENSING.md](../LICENSING.md) と [DISTRIBUTION.md](../DISTRIBUTION.md) を参照してください。ショートカット用ヘルパーとプラグインは個別にリリースされます。旧 Linux 配布の既存ダウンロードは引き続き利用できますが、新規インストールには共通の `MoleditPy` パッケージを使用します。
 
 本体は起動プロセス内で `QT_API=pyside6` を指定し、OS 全体の環境変数は変更しません。

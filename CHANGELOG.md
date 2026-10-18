@@ -6,17 +6,23 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
-### Documentation
+---
 
-- Correct alpha installation commands, helper/plugin publication status, standalone asset links, PySide6/LGPL website labels, and CI/rendering descriptions. Keep English/Japanese manuals and wiki guidance consistent.
-
-### Tests
-
-- Restore the PyQt6 entry in the core layer's forbidden-Qt-import guard after the binding migration duplicated PySide6.
+## [5.0.0a2] - 2026-10-19
 
 ### Fixed
 
 - Parent the UI manager and its interactor watchdog timer to the application window so native window destruction also stops the timer, preventing callbacks into a deleted window and a Linux/Python 3.12 Qt event-loop crash.
+
+### Documentation
+
+- Keep standard PyPI installation commands in the README, website and manuals, without alpha-specific or temporary publication instructions. Correct standalone asset links, PySide6/LGPL website labels and CI/rendering descriptions; keep English/Japanese guidance consistent.
+- Document manual plugin workflow selection of a MoleditPy branch, tag or full commit SHA through `moleditpy_ref`, separately from the main app's published-package version input.
+
+### Tests
+
+- Restore the PyQt6 entry in the core layer's forbidden-Qt-import guard after the binding migration duplicated PySide6.
+- Verify that native window destruction also destroys its UI manager and active interactor watchdog timer. Derive the Windows executable smoke check's expected version from package metadata.
 
 ---
 
