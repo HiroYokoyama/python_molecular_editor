@@ -206,98 +206,21 @@ class DummyQtInteractorMock(_parent_class):
 pvqt.QtInteractor = DummyQtInteractorMock
 
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QCoreApplication, QEvent
+from shiboken6 import isValid
+import gc
 
 
-# 3. Minimal cleanup to avoid COM crashes
 @pytest.fixture(scope="session")
-def app():
-    """QApplication session-wide instance with platform-aware teardown."""
-    is_headless = os.environ.get("MOLEDITPY_HEADLESS", "0") == "1"
-    is_offscreen = os.environ.get("QT_QPA_PLATFORM") == "offscreen"
-
-    if is_headless:
-        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-    q_app = QApplication.instance()
-    if q_app is None:
-        q_app = QApplication(sys.argv)
-
-    yield q_app
-
-    # Platform-aware teardown: prevent 0x80010108/0x8001010d on Windows but avoid CI segfaults
-    if not (is_headless or is_offscreen):
-        try:
-            # Aggressively neutralize blocking dialogs/filters before bulk closure
-            # This prevents 0xc0000374 (heap corruption) on Windows during rapid teardown.
-            for widget in QApplication.topLevelWidgets():
-                try:
-                    # 1. Force has_unsaved_changes to False to skip "Save?" prompts
-                    if hasattr(widget, "state_manager"):
-                        try:
-                            widget.state_manager.has_unsaved_changes = False
-                        except Exception:
-                            pass
-                    elif hasattr(widget, "has_unsaved_changes"):
-                        widget.has_unsaved_changes = False
-
-                    # 2. Detach UIManager filters to prevent recursive/blocking logic
-                    if hasattr(widget, "ui_manager"):
-                        try:
-                            widget.removeEventFilter(widget.ui_manager)
-                        except Exception:
-                            pass
-
-                    # 3. Fast-path closeEvent
-                    widget.closeEvent = lambda event: event.accept()
-                except Exception:
-                    pass
-
-            q_app.closeAllWindows()
-            for _ in range(10):
-                q_app.processEvents()
-
-            # Force garbage collection to release Python-wrapped Qt objects
-            import gc
-
-            gc.collect()
-            q_app.processEvents()
-
-            try:
-                import colorama
-
-                colorama.deinit()
-            except (ImportError, Exception):
-                pass
-
-            # Wait for any lingering background threads to finish.
-            import threading
-            import time
-
-            main_thread = threading.main_thread()
-            deadline = time.monotonic() + 2.0  # 2 second max wait
-            for t in threading.enumerate():
-                if t is main_thread or not t.is_alive():
-                    continue
-                remaining = deadline - time.monotonic()
-                if remaining > 0:
-                    t.join(timeout=remaining)
-
-            # Final event processing after threads are done
-            for _ in range(5):
-                q_app.processEvents()
-        except Exception:
-            pass
-
-    # Suppress Windows fatal exception handler for known teardown crashes.
-    if sys.platform == "win32":
-        try:
-            import faulthandler
-
-            faulthandler.disable()
-        except Exception:
-            pass
-
-    q_app.quit()
+def app(qapp):
+    """Release native widgets while the retained QApplication is still alive."""
+    yield qapp
+    for widget in QApplication.topLevelWidgets():
+        if isValid(widget):
+            widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    gc.collect()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 @pytest.fixture
@@ -446,98 +369,12 @@ def window(app, qtbot, monkeypatch, tmp_path):
 
     monkeypatch.setattr(win, "isVisible", lambda *a, **k: True, raising=False)
 
-    try:
-        yield win
-    finally:
-        # Clean teardown: stop threads, close window and process events to avoid COM/RPC stale objects
-        try:
-            # Forcefully prevent "unsaved changes" dialogs
-            try:
-                win.has_unsaved_changes = False
-            except Exception:
-                import traceback
+    yield win
 
-                traceback.print_exc()
-
-            # Override closeEvent to avoid any blocking logic
-            try:
-                win.closeEvent = lambda event: event.accept()
-            except Exception:
-                import traceback
-
-                traceback.print_exc()
-
-            # Stop any active threads explicitly before closing
-            active_threads = list(getattr(win, "_active_calc_threads", []) or [])
-            for thr in active_threads:
-                try:
-                    if hasattr(thr, "isRunning") and thr.isRunning():
-                        thr.quit()
-                        thr.wait(100)
-                except Exception:
-                    import traceback
-
-                    traceback.print_exc()
-
-            # Aggressive auto-close: ensure all top-level widgets are closed
-            # to satisfy "auto close window" request and prevent COM hangs.
-            # In headless mode, we must detach event filters or use event.accept()
-            # to avoid infinite recursion (CloseEvent -> close() -> CloseEvent).
-            for widget in QApplication.topLevelWidgets():
-                try:
-                    # 1. Detach UIManager filter from host to prevent handle_close_event recursion
-                    if hasattr(win, "ui_manager") and widget == win:
-                        try:
-                            widget.removeEventFilter(win.ui_manager)
-                        except Exception:
-                            pass
-
-                    # 2. Override closeEvent to simply accept (Solution 1)
-                    # This ensures that calling widget.close() below terminates safely.
-                    try:
-                        widget.closeEvent = lambda event: event.accept()
-                    except Exception:
-                        pass
-
-                    widget.close()
-                    try:
-                        widget.deleteLater()
-                    except Exception:
-                        import traceback
-
-                        traceback.print_exc()
-                except Exception:
-                    import traceback
-
-                    traceback.print_exc()
-
-            QApplication.closeAllWindows()
-
-            # Thoroughly process events to clear any pending COM calls or slots
-            # Use a small number of iterations with short sleep if needed,
-            # but here we just processEvents multiple times.
-            for _ in range(10):
-                app.processEvents()
-
-        except Exception:
-            import traceback
-
-            traceback.print_exc()
-
-        # Attempt to de-initialize colorama if it's wrapping stdout/stderr
-        # which can cause 0x80010012/0x80010108 fatal exceptions on Windows teardown
-        try:
-            import colorama
-
-            colorama.deinit()
-        except ImportError:
-            pass
-        except Exception:
-            import traceback
-
-            traceback.print_exc()
-
-        # Force garbage collection to clean up potential circular references or lingering Qt objects
-        import gc
-
-        gc.collect()
+    # Only this fixture's window belongs here. Deleting unrelated top-level
+    # dialogs can race their timers and invalidate another fixture's wrappers.
+    win.removeEventFilter(win.ui_manager)
+    win.closeEvent = lambda event: event.accept()
+    win.close()
+    win.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

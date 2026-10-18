@@ -6,27 +6,27 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
-### Changed
-- Migrate the application, plugin examples and test/build tooling from PyQt6 to PySide6-Essentials, with GUI-thread delivery of calculation results.
-- License the core under LGPL-3.0-or-later and explicitly permit independently developed plugins under any license; preserve existing plugin licenses.
-- Keep replaceable Qt shared libraries and ship license notices, source/build manifests and replacement instructions with frozen bundles.
-
-### Removed
-- Remove Open Babel dependencies, bundled libraries, conversion fallback and built-in force fields from the core; Fallback now tries RDKit then Direct mode.
-
-
 ---
 
 ## [5.0.0a1] - 2026-10-18
 
 ### Changed
+- Migrate the application, plugin examples and test/build tooling from PyQt6 to PySide6-Essentials, with GUI-thread delivery of calculation results.
+- License the core under LGPL-3.0-or-later and explicitly permit independently developed plugins under any license; preserve existing plugin licenses.
+- Keep replaceable Qt shared libraries and ship license notices, source/build manifests and replacement instructions with frozen bundles.
+- Use the same `MoleditPy` package on Windows, macOS and Linux, with Python 3.9–3.14 support. Python 3.9 uses Qt 6.9; newer interpreters use Qt 6.10–6.12.
+- When upgrading an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before installing MoleditPy 5.
 
-- The main `MoleditPy` package requires Python 3.10–3.14 and uses the official `openbabel >= 3.2.1, < 3.3` wheels instead of the deprecated `openbabel-wheel`. The same package now supports Windows, macOS, and Linux; the separate `MoleditPy-linux` source tree and publishing pipeline have been retired.
-- When upgrading an existing main-package environment, uninstall `moleditpy-linux` and `openbabel-wheel` before installing MoleditPy 5 to avoid overlapping `openbabel` files from the two distributions.
+### Removed
+- Remove Open Babel dependencies, bundled libraries, conversion fallback and built-in force fields from the core; Fallback now tries RDKit then Direct mode.
+- Retire the separate `MoleditPy-linux` source tree and its build and publishing workflows.
 
 ### Fixed
 
-- Preserve Open Babel’s bundled plugin directory and locate its Windows force-field parameter files correctly. Load its native libraries only in child processes, with RDKit loaded first, so they cannot conflict with the GUI's Qt/VTK libraries. Both 3D conversion and force-field optimization use this isolation, including frozen Windows/macOS builds. Cancellation terminates the optimization child without changing the original coordinates, and native failures are reported through the worker's normal fallback/error handling.
+- Deliver calculation callbacks on the GUI thread and retain worker threads until they finish.
+- Destroy test widgets and deliver deferred deletions before Python shutdown, avoiding native Qt destruction after event filters have been released.
+- Cancel deferred startup and import redraws when their window is destroyed, and give submenu widgets explicit native parents.
+- Preserve Python 3.9 compatibility in molecular geometry and drawing operations by avoiding Python 3.10-only `zip` arguments.
 
 ---
 

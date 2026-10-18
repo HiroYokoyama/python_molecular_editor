@@ -18,13 +18,14 @@ description = "A cross-platform, simple, and intuitive molecular structure edito
 
 readme = "README.md"
 
-requires-python = ">=3.10, <3.15"
+requires-python = ">=3.9, <3.15"
 
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Chemistry",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -34,7 +35,8 @@ classifiers = [
 
 dependencies = [
   "numpy",
-  "pyside6-essentials >= 6.10, < 6.13",
+  "pyside6-essentials >= 6.9, < 6.10; python_version < '3.10'",
+  "pyside6-essentials >= 6.10, < 6.13; python_version >= '3.10'",
   "pyvista < 0.50",
   "pyvistaqt < 0.14",
   "rdkit < 2026.4"

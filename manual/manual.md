@@ -59,7 +59,7 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
 
 ## 2\. Installation and Launch
 
-MoleditPy 5 requires Python 3.10–3.14 and uses the same `moleditpy` package on Windows, macOS, and Linux, using PySide6-Essentials for the GUI. The core no longer requires Open Babel. When upgrading, first remove the old distributions with `python -m pip uninstall moleditpy-linux openbabel-wheel`, then run `python -m pip install --upgrade moleditpy`. The installer helper creates shortcuts and file associations; it does not bundle the application.
+MoleditPy 5 requires Python 3.9–3.14 and uses the same `moleditpy` package on Windows, macOS, and Linux, using PySide6-Essentials for the GUI. The core no longer requires Open Babel. When upgrading, first remove the old distributions with `python -m pip uninstall moleditpy-linux openbabel-wheel`, then run `python -m pip install --upgrade moleditpy`. The installer helper creates shortcuts and file associations; it does not bundle the application.
 
 
 

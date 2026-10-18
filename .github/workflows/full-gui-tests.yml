@@ -106,7 +106,7 @@ jobs:
 
   # Does the GUI come up on every supported interpreter? A hang or crash here
   # is red — that is the whole point of the probe.
-  # The unified package supports Python 3.10–3.14 on all three platforms.
+  # The unified package supports Python 3.9–3.14 on all three platforms.
   # Windows OpenGL remains optional; Linux and macOS require the probe to pass.
   launch-probe:
     name: launch-probe / ${{ matrix.os }} / py${{ matrix.python-version }}
@@ -115,7 +115,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v6

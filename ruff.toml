@@ -6,9 +6,9 @@
 
 # Must be set explicitly. Without it ruff reports
 # `linter.unresolved_target_version = none` and falls back to its own default
-# instead of the package's requires-python (">=3.10, <3.15"), which silently
+# instead of the package's requires-python (">=3.9, <3.15"), which silently
 # changes which pyupgrade-style rules apply.
-target-version = "py310"
+target-version = "py39"
 
 # Left at ruff's default (88) on purpose: `ruff format` is already part of the
 # documented workflow (CLAUDE.md) and all 69 source files are formatted at 88.

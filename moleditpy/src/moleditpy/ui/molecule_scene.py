@@ -179,7 +179,7 @@ class MoleculeScene(
                 bond_item.ring_center = None
 
         # 6. Apply ring information
-        for a_ring, b_ring in zip(atom_rings, bond_rings, strict=False):
+        for a_ring, b_ring in zip(atom_rings, bond_rings):
             ring_size = len(a_ring)
             # Calculate ring center (geometric mean of atom positions)
             positions = []

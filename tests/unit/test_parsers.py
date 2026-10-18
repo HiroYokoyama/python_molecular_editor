@@ -10,6 +10,13 @@ from PySide6.QtCore import QPointF, QTimer
 from PySide6.QtWidgets import QApplication, QDialog
 from unittest.mock import MagicMock, patch
 
+
+@pytest.fixture(autouse=True)
+def _defer_ui_timers(monkeypatch):
+    """These parser hosts are mocks; native timer delivery is tested separately."""
+    monkeypatch.setattr("moleditpy.ui.io_logic.QTimer.singleShot", MagicMock())
+
+
 # ---------------------------------------------------------------------------
 # Module-level patching so dialog calls don't block in headless tests.
 # ---------------------------------------------------------------------------

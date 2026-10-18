@@ -85,7 +85,7 @@ The `--pylint` flag on `run_all_tests.py` runs pylint automatically after all te
 
 ## Scope
 
-Application source lives in `moleditpy/`, the single package for Windows, macOS, and Linux. MoleditPy 5 requires Python 3.10–3.14 and PySide6-Essentials. Open Babel is not a core dependency. There is no separate Linux source tree or synchronization step.
+Application source lives in `moleditpy/`, the single package for Windows, macOS, and Linux. MoleditPy 5 requires Python 3.9–3.14 and PySide6-Essentials. Open Babel is not a core dependency. There is no separate Linux source tree or synchronization step.
 
 ## Code Quality Standards
 

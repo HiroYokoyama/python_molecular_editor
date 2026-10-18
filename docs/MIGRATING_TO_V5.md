@@ -1,6 +1,6 @@
 # Migrating to MoleditPy 5
 
-MoleditPy 5.0.0a1 uses one `moleditpy` package on Windows, macOS and Linux, Python 3.10–3.14, PySide6-Essentials, RDKit and PyVista. The core does not install, import or bundle Open Babel. The separate Linux distribution and its build/publish pipeline have been removed.
+MoleditPy 5.0.0a1 uses one `moleditpy` package on Windows, macOS and Linux, Python 3.9–3.14, PySide6-Essentials, RDKit and PyVista. The core does not install, import or bundle Open Babel. The separate Linux distribution and its build/publish pipeline have been removed.
 
 ```sh
 python -m pip uninstall moleditpy-linux openbabel-wheel

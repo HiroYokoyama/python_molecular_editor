@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17268532.svg)](https://doi.org/10.5281/zenodo.17268532)
 [![PyPI version](https://badge.fury.io/py/MoleditPy.svg)](https://badge.fury.io/py/MoleditPy)
-[![Python Versions](https://img.shields.io/badge/python-3.10--3.14-blue.svg)](https://pypi.org/project/MoleditPy/)
+[![Python Versions](https://img.shields.io/badge/python-3.9--3.14-blue.svg)](https://pypi.org/project/MoleditPy/)
 [![License: LGPL v3+](https://img.shields.io/badge/License-LGPLv3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Build Status](https://github.com/HiroYokoyama/python_molecular_editor/actions/workflows/tests.yml/badge.svg)](https://github.com/HiroYokoyama/python_molecular_editor/actions)
 [![codecov](https://codecov.io/gh/HiroYokoyama/python_molecular_editor/graph/badge.svg)](https://codecov.io/gh/HiroYokoyama/python_molecular_editor)
@@ -31,7 +31,7 @@ pip install moleditpy-installer
 python -m moleditpy_installer
 ```
 
-The first command installs the same `moleditpy` package on Windows, macOS, and Linux; the second creates an application shortcut. MoleditPy 5 requires Python 3.10–3.14. For an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before upgrading. The core uses PySide6-Essentials and does not require Open Babel. Start the app from the shortcut or with:
+The first command installs the same `moleditpy` package on Windows, macOS, and Linux; the second creates an application shortcut. MoleditPy 5 requires Python 3.9–3.14. For an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before upgrading. The core uses PySide6-Essentials and does not require Open Babel. Start the app from the shortcut or with:
 
 ```bash
 moleditpy

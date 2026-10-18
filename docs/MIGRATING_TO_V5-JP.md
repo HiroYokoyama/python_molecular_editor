@@ -1,6 +1,6 @@
 # MoleditPy 5 への移行
 
-MoleditPy 5.0.0a1 は Windows・macOS・Linux で共通の `moleditpy` パッケージを使用します。Python 3.10–3.14、PySide6-Essentials、RDKit、PyVista が必要です。コアは Open Babel をインストール・読み込み・バンドルしません。個別の Linux パッケージとビルド・公開処理は廃止しました。
+MoleditPy 5.0.0a1 は Windows・macOS・Linux で共通の `moleditpy` パッケージを使用します。Python 3.9–3.14、PySide6-Essentials、RDKit、PyVista が必要です。コアは Open Babel をインストール・読み込み・バンドルしません。個別の Linux パッケージとビルド・公開処理は廃止しました。
 
 ```sh
 python -m pip uninstall moleditpy-linux openbabel-wheel

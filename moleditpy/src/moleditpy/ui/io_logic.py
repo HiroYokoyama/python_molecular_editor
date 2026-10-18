@@ -845,9 +845,9 @@ class IOManager:
             self.host.statusBar().showMessage(f"PME Project loaded from {file_path}")
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(50, self._plotter_view_isometric)
-            QTimer.singleShot(100, self._plotter_render)
-            QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
+            QTimer.singleShot(50, self.host, self._plotter_view_isometric)
+            QTimer.singleShot(100, self.host, self._plotter_render)
+            QTimer.singleShot(100, self.host, self.host.view_3d_manager.fit_to_view)
 
         except FileNotFoundError:
             self._report_load_error(
@@ -1012,7 +1012,7 @@ class IOManager:
             self.host.statusBar().showMessage(f"Successfully imported {file_path}")
             self.host.init_manager.scene.update_all_items()
             self.host.edit_actions_manager.push_undo_state()
-            QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
+            QTimer.singleShot(100, self.host, self.host.view_3d_manager.fit_to_view)
         except SdfSelectionCancelled:
             self.host.statusBar().showMessage("Import cancelled.")
         except (
@@ -1092,8 +1092,8 @@ class IOManager:
             self.host.view_3d_manager.draw_molecule_3d(mol)
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(50, self._plotter_view_isometric)
-            QTimer.singleShot(100, self._plotter_render)
+            QTimer.singleShot(50, self.host, self._plotter_view_isometric)
+            QTimer.singleShot(100, self.host, self._plotter_render)
 
             self.host.ui_manager.enter_3d_viewer_mode()
 
@@ -1154,8 +1154,8 @@ class IOManager:
             self.host.view_3d_manager.draw_molecule_3d(mol)
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(50, self._plotter_view_isometric)
-            QTimer.singleShot(100, self._plotter_render)
+            QTimer.singleShot(50, self.host, self._plotter_view_isometric)
+            QTimer.singleShot(100, self.host, self._plotter_render)
 
             self.host.ui_manager.enter_3d_viewer_mode()
             self.host.ui_manager.enable_3d_features(True)
@@ -1322,8 +1322,8 @@ class IOManager:
             self.host.statusBar().showMessage(f"Project loaded from {file_path}")
 
             # Reset camera/zoom after drawing
-            QTimer.singleShot(50, self._plotter_view_isometric)
-            QTimer.singleShot(100, self._plotter_render)
+            QTimer.singleShot(50, self.host, self._plotter_view_isometric)
+            QTimer.singleShot(100, self.host, self._plotter_render)
 
         except FileNotFoundError:
             self._report_load_error(

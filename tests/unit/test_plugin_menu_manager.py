@@ -7,6 +7,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMenu
 
 from moleditpy.ui.plugin_menu_manager import PluginMenuManager
+from moleditpy.ui.menu_utils import add_menu
 
 
 # ---------------------------------------------------------------------------
@@ -33,6 +34,15 @@ def _patch_qaction(monkeypatch, app):
         return _RealQAction(text, holder)
 
     monkeypatch.setattr("moleditpy.ui.plugin_menu_manager.QAction", _safe_qaction)
+    from PySide6.QtWidgets import QMenuBar
+    from moleditpy.ui.menu_utils import add_menu
+
+    def _safe_add_menu(parent, title):
+        if isinstance(parent, (QMenu, QMenuBar)):
+            return add_menu(parent, title)
+        return parent.addMenu(title)
+
+    monkeypatch.setattr("moleditpy.ui.plugin_menu_manager.add_menu", _safe_add_menu)
     yield
     holder.deleteLater()
 
@@ -707,7 +717,7 @@ def _menubar_with_tools(im, app):
     from PySide6.QtWidgets import QMenuBar
 
     bar = QMenuBar()
-    tools = bar.addMenu("Tools")
+    tools = add_menu(bar, "Tools")
     tools.addAction("Native A")
     tools.addAction("Native B")
     im.host.menuBar = MagicMock(return_value=bar)
@@ -800,12 +810,12 @@ def _menubar_with_plugin_top_level(im):
     from PySide6.QtWidgets import QMenuBar
 
     bar = QMenuBar()
-    bar.addMenu("Tools").addAction("Native A")
+    add_menu(bar, "Tools").addAction("Native A")
 
     sep = bar.addSeparator()
     sep.setData(TAG)
 
-    plugin_top = bar.addMenu("MyPlugin")
+    plugin_top = add_menu(bar, "MyPlugin")
     plugin_top.menuAction().setData(TAG)
     entry = plugin_top.addAction("Gone")
     entry.setData(TAG)
@@ -844,7 +854,7 @@ class TestClearPluginMenubarEntries:
         from PySide6.QtWidgets import QMenuBar
 
         bar = QMenuBar()
-        bar.addMenu("Empty Native")
+        add_menu(bar, "Empty Native")
         im.host.menuBar = MagicMock(return_value=bar)
 
         pmm._clear_all_plugin_actions()
@@ -871,7 +881,7 @@ def _menubar_with_plugin_menu(im):
     from PySide6.QtWidgets import QMenuBar
 
     bar = QMenuBar()
-    plugin_menu = bar.addMenu("&Plugin")
+    plugin_menu = add_menu(bar, "&Plugin")
     im.host.menuBar = MagicMock(return_value=bar)
     im.plugin_menu = plugin_menu
     return bar, plugin_menu
@@ -1086,7 +1096,7 @@ class TestHeaderPin:
         from PySide6.QtWidgets import QMenuBar
 
         bar = QMenuBar()
-        tools = bar.addMenu("Tools")
+        tools = add_menu(bar, "Tools")
         tools.addAction("Native A")
         im.host.menuBar = MagicMock(return_value=bar)
         del im.plugin_menu
@@ -1137,7 +1147,7 @@ class TestCleanupDoesNotStrandObjects:
     def test_native_submenu_survives_cleanup(self, im, pmm, app):
         """An empty native submenu is neither removed nor destroyed."""
         _bar, tools = _menubar_with_tools(im, app)
-        native_sub = tools.addMenu("Native Sub")
+        native_sub = add_menu(tools, "Native Sub")
 
         pmm._clear_all_plugin_actions()
         _drain_deferred_deletes(app)

@@ -9,6 +9,12 @@ from PySide6.QtCore import QPointF
 from unittest.mock import MagicMock, patch
 
 
+@pytest.fixture(autouse=True)
+def _defer_ui_timers(monkeypatch):
+    """These parser hosts are mocks; native timer delivery is tested separately."""
+    monkeypatch.setattr("moleditpy.ui.io_logic.QTimer.singleShot", MagicMock())
+
+
 # ---------------------------------------------------------------------------
 # DummyProjectIo — uses an external host from conftest (mock_parser_host)
 # ---------------------------------------------------------------------------

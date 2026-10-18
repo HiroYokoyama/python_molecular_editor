@@ -201,7 +201,7 @@ class PlanarizeDialog(BasePickingDialog):
 
             # Update molecular coordinates
             positions = self.mol.GetConformer().GetPositions()
-            for i, new_pos in zip(selected_indices, new_positions, strict=False):
+            for i, new_pos in zip(selected_indices, new_positions):
                 positions[int(i)] = new_pos
 
             # Write updated positions back using inherited helper

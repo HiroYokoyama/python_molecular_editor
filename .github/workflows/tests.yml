@@ -19,8 +19,11 @@ jobs:
       QT_API: pyside6
       PYTHONFAULTHANDLER: "1"
     strategy:
+      fail-fast: false
       matrix:
         include:
+          - os: ubuntu-latest
+            python-version: "3.9"
           - os: ubuntu-latest
             python-version: "3.10"
           - os: ubuntu-latest
@@ -32,6 +35,8 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.14"
           - os: windows-latest
+            python-version: "3.9"
+          - os: windows-latest
             python-version: "3.13"
             # Exactly one matrix entry measures and uploads coverage, so the
             # other nine are not slowed down and Codecov gets a single report
@@ -40,6 +45,8 @@ jobs:
             coverage: true
           - os: windows-latest
             python-version: "3.14"
+          - os: macos-latest
+            python-version: "3.9"
           - os: macos-latest
             python-version: "3.13"
           - os: macos-latest
