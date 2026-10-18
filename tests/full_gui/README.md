@@ -43,7 +43,7 @@ whole tier **skips** with the reason attached, because a missing GPU is an
 environment fact, not a defect in the application.
 
 Set `MOLEDITPY_FULL_GUI_REQUIRED=1` to turn that skip into a failure. CI's
-Linux job sets it, so a broken runner image is reported instead of quietly
+Linux rendering jobs and Linux/macOS launch-probe jobs set it, so a broken runner image is reported instead of quietly
 disabling every test in this directory.
 
 ## Environment variables

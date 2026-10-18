@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MoleditPy is a Python-based molecular editor (v4.x — see moleditpy/pyproject.toml for the current version) built with PySide6, RDKit, and PyVista. It provides 2D editing + 3D visualization of molecules with a plugin system.
+MoleditPy is a Python-based molecular editor (v5.x — see moleditpy/pyproject.toml for the current version) built with PySide6, RDKit, and PyVista. It provides 2D editing + 3D visualization of molecules with a plugin system.
 
 ## Development Setup
 
@@ -20,7 +20,7 @@ pip install pytest pytest-qt pytest-cov pytest-timeout
 
 ## Running Tests
 
-Run the full test suite (mirrors CI):
+Run the core CI unit/integration suites:
 ```bash
 MOLEDITPY_HEADLESS=1 QT_QPA_PLATFORM=offscreen python tests/run_all_tests.py --no-cov --no-report --unit --integration
 ```

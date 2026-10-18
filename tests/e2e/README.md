@@ -1,83 +1,26 @@
-# E2E Tests
+# E2E tests
 
-This directory contains end-to-end tests that confirm real application behaviour
-across all supported platforms (Windows, Linux, macOS).
+These tests exercise the unified `moleditpy` package on Windows, Linux, and
+macOS, including RDKit conversion, molecule geometry and application workflows.
+They use real RDKit chemistry and real PySide6 widgets where a window is needed.
+VTK/PyVista are mocked by `conftest.py`, so this tier runs headlessly without
+an OpenGL context. It does not test an Open Babel backend.
 
-## Purpose
+For real native rendering and the background calculation thread, use the
+separate [full-GUI tier](../full_gui/README.md).
 
-E2E tests exercise the full conversion pipeline — from drawing a molecule in 2D
-to producing a valid optimised 3D structure — using **zero mocks**.
-They run completely headlessly (no display, no Qt window) and are fast enough
-to include in every CI run on every OS.
+## Package selection
 
-Unlike the integration tests in `tests/integration/`, which focus on individual
-component contracts (worker signal protocols, geometry validation), e2e tests
-focus on **real package behaviour under the actual OS conditions** the user
-experiences:
-
-| Concern | Integration tests | E2E tests |
-|---|---|---|
-| RDKit geometry accuracy | ✓ (bond lengths, dihedrals) | — |
-| Correct package imported per OS | — | ✓ |
-| All conversion modes smoke-tested | — | ✓ |
-| Open Babel path (all platforms) | — | ✓ |
-| Headless, no VTK/PyVista mocking | — | ✓ |
-
-## Package Selection
-
-All platforms use `moleditpy/src/moleditpy/`. Set `MOLEDITPY_USE_INSTALLED=1` to test the installed package instead of local source.
+The default uses `moleditpy/src/moleditpy/` on every platform. Set
+`MOLEDITPY_USE_INSTALLED=1` to validate a pip-installed package instead of the
+local source. There is no separate Linux import namespace.
 
 ## Running
 
-```bash
-# E2E suite only
+```sh
 python tests/run_all_tests.py --e2e
-
-# Or directly with pytest
 python -m pytest tests/e2e/ -v
-
-# As part of the full suite
-python tests/run_all_tests.py --unit --integration --e2e
 ```
 
-No environment variables are required — the conftest sets
-`QT_QPA_PLATFORM=offscreen` automatically.
-
-## Test Descriptions
-
-### `test_ethane_conversion.py`
-
-Ethane (2 C, 1 bond) is the minimal molecule that exercises the full
-2D → MOL-block → 3D embedding → optimisation pipeline.
-
-| Test | What it checks |
-|---|---|
-| `test_ethane_2d_structure` | `MolecularData` builds 2 atoms and 1 bond correctly |
-| `test_ethane_molblock_roundtrip` | MOL-block produced by `MolecularData.to_mol_block()` is parseable by RDKit |
-| `test_ethane_conversion_rdkit` | `CalculationWorker` with `rdkit` mode returns a valid 3D mol |
-| `test_ethane_conversion_direct` | `direct` mode returns a valid 3D mol |
-| `test_ethane_conversion_fallback` | `fallback` mode (RDKit → Direct chain) returns a valid 3D mol |
-| `test_main_package_is_active` | `moleditpy` is the active import on every platform |
-
-**Geometry assertion:** every conversion test checks that the 3D mol has exactly
-2 carbon atoms and a C–C bond length in the chemically reasonable range
-`[1.3, 1.7] Å`.
-
-## Requirements
-
-- **RDKit** — 3D embedding and geometry validation
-- **PySide6** — `QApplication` instance required by `CalculationWorker` signals
-- **pytest-qt** — `qtbot` fixture (used to satisfy the `app` fixture dependency)
-  the test is automatically skipped when absent
-
-## Workflow Test Files (added 2026-07)
-
-| File | Covers |
-|---|---|
-| `test_project_roundtrip.py` | .pmeprj / .pmeraw save→clear→load round-trips, Save-As extension, unsaved-changes prompt |
-| `test_export_files.py` | 2D MOL, 3D MOL, XYZ export — extension appending + RDKit re-parse validation |
-| `test_import_workflows.py` | SMILES / MOL-file / XYZ import, invalid-input safety, 3D viewer mode switch |
-| `test_undo_redo_workflow.py` | draw→undo→redo cycles, bond-data restoration, undo history depth cap |
-| `test_plugin_workflow.py` | real PluginManager install/discover (.py and single-file ZIP), plugin state persistence through project save/load |
-| `test_ethane_gui.py` | real `MainWindow` launched headless (VTK/PyVista mocked): draws ethane in the 2D scene, clicks Convert 2D→3D, asserts the resulting 3D mol via real RDKit embedding + MMFF |
-| `test_corrupt_files.py` | Corrupted/malformed file handling (empty, binary garbage, malformed MOL/XYZ/.pmeraw) ensuring errors are handled cleanly without unhandled crashes |
+Use `QT_QPA_PLATFORM=offscreen` for headless execution and
+`PYTEST_QT_API=pyside6` when multiple Qt bindings are installed.

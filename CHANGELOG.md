@@ -6,6 +6,14 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Documentation
+
+- Correct alpha installation commands, helper/plugin publication status, standalone asset links, PySide6/LGPL website labels, and CI/rendering descriptions. Keep English/Japanese manuals and wiki guidance consistent.
+
+### Tests
+
+- Restore the PyQt6 entry in the core layer's forbidden-Qt-import guard after the binding migration duplicated PySide6.
+
 ---
 
 ## [5.0.0a1] - 2026-10-18

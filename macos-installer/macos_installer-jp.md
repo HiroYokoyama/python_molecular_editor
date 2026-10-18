@@ -9,17 +9,19 @@ MoleditPyは、Pythonで構築された、クロスプラットフォームで�
 
 ## このバージョンについて
 
-このアプリケーションバンドルは全 OS 共通の `moleditpy` パッケージから作成され、公式 Open Babel wheel を含みます。
+このアプリケーションバンドルは全 OS 共通の `moleditpy` パッケージから作成され、PySide6-Essentials を使用します。Open Babel は同梱しません。
 本バンドルは**Apple Silicon（arm64）専用**で、Appleによる公証（notarization）は受けておらず、アドホック署名のみが施されています。Intel Macをお使いの場合、またはすべての機能を利用したい場合は、代わりに`pip`でインストールしてください（[Installation for macOS](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-macOS)を参照）。
 
 注意: 本パッケージには`pip`が含まれていないため、外部依存関係（追加パッケージ）を必要とするプラグインは実行できません。さらに、本バンドルは**ターミナルウィンドウを伴わずに起動する**ため、コンソール出力はログファイルからのみ確認できます。詳しくは下記の[制限事項](#制限事項)をご覧ください。
+
+このダウンロードは 5.0.0a1 の alpha プレリリース版です。
 
 ## ダウンロード
 
 以下のリンクからアプリバンドルをダウンロードしてください。
 クリックするとダウンロードが開始されます。
 
-[MoleditPy for macOS (Apple Silicon) をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.13.0/MoleditPy_4.13.0_macos_arm64.zip)
+[MoleditPy for macOS (Apple Silicon) をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v5.0.0a1/MoleditPy_5.0.0a1_macos_arm64.zip)
 
 ## インストール手順
 

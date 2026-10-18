@@ -43,7 +43,7 @@ MoleditPy は、Python で開発された分子編集ソフトウェアです。
 **主な機能:**
 
   * **2D 分子編集:** 原子や結合の追加・削除・変更、テンプレートを用いた構造作成。ユーザーが指定した構造を保存・利用できるユーザーテンプレートにも対応しています。
-  * **3D 構造生成:** RDKit または Direct モードを利用した 2D 構造からの 3D 座標生成および構造最適化。
+  * **3D 構造生成:** RDKit または Direct モードで 3D 座標を生成し、RDKit または別途導入した最適化プラグインで構造を最適化します。
   * **3D 分子表示:** Ball & Stick, CPK (空間充填), Wireframe, Stick など、複数のスタイルでの 3D 分子表示。
   * **ファイル操作:** 独自形式 (.pmeprj) でのプロジェクト保存・読み込み、標準的な化学ファイル形式 (MOL, SDF, XYZ) や SMILES, InChI 文字列のインポート・エクスポートに対応。エクスポートされたファイルは、DFT計算へ使用することができます。画像 (PNG) や 3D印刷用の3D モデル (STL, OBJ) としてのエクスポートも可能。
   * **分子分析:** SMILES, InChI, 分子式, 分子量, LogP, TPSA などの基本的な分子特性を表示。
@@ -60,14 +60,16 @@ MoleditPy は、Python で開発された分子編集ソフトウェアです。
 
 ## 2\. インストールと起動
 
-MoleditPy 5 は Python 3.9–3.14 に対応し、Windows・macOS・Linux のすべてで同じ `moleditpy` パッケージを使用し、GUI には PySide6-Essentials を使用します。コアは Open Babel を必要としません。更新時は、先に `python -m pip uninstall moleditpy-linux openbabel-wheel` で旧パッケージを削除し、`python -m pip install --upgrade moleditpy` を実行してください。インストーラーヘルパーはショートカットとファイルの関連付けを作成するもので、アプリケーションをバンドルするものではありません。
+MoleditPy 5 は Python 3.9–3.14 に対応し、Windows・macOS・Linux のすべてで同じ `moleditpy` パッケージを使用し、GUI には PySide6-Essentials を使用します。コアは Open Babel を必要としません。更新時は、先に `python -m pip uninstall moleditpy-linux openbabel-wheel` で旧パッケージを削除し、`python -m pip install MoleditPy==5.0.0a1` を実行してください。インストーラーヘルパーはショートカットとファイルの関連付けを作成するもので、アプリケーションをバンドルするものではありません。
 
 
-1.  **パッケージのインストール**
+alpha 版の本体は `python -m pip install MoleditPy==5.0.0a1` で直接導入できます。以下は追加でショートカットが必要な場合の手順です。MoleditPy 5 対応ヘルパーは未公開のため、移行ブランチを明示してインストールします。
+
+1.  **ショートカット用ヘルパーのインストール**
     このコマンドを実行すると、全 OS 共通の `moleditpy` 本体が依存パッケージとしてインストールされます。
 
     ```bash
-    pip install moleditpy-installer
+    python -m pip install "moleditpy-installer @ git+https://github.com/HiroYokoyama/python_molecular_editor_installer.git@migrate/unified-moleditpy-5#subdirectory=moleditpy-installer"
     ```
 
 2.  **ショートカットの作成**

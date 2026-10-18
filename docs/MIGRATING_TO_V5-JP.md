@@ -13,4 +13,6 @@ Fallback は RDKit の後に Direct を試します。Direct は描画した座�
 
 プラグインは PySide6 の `Signal`・`Slot`・`Property` と Shiboken6 の有効性確認へ移行してください。ワーカースレッドから UI を更新する場合は GUI スレッドに属する QObject と型付きスロットを使用します。
 
-コアは LGPL-3.0-or-later です。独立したプラグインは任意のライセンスを選択でき、既存プラグインのライセンスは変更しません。詳細は [LICENSING.md](../LICENSING.md) と [DISTRIBUTION.md](../DISTRIBUTION.md) を参照してください。このブランチはリリースや PyPI 公開を行いません。
+コアは LGPL-3.0-or-later です。独立したプラグインは任意のライセンスを選択でき、既存プラグインのライセンスは変更しません。詳細は [LICENSING.md](../LICENSING.md) と [DISTRIBUTION.md](../DISTRIBUTION.md) を参照してください。5.0.0a1 は移行ブランチから GitHub と PyPI に alpha 版として公開済みです。旧 Linux 配布の既存ダウンロードは引き続き利用できます。ショートカット用ヘルパーと移行済みプラグインの各 PR は未マージで、各パッケージの新バージョンは未公開です。
+
+本体は起動プロセス内で `QT_API=pyside6` を指定し、OS 全体の環境変数は変更しません。

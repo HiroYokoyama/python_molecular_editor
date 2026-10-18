@@ -90,8 +90,8 @@ least:
 *   Real `MainWindow`, shown; real PyVista/VTK widget embedded; real `CalculationWorker` thread. Draws benzene, converts it to 3D, checks the geometry, and round-trips the session through `.pmeprj`.
 *   **Not** part of a no-flag `run_all_tests.py` run — it needs a display and an OpenGL context. Opt in with `--full-gui`, and on Linux run it under `xvfb-run`.
 *   **CI coverage:**
-    *   Full 36-test suite gates on Linux (Python 3.11, 3.13) via `xvfb-run` + llvmpipe.
-    *   Launch probe (`test_full_launch.py`) runs on **Linux, macOS and Windows** across **Python 3.10 – 3.14**. Only Linux gates: macOS runs the subprocess-isolated test alone, and the Windows runner has no usable OpenGL, so it reports skips.
+    *   Full rendering suites run on Linux (Python 3.11, 3.13) via `xvfb-run` + llvmpipe and Windows (Python 3.13). Linux requires a render context; Windows may skip if OpenGL is unavailable.
+    *   Launch probe (`test_full_launch.py`) runs on **Linux, macOS and Windows** across **Python 3.9 – 3.14**. Linux and macOS require a passing probe; macOS runs the subprocess-isolated test alone. Windows may skip when OpenGL is unavailable.
 *   [**Read More**](full_gui/README.md)
 
 ## Test Reports & Catalogs

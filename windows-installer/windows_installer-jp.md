@@ -9,19 +9,21 @@ MoleditPyは、Pythonで構築された、クロスプラットフォームで�
 
 ## このバージョンについて
 
-このアプリケーションバンドルは全 OS 共通の `moleditpy` パッケージから作成され、公式 Open Babel wheel を含みます。
+このアプリケーションバンドルは全 OS 共通の `moleditpy` パッケージから作成され、PySide6-Essentials を使用します。Open Babel は同梱しません。
 注意: 本パッケージには`pip`が含まれていないため、外部依存関係（追加パッケージ）を必要とするプラグインは実行できません。
+
+このダウンロードは 5.0.0a1 の alpha プレリリース版です。
 
 ## ダウンロード
 
 以下のリンクからインストーラーをダウンロードしてください。
 クリックするとダウンロードが開始されます。
 
-[MoleditPy Windows Installer をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.13.0/MoleditPy_4.13.0_win64_setup.exe)
+[MoleditPy Windows Installer をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v5.0.0a1/MoleditPy_5.0.0a1_win64_setup.exe)
 
 ポータブル版もご利用いただけます：
 
-[MoleditPy Windows Portable をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.13.0/MoleditPy_4.13.0_win64_portable.zip)
+[MoleditPy Windows Portable をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v5.0.0a1/MoleditPy_5.0.0a1_win64_portable.zip)
 
 ## インストール手順
 

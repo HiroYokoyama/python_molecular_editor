@@ -27,11 +27,11 @@ See the [user manual](https://hiroyokoyama.github.io/python_molecular_editor/man
 ## Installation
 
 ```bash
-pip install moleditpy-installer
-python -m moleditpy_installer
+python -m pip install MoleditPy==5.0.0a1
+moleditpy
 ```
 
-The first command installs the same `moleditpy` package on Windows, macOS, and Linux; the second creates an application shortcut. MoleditPy 5 requires Python 3.9–3.14. For an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before upgrading. The core uses PySide6-Essentials and does not require Open Babel. Start the app from the shortcut or with:
+The first command installs the published alpha directly; the second launches it. The same `moleditpy` package is used on Windows, macOS, and Linux. MoleditPy 5 requires Python 3.9–3.14. For an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before upgrading. The core uses PySide6-Essentials and does not require Open Babel. Start the app from the shortcut or with:
 
 ```bash
 moleditpy
@@ -40,6 +40,15 @@ moleditpy
 The first launch can take a while as RDKit and the other libraries initialize. A [Windows installer](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer), a [macOS app bundle](https://hiroyokoyama.github.io/python_molecular_editor/macos-installer/macos_installer), and a [Docker image](https://github.com/HiroYokoyama/python_molecular_editor_docker) are also available.
 
 > **Security note:** the legacy `.pmeraw` project format uses Python pickle, which can execute arbitrary code when loaded. Only open `.pmeraw` files you created yourself, and use the JSON-based `.pmeprj` format for sharing.
+
+The MoleditPy 5 shortcut helper is available on its migration branch and has not been released to PyPI yet. To create shortcuts and file associations, install it explicitly (requires Git):
+
+```bash
+python -m pip install "moleditpy-installer @ git+https://github.com/HiroYokoyama/python_molecular_editor_installer.git@migrate/unified-moleditpy-5#subdirectory=moleditpy-installer"
+python -m moleditpy_installer
+```
+
+GUI plugins also need their PySide6 migration versions; existing published plugin assets may still target MoleditPy 4. See the [migration guide](https://github.com/HiroYokoyama/python_molecular_editor/blob/migrate/pyside6-without-openbabel/docs/MIGRATING_TO_V5.md).
 
 ## Citation
 
@@ -53,6 +62,6 @@ Please also cite the plugins you used; see [Citation in the plugin collection](h
 
 ## License & Disclaimer
 
-This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPL-3.0-or-later) - see the [LICENSE](https://github.com/HiroYokoyama/python_molecular_editor/blob/main/LICENSE) file for details. As open-source software, it is provided 'as is' without warranty of any kind, and the author assumes no responsibility or liability for the results. Although outputs have been carefully verified, users are strongly encouraged to independently check and validate them for critical applications (such as publications). If you encounter any bugs, please open an issue.
+This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPL-3.0-or-later) - see the [LICENSE](https://github.com/HiroYokoyama/python_molecular_editor/blob/v5.0.0a1/LICENSE) file for details. As open-source software, it is provided 'as is' without warranty of any kind, and the author assumes no responsibility or liability for the results. Although outputs have been carefully verified, users are strongly encouraged to independently check and validate them for critical applications (such as publications). If you encounter any bugs, please open an issue.
 
-Independently developed plugins may use any license, including proprietary licenses. Existing plugins retain their licenses. See [licensing policy](https://github.com/HiroYokoyama/python_molecular_editor/blob/main/LICENSING.md) and [binary distribution instructions](https://github.com/HiroYokoyama/python_molecular_editor/blob/main/DISTRIBUTION.md).
+Independently developed plugins may use any license, including proprietary licenses. Existing plugins retain their licenses. See [licensing policy](https://github.com/HiroYokoyama/python_molecular_editor/blob/v5.0.0a1/LICENSING.md) and [binary distribution instructions](https://github.com/HiroYokoyama/python_molecular_editor/blob/v5.0.0a1/DISTRIBUTION.md).

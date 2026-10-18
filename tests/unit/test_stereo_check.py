@@ -195,7 +195,7 @@ def test_core_has_no_ui_dependency(filename):
     path = os.path.join(os.path.dirname(core_pkg.__file__), filename)
     with open(path, encoding="utf-8") as f:
         tree = ast.parse(f.read())
-    forbidden = ("PySide6", "PyQt5", "PySide6", "pyvista", "pyvistaqt", "vtk")
+    forbidden = ("PyQt6", "PyQt5", "PySide6", "pyvista", "pyvistaqt", "vtk")
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             names = [a.name for a in node.names]
@@ -361,7 +361,7 @@ def test_actual_ez_reads_cip_from_3d():
     from rdkit.Chem import AllChem
     from moleditpy.core.stereo_check import actual_ez
 
-    for smiles, want in (("C/C=C/C", "E"), ("C/C=C\C", "Z")):
+    for smiles, want in (("C/C=C/C", "E"), (r"C/C=C\C", "Z")):
         mol = Chem.AddHs(Chem.MolFromSmiles(smiles))
         AllChem.EmbedMolecule(mol, randomSeed=7)
         double = next(

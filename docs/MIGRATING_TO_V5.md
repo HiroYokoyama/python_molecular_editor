@@ -15,4 +15,6 @@ Plugin authors must change PyQt6 imports to PySide6, `pyqtSignal`/`pyqtSlot`/`py
 
 The core is LGPL-3.0-or-later. Independently developed plugins may choose any license; existing plugin licenses remain unchanged. Read [LICENSING.md](../LICENSING.md) and [DISTRIBUTION.md](../DISTRIBUTION.md) for the exact permission and frozen-library replacement/source instructions.
 
-No PyPI metadata change is needed until publication of the new version. Publish only the main package; retire the old Linux distribution after the coordinated stable release while keeping old downloads available. This branch does not publish or archive PyPI projects.
+MoleditPy 5.0.0a1 has been published from the migration branch as a GitHub prerelease and on PyPI. Only the main package was published; existing Linux-package downloads remain available. The shortcut helper and migrated plugin PRs remain unmerged, and their new package versions have not been published.
+
+The app sets `QT_API=pyside6` inside its launch process; it does not change persistent operating-system environment variables.

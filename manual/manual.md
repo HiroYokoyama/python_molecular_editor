@@ -42,7 +42,7 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
 **Main Features:**
 
   * **2D Molecular Editing:** Add, delete, or modify atoms and bonds; create structures using templates. Also supports user templates, allowing users to save and use their own specified structures.
-  * **3D Structure Generation:** Generate 3D coordinates from 2D structures and perform structure optimization using RDKit or Direct mode.
+  * **3D Structure Generation:** Generate 3D coordinates using RDKit or Direct mode, then optimize with RDKit or a separately installed optimizer plugin.
   * **3D Molecular Display:** Display 3D molecules in multiple styles, including Ball & Stick, CPK (Space-filling), Wireframe, and Stick.
   * **File Operations:** Save and load projects in a proprietary format (.pmeprj). Supports import and export of standard chemical file formats (MOL, SDF, XYZ) and SMILES, InChI strings. Exported files can be used for DFT calculations. Also supports exporting as images (PNG) or 3D models (STL, OBJ) for 3D printing.
   * **Molecular Analysis:** Display basic molecular properties such as SMILES, InChI, Molecular Formula, Molecular Weight, LogP, and TPSA.
@@ -59,15 +59,17 @@ MoleditPy is a molecular editing software developed in Python. Through an intuit
 
 ## 2\. Installation and Launch
 
-MoleditPy 5 requires Python 3.9–3.14 and uses the same `moleditpy` package on Windows, macOS, and Linux, using PySide6-Essentials for the GUI. The core no longer requires Open Babel. When upgrading, first remove the old distributions with `python -m pip uninstall moleditpy-linux openbabel-wheel`, then run `python -m pip install --upgrade moleditpy`. The installer helper creates shortcuts and file associations; it does not bundle the application.
+MoleditPy 5 requires Python 3.9–3.14 and uses the same `moleditpy` package on Windows, macOS, and Linux, using PySide6-Essentials for the GUI. The core no longer requires Open Babel. When upgrading, first remove the old distributions with `python -m pip uninstall moleditpy-linux openbabel-wheel`, then run `python -m pip install MoleditPy==5.0.0a1`. The installer helper creates shortcuts and file associations; it does not bundle the application.
 
 
 
-1.  **Install the Package**
+Install the alpha app directly with `python -m pip install MoleditPy==5.0.0a1`. The following optional steps create shortcuts. The MoleditPy 5 helper is not published yet, so select its migration branch explicitly.
+
+1.  **Install the Shortcut Helper**
     This installs the unified `moleditpy` package as a dependency.
 
     ```bash
-    pip install moleditpy-installer
+    python -m pip install "moleditpy-installer @ git+https://github.com/HiroYokoyama/python_molecular_editor_installer.git@migrate/unified-moleditpy-5#subdirectory=moleditpy-installer"
     ```
 
 2.  **Create the Shortcut**

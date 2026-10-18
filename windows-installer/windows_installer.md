@@ -9,20 +9,22 @@ This installer provides a package built for the Windows environment.
 
 ## About This Version
 
-This application bundle is built from the unified `moleditpy` package and includes official Open Babel wheels.
+This application bundle is built from the unified `moleditpy` package and uses PySide6-Essentials; Open Babel is not bundled.
 Note: As `pip` is not included in this package, plugins requiring external dependencies cannot be executed.
 
+
+This download is the 5.0.0a1 alpha prerelease.
 
 ## Download
 
 Please download the installer from the link below.
 The download will start upon clicking.
 
-[Download MoleditPy Windows Installer](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.13.0/MoleditPy_4.13.0_win64_setup.exe)
+[Download MoleditPy Windows Installer](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v5.0.0a1/MoleditPy_5.0.0a1_win64_setup.exe)
 
 A portable version is also available:
 
-[Download MoleditPy Windows Portable](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.13.0/MoleditPy_4.13.0_win64_portable.zip)
+[Download MoleditPy Windows Portable](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v5.0.0a1/MoleditPy_5.0.0a1_win64_portable.zip)
 
 ## Installation Steps
 
