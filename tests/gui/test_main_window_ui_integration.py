@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock, patch
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QMenu, QToolBar, QFileDialog, QToolButton
+from moleditpy.ui.menu_utils import add_menu
 
 
 def test_plugin_menu_actions_population(window, qtbot):
@@ -12,7 +13,7 @@ def test_plugin_menu_actions_population(window, qtbot):
     menu_bar = window.menuBar()
 
     # Ensure existing menu to test path merging
-    menu_bar.addMenu("Analysis")
+    add_menu(menu_bar, "Analysis")
 
     window.plugin_manager.menu_actions = [
         {
