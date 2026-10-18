@@ -31,7 +31,7 @@ The `CalculationWorker` inherits from `QObject` and is designed to run within a 
 Computational chemistry libraries (C++ extensions) can sometimes cause hard crashes. MoleditPy uses multiple isolation strategies:
 
 ### Subprocess Isolation
-Calculations involving Open Babel's `make3D()` are executed within a dedicated Python subprocess. This prevents a potential Open Babel segmentation fault from terminating the core application.
+Open Babel's native libraries are loaded only in dedicated child processes. Both `make3D()` and force-field optimization run there, keeping Open Babel's native symbols out of the Qt/VTK GUI process. The child loads RDKit before Open Babel and resolves the wheel's bundled parameter files. Optimization cancellation kills and reaps the child; coordinates are applied only after a complete, successful response. Frozen executables use the same isolation through dedicated internal command-line entry points.
 
 ### Exception Safety
 All background computations and their UI feedback loops are protected by a global exception hook in `main.py`. This ensures that even unexpected calculation failures are captured in the terminal logs (`ERROR`) without a silent application exit.

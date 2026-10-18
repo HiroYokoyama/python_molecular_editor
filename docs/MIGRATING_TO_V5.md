@@ -8,7 +8,7 @@ In the Python environment containing the old application, run:
 
 ```sh
 python -m pip uninstall moleditpy-linux openbabel-wheel
-python -m pip install --upgrade 'moleditpy>=5,<6'
+python -m pip install --pre --upgrade 'moleditpy>=5.0.0a1,<6'
 ```
 
 Removing the old distributions first avoids overlapping `openbabel` files and
@@ -24,8 +24,10 @@ Alpine/musl, 32-bit Linux, free-threaded Python, and Python 3.15 are outside the
 tested support matrix.
 
 Open Babel loads native symbols globally on Linux. Load RDKit before Open Babel
-in plugins and scripts that use both. MoleditPy follows that order and checks
-conversion, bundled force-field parameters, and cold GUI startup in CI.
+in plugins and scripts that use both. MoleditPy loads Open Babel only in child
+processes, preserving that order and keeping its native libraries out of the
+Qt/VTK GUI process. CI checks conversion, bundled force-field parameters,
+cancellation, and cold GUI startup.
 
 Sources: [official Open Babel wheels](https://pypi.org/project/openbabel/),
 [wheel deprecation notice](https://github.com/njzjz/openbabel-wheel),
@@ -33,8 +35,8 @@ Sources: [official Open Babel wheels](https://pypi.org/project/openbabel/),
 
 ## Release and PyPI checklist
 
-1. Publish `MoleditPy 5.0.0` from the unified release workflow after CI passes.
-2. Publish the updated shortcut helper, which depends on `moleditpy >= 5, < 6`
+1. Publish `MoleditPy 5.0.0a1` from the unified release workflow after CI passes.
+2. Publish the updated shortcut helper, which depends on `moleditpy >= 5.0.0a1, < 6`
    on every supported OS.
 3. Archive the old `MoleditPy-linux` project from its PyPI settings. Keep all
    existing releases available for users pinned to older versions. Archival

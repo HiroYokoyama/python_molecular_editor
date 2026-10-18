@@ -17,7 +17,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
-- Preserve Open Babel’s bundled plugin directory and locate its Windows force-field parameter files correctly. Keep RDKit loaded before Open Babel to avoid Linux native-library import conflicts. An unavailable Open Babel import now cleanly disables the optional backend. Frozen Windows and macOS builds use the main package and support isolated Open Babel conversion through a dedicated child-process entry point.
+- Preserve Open Babel’s bundled plugin directory and locate its Windows force-field parameter files correctly. Load its native libraries only in child processes, with RDKit loaded first, so they cannot conflict with the GUI's Qt/VTK libraries. Both 3D conversion and force-field optimization use this isolation, including frozen Windows/macOS builds. Cancellation terminates the optimization child without changing the original coordinates, and native failures are reported through the worker's normal fallback/error handling.
 
 ---
 
