@@ -40,7 +40,7 @@ class UIManager(QObject):
 
     def __init__(self, host: Any) -> None:
         """Initialize UIManager coordinating UI state and viewport events."""
-        super().__init__()
+        super().__init__(host if isinstance(host, QObject) else None)
         self.is_2d_editable = False
         self.host = host
 

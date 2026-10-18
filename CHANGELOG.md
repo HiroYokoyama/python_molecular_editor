@@ -14,6 +14,10 @@ All notable changes to this project are recorded here. The format follows
 
 - Restore the PyQt6 entry in the core layer's forbidden-Qt-import guard after the binding migration duplicated PySide6.
 
+### Fixed
+
+- Parent the UI manager and its interactor watchdog timer to the application window so native window destruction also stops the timer, preventing callbacks into a deleted window and a Linux/Python 3.12 Qt event-loop crash.
+
 ---
 
 ## [5.0.0a1] - 2026-10-18

@@ -156,6 +156,32 @@ def test_style_watchdog_ignores_rubberband_style():
     assert plotter.iren.style is not ui._expected_style
 
 
+def test_window_destruction_deletes_ui_manager_and_active_watchdog(qapp, monkeypatch):
+    """A native window deletion must also unregister its live watchdog timer."""
+    from PySide6.QtCore import QCoreApplication, QEvent
+    from PySide6.QtWidgets import QWidget
+    from shiboken6 import isValid
+
+    host = QWidget()
+    host.view_3d_manager = MagicMock()
+    host.set_plotter_picker = MagicMock()
+    monkeypatch.setattr(
+        "moleditpy.ui.ui_manager.CustomInteractorStyle", lambda window: object()
+    )
+    ui = UIManager(host)
+    ui.setup_3d_picker()
+    watchdog = ui._style_watchdog
+    assert watchdog.isActive()
+
+    host.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    assert not isValid(host)
+    assert not isValid(ui)
+    assert not isValid(watchdog)
+    qapp.processEvents()
+
+
 from unittest.mock import patch
 
 

@@ -17,6 +17,18 @@ Open Babel and PyQt6 are excluded from the core and frozen bundles.
 | `zenodo.yml` | Separate manual Zenodo publication workflow. |
 | `test-zenodo.yml` | Manual Zenodo Sandbox workflow. The `draft` input controls whether the sandbox record is published. |
 
+## Manual plugin tests
+
+Plugin test workflows that install MoleditPy expose a manual `moleditpy_ref`
+input for testing against an app branch, tag, or full commit SHA. Leaving it blank
+preserves normal CI selection: the repository's `MOLEDITPY_REF` variable, when configured, otherwise
+the migration branch `migrate/pyside6-without-openbabel`. Select the plugin's own
+branch separately in the workflow dispatch branch selector. A published app tag
+such as `v5.0.0a1` selects that release's source for plugin compatibility tests.
+
+The main app's `test-pip-install.yml` already accepts an exact published version
+and PyPI/TestPyPI source. This is separate from checking out an app source ref.
+
 ## Running tests locally
 
 ```sh
