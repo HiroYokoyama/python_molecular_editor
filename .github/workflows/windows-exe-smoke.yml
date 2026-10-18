@@ -1,0 +1,30 @@
+name: Windows executable smoke test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install unified main package and build tools
+        run: python -m pip install -e moleditpy/ pyinstaller
+      - name: Build executable from moleditpy
+        run: pyinstaller --clean --noconfirm --distpath dist/pyinstaller windows-installer/script/MoleditPy.spec
+      - name: Check executable startup and Open Babel conversion
+        run: python scripts/check_frozen_openbabel.py dist/pyinstaller/MoleditPy/MoleditPy.exe --version 5.0.0
+      - name: Upload tested executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: moleditpy-windows-exe
+          path: dist/pyinstaller/MoleditPy/
+          retention-days: 3

@@ -60,8 +60,11 @@ MoleditPy は、Python で開発された分子編集ソフトウェアです。
 
 ## 2\. インストールと起動
 
+MoleditPy 5 は Python 3.10–3.14 に対応し、Windows・macOS・Linux のすべてで同じ `moleditpy` パッケージと公式 Open Babel wheel を使用します。更新時は、先に `python -m pip uninstall moleditpy-linux openbabel-wheel` で旧パッケージを削除し、`python -m pip install --upgrade moleditpy` を実行してください。インストーラーヘルパーはショートカットとファイルの関連付けを作成するもので、アプリケーションをバンドルするものではありません。
+
+
 1.  **パッケージのインストール**
-    このコマンドを実行すると、お使いのOS（Windows/macOSまたはLinux）に適した `moleditpy` 本体が自動的にインストールされます。
+    このコマンドを実行すると、全 OS 共通の `moleditpy` 本体が依存パッケージとしてインストールされます。
 
     ```bash
     pip install moleditpy-installer
@@ -563,7 +566,7 @@ MoleditPyは、Pythonスクリプトによる機能の拡張をサポートし�
 
 ## 11\. バージョン情報・ライセンス
 
-  * **バージョン:** 4.13
+  * **バージョン:** 5.0
   * **作者:** Hiromichi Yokoyama
   * **ライセンス:** GPL-3.0 license
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

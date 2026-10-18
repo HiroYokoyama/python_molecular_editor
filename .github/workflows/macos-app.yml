@@ -159,7 +159,7 @@ jobs:
           from pathlib import Path
 
           src = Path("README.md").read_text(encoding="utf-8")
-          for dest_path in ("moleditpy/README.md", "moleditpy-linux/README.md"):
+          for dest_path in ("moleditpy/README.md",):
               dest = Path(dest_path)
               if not dest.exists() or dest.read_text(encoding="utf-8") != src:
                   dest.write_text(src, encoding="utf-8")
@@ -167,20 +167,16 @@ jobs:
               else:
                   print(f"No change: {dest_path}")
 
-      - name: Sync Linux Package
+      - name: Install Main Package for Bundle Build
         run: |
-          python scripts/sync_linux_version.py
-
-      - name: Install Linux Package for Bundle Build
-        run: |
-          python -m pip install -e moleditpy-linux/
+          python -m pip install -e moleditpy/
 
       # This job gates the release: it runs before the Windows job pushes the
       # tag, so a failure here costs nothing but a red run. Unit only and
       # fail-fast to keep the gate quick -- the Windows job runs unit plus
       # integration straight after. Deps come from the editable install above;
       # conftest puts moleditpy/src on sys.path, so the suite imports the
-      # freshly synced source rather than anything installed.
+      # main package source rather than anything installed.
       - name: Run Fast Tests
         env:
           MOLEDITPY_HEADLESS: "1"
@@ -212,9 +208,10 @@ jobs:
         run: |
           OUTPUT="$(dist/pyinstaller/MoleditPy.app/Contents/MacOS/MoleditPy --version)"
           echo "$OUTPUT"
+          python scripts/check_frozen_openbabel.py dist/pyinstaller/MoleditPy.app/Contents/MacOS/MoleditPy --version "$APP_VERSION"
           # Catches a broken freeze (missing imports) and a version that did not
           # survive into the bundle, which would otherwise ship as "Unknown".
-          if [ "$OUTPUT" != "MoleditPy (Linux) $APP_VERSION" ]; then
+          if [ "$OUTPUT" != "MoleditPy $APP_VERSION" ]; then
             echo "Unexpected --version output from the frozen bundle" >&2
             exit 1
           fi

@@ -78,7 +78,7 @@ def _child_source(src_root: str) -> str:
     return f"""
 import os, sys
 os.environ.pop("QT_QPA_PLATFORM", None)
-if os.path.isdir({src_root!r}):
+if os.environ.get("MOLEDITPY_USE_INSTALLED") != "1" and os.path.isdir({src_root!r}):
     sys.path.insert(0, {src_root!r})
 
 
@@ -92,6 +92,8 @@ from PyQt6.QtCore import QTimer
 
 mark("STAGE_QT_IMPORTED")
 main_mod = importlib.import_module("{PKG}.main")
+worker_mod = importlib.import_module("{PKG}.ui.calculation_worker")
+assert worker_mod.OBABEL_AVAILABLE, "Open Babel did not initialize during startup"
 mark("STAGE_APP_IMPORTED")
 
 EXPOSE_DEADLINE_MS = 30000
@@ -170,7 +172,7 @@ def test_entry_point_boots_in_a_subprocess(tmp_path):
             os.path.dirname(__file__),
             "..",
             "..",
-            "moleditpy-linux" if PKG == "moleditpy_linux" else "moleditpy",
+            "moleditpy",
             "src",
         )
     )

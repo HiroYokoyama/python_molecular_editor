@@ -9,9 +9,17 @@ src_root = os.path.abspath(
 )
 src_moleditpy = os.path.join(src_root, "moleditpy")
 
-if os.path.isdir(src_root) and src_root not in sys.path:
+if (
+    os.environ.get("MOLEDITPY_USE_INSTALLED") != "1"
+    and os.path.isdir(src_root)
+    and src_root not in sys.path
+):
     sys.path.insert(0, src_root)
-if os.path.isdir(src_moleditpy) and src_moleditpy not in sys.path:
+if (
+    os.environ.get("MOLEDITPY_USE_INSTALLED") != "1"
+    and os.path.isdir(src_moleditpy)
+    and src_moleditpy not in sys.path
+):
     sys.path.insert(0, src_moleditpy)
 
 

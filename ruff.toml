@@ -6,16 +6,16 @@
 
 # Must be set explicitly. Without it ruff reports
 # `linter.unresolved_target_version = none` and falls back to its own default
-# instead of the package's requires-python (">=3.9, <3.15"), which silently
+# instead of the package's requires-python (">=3.10, <3.15"), which silently
 # changes which pyupgrade-style rules apply.
-target-version = "py39"
+target-version = "py310"
 
 # Left at ruff's default (88) on purpose: `ruff format` is already part of the
 # documented workflow (CLAUDE.md) and all 69 source files are formatted at 88.
 # Raising it to e.g. 120 would silently reflow 56 of them on the next format run.
 # line-length = 88
 
-extend-exclude = ["moleditpy-linux", "moleditpy/src/moleditpy/assets"]
+extend-exclude = ["moleditpy/src/moleditpy/assets"]
 
 
 [lint]

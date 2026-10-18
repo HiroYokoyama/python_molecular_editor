@@ -6,18 +6,13 @@ draw -> save -> clear -> load -> verify nothing is lost, plus the
 unsaved-changes prompt and Save-As extension handling.
 """
 
-import importlib.util
 import json
 
 import pytest
 from PyQt6.QtCore import QPointF
 from PyQt6.QtWidgets import QMessageBox
 
-_PKG = (
-    "moleditpy_linux"
-    if importlib.util.find_spec("moleditpy_linux") is not None
-    else "moleditpy"
-)
+_PKG = "moleditpy"
 
 
 def _draw_ethanol_like(window):

@@ -20,20 +20,12 @@ experiences:
 | RDKit geometry accuracy | ✓ (bond lengths, dihedrals) | — |
 | Correct package imported per OS | — | ✓ |
 | All conversion modes smoke-tested | — | ✓ |
-| Open Babel path (Linux) | — | ✓ (auto-skip elsewhere) |
+| Open Babel path (all platforms) | — | ✓ |
 | Headless, no VTK/PyVista mocking | — | ✓ |
 
 ## Package Selection
 
-On **Linux**, the `moleditpy-linux` package is used (mirrors the distributed
-installer and CI environment).  On **Windows / macOS**, the standard `moleditpy`
-package is used.  Selection is automatic based on `sys.platform`.
-
-```
-Linux   → moleditpy-linux/src/moleditpy_linux/
-Windows → moleditpy/src/moleditpy/
-macOS   → moleditpy/src/moleditpy/
-```
+All platforms use `moleditpy/src/moleditpy/`. Set `MOLEDITPY_USE_INSTALLED=1` to test the installed package instead of local source.
 
 ## Running
 
@@ -66,8 +58,7 @@ Ethane (2 C, 1 bond) is the minimal molecule that exercises the full
 | `test_ethane_conversion_direct` | `direct` mode returns a valid 3D mol |
 | `test_ethane_conversion_fallback` | `fallback` mode (RDKit → obabel chain) returns a valid 3D mol |
 | `test_ethane_conversion_obabel` | `obabel` mode returns a valid 3D mol — **skipped** when Open Babel is absent |
-| `test_linux_package_is_active` | On Linux, `moleditpy_linux` is the active import — **skipped** on other OSes |
-| `test_main_package_is_active` | On Windows/macOS, `moleditpy` is the active import — **skipped** on Linux |
+| `test_main_package_is_active` | `moleditpy` is the active import on every platform |
 
 **Geometry assertion:** every conversion test checks that the 3D mol has exactly
 2 carbon atoms and a C–C bond length in the chemically reasonable range

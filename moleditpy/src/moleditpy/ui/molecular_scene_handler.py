@@ -733,7 +733,7 @@ class TemplateMixin:
         # Create atoms
         atom_id_map = {}  # template id -> scene atom id
 
-        for i, (pos, atom_data) in enumerate(zip(points, atoms_data)):
+        for i, (pos, atom_data) in enumerate(zip(points, atoms_data, strict=False)):
             # Reuse the clicked atom for the template's first atom, overwriting its element
             if i == 0 and attachment_atom:
                 atom_id_map[atom_data["id"]] = attachment_atom.atom_id

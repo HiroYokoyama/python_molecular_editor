@@ -49,9 +49,7 @@ SMALL_DIR = os.path.join(ICON_DIR, "small")
 ICO_PATH = os.path.join(ICON_DIR, "file_icon.ico")
 ICNS_PATH = os.path.join(ICON_DIR, "file_icon.icns")
 
-#: Where the built .ico is actually consumed by the app. moleditpy-linux's
-#: copy is synced separately by scripts/sync_linux_version.py, which mirrors
-#: any binary file under assets/ -- no separate step needed here for that.
+#: Where the unified app consumes the generated icon.
 APP_ASSET_ICO = os.path.join(
     BASE_DIR, "moleditpy", "src", "moleditpy", "assets", "file_icon.ico"
 )
@@ -367,8 +365,7 @@ def main() -> int:
             f"Installer repo not found beside this one ({INSTALLER_DATA_DIR}); skipped"
         )
     print(
-        "Note: moleditpy-linux/.../assets/file_icon.ico is synced separately "
-        "by scripts/sync_linux_version.py."
+        "The generated icon is used by the unified moleditpy package."
     )
     return 0
 

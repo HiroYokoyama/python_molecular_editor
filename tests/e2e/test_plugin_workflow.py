@@ -13,11 +13,7 @@ import zipfile
 
 import pytest
 
-_PKG = (
-    "moleditpy_linux"
-    if importlib.util.find_spec("moleditpy_linux") is not None
-    else "moleditpy"
-)
+_PKG = "moleditpy"
 PluginManager = importlib.import_module(f"{_PKG}.plugins.plugin_manager").PluginManager
 
 PLUGIN_SRC = textwrap.dedent(

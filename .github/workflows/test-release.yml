@@ -114,7 +114,7 @@ jobs:
           from pathlib import Path
 
           src = Path("README.md").read_text(encoding="utf-8")
-          for dest_path in ("moleditpy/README.md", "moleditpy-linux/README.md"):
+          for dest_path in ("moleditpy/README.md",):
               dest = Path(dest_path)
               if not dest.exists() or dest.read_text(encoding="utf-8") != src:
                   dest.write_text(src, encoding="utf-8")
@@ -122,23 +122,14 @@ jobs:
               else:
                   print(f"No change: {dest_path}")
 
-      - name: Sync Linux Package
+      - name: Install Main Package for Installer Build
         run: |
-          python scripts/sync_linux_version.py
-
-      - name: Install Linux Package for Installer Build
-        run: |
-          python -m pip install -e moleditpy-linux/
+          python -m pip install -e moleditpy/
 
       - name: Build Main Package
         working-directory: moleditpy
         run: |
           python -m build --outdir ../dist/moleditpy
-
-      - name: Build Linux Package
-        working-directory: moleditpy-linux
-        run: |
-          python -m build --outdir ../dist/moleditpy-linux
 
       - name: Build Windows Executable
         run: |
@@ -152,6 +143,9 @@ jobs:
             Write-Error "PyInstaller did not create $exePath"
             exit 1
           }
+
+      - name: Smoke Test Frozen Open Babel
+        run: python scripts/check_frozen_openbabel.py dist/pyinstaller/MoleditPy/MoleditPy.exe --version "${{ env.APP_VERSION }}"
 
       - name: Create Portable Package
         shell: pwsh
@@ -183,12 +177,6 @@ jobs:
           name: test-release-main-package
           path: dist/moleditpy/*
 
-      - name: Upload Linux Package Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-release-linux-package
-          path: dist/moleditpy-linux/*
-
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -217,22 +205,9 @@ jobs:
           name: test-release-main-package
           path: dist/moleditpy
 
-      - name: Download Linux Package Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: test-release-linux-package
-          path: dist/moleditpy-linux
-
       - name: Publish Main Package to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
           packages-dir: dist/moleditpy
-          skip-existing: true
-
-      - name: Publish Linux Package to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          packages-dir: dist/moleditpy-linux
           skip-existing: true

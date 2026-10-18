@@ -1072,7 +1072,7 @@ class MainInitManager:
             QPointF(1 + i * (size - 2) / 2.0, cy + (amp if i % 2 == 0 else -amp))
             for i in range(3)
         ]
-        for start, end in zip(zig, zig[1:]):
+        for start, end in zip(zig, zig[1:], strict=False):
             painter.drawLine(start, end)
 
         painter.setPen(QPen(fg, max(1.5, size / 20.0)))

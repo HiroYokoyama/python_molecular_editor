@@ -187,7 +187,7 @@ def _tag_from_points(
 def _largest_gap_deg(directions: List[Tuple[float, float]]) -> float:
     """Largest angle between angularly adjacent 2D directions, in degrees."""
     angles = sorted(math.degrees(math.atan2(dy, dx)) % 360.0 for dx, dy in directions)
-    gaps = [b - a for a, b in zip(angles, angles[1:])]
+    gaps = [b - a for a, b in zip(angles, angles[1:], strict=False)]
     gaps.append(360.0 - angles[-1] + angles[0])
     return max(gaps)
 
@@ -413,7 +413,7 @@ def _tag_for_label(
     """
     cw, ccw = Chem.ChiralType.CHI_TETRAHEDRAL_CW, Chem.ChiralType.CHI_TETRAHEDRAL_CCW
     probe = Chem.Mol(mol)
-    for atom, other in zip(probe.GetAtoms(), tags):
+    for atom, other in zip(probe.GetAtoms(), tags, strict=False):
         atom.SetChiralTag(other)
     probe.GetAtomWithIdx(center).SetChiralTag(cw)
     Chem.AssignStereochemistry(probe, cleanIt=True, force=True)

@@ -1,18 +1,21 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_all
 
 
 spec_dir = Path(SPECPATH).resolve()
 repo_root = spec_dir.parent.parent
-linux_package_dir = repo_root / 'moleditpy-linux' / 'src' / 'moleditpy_linux'
-src_dir = linux_package_dir.parent  # moleditpy-linux/src/ — makes `import moleditpy_linux` work
+main_package_dir = repo_root / 'moleditpy' / 'src' / 'moleditpy'
+src_dir = main_package_dir.parent  # moleditpy/src/ — makes `import moleditpy` work
+
+ob_datas, ob_binaries, ob_hiddenimports = collect_all("openbabel")
 
 a = Analysis(
     [str(spec_dir / '_launcher.py')],
     pathex=[str(src_dir)],
-    binaries=[],
-    hiddenimports=[
+    binaries=ob_binaries,
+    hiddenimports=ob_hiddenimports + [
         # rdkit.Chem.rdForceFieldHelpers is a C extension and imports these at
         # runtime, where the module graph cannot see it. Nothing in the reachable
         # Python graph pulls them in since 4.8.3 stopped importing AllChem, so the
@@ -26,9 +29,9 @@ a = Analysis(
     excludes=[],
     noarchive=False,
     optimize=0,
-    datas=[
-        (str(linux_package_dir / 'assets'), 'assets'),
-        (str(linux_package_dir / 'assets'), 'moleditpy_linux/assets'),
+    datas=ob_datas + [
+        (str(main_package_dir / 'assets'), 'assets'),
+        (str(main_package_dir / 'assets'), 'moleditpy/assets'),
     ],
 )
 pyz = PYZ(a.pure)
@@ -49,7 +52,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=[str(linux_package_dir / 'assets' / 'icon.ico')],
+    icon=[str(main_package_dir / 'assets' / 'icon.ico')],
 )
 coll = COLLECT(
     exe,

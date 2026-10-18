@@ -85,7 +85,7 @@ The `--pylint` flag on `run_all_tests.py` runs pylint automatically after all te
 
 ## Scope
 
-All code changes go inside `moleditpy/` only. Never edit `moleditpy-linux/` — it is synced from `moleditpy/` separately.
+Application source lives in `moleditpy/`, the single package for Windows, macOS, and Linux. MoleditPy 5 requires Python 3.10–3.14 and official Open Babel wheels. There is no separate Linux source tree or synchronization step.
 
 ## Code Quality Standards
 
@@ -129,9 +129,9 @@ Plugins are discovered and loaded by `plugins/plugin_manager.py`. The public API
 
 `tests/conftest.py` aggressively mocks VTK and PyVista at import time so unit/integration tests run headless without GPU. Do not import VTK/PyVista in core logic — keep 3D rendering isolated to `view_3d_logic.py`, `custom_interactor_style.py`, and `custom_qt_interactor.py`.
 
-### e2e Tests: Never Hardcode the Package Name
+### e2e Tests: One Package on Every Platform
 
-`tests/e2e/` runs against either the `moleditpy` source tree or the `moleditpy_linux` package, depending on platform and `MOLEDITPY_USE_INSTALLED` (set by the "Test pip install" CI workflow to test the real published package). `tests/e2e/conftest.py` and each e2e test file compute a `_PKG` variable for this (`"moleditpy_linux"` on Linux, `"moleditpy"` otherwise) and import via `importlib.import_module(f"{_PKG}.module.path")`. Never write `import moleditpy...` or `importlib.import_module("moleditpy...")` literally in an e2e test — it will pass locally on Windows/macOS but raise `ModuleNotFoundError` on the Linux CI matrix, which installs `moleditpy_linux`. Copy the `_PKG` detection block from an existing e2e test file (e.g. `test_ethane_conversion.py`) into any new file that imports the package directly.
+`tests/e2e/` and `tests/full_gui/` use `moleditpy` on every platform. Set `MOLEDITPY_USE_INSTALLED=1` to test the installed package instead of adding local source directories. Keep RDKit imports before Open Babel imports: the reverse order can cause a native-library crash on Linux.
 
 ## Environment Variables
 

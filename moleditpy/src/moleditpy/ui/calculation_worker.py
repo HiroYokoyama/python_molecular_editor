@@ -13,6 +13,8 @@ DOI: 10.5281/zenodo.17268532
 import logging
 from ..utils.suppress_log import suppress_log
 import math
+import os
+from pathlib import Path
 import re
 import numpy as np
 import sys
@@ -32,37 +34,28 @@ from ..core.molecular_data import align_ez_to_cip
 from .. import OBABEL_AVAILABLE
 
 # Only import pybel on demand
+pybel: Any = None
 if OBABEL_AVAILABLE:
     # Suppress potential import errors if Open Babel is not correctly installed or configured
     with suppress_log(ImportError, OSError, RuntimeError):
-        import os
-        import glob
         import openbabel
-        from openbabel import pybel
+        from openbabel import pybel as _pybel
 
-        ob_base = os.path.dirname(openbabel.__file__)
-        data_candidates = [
-            os.path.join(ob_base, "bin", "data"),
-            os.path.join(ob_base, "share", "openbabel", "*"),
-        ]
+        pybel = _pybel
 
-        found_datadir = None
-        for pattern in data_candidates:
-            matches = glob.glob(pattern)
-            for m in matches:
-                if os.path.isdir(m):
-                    found_datadir = m
+        # The Windows wheel stores parameters in bin/data, although its initializer
+        # points BABEL_DATADIR at share/openbabel. Keep valid upstream paths intact.
+        datadir = os.environ.get("BABEL_DATADIR")
+        if not datadir or not (Path(datadir) / "UFF.prm").is_file():
+            ob_base = Path(openbabel.__file__).parent
+            candidates = [ob_base / "bin" / "data"]
+            candidates.extend((ob_base / "share" / "openbabel").glob("*"))
+            for candidate in candidates:
+                if (candidate / "UFF.prm").is_file():
+                    os.environ["BABEL_DATADIR"] = str(candidate)
                     break
-            if found_datadir:
-                break
-
-        if found_datadir:
-            os.environ["BABEL_DATADIR"] = found_datadir
-        os.environ["BABEL_LIBDIR"] = ob_base
-    if not pybel:
+    if pybel is None:
         OBABEL_AVAILABLE = False
-else:
-    pybel = None
 
 
 class WorkerHaltError(Exception):
@@ -717,19 +710,18 @@ def _perform_obabel_conversion(
             raise RuntimeError("Open Babel not available.")
 
         # Isolate make3D in a subprocess to prevent hard C++ aborts from crashing the main GUI
-        script = """
-import sys, contextlib
-from openbabel import pybel
-mol_block = sys.stdin.read()
-ob_mol = pybel.readstring("mol", mol_block)
-with contextlib.suppress(Exception): ob_mol.addh()
-ob_mol.make3D()
-print(ob_mol.write("mol"))
-        """
+        script = (
+            "from moleditpy.utils.openbabel_worker import make3d_main; make3d_main()"
+        )
 
         try:
+            command = (
+                [sys.executable, "--openbabel-make3d"]
+                if getattr(sys, "frozen", False)
+                else [sys.executable, "-c", script]
+            )
             result = subprocess.run(
-                [sys.executable, "-c", script],
+                command,
                 input=mol_block,
                 text=True,
                 capture_output=True,

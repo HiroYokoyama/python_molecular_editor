@@ -246,7 +246,7 @@ def test_benzene_conversion_backends(full_window, mode):
 
 
 def test_benzene_conversion_obabel_when_available(full_window):
-    """Open Babel back-end, where the platform actually ships it (Linux)."""
+    """The unified package's Open Babel backend produces real benzene geometry."""
     pkg = importlib.import_module(PKG)
     if not getattr(pkg, "OBABEL_AVAILABLE", False):
         pytest.skip("Open Babel is not available on this platform")

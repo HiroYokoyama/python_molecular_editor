@@ -244,10 +244,7 @@ def main() -> None:
         description="MoleditPy — A Python-based molecular editing software",
     )
     parser.add_argument("file", nargs="?", default=None, help="File to open on startup")
-    _variant = " (Linux)" if "moleditpy_linux" in (__file__ or "") else ""
-    parser.add_argument(
-        "--version", action="version", version=f"MoleditPy{_variant} {VERSION}"
-    )
+    parser.add_argument("--version", action="version", version=f"MoleditPy {VERSION}")
     parser.add_argument(
         "--safe",
         action="store_true",

@@ -8,6 +8,19 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [5.0.0] - 2026-10-18
+
+### Changed
+
+- The main `MoleditPy` package requires Python 3.10–3.14 and uses the official `openbabel >= 3.2.1, < 3.3` wheels instead of the deprecated `openbabel-wheel`. The same package now supports Windows, macOS, and Linux; the separate `MoleditPy-linux` source tree and publishing pipeline have been retired.
+- When upgrading an existing main-package environment, uninstall `moleditpy-linux` and `openbabel-wheel` before installing MoleditPy 5 to avoid overlapping `openbabel` files from the two distributions.
+
+### Fixed
+
+- Preserve Open Babel’s bundled plugin directory and locate its Windows force-field parameter files correctly. Keep RDKit loaded before Open Babel to avoid Linux native-library import conflicts. An unavailable Open Babel import now cleanly disables the optional backend. Frozen Windows and macOS builds use the main package and support isolated Open Babel conversion through a dedicated child-process entry point.
+
+---
+
 ## [4.13.0] - 2026-10-15
 
 ### Added

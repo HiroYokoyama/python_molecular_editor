@@ -1,7 +1,6 @@
 import sys
 import os
 import json
-import platform
 import argparse
 import subprocess
 import time
@@ -105,29 +104,6 @@ def _run_once(name, cmd, env):
     duration = time.time() - start_ts
     print(f"  [END] {name}: exit={returncode} elapsed={duration:.1f}s", flush=True)
     return returncode, "".join(output_lines), duration
-
-
-def sync_linux_for_e2e(base_dir):
-    """Sync moleditpy → moleditpy-linux before running e2e tests on Linux."""
-    sync_script = os.path.join(base_dir, "scripts", "sync_linux_version.py")
-    if not os.path.exists(sync_script):
-        print(
-            "  [SKIP] sync_linux_version.py not found — skipping Linux sync", flush=True
-        )
-        return
-    print("\n>>> Syncing Linux version before E2E tests...", flush=True)
-    result = subprocess.run(
-        [sys.executable, sync_script],
-        cwd=base_dir,
-        capture_output=True,
-        text=True,
-    )
-    print(result.stdout, end="", flush=True)
-    if result.returncode != 0:
-        print(
-            f"  Warning: sync_linux_version.py exited {result.returncode}", flush=True
-        )
-        print(result.stderr, end="", flush=True)
 
 
 def run_suite(
@@ -388,28 +364,18 @@ if __name__ == "__main__":
     )
 
     if args.full_gui:
-        if platform.system() == "Linux":
-            sync_linux_for_e2e(BASE_DIR)
         suites.append(("FULL_GUI", FULL_GUI_DIR))
     if args.unit or run_all:
         suites.append(("UNIT", UNIT_DIR))
     if args.integration or run_all:
         suites.append(("INTEGRATION", INTEGRATION_DIR))
     if args.e2e or run_all:
-        if platform.system() == "Linux":
-            sync_linux_for_e2e(BASE_DIR)
         suites.append(("E2E", E2E_DIR))
     if args.gui or run_all:
         suites.append(("GUI", GUI_DIR))
 
     for name, path in suites:
         try:
-            # E2E uses moleditpy_linux on Linux, moleditpy elsewhere
-            e2e_cov = (
-                "moleditpy_linux"
-                if name == "E2E" and platform.system() == "Linux"
-                else None
-            )
             ret_code = run_suite(
                 name,
                 path,
@@ -417,7 +383,7 @@ if __name__ == "__main__":
                 extra_args=extra_pytest_args,
                 enable_cov=enable_cov,
                 exitfirst=args.exitfirst,
-                cov_source=e2e_cov,
+                cov_source="moleditpy",
             )
             results[name] = "PASSED" if ret_code == 0 else "FAILED"
         except KeyboardInterrupt:

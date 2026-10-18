@@ -10,7 +10,7 @@ Test matrix:
 
 | OS | Python versions |
 | --- | --- |
-| Ubuntu | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 |
+| Ubuntu | 3.10, 3.11, 3.12, 3.13, 3.14 |
 | Windows | 3.13, 3.14 |
 | macOS | 3.13, 3.14 |
 
@@ -54,15 +54,13 @@ This workflow:
 2. Validates the version input.
 3. Runs unit and integration tests on `windows-latest` with Python 3.12.
 4. Updates `moleditpy/pyproject.toml` in the temporary runner checkout.
-5. Runs `python scripts/sync_linux_version.py`.
-6. Builds `MoleditPy` and `MoleditPy-linux` distributions.
 7. Builds `dist/MoleditPy/MoleditPy.exe` with PyInstaller from the Linux package source.
 8. Creates `MoleditPy_<version>_win64_portable.zip`.
 9. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
 10. Uploads all built artifacts to the workflow run.
 11. In parallel, calls `macos-app.yml` to build the macOS app bundle (artifact only).
 12. Starts a separate `ubuntu-latest` publishing job.
-13. Publishes both Python packages to TestPyPI.
+13. Publishes the unified Python package to TestPyPI.
 
 It does not commit, tag, push, or create a GitHub Release.
 
@@ -89,8 +87,7 @@ This workflow:
 1. Resolves the git ref (callers pass one explicitly - `github.event_name` reports the
    *caller's* event in a reusable workflow and must not be branched on), checks it out,
    and validates the version and that the runner is `arm64`.
-2. Updates `moleditpy/pyproject.toml` and runs `python scripts/sync_linux_version.py`.
-3. Installs `moleditpy-linux` and builds `macos-installer/script/MoleditPy.spec` with PyInstaller.
+3. Installs `moleditpy` and builds `macos-installer/script/MoleditPy.spec` with PyInstaller.
 4. Verifies `Contents/MacOS/MoleditPy` exists and that `Info.plist` carries the release version.
 5. Smoke-tests the frozen bundle with `--version` (catches a broken freeze or a lost version string).
 6. Ad-hoc signs the bundle with `codesign --force --deep --sign -` — required on Apple Silicon — and verifies the signature.
@@ -115,7 +112,7 @@ Run it from GitHub Actions:
 
 ### What it tests
 
-Each matrix leg installs the target package from scratch on a clean runner and then runs the real `tests/e2e/` suite against the installed package. The env var `MOLEDITPY_USE_INSTALLED=1` tells the e2e conftest to use `importlib.util.find_spec` to locate the pip-installed package instead of the local source tree.
+Each matrix leg installs the target package from scratch on a clean runner and then runs the real `tests/e2e/` suite against the installed package. The env var `MOLEDITPY_USE_INSTALLED=1` tells the e2e conftest to use the pip-installed `moleditpy` package instead of the local source tree.
 
 The e2e suite covers:
 
@@ -126,15 +123,13 @@ The e2e suite covers:
 
 | Package | OS | Python versions |
 | --- | --- | --- |
-| MoleditPy | Windows, macOS | 3.9–3.14 |
-| MoleditPy-linux | Ubuntu, Windows, macOS | 3.9–3.14 |
+| MoleditPy | Ubuntu, Windows, macOS | 3.10–3.14 |
 
-Pip download cache is enabled (`cache: 'pip'`) to speed up the 30-leg matrix.
+Pip download cache is enabled (`cache: 'pip'`) for the 15-leg matrix.
 
 ### Notes
 
 - `MOLEDITPY_USE_INSTALLED=1` only affects the e2e test conftest. All other workflows are unaffected and continue to use the local source tree as before.
-- `test_main_package_is_active` is automatically skipped when `MoleditPy-linux` is the active package on Windows/macOS (cross-platform pip-install scenario).
 
 ## `release.yml` - Production Release
 
@@ -159,16 +154,13 @@ This workflow:
 3. Rejects the release if the tag already exists.
 4. Runs unit and integration tests on `windows-latest` with Python 3.12.
 5. Updates `moleditpy/pyproject.toml`.
-6. Copies the root `README.md` to `moleditpy/README.md` and `moleditpy-linux/README.md` if the content has changed.
-7. Runs `python scripts/sync_linux_version.py`.
-8. Builds `MoleditPy` and `MoleditPy-linux` distributions.
 9. Builds `dist/MoleditPy/MoleditPy.exe` with PyInstaller from the Linux package source.
 10. Creates `MoleditPy_<version>_win64_portable.zip`.
 11. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
-12. Commits the version bump, README sync, and Linux sync changes, then creates and pushes the release tag.
+12. Commits the version bump, README updates, then creates and pushes the release tag.
 13. Before any of the above, calls `macos-app.yml` on `macos-latest` to build `MoleditPy_<version>_macos_arm64.zip`; the Windows job waits on it, so a failed macOS build cannot leave a release tagged but unpublished.
 14. Starts a separate `ubuntu-latest` publishing job.
-15. Publishes both Python packages to PyPI.
+15. Publishes the unified Python package to PyPI.
 16. Creates a GitHub Release and attaches the distributions, installer, portable ZIP, and macOS app bundle.
 17. If the **Zenodo** checkbox is checked: downloads the release assets and publishes them to the production Zenodo record via `scripts/update_zenodo.py`.
 
@@ -181,8 +173,7 @@ graph TD
     A[Manual Dispatch with Version Parameter] --> B[Validate: Must run on main, tag must be new, format checked]
     B --> C[Run Unit & Integration Tests]
     C --> D[Update pyproject.toml & Installer Download URLs]
-    D --> E[Sync Linux package versions via scripts/sync_linux_version.py]
-    E --> F[Build moleditpy and moleditpy-linux packages]
+    D --> F[Build the unified moleditpy package]
     F --> G[Run PyInstaller windows-installer/script/MoleditPy.spec]
     G --> H[Create Portable ZIP and compile Inno Setup installer]
     H --> I[Commit version bumps, create Git tag & push to GitHub]
@@ -201,7 +192,6 @@ graph TD
 2. **Dynamic Replacement & Cross-Compilation Sync**:
    - Modifies `pyproject.toml` (version tag).
    - Injects the new download version string into `windows_installer.md`, `windows_installer-jp.md`, `macos_installer.md`, and `macos_installer-jp.md`.
-   - Runs `scripts/sync_linux_version.py` to keep the sibling package `moleditpy-linux/pyproject.toml` in lockstep.
 3. **Stand-alone Executable & Installer Packaging**:
    - Executes PyInstaller using the specification file `windows-installer/script/MoleditPy.spec`.
    - Generates the portable compressed folder (`Compress-Archive` in PowerShell).
@@ -220,7 +210,6 @@ Both release workflows use PyPI trusted publishing with GitHub Actions OIDC.
 Configure trusted publishers for these projects:
 
 - `MoleditPy`
-- `MoleditPy-linux`
 
 For production PyPI, use workflow filename:
 
@@ -249,8 +238,6 @@ The release workflows generate:
 
 - `dist/moleditpy/*.whl`
 - `dist/moleditpy/*.tar.gz`
-- `dist/moleditpy-linux/*.whl`
-- `dist/moleditpy-linux/*.tar.gz`
 - `dist/windows/MoleditPy_<version>_win64_setup.exe`
 - `dist/windows/MoleditPy_<version>_win64_portable.zip`
 
@@ -260,7 +247,6 @@ The release workflows generate:
 
 - `moleditpy/pyproject.toml`
 - `moleditpy/README.md` (if updated from root `README.md`)
-- `moleditpy-linux/` (entire directory, including `README.md` if updated)
 - `windows-installer/script/script.iss`
 - `windows-installer/script/MoleditPy.spec`
 
@@ -268,15 +254,14 @@ The release workflows generate:
 
 ## Windows Packaging Chain
 
-Windows packaging uses the Linux package variant because Open Babel is disabled there.
+Windows and macOS bundles are built from the main `moleditpy` package and include Open Babel. A frozen child-process smoke test checks real 3D conversion before packaging.
 PyPI publishing runs in a separate Linux job because `pypa/gh-action-pypi-publish` only supports GNU/Linux runners.
 
 Build order:
 
 ```text
 moleditpy/pyproject.toml version update
--> scripts/sync_linux_version.py
--> moleditpy-linux package build
+-> moleditpy package build
 -> PyInstaller using windows-installer/script/MoleditPy.spec
 -> dist/MoleditPy/MoleditPy.exe
 -> portable ZIP from dist/MoleditPy/*
@@ -360,3 +345,7 @@ The `scripts/update_zenodo.py` script automates the update process using the **I
    - Updates the draft metadata payload via `PUT <draft_self_link>`.
 5. **Publish Version**:
    - `POST <draft_publish_link>` (if `--publish` is active).
+
+## `windows-exe-smoke.yml` — Main-package executable
+
+Runs on pull requests and manual dispatch. Installs the unified main package, builds the Windows executable from `windows-installer/script/MoleditPy.spec`, checks version reporting and real Open Babel 3D conversion, and uploads the tested executable as a CI artifact. No package is published.

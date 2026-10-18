@@ -244,7 +244,7 @@ class TemplatePreviewItem(QGraphicsItem):
 
     def _move_ghost(self, points: list[QPointF]) -> None:
         """Move an unchanged ghost molecule to the new cursor position."""
-        for atom, point in zip(self.ghost_atoms, points):
+        for atom, point in zip(self.ghost_atoms, points, strict=False):
             atom.setPos(point)
         for bond in self.ghost_bonds:
             bond.update_position()

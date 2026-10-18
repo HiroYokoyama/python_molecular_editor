@@ -11,30 +11,13 @@ import importlib.util
 
 import pytest
 
-# Package selection mirrors tests/e2e/conftest.py.
-_IS_LINUX = sys.platform.startswith("linux")
-
-_LINUX_SRC = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy-linux", "src")
-)
+# The unified package is used on every platform.
+_PKG = "moleditpy"
 _MAIN_SRC = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
 )
-
-if os.environ.get("MOLEDITPY_USE_INSTALLED") == "1":
-    _PKG = (
-        "moleditpy_linux"
-        if importlib.util.find_spec("moleditpy_linux") is not None
-        else "moleditpy"
-    )
-elif _IS_LINUX and os.path.isdir(_LINUX_SRC):
-    if _LINUX_SRC not in sys.path:
-        sys.path.insert(0, _LINUX_SRC)
-    _PKG = "moleditpy_linux"
-else:
-    if _MAIN_SRC not in sys.path:
-        sys.path.insert(0, _MAIN_SRC)
-    _PKG = "moleditpy"
+if os.environ.get("MOLEDITPY_USE_INSTALLED") != "1" and _MAIN_SRC not in sys.path:
+    sys.path.insert(0, _MAIN_SRC)
 
 PKG = _PKG
 

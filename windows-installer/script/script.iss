@@ -10,7 +10,7 @@
   #error MyAppVersion must be provided with /DMyAppVersion=<version> or MOLEDITPY_APP_VERSION.
 #endif
 #ifndef BuildDir
-#define BuildDir "C:\Users\hiro2\py3env\moleditpy-installer\Lib\site-packages\moleditpy_linux\dist\MoleditPy"
+#define BuildDir "..\..\dist\pyinstaller\MoleditPy"
 #endif
 #define MyAppPublisher "HiroYokoyama"
 #define MyAppURL "https://github.com/HiroYokoyama/python_molecular_editor"

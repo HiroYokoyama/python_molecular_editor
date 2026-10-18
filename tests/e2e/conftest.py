@@ -3,43 +3,25 @@
 
 VTK/PyVista are mocked at import time so the real MainWindow can be
 instantiated headlessly.  The `window` fixture selects the right package
-(moleditpy_linux on Linux, moleditpy everywhere else) automatically.
+(moleditpy on every platform) automatically.
 """
 
 import os
 import sys
 import types
-import importlib.util
 import pytest
 from unittest import mock as _mock
 from PyQt6.QtWidgets import QApplication
 
 # ---------------------------------------------------------------------------
-# Package selection (mirrors test_ethane_conversion.py)
+# Package selection: the unified package on every platform.
 # ---------------------------------------------------------------------------
-_IS_LINUX = sys.platform.startswith("linux")
-
-_LINUX_SRC = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy-linux", "src")
-)
+_PKG = "moleditpy"
 _MAIN_SRC = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
 )
-
-if os.environ.get("MOLEDITPY_USE_INSTALLED") == "1":
-    # CI pip-install mode: use whichever package is installed; skip local source.
-    if importlib.util.find_spec("moleditpy_linux") is not None:
-        _PKG = "moleditpy_linux"
-    else:
-        _PKG = "moleditpy"
-elif _IS_LINUX and os.path.isdir(_LINUX_SRC):
-    if _LINUX_SRC not in sys.path:
-        sys.path.insert(0, _LINUX_SRC)
-    _PKG = "moleditpy_linux"
-else:
-    if _MAIN_SRC not in sys.path:
-        sys.path.insert(0, _MAIN_SRC)
-    _PKG = "moleditpy"
+if os.environ.get("MOLEDITPY_USE_INSTALLED") != "1" and _MAIN_SRC not in sys.path:
+    sys.path.insert(0, _MAIN_SRC)
 
 # ---------------------------------------------------------------------------
 # VTK / PyVista mocking — must happen before any app module is imported

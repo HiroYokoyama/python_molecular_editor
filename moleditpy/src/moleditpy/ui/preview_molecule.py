@@ -182,13 +182,15 @@ def apply_preview_topology(
         logging.debug("Preview topology unavailable", exc_info=True)
         return {}
 
-    for item, atom in zip(atom_items, mol.GetAtoms()):
+    for item, atom in zip(atom_items, mol.GetAtoms(), strict=False):
         item.implicit_h_count = atom.GetTotalNumHs()
 
     ring_info = mol.GetRingInfo()
     ring_atoms: Dict[int, Tuple[int, ...]] = {}
     best_ring_size: Dict[int, int] = {}
-    for atom_ring, bond_ring in zip(ring_info.AtomRings(), ring_info.BondRings()):
+    for atom_ring, bond_ring in zip(
+        ring_info.AtomRings(), ring_info.BondRings(), strict=False
+    ):
         positions = [atom_items[idx].pos() for idx in atom_ring]
         center = (
             sum(p.x() for p in positions) / len(positions),
