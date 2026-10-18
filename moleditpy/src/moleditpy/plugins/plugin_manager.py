@@ -21,6 +21,7 @@ import os
 import shutil
 import stat
 import sys
+import tokenize
 import zipfile
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -403,6 +404,7 @@ class PluginManager:
     ) -> None:
         """Common loading logic for both single-file and package plugins."""
         try:
+            self._check_qt_binding_compatibility(filepath)
             # Ensure unique module name by including category path
             # e.g. Analysis.Docking
             unique_module_name = (
@@ -531,6 +533,44 @@ class PluginManager:
                 "Failed to load plugin %s: %s", module_name, e, exc_info=True
             )
             self._register_failed_plugin(filepath, module_name, category, e)
+
+    def _check_qt_binding_compatibility(self, filepath: str) -> None:
+        """Reject legacy Qt imports before plugin code can load another binding."""
+        if not os.path.isfile(filepath):
+            return
+        paths = [filepath]
+        if os.path.basename(filepath) == "__init__.py":
+            paths = [
+                os.path.join(directory, name)
+                for directory, _, names in os.walk(os.path.dirname(filepath))
+                for name in names
+                if name.endswith(".py")
+            ]
+        unsupported = {"PyQt6", "PyQt5", "PySide2"}
+        for path in paths:
+            with tokenize.open(path) as source:
+                tree = ast.parse(source.read(), filename=path)
+            imports = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    imports.extend(alias.name for alias in node.names)
+                elif isinstance(node, ast.ImportFrom) and node.module:
+                    imports.append(node.module)
+                elif isinstance(node, ast.Call) and node.args:
+                    function = node.func
+                    dynamic_import = (
+                        isinstance(function, ast.Name) and function.id == "__import__"
+                    ) or (
+                        isinstance(function, ast.Attribute) and function.attr == "import_module"
+                    )
+                    if dynamic_import and isinstance(node.args[0], ast.Constant):
+                        imports.append(str(node.args[0].value))
+            legacy = next((name for name in imports if name.split(".")[0] in unsupported), None)
+            if legacy:
+                raise ImportError(
+                    f"Plugin requires migration to PySide6: unsupported Qt binding {legacy} in {os.path.basename(path)}. "
+                    "Install a MoleditPy 5 compatible plugin version."
+                )
 
     def _register_failed_plugin(
         self, filepath: str, module_name: str, category: str, error: BaseException

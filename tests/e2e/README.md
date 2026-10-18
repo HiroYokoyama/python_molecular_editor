@@ -6,7 +6,7 @@ across all supported platforms (Windows, Linux, macOS).
 ## Purpose
 
 E2E tests exercise the full conversion pipeline — from drawing a molecule in 2D
-to producing a valid optimised 3D structure — using **zero mocks**.  
+to producing a valid optimised 3D structure — using **zero mocks**.
 They run completely headlessly (no display, no Qt window) and are fast enough
 to include in every CI run on every OS.
 

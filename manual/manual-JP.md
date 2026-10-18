@@ -60,7 +60,7 @@ MoleditPy は、Python で開発された分子編集ソフトウェアです。
 
 ## 2\. インストールと起動
 
-MoleditPy 5 は Python 3.10–3.14 に対応し、Windows・macOS・Linux のすべてで同じ `moleditpy` パッケージとGUI には PySide6-Essentials を使用します。コアは Open Babel を必要としません。更新時は、先に `python -m pip uninstall moleditpy-linux openbabel-wheel` で旧パッケージを削除し、`python -m pip install --upgrade moleditpy` を実行してください。インストーラーヘルパーはショートカットとファイルの関連付けを作成するもので、アプリケーションをバンドルするものではありません。
+MoleditPy 5 は Python 3.10–3.14 に対応し、Windows・macOS・Linux のすべてで同じ `moleditpy` パッケージを使用し、GUI には PySide6-Essentials を使用します。コアは Open Babel を必要としません。更新時は、先に `python -m pip uninstall moleditpy-linux openbabel-wheel` で旧パッケージを削除し、`python -m pip install --upgrade moleditpy` を実行してください。インストーラーヘルパーはショートカットとファイルの関連付けを作成するもので、アプリケーションをバンドルするものではありません。
 
 
 1.  **パッケージのインストール**

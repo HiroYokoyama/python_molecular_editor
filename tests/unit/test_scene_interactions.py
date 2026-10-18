@@ -390,8 +390,9 @@ def test_purge_on_quit_is_connected_once(mock_parser_host):
     from PySide6.QtWidgets import QApplication
 
     scene = setup_scene_with_view(mock_parser_host)
-    app = QApplication.instance()
-    with patch.object(app, "aboutToQuit") as signal:
+    app = MagicMock()
+    signal = app.aboutToQuit
+    with patch("moleditpy.ui.molecule_scene.QApplication.instance", return_value=app):
         scene._purge_connected = False
         scene.reinitialize_items()
         scene.reinitialize_items()
