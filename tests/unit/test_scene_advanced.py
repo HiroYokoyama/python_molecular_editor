@@ -1,8 +1,8 @@
 """Unit tests for advanced MoleculeScene mouse interactions."""
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QGraphicsView
-from PyQt6.QtCore import Qt, QPointF
+from PySide6.QtWidgets import QApplication, QGraphicsView
+from PySide6.QtCore import Qt, QPointF
 
 from moleditpy.ui.molecule_scene import MoleculeScene
 from moleditpy.core.molecular_data import MolecularData
@@ -15,10 +15,10 @@ from unittest.mock import MagicMock, patch
 def mock_graphics_scene_events():
     """Patch QGraphicsScene mouse events to accept MagicMock."""
     with (
-        patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent"),
-        patch("PyQt6.QtWidgets.QGraphicsScene.mouseMoveEvent"),
-        patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
-        patch("PyQt6.QtWidgets.QGraphicsScene.keyPressEvent"),
+        patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent"),
+        patch("PySide6.QtWidgets.QGraphicsScene.mouseMoveEvent"),
+        patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
+        patch("PySide6.QtWidgets.QGraphicsScene.keyPressEvent"),
     ):
         yield
 
@@ -26,7 +26,7 @@ def mock_graphics_scene_events():
 @pytest.fixture(autouse=True)
 def mock_start_drag_distance():
     """Ensure drag distance is small enough for tests."""
-    with patch("PyQt6.QtWidgets.QApplication.startDragDistance", return_value=5):
+    with patch("PySide6.QtWidgets.QApplication.startDragDistance", return_value=5):
         yield
 
 

@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -26,8 +26,8 @@ from .utils.constants import VERSION
 
 # VERSION is resolved above (before Qt) so --version works without launching the app.
 
-from PyQt6.QtCore import QtMsgType, QThread, QTimer, qInstallMessageHandler
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QtMsgType, QThread, QTimer, qInstallMessageHandler
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from .ui.main_window import MainWindow
 
@@ -244,10 +244,7 @@ def main() -> None:
         description="MoleditPy — A Python-based molecular editing software",
     )
     parser.add_argument("file", nargs="?", default=None, help="File to open on startup")
-    _variant = " (Linux)" if "moleditpy_linux" in (__file__ or "") else ""
-    parser.add_argument(
-        "--version", action="version", version=f"MoleditPy{_variant} {VERSION}"
-    )
+    parser.add_argument("--version", action="version", version=f"MoleditPy {VERSION}")
     parser.add_argument(
         "--safe",
         action="store_true",

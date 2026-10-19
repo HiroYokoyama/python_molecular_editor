@@ -3,8 +3,8 @@
 
 import os
 from unittest.mock import MagicMock
-from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QMessageBox
 from moleditpy.utils.constants import DEFAULT_CPK_COLORS
 
 

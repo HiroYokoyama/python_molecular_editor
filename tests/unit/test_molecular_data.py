@@ -5,7 +5,7 @@ from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
 from moleditpy.core.molecular_data import MolecularData
 from moleditpy.utils.constants import ANGSTROM_PER_PIXEL
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 
 
 # =============================================================================

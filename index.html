@@ -54,7 +54,7 @@
       <div class="wrapper home-hero-layout">
         <div class="home-hero-copy">
           <p class="home-product"><img src="img/icon.png" alt="" width="36" height="36"> MoleditPy <span>v4</span></p>
-          <p class="home-license">Free &amp; open source &middot; GPL-3.0</p>
+          <p class="home-license">Free &amp; open source &middot; LGPL-3.0-or-later</p>
           <p class="home-eyebrow"><span class="lang-en">Unified Molecular Workspace</span><span class="lang-ja">2D/3D・計算化学を統合する分子ワークスペース</span></p>
           <h1 id="hero-title"><span class="lang-en">Draw. Shape. <em>Compute.</em></span><span class="lang-ja">分子を描き、<br><em>計算へ。</em></span></h1>
           <p class="hero-description"><span class="lang-en">MoleditPy brings 2D sketching, interactive 3D geometry editing, and computational-chemistry preparation into one programmable desktop workspace.</span><span class="lang-ja">MoleditPyは、2D分子描画、直感的な3D構造モデリング、計算化学の準備をシームレスに統合した拡張自在な分子エディターです。</span></p>
@@ -177,8 +177,8 @@
               <span class="lang-ja">直感的な2D描画と編集</span>
             </h3>
             <p>
-              <span class="lang-en">Draw and edit molecular structures with simple mouse controls on a responsive PyQt6 canvas.</span>
-              <span class="lang-ja">PyQt6によるモダンで軽快なキャンバス上で、原子や結合を直感的なマウス操作で描画・編集できます。</span>
+              <span class="lang-en">Draw and edit molecular structures with simple mouse controls on a responsive PySide6 canvas.</span>
+              <span class="lang-ja">PySide6によるモダンで軽快なキャンバス上で、原子や結合を直感的なマウス操作で描画・編集できます。</span>
             </p>
             <ul class="lang-en">
               <li>Benzene and 3–9 membered ring templates with live preview</li>
@@ -318,7 +318,7 @@
           </p>
         </div>
 
-        <!-- Install Terminal with Steps (1. Install, 2. Shortcut) -->
+        <!-- Install Terminal with Steps (1. Install helper, 2. Create shortcuts) -->
         <div class="install-terminal">
           <div class="install-terminal-header">
             <span class="terminal-label">Recommended: Python / pip</span>
@@ -330,18 +330,18 @@
           <div class="install-terminal-body">
             <div class="terminal-line">
               <span class="terminal-comment">
-                <span class="lang-en"># 1. Install MoleditPy</span>
-                <span class="lang-ja"># 1. MoleditPyをインストール</span>
+                <span class="lang-en"># 1. Install MoleditPy and the shortcut helper</span>
+                <span class="lang-ja"># 1. MoleditPyとショートカット用ヘルパーをインストール</span>
               </span>
             </div>
             <div class="terminal-line">
               <span class="prompt">$</span>
-              <code>pip install moleditpy-installer</code>
+              <code>python -m pip install moleditpy-installer</code>
             </div>
             <div class="terminal-line" style="margin-top: 0.75rem;">
               <span class="terminal-comment">
-                <span class="lang-en"># 2. Create an application shortcut</span>
-                <span class="lang-ja"># 2. アプリケーションショートカットを作成</span>
+                <span class="lang-en"># 2. Create shortcuts</span>
+                <span class="lang-ja"># 2. ショートカットを作成</span>
               </span>
             </div>
             <div class="terminal-line">
@@ -398,7 +398,7 @@
         <a href="https://pypi.org/project/MoleditPy/" target="_blank" rel="noopener">PyPI</a>
         <a href="https://doi.org/10.5281/zenodo.17268532" target="_blank" rel="noopener">Zenodo DOI</a>
       </div>
-      <p>Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank" rel="noopener">GPL-v3</a></p>
+      <p>Licensed under <a href="https://www.gnu.org/licenses/lgpl-3.0" target="_blank" rel="noopener">LGPL-v3+</a></p>
       <p class="copyright">&copy; HiroYokoyama &mdash; MoleditPy</p>
     </div>
   </footer>
@@ -445,7 +445,7 @@
     }
 
     function copyInstallCmd() {
-      var cmd = "pip install moleditpy-installer\npython -m moleditpy_installer";
+      var cmd = "python -m pip install moleditpy-installer\npython -m moleditpy_installer";
       var btn = document.getElementById('copy-btn');
       var text = document.getElementById('copy-text');
       var lang = document.body.getAttribute('data-lang');

@@ -14,7 +14,7 @@ _SRC = os.path.normpath(
 if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
-from PyQt6.QtCore import QtMsgType
+from PySide6.QtCore import QtMsgType
 
 import moleditpy.main as main_mod
 from moleditpy.main import (

@@ -2,12 +2,12 @@
 """GUI tests for MainWindow startup, file I/O, and core operations."""
 
 import pytest
-from PyQt6.QtCore import QPointF, Qt, QMimeData, QUrl
-from PyQt6.QtGui import QDropEvent
+from PySide6.QtCore import QPointF, Qt, QMimeData, QUrl
+from PySide6.QtGui import QDropEvent
 from unittest.mock import mock_open
 from unittest import mock as _mock
-from PyQt6.QtWidgets import QDialog, QApplication, QMessageBox
-from PyQt6.QtGui import QAction
+from PySide6.QtWidgets import QDialog, QApplication, QMessageBox
+from PySide6.QtGui import QAction
 import json
 
 # Import application modules directly (avoiding dependency on conftest side-effects)
@@ -530,7 +530,7 @@ def test_copy_paste(window, qtbot, monkeypatch):
     # Simulation: mock paste position to (100, 50)
     # Patch global cursor position to control paste location
     monkeypatch.setattr(
-        "PyQt6.QtGui.QCursor.pos",
+        "PySide6.QtGui.QCursor.pos",
         lambda *a, **k: window.init_manager.view_2d.mapToGlobal(
             window.init_manager.view_2d.mapFromScene(QPointF(100, 50))
         ),
@@ -556,7 +556,7 @@ def test_file_import_smiles(window, qtbot, monkeypatch):
     """File: Test for SMILES import."""
     # 1. Mock SMILES dialog
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QInputDialog.getText",
+        "PySide6.QtWidgets.QInputDialog.getText",
         lambda *a, **k: ("CCO", True),
         raising=False,
     )
@@ -591,7 +591,7 @@ def test_key_press_change_atom(window, qtbot, monkeypatch):
     view = scene.views()[0]
     viewport_pos = view.mapFromScene(atom_item.pos())
     # Ensure the global cursor position maps to the atom in the test environment
-    from PyQt6.QtGui import QCursor
+    from PySide6.QtGui import QCursor
 
     global_pos = view.mapToGlobal(viewport_pos)
     QCursor.setPos(global_pos)
@@ -626,7 +626,7 @@ def test_key_press_change_bond(window, qtbot, monkeypatch):
     view = scene.views()[0]
     viewport_pos = view.mapFromScene(bond_item.sceneBoundingRect().center())
     # Ensure the global cursor position maps to the bond in the test environment
-    from PyQt6.QtGui import QCursor
+    from PySide6.QtGui import QCursor
 
     global_pos = view.mapToGlobal(viewport_pos)
     QCursor.setPos(global_pos)
@@ -939,7 +939,7 @@ M  END
 
     # 2. Mock QFileDialog only (to avoid UI interaction)
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
+        "PySide6.QtWidgets.QFileDialog.getOpenFileName",
         lambda *a, **k: (str_path, "*.mol"),
         raising=False,
     )
@@ -1002,7 +1002,7 @@ def test_open_3d_edit_dialogs(window, qtbot, monkeypatch):
 @pytest.mark.gui
 def test_save_project_as(window, qtbot, monkeypatch, tmp_path):
     """Save the real project atomically and clear the unsaved-work warning."""
-    from PyQt6.QtWidgets import QFileDialog
+    from PySide6.QtWidgets import QFileDialog
 
     target = tmp_path / "saved.pmeprj"
     monkeypatch.setattr(
@@ -1066,7 +1066,7 @@ def test_open_project(window, qtbot, monkeypatch):
 
     # 2. Mock QFileDialog and json.load
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
+        "PySide6.QtWidgets.QFileDialog.getOpenFileName",
         lambda *a, **k: ("/fake/load.pmeprj", "*.pmeprj"),
         raising=False,
     )
@@ -1387,7 +1387,7 @@ def test_project_save_load_round_trip(window, qtbot, monkeypatch, tmp_path):
 
     # Mock QFileDialog to return temp path
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName",
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName",
         lambda *a, **k: (save_path_str, "*.pmeprj"),
         raising=False,
     )
@@ -1408,7 +1408,7 @@ def test_project_save_load_round_trip(window, qtbot, monkeypatch, tmp_path):
 
     # 4. Load from temporary file
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QFileDialog.getOpenFileName",
+        "PySide6.QtWidgets.QFileDialog.getOpenFileName",
         lambda *a, **k: (save_path_str, "*.pmeprj"),
         raising=False,
     )
@@ -1437,7 +1437,7 @@ def test_file_import_smiles_error(window, qtbot, monkeypatch):
 
     # 1. Mock invalid SMILES input
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QInputDialog.getText",
+        "PySide6.QtWidgets.QInputDialog.getText",
         lambda *a, **k: ("INVALID_SMILES_>>", True),
         raising=False,
     )
@@ -1445,10 +1445,10 @@ def test_file_import_smiles_error(window, qtbot, monkeypatch):
     # 2. Mock error dialogs (QMessageBox.critical or warning)
     mock_msg_box = _mock.MagicMock()
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QMessageBox.critical", mock_msg_box, raising=False
+        "PySide6.QtWidgets.QMessageBox.critical", mock_msg_box, raising=False
     )
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QMessageBox.warning", mock_msg_box, raising=False
+        "PySide6.QtWidgets.QMessageBox.warning", mock_msg_box, raising=False
     )
 
     # 3. Execute import
@@ -1498,10 +1498,10 @@ def test_import_invalid_mol_file(window, qtbot, monkeypatch, tmp_path):
     # 2. Mock error display
     mock_msg_box = _mock.MagicMock()
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QMessageBox.critical", mock_msg_box, raising=False
+        "PySide6.QtWidgets.QMessageBox.critical", mock_msg_box, raising=False
     )
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QMessageBox.warning", mock_msg_box, raising=False
+        "PySide6.QtWidgets.QMessageBox.warning", mock_msg_box, raising=False
     )
 
     # Mock RDKit parsing failure (allows testing in environments without RDKit)
@@ -1537,7 +1537,7 @@ def test_clear_2d_editor_cancel(window, qtbot, monkeypatch):
     # 1. Mock "Cancel" selection in dialog
     # QMessageBox.StandardButton.Cancel = 4194304
     monkeypatch.setattr(
-        "PyQt6.QtWidgets.QMessageBox.question",
+        "PySide6.QtWidgets.QMessageBox.question",
         lambda *a, **k: QMessageBox.StandardButton.Cancel,
         raising=False,
     )

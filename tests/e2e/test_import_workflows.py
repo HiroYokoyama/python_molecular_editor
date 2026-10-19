@@ -5,18 +5,12 @@ Each test uses the real importer managers on a live MainWindow and asserts
 the resulting document state (2D scene data or 3D viewer mode).
 """
 
-import importlib.util
-
 import pytest
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
-_PKG = (
-    "moleditpy_linux"
-    if importlib.util.find_spec("moleditpy_linux") is not None
-    else "moleditpy"
-)
+_PKG = "moleditpy"
 
 WATER_XYZ = """3
 water test

@@ -11,7 +11,7 @@ from moleditpy.core.mol_geometry import calculate_dihedral
 from moleditpy.core.molecular_data import MolecularData
 from moleditpy.ui.angle_dialog import AngleDialog
 from moleditpy.ui.bond_length_dialog import BondLengthDialog
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 from unittest.mock import patch, MagicMock
 
 
@@ -505,45 +505,6 @@ def test_calculation_worker_mmff_variants(qtbot, app):
         assert found
 
 
-def test_calculation_worker_obabel_fallback_mocked(qtbot, app):
-    """
-    Test the Open Babel fallback path by mocking availability and pybel.
-    """
-    data = MolecularData()
-    data.add_atom("C", QPointF(0, 0))
-    mol_block = data.to_mol_block()
-
-    worker = CalculationWorker()
-
-    with (
-        patch(
-            "moleditpy.ui.calculation_worker.rdDistGeom.EmbedMolecule",
-            return_value=-1,
-        ),
-        patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", True),
-        patch("moleditpy.ui.calculation_worker.pybel", spec=True),
-        patch("moleditpy.ui.calculation_worker.subprocess.run") as mock_run,
-        patch("moleditpy.ui.calculation_worker.Chem.MolFromMolBlock") as mock_rd_parse,
-    ):
-        # Mock subprocess result
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stdout = "dummy_mol_block"
-        mock_run.return_value = mock_result
-
-        # Mock RDKit back-parse
-        mock_rd_mol = Chem.MolFromSmiles("C")
-        mock_rd_parse.return_value = mock_rd_mol
-
-        with qtbot.waitSignal(worker.finished, timeout=10000):
-            worker.run_calculation(mol_block, {"conversion_mode": "fallback"})
-
-        assert mock_run.called
-        # Check if first arg to subprocess.run contains sys.executable
-        args, kwargs = mock_run.call_args
-        assert sys.executable in args[0]
-
-
 def test_calculation_worker_complex_direct_h_placement(qtbot, app):
     """
     Test direct mode with 4 hydrogens on a carbon to hit the rotation/offset logic.
@@ -993,9 +954,9 @@ def test_calculation_worker_direct_mmff94_rdkit_variant(qtbot, app):
     assert mol_3d.GetNumConformers() >= 1
 
 
-def test_calculation_worker_fallback_to_direct_no_obabel(qtbot, app):
+def test_calculation_worker_fallback_to_direct(qtbot, app):
     """
-    Integration test: fallback mode with OBABEL_AVAILABLE=False and
+    Integration test: fallback mode with
     RDKit embedding forced to fail. Should fall through to direct conversion
     as last resort.
     """
@@ -1009,9 +970,8 @@ def test_calculation_worker_fallback_to_direct_no_obabel(qtbot, app):
     status_messages = []
     worker.status_update.connect(lambda msg: status_messages.append(msg))
 
-    # Mock OBABEL_AVAILABLE to False and force EmbedMolecule to return -1
+    # Force embedding failure to exercise Direct fallback.
     with (
-        patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", False),
         patch(
             "moleditpy.ui.calculation_worker.rdDistGeom.EmbedMolecule", return_value=-1
         ),
@@ -1042,7 +1002,6 @@ def test_calculation_worker_fallback_to_direct_with_optimize(qtbot, app):
     worker = CalculationWorker()
 
     with (
-        patch("moleditpy.ui.calculation_worker.OBABEL_AVAILABLE", False),
         patch(
             "moleditpy.ui.calculation_worker.rdDistGeom.EmbedMolecule", return_value=-1
         ),

@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import MagicMock, Mock, patch, mock_open
 import numpy as np
-from PyQt6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow
 from moleditpy.ui.export_logic import ExportManager
-from PyQt6.QtCore import QRectF
+from PySide6.QtCore import QRectF
 
 
 # Create dummy classes for reliable isinstance checks
@@ -295,7 +295,7 @@ def test_export_2d_png_success(window, mock_file_dialog, mock_message_box):
         window.init_manager.scene.items.return_value = [atom_instance]
 
         window.export_2d_png()
-        mock_image.save.assert_called_with("/path/to/image.png", "PNG")
+        mock_image.save.assert_called_with("/path/to/image.png")
         window.statusBar().showMessage.assert_any_call(
             "2D view exported to /path/to/image.png"
         )

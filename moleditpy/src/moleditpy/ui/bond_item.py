@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -15,8 +15,8 @@ import math
 import logging
 from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
 
-from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
-from PyQt6.QtGui import (
+from PySide6.QtCore import QLineF, QPointF, QRectF, Qt
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QFont,
@@ -27,7 +27,7 @@ from PyQt6.QtGui import (
     QPen,
     QPolygonF,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsScene,
     QGraphicsSceneHoverEvent,
@@ -618,8 +618,9 @@ class BondItem(QGraphicsItem):
         """Highlight the bond on mouse hover."""
         self.hovered = True
         self.update()
-        if self.scene():
-            self.scene().set_hovered_item(self)  # type: ignore[union-attr]
+        scene = self.scene()
+        if scene is not None and hasattr(scene, "set_hovered_item"):
+            scene.set_hovered_item(self)
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event: QGraphicsSceneHoverEvent) -> None:  # type: ignore[override]
@@ -627,6 +628,7 @@ class BondItem(QGraphicsItem):
         if self.hovered:
             self.hovered = False
             self.update()
-        if self.scene():
-            self.scene().set_hovered_item(None)  # type: ignore[union-attr]
+        scene = self.scene()
+        if scene is not None and hasattr(scene, "set_hovered_item"):
+            scene.set_hovered_item(None)
         super().hoverLeaveEvent(event)

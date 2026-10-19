@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtGui import QFont
+from PySide6.QtGui import QFont
 
 from moleditpy.ui.atom_item import SUBSCRIPT_MAP, _WARM_UP_TEXT, warm_font_cache
 

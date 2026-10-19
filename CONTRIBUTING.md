@@ -58,7 +58,7 @@ MoleditPy's stability policy is: **never hide errors, never crash.**
 | UI slot / event handler | Wrap in `try/except`, log the traceback, show a status message or dialog |
 | Plugin `initialize()` / `run()` | Same — always log; optionally show a warning to the user |
 | Internal helper (non-UI) | Let exceptions propagate; do NOT swallow them |
-| C-extension boundary (RDKit, PyVista, PyQt6) | Broad `except Exception` is acceptable **only here**; must still log |
+| C-extension boundary (RDKit, PyVista, PySide6) | Broad `except Exception` is acceptable **only here**; must still log |
 
 **Critical rule:** an `except` block that contains only `pass` is **never** acceptable. You must at minimum write to the log:
 

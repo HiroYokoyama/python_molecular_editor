@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -14,9 +14,9 @@ import logging
 from typing import Any, List, Optional, Union, TYPE_CHECKING
 
 import numpy as np
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QCloseEvent, QKeyEvent
-from PyQt6.QtWidgets import QDialog, QWidget
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer
+from PySide6.QtGui import QCloseEvent, QKeyEvent
+from PySide6.QtWidgets import QDialog, QWidget
 from rdkit import Chem, Geometry
 
 from .dialog_3d_picking_mixin import Dialog3DPickingMixin
@@ -45,7 +45,7 @@ class SelectionList(List[int]):
             self.add(item)
 
 
-class BasePickingDialog(Dialog3DPickingMixin, QDialog):
+class BasePickingDialog(QDialog, Dialog3DPickingMixin):
     """
     Base class for any dialog requiring 3D atom picking.
     Provides standard cleanup and event handling for picking filters and labels.
@@ -69,6 +69,10 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         self._molecule_modified = (
             False  # Track if any modifications were made during this session
         )
+
+    def eventFilter(self, obj: Optional[QObject], event: Optional[QEvent]) -> bool:
+        """Route picking events while keeping Qt's native class first in the MRO."""
+        return Dialog3DPickingMixin.eventFilter(self, obj, event)
 
     def invalidate_molecule(self) -> None:
         """Close a dialog bound to a replaced molecule without recording an edit."""
@@ -94,7 +98,8 @@ class BasePickingDialog(Dialog3DPickingMixin, QDialog):
         self._geometry_refresh_timer.stop()
         self.clear_atom_labels()
         self.disable_picking()
-        super().closeEvent(event)
+        if event is not None:
+            super().closeEvent(event)
 
     def reject(self) -> None:
         """Cleanup on cancel."""

@@ -4,29 +4,12 @@ exceptions out of the loaders — every case must land in a handler that
 reports the failure (status bar + dialog in GUI mode) and leaves the app
 alive. Added with the dev-4.3.1 fix for the empty-.pmeraw EOFError crash."""
 
-import importlib.util
-import os
 import pickle
-import sys
 
 import pytest
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
-# Mirrors tests/e2e/conftest.py: pick the platform-appropriate package name
-# so this file works both against local sources and a pip-installed package.
-if os.environ.get("MOLEDITPY_USE_INSTALLED") == "1":
-    if importlib.util.find_spec("moleditpy_linux") is not None:
-        _PKG = "moleditpy_linux"
-    else:
-        _PKG = "moleditpy"
-elif sys.platform.startswith("linux") and os.path.isdir(
-    os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy-linux", "src")
-    )
-):
-    _PKG = "moleditpy_linux"
-else:
-    _PKG = "moleditpy"
+_PKG = "moleditpy"
 
 CASES = {
     "empty": b"",

@@ -4,9 +4,9 @@
 import math
 
 import pytest
-from PyQt6.QtCore import Qt, QPoint, QPointF
-from PyQt6.QtGui import QKeyEvent
-from PyQt6.QtTest import QTest
+from PySide6.QtCore import Qt, QPoint, QPointF
+from PySide6.QtGui import QKeyEvent
+from PySide6.QtTest import QTest
 
 from moleditpy.ui.chain_mixin import CHAIN_HALF_ANGLE_DEG
 from moleditpy.utils.constants import DEFAULT_BOND_LENGTH
@@ -15,7 +15,7 @@ CHAIN_AXIS_STEP = DEFAULT_BOND_LENGTH * math.cos(math.radians(CHAIN_HALF_ANGLE_D
 
 
 class FakeSceneMouseEvent:
-    """QGraphicsSceneMouseEvent stand-in; PyQt6 forbids instantiating the real one."""
+    """QGraphicsSceneMouseEvent stand-in; PySide6 forbids instantiating the real one."""
 
     def __init__(self, pos, button=Qt.MouseButton.LeftButton):
         self._pos = pos
@@ -168,7 +168,7 @@ def test_temp_line_cancellation(window, qtbot):
     # Simulate start of bond drawing
     scene.start_atom = a1_item
     scene.start_pos = a1_item.pos()
-    from PyQt6.QtWidgets import QGraphicsLineItem
+    from PySide6.QtWidgets import QGraphicsLineItem
 
     scene.temp_line = QGraphicsLineItem()
     scene.addItem(scene.temp_line)

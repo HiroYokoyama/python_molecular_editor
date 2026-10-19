@@ -10,7 +10,7 @@ import math
 
 import numpy as np
 import pytest
-from PyQt6.QtCore import Qt
+from PySide6.QtCore import Qt
 
 from benzene import assert_is_2d_benzene, draw_benzene_by_hand, place_benzene_template
 from conftest import PKG
@@ -243,17 +243,6 @@ def test_benzene_conversion_backends(full_window, mode):
     draw_benzene_by_hand(full_window)
     mol_block = full_window.state_manager.data.to_mol_block()
     assert_is_3d_benzene(_run_worker_sync(mol_block, mode), mode)
-
-
-def test_benzene_conversion_obabel_when_available(full_window):
-    """Open Babel back-end, where the platform actually ships it (Linux)."""
-    pkg = importlib.import_module(PKG)
-    if not getattr(pkg, "OBABEL_AVAILABLE", False):
-        pytest.skip("Open Babel is not available on this platform")
-
-    draw_benzene_by_hand(full_window)
-    mol_block = full_window.state_manager.data.to_mol_block()
-    assert_is_3d_benzene(_run_worker_sync(mol_block, "obabel"), "obabel")
 
 
 # ---------------------------------------------------------------------------

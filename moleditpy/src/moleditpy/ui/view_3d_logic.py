@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -25,11 +25,11 @@ import vtk
 # RDKit imports (explicit to satisfy flake8 and used features)
 from rdkit import Chem
 
-# PyQt6 Modules
+# PySide6 Modules
 import pyvista as pv
-from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QColor, QTransform
-from PyQt6.QtWidgets import QGraphicsView
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QColor, QTransform
+from PySide6.QtWidgets import QGraphicsView
 
 
 from ..utils.constants import CPK_COLORS_PV, VDW_DISPLAY_RADII, pt

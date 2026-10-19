@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -17,9 +17,9 @@ from typing import Any, Optional
 
 import vtk
 
-# PyQt6 Modules
-from PyQt6.QtCore import QEvent, Qt, QTimer, QObject
-from PyQt6.QtWidgets import (
+# PySide6 Modules
+from PySide6.QtCore import QEvent, Qt, QTimer, QObject
+from PySide6.QtWidgets import (
     QApplication,
     QGraphicsView,
     QMainWindow,
@@ -27,7 +27,7 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QWidget,
 )
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
 from ..utils.sip_isdeleted_safe import sip_isdeleted_safe
 
@@ -40,7 +40,7 @@ class UIManager(QObject):
 
     def __init__(self, host: Any) -> None:
         """Initialize UIManager coordinating UI state and viewport events."""
-        super().__init__()
+        super().__init__(host if isinstance(host, QObject) else None)
         self.is_2d_editable = False
         self.host = host
 
@@ -217,7 +217,7 @@ class UIManager(QObject):
                     event.ignore()
                     return True  # Stop propagation
 
-        return super().eventFilter(obj, event)
+        return super().eventFilter(obj, event) if obj is not None else False
 
     def handle_close_event(self, event: QEvent) -> bool:
         """

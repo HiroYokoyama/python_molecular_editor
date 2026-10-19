@@ -227,9 +227,9 @@ def test_slow_optimization_close_keeps_gui_responsive_and_worker_alive(
 ):
     """A blocked minimization cannot freeze close/undo or die with its dialog."""
     from threading import Event
-    from PyQt6 import sip
-    from PyQt6.QtCore import Qt, QTimer
-    from PyQt6.QtGui import QCloseEvent
+    from shiboken6 import isValid
+    from PySide6.QtCore import Qt, QTimer
+    from PySide6.QtGui import QCloseEvent
     from rdkit.Chem import rdForceFieldHelpers
 
     mol = install_molecule(window, monkeypatch)
@@ -264,7 +264,7 @@ def test_slow_optimization_close_keeps_gui_responsive_and_worker_alive(
         if action == "delete_on_close":
             dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
             dialog.close()
-            qtbot.waitUntil(lambda: sip.isdeleted(dialog), timeout=1000)
+            qtbot.waitUntil(lambda: not isValid(dialog), timeout=1000)
         elif action == "undo":
             window.edit_actions_manager.undo()
         elif action == "application_close":

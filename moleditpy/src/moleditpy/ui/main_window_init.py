@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -20,9 +20,9 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
-# PyQt6 Modules
-from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt, QTimer, QUrl
-from PyQt6.QtGui import (
+# PySide6 Modules
+from PySide6.QtCore import QLineF, QPointF, QRectF, Qt, QTimer, QUrl
+from PySide6.QtGui import (
     QAction,
     QActionGroup,
     QBrush,
@@ -36,7 +36,7 @@ from PyQt6.QtGui import (
     QPixmap,
     QPolygonF,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLabel,
@@ -51,7 +51,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from .. import OBABEL_AVAILABLE
 from ..utils.default_settings import DEFAULT_SETTINGS
 from ..plugins.plugin_manager import PluginManager
 from ..utils.system_utils import detect_system_dark_mode
@@ -69,6 +68,7 @@ from ..core.molecular_data import MolecularData
 from .molecule_scene import MoleculeScene
 from .plugin_menu_manager import PluginMenuManager
 from .settings_dialog import SettingsDialog
+from .menu_utils import add_menu
 from .zoomable_view import ZoomableView
 
 
@@ -195,11 +195,13 @@ class MainInitManager:
 
         if initial_file:
             # Deferred: a load-error dialog raised in the constructor would block the window from showing
-            QTimer.singleShot(0, lambda: self.load_command_line_file(initial_file))
+            QTimer.singleShot(
+                0, self.host, lambda: self.load_command_line_file(initial_file)
+            )
 
-        QTimer.singleShot(0, self.apply_initial_settings)
+        QTimer.singleShot(0, self.host, self.apply_initial_settings)
         # After apply_initial_settings, so the user's own font family is warmed.
-        QTimer.singleShot(0, self._warm_font_cache)
+        QTimer.singleShot(0, self.host, self._warm_font_cache)
         # Camera initialization flag (permits reset only during the first draw)
         self._camera_initialized = False
 
@@ -214,7 +216,7 @@ class MainInitManager:
         # when opening a file or starting the application. This avoids
         # accidental focus landing on toolbar/buttons (e.g. Optimize 2D).
         try:
-            QTimer.singleShot(0, self.view_2d.setFocus)  # type: ignore[attr-defined]
+            QTimer.singleShot(0, self.host, self.view_2d.setFocus)  # type: ignore[attr-defined]
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.debug(
                 f"Suppressed exception: {e}"
@@ -325,7 +327,7 @@ class MainInitManager:
             self.host.io_manager.load_xyz_for_3d_viewing(file_path)
         elif file_ext in ["pmeraw", "pmeprj"]:
             self.host.io_manager.open_project_file(file_path=file_path)
-            QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
+            QTimer.singleShot(100, self.host, self.host.view_3d_manager.fit_to_view)
         else:
             self.host.statusBar().showMessage(f"Unsupported file type: {file_ext}")
 
@@ -617,7 +619,7 @@ class MainInitManager:
         self.splitter.setSizes([600, 600])
 
         # Set tooltip for splitter handle
-        QTimer.singleShot(100, self.host.ui_manager.setup_splitter_tooltip)
+        QTimer.singleShot(100, self.host, self.host.ui_manager.setup_splitter_tooltip)
 
         # Settings to separate status bar segments
         self.status_bar = self.host.statusBar()
@@ -640,11 +642,13 @@ class MainInitManager:
                 loaded_settings["3d_conversion_mode"] = "rdkit"
             del loaded_settings["clean_up_2d_on_conversion"]
 
-        # Migrate old key 'use_obabel_optimization'
-        if "use_obabel_optimization" in loaded_settings:
-            if loaded_settings["use_obabel_optimization"]:
-                loaded_settings["optimization_method"] = "MMFF94_OBABEL"
-            del loaded_settings["use_obabel_optimization"]
+        # Retired built-in optimizers cannot be restored as active methods.
+        loaded_settings.pop("use_obabel_optimization", None)
+        method = str(loaded_settings.get("optimization_method", ""))
+        if method.upper().endswith("_OBABEL"):
+            loaded_settings["optimization_method"] = "MMFF_RDKIT"
+        if loaded_settings.get("3d_conversion_mode") == "obabel":
+            loaded_settings["3d_conversion_mode"] = "fallback"
 
     def _init_left_panel(self, left_layout: Any) -> None:
         """Initialize the left panel (2D view and buttons)."""
@@ -1167,7 +1171,7 @@ class MainInitManager:
     # --- Menu Bar Initialization Helpers ---
     def _init_file_menu(self, menu_bar: Any) -> None:
         """Initialize the File menu."""
-        file_menu = menu_bar.addMenu("&File")
+        file_menu = add_menu(menu_bar, "&File")
 
         # === Project Operations ===
         new_action = QAction("&New", self.host)
@@ -1199,7 +1203,7 @@ class MainInitManager:
         file_menu.addSeparator()
 
         # === Import ===
-        self.import_menu = file_menu.addMenu("Import")
+        self.import_menu = add_menu(file_menu, "Import")
         load_mol_action = QAction("MOL/SDF File...", self.host)
         load_mol_action.triggered.connect(self.host.io_manager.load_mol_file)
         self.import_menu.addAction(load_mol_action)
@@ -1230,13 +1234,13 @@ class MainInitManager:
         self.import_menu.addAction(load_3d_xyz_action)
 
         # === Export ===
-        export_menu = file_menu.addMenu("Export")
+        export_menu = add_menu(file_menu, "Export")
         export_pmeraw_action = QAction("PME Raw Format...", self.host)
         export_pmeraw_action.triggered.connect(self.host.io_manager.save_raw_data)
         export_menu.addAction(export_pmeraw_action)
         export_menu.addSeparator()
 
-        export_2d_menu = export_menu.addMenu("2D Formats")
+        export_2d_menu = add_menu(export_menu, "2D Formats")
         save_mol_action = QAction("MOL File...", self.host)
         save_mol_action.triggered.connect(self.host.io_manager.save_as_mol)
         export_2d_menu.addAction(save_mol_action)
@@ -1249,7 +1253,7 @@ class MainInitManager:
         export_2d_svg_action.triggered.connect(self.host.export_manager.export_2d_svg)
         export_2d_menu.addAction(export_2d_svg_action)
 
-        export_3d_menu = export_menu.addMenu("3D Formats")
+        export_3d_menu = add_menu(export_menu, "3D Formats")
         save_3d_mol_action = QAction("MOL File...", self.host)
         save_3d_mol_action.triggered.connect(self.host.io_manager.save_3d_as_mol)
         export_3d_menu.addAction(save_3d_mol_action)
@@ -1280,7 +1284,7 @@ class MainInitManager:
 
     def _init_edit_menu(self, menu_bar: Any) -> None:
         """Initialize the Edit menu."""
-        edit_menu = menu_bar.addMenu("&Edit")
+        edit_menu = add_menu(menu_bar, "&Edit")
         self.undo_action = QAction("Undo", self.host)
         self.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
         self.undo_action.triggered.connect(self.host.edit_actions_manager.undo)
@@ -1370,7 +1374,7 @@ class MainInitManager:
 
     def _init_view_menu(self, menu_bar: Any) -> None:
         """Initialize the View menu."""
-        view_menu = menu_bar.addMenu("&View")
+        view_menu = add_menu(menu_bar, "&View")
         zoom_in_action = QAction("Zoom In", self.host)
         zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn)
         zoom_in_action.triggered.connect(self.host.view_3d_manager.zoom_in)
@@ -1411,7 +1415,7 @@ class MainInitManager:
         view_menu.addAction(self.host.redraw_menu_action)
 
         view_menu.addSeparator()
-        layout_menu = view_menu.addMenu("Panel Layout")
+        layout_menu = add_menu(view_menu, "Panel Layout")
         equal_panels_action = QAction("Equal Panels (50:50)", self.host)
         equal_panels_action.setShortcut(QKeySequence("Ctrl+1"))
         equal_panels_action.triggered.connect(
@@ -1451,7 +1455,7 @@ class MainInitManager:
         view_menu.addAction(self.toggle_chiral_action)
 
         view_menu.addSeparator()
-        atom_info_menu = view_menu.addMenu("3D Atom Info Display")
+        atom_info_menu = add_menu(view_menu, "3D Atom Info Display")
 
         self.show_index_action = QAction("Show Index", self.host)
         self.show_index_action.setCheckable(True)
@@ -1489,7 +1493,7 @@ class MainInitManager:
         atom_info_menu.addAction(self.show_atom_symbol_action)
 
         atom_info_menu.addSeparator()
-        self.atom_index_base_menu = atom_info_menu.addMenu("Index Base")
+        self.atom_index_base_menu = add_menu(atom_info_menu, "Index Base")
         index_base_group = QActionGroup(self.host)
         index_base_group.setExclusive(True)
 
@@ -1515,7 +1519,7 @@ class MainInitManager:
 
     def _init_analysis_menu(self, menu_bar: Any) -> None:
         """Initialize the Analysis menu."""
-        analysis_menu = menu_bar.addMenu("&Analysis")
+        analysis_menu = add_menu(menu_bar, "&Analysis")
         self.analysis_action = QAction("Show Analysis...", self.host)
         self.analysis_action.triggered.connect(
             self.host.dialog_manager.open_analysis_window
@@ -1525,7 +1529,7 @@ class MainInitManager:
 
     def _init_edit_3d_menu(self, menu_bar: Any) -> None:
         """Initialize the 3D Edit menu."""
-        edit_3d_menu = menu_bar.addMenu("3D &Edit")
+        edit_3d_menu = add_menu(menu_bar, "3D &Edit")
         translation_action = QAction("Translation...", self.host)
         translation_action.triggered.connect(
             self.host.dialog_manager.open_translation_dialog
@@ -1551,11 +1555,11 @@ class MainInitManager:
         self.host.move_group_action = move_group_action
 
         edit_3d_menu.addSeparator()
-        align_menu = edit_3d_menu.addMenu("Align to")
+        align_menu = add_menu(edit_3d_menu, "Align to")
         align_menu.setEnabled(False)
         self.host.align_menu = align_menu
 
-        axis_align_menu = align_menu.addMenu("Axis")
+        axis_align_menu = add_menu(align_menu, "Axis")
         align_x_action = QAction("X-axis", self.host)
         align_x_action.triggered.connect(
             lambda: self.host.dialog_manager.open_alignment_dialog("x")
@@ -1580,7 +1584,7 @@ class MainInitManager:
         axis_align_menu.addAction(align_z_action)
         self.host.align_z_action = align_z_action
 
-        plane_align_menu = align_menu.addMenu("Plane")
+        plane_align_menu = add_menu(align_menu, "Plane")
         alignplane_xy_action = QAction("XY-plane", self.host)
         alignplane_xy_action.triggered.connect(
             lambda: self.host.dialog_manager.open_align_plane_dialog("xy")
@@ -1653,7 +1657,7 @@ class MainInitManager:
 
     def _init_plugin_menu(self, menu_bar: Any) -> None:
         """Initialize the Plugin menu."""
-        self.plugin_menu = menu_bar.addMenu("&Plugin")
+        self.plugin_menu = add_menu(menu_bar, "&Plugin")
         manage_plugins_action = QAction("Plugin Manager...", self.host)
 
         def show_plugin_manager() -> None:
@@ -1674,7 +1678,7 @@ class MainInitManager:
 
     def _init_settings_menu(self, menu_bar: Any) -> None:
         """Initialize the Settings menu."""
-        settings_menu = menu_bar.addMenu("&Settings")
+        settings_menu = add_menu(menu_bar, "&Settings")
         view_settings_action = QAction("Settings...", self.host)
         view_settings_action.setMenuRole(QAction.MenuRole.NoRole)
         view_settings_action.triggered.connect(
@@ -1688,7 +1692,7 @@ class MainInitManager:
         )
         settings_menu.addAction(color_action)
 
-        conversion_menu = settings_menu.addMenu("3D Conversion")
+        conversion_menu = add_menu(settings_menu, "3D Conversion")
         conv_group = QActionGroup(self.host)
         conv_group.setExclusive(True)
 
@@ -1704,15 +1708,12 @@ class MainInitManager:
         conv_options = [
             ("Fallback", "fallback"),
             ("RDKit only", "rdkit"),
-            ("Open Babel only", "obabel"),
             ("Direct (use 2D coords + add H)", "direct"),
         ]
         self.conv_actions = {}
         for label, key in conv_options:
             a = QAction(label, self.host)
             a.setCheckable(True)
-            if key == "obabel" and not OBABEL_AVAILABLE:
-                a.setEnabled(False)
             a.triggered.connect(lambda checked, m=key: _set_conv_mode(m))
             conversion_menu.addAction(a)
             conv_group.addAction(a)
@@ -1733,16 +1734,11 @@ class MainInitManager:
             self.conv_actions[saved_conv].setChecked(True)
         self.settings["3d_conversion_mode"] = saved_conv
 
-        self.optimization_menu = settings_menu.addMenu("3D Optimization Settings")
+        self.optimization_menu = add_menu(settings_menu, "3D Optimization Settings")
         opt_methods = [
             ("MMFF94s (RDKit)", "MMFF_RDKIT"),
             ("MMFF94 (RDKit)", "MMFF94_RDKIT"),
             ("UFF (RDKit)", "UFF_RDKIT"),
-            ("MMFF94s (Open Babel)", "MMFF94s_OBABEL"),
-            ("MMFF94 (Open Babel)", "MMFF94_OBABEL"),
-            ("UFF (Open Babel)", "UFF_OBABEL"),
-            ("GAFF (Open Babel)", "GAFF_OBABEL"),
-            ("Ghemical (Open Babel)", "GHEMICAL_OBABEL"),
         ]
         self.opt3d_method_labels = {key.upper(): label for (label, key) in opt_methods}
         self.opt_group = QActionGroup(self.host)
@@ -1751,8 +1747,6 @@ class MainInitManager:
         for label, key in opt_methods:
             action = QAction(label, self.host)
             action.setCheckable(True)
-            if key.endswith("_OBABEL") and not OBABEL_AVAILABLE:
-                action.setEnabled(False)
             action.triggered.connect(
                 lambda checked, m=key: (
                     self.host.compute_manager.set_optimization_method(m)
@@ -1819,7 +1813,7 @@ class MainInitManager:
 
     def _init_help_menu(self, menu_bar: Any) -> None:
         """Initialize the Help menu."""
-        help_menu = menu_bar.addMenu("&Help")
+        help_menu = add_menu(menu_bar, "&Help")
         about_action = QAction("About", self.host)
         about_action.setMenuRole(QAction.MenuRole.NoRole)
         about_action.triggered.connect(self.host.dialog_manager.show_about_dialog)

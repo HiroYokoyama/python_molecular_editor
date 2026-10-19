@@ -3,43 +3,25 @@
 
 VTK/PyVista are mocked at import time so the real MainWindow can be
 instantiated headlessly.  The `window` fixture selects the right package
-(moleditpy_linux on Linux, moleditpy everywhere else) automatically.
+(moleditpy on every platform) automatically.
 """
 
 import os
 import sys
 import types
-import importlib.util
 import pytest
 from unittest import mock as _mock
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 # ---------------------------------------------------------------------------
-# Package selection (mirrors test_ethane_conversion.py)
+# Package selection: the unified package on every platform.
 # ---------------------------------------------------------------------------
-_IS_LINUX = sys.platform.startswith("linux")
-
-_LINUX_SRC = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy-linux", "src")
-)
+_PKG = "moleditpy"
 _MAIN_SRC = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
 )
-
-if os.environ.get("MOLEDITPY_USE_INSTALLED") == "1":
-    # CI pip-install mode: use whichever package is installed; skip local source.
-    if importlib.util.find_spec("moleditpy_linux") is not None:
-        _PKG = "moleditpy_linux"
-    else:
-        _PKG = "moleditpy"
-elif _IS_LINUX and os.path.isdir(_LINUX_SRC):
-    if _LINUX_SRC not in sys.path:
-        sys.path.insert(0, _LINUX_SRC)
-    _PKG = "moleditpy_linux"
-else:
-    if _MAIN_SRC not in sys.path:
-        sys.path.insert(0, _MAIN_SRC)
-    _PKG = "moleditpy"
+if os.environ.get("MOLEDITPY_USE_INSTALLED") != "1" and _MAIN_SRC not in sys.path:
+    sys.path.insert(0, _MAIN_SRC)
 
 # ---------------------------------------------------------------------------
 # VTK / PyVista mocking — must happen before any app module is imported
@@ -195,7 +177,7 @@ pyv.Box = _mock.MagicMock
 pvqt.BackgroundPlotter = _DummyPlotterBase
 
 # QtInteractor must be a QWidget subclass so it can be embedded in the splitter
-from PyQt6.QtWidgets import QWidget as _QWidget  # noqa: E402
+from PySide6.QtWidgets import QWidget as _QWidget  # noqa: E402
 
 
 class _DummyQtInteractor(_QWidget):
@@ -235,7 +217,7 @@ def app():
 @pytest.fixture
 def window(app, qtbot, monkeypatch, tmp_path):
     """Real MainWindow, headless, using the platform-appropriate package."""
-    from PyQt6.QtWidgets import QWidget, QMessageBox, QFileDialog
+    from PySide6.QtWidgets import QWidget, QMessageBox, QFileDialog
 
     # Sandbox the home dir so tests never read/write the real ~/.moleditpy
     # (settings.json, plugins). MainInitManager and PluginManager both build
@@ -328,7 +310,7 @@ def window(app, qtbot, monkeypatch, tmp_path):
     def _sync_trigger(self_compute):
         from rdkit import Chem
         from rdkit.Chem import AllChem
-        from PyQt6.QtCore import QTimer
+        from PySide6.QtCore import QTimer
 
         mol = self_compute.host.state_manager.data.to_rdkit_mol(use_2d_stereo=False)
         if mol and mol.GetNumAtoms() > 0:

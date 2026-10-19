@@ -2,8 +2,8 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtGui import QKeyEvent
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QKeyEvent
 from moleditpy.ui.molecular_scene_handler import KeyboardMixin
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem

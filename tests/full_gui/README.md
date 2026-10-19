@@ -43,7 +43,7 @@ whole tier **skips** with the reason attached, because a missing GPU is an
 environment fact, not a defect in the application.
 
 Set `MOLEDITPY_FULL_GUI_REQUIRED=1` to turn that skip into a failure. CI's
-Linux job sets it, so a broken runner image is reported instead of quietly
+Linux rendering jobs and Linux/macOS launch-probe jobs set it, so a broken runner image is reported instead of quietly
 disabling every test in this directory.
 
 ## Environment variables
@@ -54,7 +54,7 @@ disabling every test in this directory.
 | `MOLEDITPY_LAUNCH_TIMEOUT` | `180` | seconds the subprocess launch test waits before killing the app and failing |
 
 `MOLEDITPY_LAUNCH_TIMEOUT` exists because the failure mode worth catching is a
-launch that *never finishes* — reported on macOS with the PyQt6 range pinned
+launch that *never finishes* — reported on macOS with the PySide6 range pinned
 for Python 3.9. In-process that is undetectable: an event loop that never
 returns cannot be interrupted, and pytest-timeout's `signal` handler fires
 inside a Qt event handler where pyvistaqt catches it. A child process can be

@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import MagicMock
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 from moleditpy.ui.molecular_scene_handler import KeyboardMixin
 from moleditpy.ui.atom_item import AtomItem
 

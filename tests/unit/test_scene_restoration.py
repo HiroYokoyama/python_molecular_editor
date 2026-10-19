@@ -2,8 +2,8 @@
 
 import pytest
 import copy
-from PyQt6.QtCore import QPointF
-from PyQt6 import sip
+from PySide6.QtCore import QPointF
+from shiboken6 import isValid
 
 from moleditpy.core.molecular_data import MolecularData
 from moleditpy.ui.molecule_scene import MoleculeScene
@@ -40,7 +40,7 @@ def test_clear_drops_deleted_items_and_drag_references(app):
     scene.initial_positions_in_event = {atoms[2]: atoms[2].pos()}
     scene.template_context = {"items": atoms}
     scene.clear()
-    assert all(sip.isdeleted(item) for item in [*atoms, bond])
+    assert all(not isValid(item) for item in [*atoms, bond])
     assert scene.atom_items == scene.bond_items == {}
     assert scene.start_atom is scene.hovered_item is scene.chain_start_atom is None
     assert not scene.initial_positions_in_event

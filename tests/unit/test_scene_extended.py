@@ -1,9 +1,9 @@
 """Unit tests for MoleculeScene extended behaviors and keyboard operations."""
 
 import pytest
-from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtGui import QKeyEvent, QTransform
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QKeyEvent, QTransform
+from PySide6.QtWidgets import QApplication
 from moleditpy.ui.molecule_scene import MoleculeScene
 from moleditpy.ui.atom_item import AtomItem
 from unittest.mock import MagicMock, patch
@@ -13,10 +13,10 @@ from unittest.mock import MagicMock, patch
 def mock_graphics_scene_events():
     """Patch QGraphicsScene mouse events to accept MagicMock."""
     with (
-        patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent"),
-        patch("PyQt6.QtWidgets.QGraphicsScene.mouseMoveEvent"),
-        patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
-        patch("PyQt6.QtWidgets.QGraphicsScene.keyPressEvent"),
+        patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent"),
+        patch("PySide6.QtWidgets.QGraphicsScene.mouseMoveEvent"),
+        patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
+        patch("PySide6.QtWidgets.QGraphicsScene.keyPressEvent"),
     ):
         yield
 
@@ -54,7 +54,7 @@ def test_scene_keypress_modes(mock_parser_host):
     scene.mode = "atom_C"
     with (
         patch.object(MoleculeScene, "itemAt", return_value=None),
-        patch("PyQt6.QtGui.QCursor.pos", return_value=QPointF(0, 0)),
+        patch("PySide6.QtGui.QCursor.pos", return_value=QPointF(0, 0)),
     ):
         event = QKeyEvent(
             QKeyEvent.Type.KeyPress, Qt.Key.Key_Space, Qt.KeyboardModifier.NoModifier
@@ -76,7 +76,7 @@ def test_scene_keypress_modes(mock_parser_host):
 
     with (
         patch.object(MoleculeScene, "itemAt", return_value=None),
-        patch("PyQt6.QtGui.QCursor.pos", return_value=QPointF(0, 0)),
+        patch("PySide6.QtGui.QCursor.pos", return_value=QPointF(0, 0)),
     ):
         for key, expected_mode in key_map.items():
             event = QKeyEvent(
@@ -97,7 +97,7 @@ def test_scene_keypress_special_symbols(mock_parser_host):
 
     with (
         patch.object(MoleculeScene, "itemAt", return_value=None),
-        patch("PyQt6.QtGui.QCursor.pos", return_value=QPointF(0, 0)),
+        patch("PySide6.QtGui.QCursor.pos", return_value=QPointF(0, 0)),
     ):
         event = QKeyEvent(
             QKeyEvent.Type.KeyPress, Qt.Key.Key_C, Qt.KeyboardModifier.ShiftModifier
@@ -129,7 +129,7 @@ def test_scene_keypress_delete(mock_parser_host):
         patch.object(MoleculeScene, "delete_items") as mock_delete,
         patch.object(MoleculeScene, "selectedItems", return_value=[atom_item]),
         patch.object(MoleculeScene, "itemAt", return_value=None),
-        patch("PyQt6.QtGui.QCursor.pos", return_value=QPointF(0, 0)),
+        patch("PySide6.QtGui.QCursor.pos", return_value=QPointF(0, 0)),
     ):
         event = QKeyEvent(
             QKeyEvent.Type.KeyPress, Qt.Key.Key_Delete, Qt.KeyboardModifier.NoModifier
@@ -218,7 +218,7 @@ def test_scene_mouse_drag_create_bond_existing_atoms(mock_parser_host):
     # 2. Release on A2
     release_event = create_mock_mouse_event(QPointF(50, 0))
     with (
-        patch("PyQt6.QtWidgets.QApplication.startDragDistance", return_value=10),
+        patch("PySide6.QtWidgets.QApplication.startDragDistance", return_value=10),
         patch.object(scene, "itemAt", return_value=a2),
     ):
         scene.mouseReleaseEvent(release_event)
@@ -237,7 +237,7 @@ def test_scene_mouse_click_create_single_atom(mock_parser_host):
     click_event = create_mock_mouse_event(QPointF(100, 100))
     with (
         patch.object(scene, "itemAt", return_value=None),
-        patch("PyQt6.QtWidgets.QApplication.startDragDistance", return_value=10),
+        patch("PySide6.QtWidgets.QApplication.startDragDistance", return_value=10),
     ):
         # mousePressEvent sets self.start_pos and self.press_pos
         scene.mousePressEvent(click_event)
@@ -306,7 +306,7 @@ def test_scene_drag_and_drop_atom(mock_parser_host):
         # 2. Move
         atom_item.setPos(new_pos)
         move_event = create_mock_mouse_event(new_pos)
-        with patch("PyQt6.QtWidgets.QApplication.startDragDistance", return_value=5):
+        with patch("PySide6.QtWidgets.QApplication.startDragDistance", return_value=5):
             scene.mouseMoveEvent(move_event)
 
             # 3. Release

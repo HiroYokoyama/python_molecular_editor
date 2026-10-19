@@ -66,7 +66,7 @@ class _PluginWrappedCompute(ComputeManager):
         return getattr(self._host, name)
 
     def _start_calculation_worker(self, mol_block, options, run_id) -> None:
-        with patch("PyQt6.QtCore.QThread.start"):
+        with patch("PySide6.QtCore.QThread.start"):
             ComputeManager._start_calculation_worker(self, mol_block, options, run_id)
 
     @property
@@ -133,7 +133,7 @@ class TestTriggerConversionTempMode:
 
         compute.trigger_conversion = fake_trigger
 
-        with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
+        with patch("PySide6.QtCore.QTimer.singleShot") as mock_timer:
             compute._trigger_conversion_with_temp_mode("rdkit")
 
         # QTimer.singleShot was called with the right callback
@@ -209,7 +209,7 @@ class TestTriggerConversionTempMode:
 
         mol = Chem.MolFromSmiles("C")
         host.state_manager.data.atoms = {1: {"symbol": "C"}}
-        host.init_manager.settings["3d_conversion_mode"] = "obabel"
+        host.init_manager.settings["3d_conversion_mode"] = "direct"
 
         with (
             patch.object(host.state_manager.data, "to_rdkit_mol", return_value=mol),
@@ -225,7 +225,7 @@ class TestTriggerConversionTempMode:
             compute.trigger_conversion()
 
         options = mock_start.call_args[0][1]
-        assert options["conversion_mode"] == "obabel"
+        assert options["conversion_mode"] == "direct"
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +252,7 @@ class TestPluginWrappedTriggerConversion:
             timer_callbacks.append(cb)
 
         with (
-            patch("PyQt6.QtCore.QTimer.singleShot", side_effect=capture_callback),
+            patch("PySide6.QtCore.QTimer.singleShot", side_effect=capture_callback),
             patch.object(host.state_manager.data, "to_rdkit_mol", return_value=mol),
             patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
             patch("rdkit.Chem.SanitizeMol"),
@@ -333,7 +333,7 @@ class TestPluginWrappedTriggerConversion:
             timer_callbacks.append(cb)
 
         with (
-            patch("PyQt6.QtCore.QTimer.singleShot", side_effect=capture),
+            patch("PySide6.QtCore.QTimer.singleShot", side_effect=capture),
             patch.object(host.state_manager.data, "to_rdkit_mol", return_value=mol),
             patch("rdkit.Chem.DetectChemistryProblems", return_value=[]),
             patch("rdkit.Chem.SanitizeMol"),
@@ -462,7 +462,7 @@ class TestConvertButtonDoesNotLeakClickedArg:
         plugin-set mode is neither used nor cleared, and it survives into the
         next conversion.
         """
-        from PyQt6.QtWidgets import QPushButton
+        from PySide6.QtWidgets import QPushButton
 
         host.init_manager.convert_button = QPushButton()
         host.init_manager.optimize_3d_button = QPushButton()

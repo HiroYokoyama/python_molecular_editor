@@ -7,8 +7,8 @@ from the ``bond_snapping_distance_2d`` setting.
 """
 
 import pytest
-from PyQt6.QtCore import QPointF
-from PyQt6.QtGui import QTransform
+from PySide6.QtCore import QPointF
+from PySide6.QtGui import QTransform
 from moleditpy.ui.molecule_scene import MoleculeScene
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem

@@ -9,13 +9,9 @@ import importlib
 import importlib.util
 
 import pytest
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 
-_PKG = (
-    "moleditpy_linux"
-    if importlib.util.find_spec("moleditpy_linux") is not None
-    else "moleditpy"
-)
+_PKG = "moleditpy"
 UNDO_STACK_MAX_DEPTH = importlib.import_module(
     f"{_PKG}.utils.constants"
 ).UNDO_STACK_MAX_DEPTH

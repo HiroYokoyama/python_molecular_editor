@@ -361,7 +361,7 @@ def test_actual_ez_reads_cip_from_3d():
     from rdkit.Chem import AllChem
     from moleditpy.core.stereo_check import actual_ez
 
-    for smiles, want in (("C/C=C/C", "E"), ("C/C=C\C", "Z")):
+    for smiles, want in (("C/C=C/C", "E"), (r"C/C=C\C", "Z")):
         mol = Chem.AddHs(Chem.MolFromSmiles(smiles))
         AllChem.EmbedMolecule(mol, randomSeed=7)
         double = next(

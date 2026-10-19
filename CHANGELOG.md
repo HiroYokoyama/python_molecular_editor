@@ -8,6 +8,63 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [5.0.0] - 2026-10-19
+
+### Changed
+
+- Release the MoleditPy 5 migration as stable: PySide6-Essentials, LGPL-3.0-or-later, a unified package on Windows/macOS/Linux, Python 3.9–3.14 support, and no Open Babel core dependency. See the alpha entries below for the complete migration details.
+
+### Documentation
+
+- Align the bilingual manuals and Wiki with MoleditPy 5, clarify plugin trust and download-hash limits, and document current and historical plugin compatibility.
+
+### Fixed
+
+- Keep user-template preview scenes owned by their thumbnail widgets so PySide6 does not destroy them after creation, leaving saved molecular templates blank.
+
+---
+
+## [5.0.0a2] - 2026-10-19
+
+### Fixed
+
+- Parent the UI manager and its interactor watchdog timer to the application window so native window destruction also stops the timer, preventing callbacks into a deleted window and a Linux/Python 3.12 Qt event-loop crash.
+
+### Documentation
+
+- Keep standard PyPI installation commands in the README, website and manuals, without alpha-specific or temporary publication instructions. Correct standalone asset links, PySide6/LGPL website labels and CI/rendering descriptions; keep English/Japanese guidance consistent.
+- Document manual plugin workflow selection of a MoleditPy branch, tag or full commit SHA through `moleditpy_ref`, separately from the main app's published-package version input.
+
+### Tests
+
+- Restore the PyQt6 entry in the core layer's forbidden-Qt-import guard after the binding migration duplicated PySide6.
+- Verify that native window destruction also destroys its UI manager and active interactor watchdog timer. Derive the Windows executable smoke check's expected version from package metadata.
+
+---
+
+## [5.0.0a1] - 2026-10-18
+
+### Changed
+- Migrate the application, plugin examples and test/build tooling from PyQt6 to PySide6-Essentials, with GUI-thread delivery of calculation results.
+- License the core under LGPL-3.0-or-later and explicitly permit independently developed plugins under any license; preserve existing plugin licenses.
+- Keep replaceable Qt shared libraries and ship license notices, source/build manifests and replacement instructions with frozen bundles.
+- Use the same `MoleditPy` package on Windows, macOS and Linux, with Python 3.9–3.14 support. Python 3.9 uses Qt 6.9; newer interpreters use Qt 6.10–6.11.
+- When upgrading an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before installing MoleditPy 5.
+
+### Removed
+- Remove Open Babel dependencies, bundled libraries, conversion fallback and built-in force fields from the core; Fallback now tries RDKit then Direct mode.
+- Retire the separate `MoleditPy-linux` source tree and its build and publishing workflows.
+
+### Fixed
+
+- Deliver calculation callbacks on the GUI thread and retain worker threads until they finish.
+- Destroy test widgets and deliver deferred deletions before Python shutdown, avoiding native Qt destruction after event filters have been released.
+- Cancel deferred startup and import redraws when their window is destroyed, and give submenu widgets explicit native parents.
+- Preserve Python 3.9 compatibility in molecular geometry and drawing operations by avoiding Python 3.10-only `zip` arguments.
+- Exclude Qt 6.12 after reproducing native `QGraphicsScene` reference-count corruption on Linux/Python 3.10–3.11; Qt 6.11.2 passes the same standalone add/remove probe.
+
+---
+
 ## [4.13.0] - 2026-10-15
 
 ### Added

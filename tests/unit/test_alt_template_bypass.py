@@ -2,8 +2,8 @@
 
 import pytest
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtWidgets import QApplication
 from moleditpy.ui.molecular_scene_handler import TemplateMixin
 
 
@@ -67,7 +67,7 @@ def test_update_template_preview_allows_snapping_but_bypasses_fusing_when_alt_pr
 
     # Simulate Alt key pressed
     with patch(
-        "PyQt6.QtWidgets.QApplication.keyboardModifiers",
+        "PySide6.QtWidgets.QApplication.keyboardModifiers",
         return_value=Qt.KeyboardModifier.AltModifier,
     ):
         scene.update_template_preview(QPointF(5, 5))
@@ -106,7 +106,7 @@ def test_add_molecule_fragment_bypasses_fusing_when_alt_pressed(qapp):
 
     # Simulate Alt key pressed
     with patch(
-        "PyQt6.QtWidgets.QApplication.keyboardModifiers",
+        "PySide6.QtWidgets.QApplication.keyboardModifiers",
         return_value=Qt.KeyboardModifier.AltModifier,
     ):
         scene.add_molecule_fragment(points, bonds_info)

@@ -5,7 +5,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem, rdMolTransforms
 from moleditpy.ui.calculation_worker import CalculationWorker
 from moleditpy.core.molecular_data import MolecularData
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 from unittest import mock as _mock
 
 
@@ -63,7 +63,7 @@ def test_3d_bond_lengths(qtbot):
 
 from moleditpy.ui.mirror_dialog import MirrorDialog
 from unittest.mock import MagicMock
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 
 
 def test_mirror_dialog_logic(qtbot):
@@ -73,7 +73,7 @@ def test_mirror_dialog_logic(qtbot):
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, AllChem.ETKDG())
 
-    # Mock main_window using QWidget to satisfy PyQt6
+    # Mock main_window using QWidget to satisfy PySide6
     main_window = QWidget()
     main_window.statusBar = MagicMock()
     main_window.statusBar.return_value = MagicMock()
@@ -150,7 +150,7 @@ def test_planarize_logic(qtbot):
 
     # Apply planarize
     # We mock QMessageBox to prevent blocking
-    with _mock.patch("PyQt6.QtWidgets.QMessageBox.information"):
+    with _mock.patch("PySide6.QtWidgets.QMessageBox.information"):
         dialog.apply_planarize()
 
     new_positions = conf.GetPositions()

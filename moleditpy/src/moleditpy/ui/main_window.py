@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -18,10 +18,10 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from rdkit import Chem
 
-# PyQt6 Modules
+# PySide6 Modules
 import copy
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QMainWindow, QMessageBox
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QMainWindow, QMessageBox
 
 
 from .app_state import StateManager
@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
     """Top-level application window that composes all manager objects."""
 
     # start_calculation carries the MOL block and an options object (second arg)
-    start_calculation = pyqtSignal(str, object)
+    start_calculation = Signal(str, object)
 
     def __init__(
         self, initial_file: Optional[str] = None, safe_mode: bool = False

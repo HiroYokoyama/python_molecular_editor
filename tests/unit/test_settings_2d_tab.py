@@ -272,7 +272,7 @@ def test_missing_font_is_not_rewritten_on_save(app):
     The combo shows a substitute for it; saving the substitute rewrote the
     setting although the user changed nothing.
     """
-    from PyQt6.QtGui import QFont
+    from PySide6.QtGui import QFont
 
     tab = Settings2DTab(DEFAULT_SETTINGS)
     settings = dict(DEFAULT_SETTINGS)

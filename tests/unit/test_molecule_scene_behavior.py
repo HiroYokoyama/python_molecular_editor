@@ -19,8 +19,8 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtGui import QTransform
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QTransform
 
 # ---------------------------------------------------------------------------
 # Path setup
@@ -287,8 +287,8 @@ class TestEZStereoCycling:
             ),
             patch.object(MoleculeScene, "itemAt", return_value=bond_item),
             patch.object(MoleculeScene, "update_bond_stereo") as mock_stereo,
-            patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent"),
-            patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
+            patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent"),
+            patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
         ):
             ev = _event()
             scene.mousePressEvent(ev)
@@ -308,8 +308,8 @@ class TestEZStereoCycling:
             ),
             patch.object(MoleculeScene, "itemAt", return_value=bond_item),
             patch.object(MoleculeScene, "update_bond_stereo") as mock_stereo,
-            patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent"),
-            patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
+            patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent"),
+            patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
         ):
             ev = _event()
             scene.mousePressEvent(ev)
@@ -329,8 +329,8 @@ class TestEZStereoCycling:
             ),
             patch.object(MoleculeScene, "itemAt", return_value=bond_item),
             patch.object(MoleculeScene, "update_bond_stereo") as mock_stereo,
-            patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent"),
-            patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
+            patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent"),
+            patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
         ):
             ev = _event()
             scene.mousePressEvent(ev)
@@ -373,8 +373,8 @@ class TestBondDirectionInversion:
                 return_value=1000,
             ),
             patch.object(MoleculeScene, "itemAt", return_value=bond_item),
-            patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent"),
-            patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
+            patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent"),
+            patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent"),
         ):
             ev = _event()
             scene.mousePressEvent(ev)

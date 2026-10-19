@@ -5,7 +5,6 @@ import json
 import re
 import sys
 import os
-import platform
 import argparse
 
 # Adjusted for tests/utils/ location
@@ -101,18 +100,6 @@ if not args_cov.skip_run:
     )
 
     print("Running E2E Tests with coverage (headless)...")
-    # On Linux, e2e imports moleditpy_linux; everywhere else it uses moleditpy
-    e2e_cov_source = "moleditpy_linux" if platform.system() == "Linux" else "moleditpy"
-    # Auto-sync Linux package before running e2e coverage
-    if platform.system() == "Linux":
-        sync_script = os.path.join(ROOT, "scripts", "sync_linux_version.py")
-        if os.path.exists(sync_script):
-            subprocess.run(
-                [sys.executable, sync_script],
-                cwd=ROOT,
-                stdout=devnull,
-                stderr=devnull,
-            )
     _run_counting(
         "E2E",
         [
@@ -122,7 +109,7 @@ if not args_cov.skip_run:
             "tests/e2e",
             "-q",
             "--timeout=60",
-            f"--cov={e2e_cov_source}",
+            "--cov=moleditpy",
             "--cov-append",
             "--cov-report=",
             "--tb=short",

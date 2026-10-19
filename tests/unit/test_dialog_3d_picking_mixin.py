@@ -18,9 +18,9 @@ Covers:
 
 import numpy as np
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import QEvent, Qt, QPoint
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QDialog
+from PySide6.QtCore import QEvent, Qt, QPoint
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import QDialog
 
 from moleditpy.ui.dialog_3d_picking_mixin import Dialog3DPickingMixin
 

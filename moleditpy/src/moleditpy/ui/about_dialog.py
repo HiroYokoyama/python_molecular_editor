@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -15,9 +15,9 @@ from typing import Any, Optional
 
 import os
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QCursor, QMouseEvent, QPainter, QPen, QPixmap
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QCursor, QMouseEvent, QPainter, QPen, QPixmap
+from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -82,8 +82,7 @@ class AboutDialog(QDialog):
         layout.addWidget(self.image_label)
 
         # Add text information
-        _variant = " (Linux)" if "moleditpy_linux" in (__file__ or "") else ""
-        info_text = f"MoleditPy{_variant} Ver. {VERSION}\nAuthor: Hiromichi Yokoyama\nLicense: GPL-3.0 license"
+        info_text = f"MoleditPy Ver. {VERSION}\nAuthor: Hiromichi Yokoyama\nLicense: LGPL-3.0-or-later"
         info_label = QLabel(info_text)
         info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(info_label)

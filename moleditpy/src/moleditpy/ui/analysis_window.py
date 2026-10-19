@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -15,8 +15,8 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QGridLayout,
@@ -225,8 +225,8 @@ class AnalysisWindow(QDialog):
     def copy_to_clipboard(self, text: str) -> None:
         """Copy text to the system clipboard and show a status bar message."""
         clipboard = QApplication.clipboard()
-        clipboard.setText(text)  # type: ignore[union-attr]
-        if self.parent() and hasattr(self.parent(), "statusBar"):
-            self.parent().statusBar().showMessage(  # type: ignore[union-attr]
-                f"Copied '{text}' to clipboard.", 2000
-            )
+        if clipboard is not None:
+            clipboard.setText(text)
+        parent = self.parent()
+        if parent is not None and hasattr(parent, "statusBar"):
+            parent.statusBar().showMessage(f"Copied '{text}' to clipboard.", 2000)

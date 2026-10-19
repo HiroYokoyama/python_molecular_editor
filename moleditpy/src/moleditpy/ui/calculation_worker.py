@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -15,11 +15,9 @@ from ..utils.suppress_log import suppress_log
 import math
 import re
 import numpy as np
-import sys
-import subprocess
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
+from PySide6.QtCore import QObject, Signal, Slot
 
 # RDKit
 from rdkit import Chem
@@ -28,41 +26,6 @@ from rdkit.DistanceGeometry import DoTriangleSmoothing
 
 from ..utils.constants import DEFAULT_BOND_LENGTH_ANGSTROM
 from ..core.molecular_data import align_ez_to_cip
-
-from .. import OBABEL_AVAILABLE
-
-# Only import pybel on demand
-if OBABEL_AVAILABLE:
-    # Suppress potential import errors if Open Babel is not correctly installed or configured
-    with suppress_log(ImportError, OSError, RuntimeError):
-        import os
-        import glob
-        import openbabel
-        from openbabel import pybel
-
-        ob_base = os.path.dirname(openbabel.__file__)
-        data_candidates = [
-            os.path.join(ob_base, "bin", "data"),
-            os.path.join(ob_base, "share", "openbabel", "*"),
-        ]
-
-        found_datadir = None
-        for pattern in data_candidates:
-            matches = glob.glob(pattern)
-            for m in matches:
-                if os.path.isdir(m):
-                    found_datadir = m
-                    break
-            if found_datadir:
-                break
-
-        if found_datadir:
-            os.environ["BABEL_DATADIR"] = found_datadir
-        os.environ["BABEL_LIBDIR"] = ob_base
-    if not pybel:
-        OBABEL_AVAILABLE = False
-else:
-    pybel = None
 
 
 class WorkerHaltError(Exception):
@@ -76,23 +39,14 @@ _OPT_METHOD_LABELS = {
     "MMFF_RDKIT": "MMFF94s (RDKit)",
     "MMFF94_RDKIT": "MMFF94 (RDKit)",
     "UFF_RDKIT": "UFF (RDKit)",
-    "MMFF94S_OBABEL": "MMFF94s (Open Babel)",
-    "MMFF94_OBABEL": "MMFF94 (Open Babel)",
-    "UFF_OBABEL": "UFF (Open Babel)",
-    "GAFF_OBABEL": "GAFF (Open Babel)",
-    "GHEMICAL_OBABEL": "Ghemical (Open Babel)",
 }
 
 
 def _resolve_method_key(opt_method: str) -> str:
-    """Resolve an optimization method string to the force-field key used by RDKit/OpenBabel."""
+    """Resolve an optimization method string to the force-field key used by RDKit."""
     upper = opt_method.upper()
     if "UFF" in upper:
         return "UFF"
-    if "GAFF" in upper:
-        return "GAFF"
-    if "GHEMICAL" in upper:
-        return "GHEMICAL"
     if "MMFF94" in upper and "MMFF94S" not in upper:
         return "MMFF94"
     return "MMFF94s"
@@ -268,46 +222,6 @@ def _iterative_optimize(
         raise
     except (RuntimeError, ValueError, TypeError) as e:
         safe_status_cb(f"Iterative optimization ({method}) error: {e}")
-        return False
-
-
-def _iterative_optimize_obabel(
-    mol: Chem.Mol,
-    method: str,
-    check_halted_cb: Callable[[], bool],
-    safe_status_cb: Callable[[str], None],
-    max_iters: int = 4000,
-    chunk_size: int = 100,
-    options: Optional[Dict[str, Any]] = None,
-) -> bool:
-    """Perform force field optimization using OpenBabel in chunks."""
-    try:
-        if not OBABEL_AVAILABLE or not pybel:
-            raise RuntimeError("OpenBabel is not available.")
-        ff = pybel.ob.OBForceField.FindForceField(method.lower())
-        if not ff:
-            raise ValueError(f"Forcefield '{method}' not found.")
-
-        ob_mol = pybel.readstring("mol", Chem.MolToMolBlock(mol))
-        if not ff.Setup(ob_mol.OBMol):
-            raise RuntimeError(f"Failed to load parameters for '{method}'.")
-
-        ff.SteepestDescent(100)
-        for _ in range(0, max_iters, chunk_size):
-            if check_halted_cb():
-                raise WorkerHaltError("Halted")
-            ff.ConjugateGradients(chunk_size)
-
-        ff.GetCoordinates(ob_mol.OBMol)
-        conf = mol.GetConformer()
-        for i in range(mol.GetNumAtoms()):
-            at = ob_mol.OBMol.GetAtom(i + 1)
-            conf.SetAtomPosition(i, [at.GetX(), at.GetY(), at.GetZ()])
-        return True
-    except WorkerHaltError:
-        raise
-    except (RuntimeError, ValueError, TypeError, ImportError) as e:
-        safe_status_cb(f"Iterative optimization ({method}) error (OpenBabel): {e}")
         return False
 
 
@@ -623,7 +537,7 @@ def _perform_direct_conversion(
             raise WorkerHaltError("Halted")
 
         opt_method = (options or {}).get("optimization_method") or "MMFF94s_RDKIT"
-        backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
+        backend = "RDKIT"
         method_key = _resolve_method_key(opt_method)
 
         # Best-effort property assignment for UI feedback
@@ -632,18 +546,16 @@ def _perform_direct_conversion(
             mol.SetProp("_pme_conversion_backend", "Direct")
         _safe_status(f"Optimizing ({method_key} / {backend})...")
 
-        opt_func = (
-            _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
-        )
+        opt_func = _iterative_optimize
         if not opt_func(
             mol,
             method_key,
             _check_halted,
             _safe_status,
-            options=options if backend == "RDKIT" else None,
+            options=options,
         ):
             fallback_success = False
-            if backend == "RDKIT" and "MMFF" in method_key:
+            if "MMFF" in method_key:
                 _safe_status("MMFF optimization failed. Auto-falling back to UFF...")
                 fallback_success = opt_func(
                     mol, "UFF", _check_halted, _safe_status, options=options
@@ -675,23 +587,20 @@ def _perform_optimize_only(
     """Perform optimization on an existing 3D structure."""
     _safe_status("Optimizing existing 3D structure...")
     opt_method = str((options or {}).get("optimization_method") or "MMFF_RDKIT").upper()
-    backend = "OBABEL" if "OBABEL" in opt_method else "RDKIT"
     method_key = _resolve_method_key(opt_method)
 
     # Best-effort property assignment for UI feedback
     with suppress_log(AttributeError, RuntimeError, TypeError):
         mol.SetProp("_pme_optimization_method", opt_method)
 
-    opt_func = (
-        _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
-    )
+    opt_func = _iterative_optimize
     opt_label = _OPT_METHOD_LABELS.get(opt_method, opt_method)
     if not opt_func(
         mol,
         method_key,
         _check_halted,
         _safe_status,
-        options=options if backend == "RDKIT" else None,
+        options=options,
     ):
         raise RuntimeError(f"Optimization with {opt_label} failed.")
 
@@ -700,120 +609,13 @@ def _perform_optimize_only(
     _safe_finished((worker_id, mol))
 
 
-def _perform_obabel_conversion(
-    mol_block: str,
-    mode: str,
-    opt_method: Optional[str],
-    worker_id: Any,
-    options: Optional[Dict[str, Any]],
-    _check_halted: Callable[[], bool],
-    _safe_status: Callable[[str], None],
-    _safe_finished: Callable[[Any], None],
-) -> bool:
-    """Perform Open Babel 3D conversion and optimization."""
-    _safe_status("Attempting Open Babel conversion...")
-    try:
-        if not OBABEL_AVAILABLE or not pybel:
-            raise RuntimeError("Open Babel not available.")
-
-        # Isolate make3D in a subprocess to prevent hard C++ aborts from crashing the main GUI
-        script = """
-import sys, contextlib
-from openbabel import pybel
-mol_block = sys.stdin.read()
-ob_mol = pybel.readstring("mol", mol_block)
-with contextlib.suppress(Exception): ob_mol.addh()
-ob_mol.make3D()
-print(ob_mol.write("mol"))
-        """
-
-        try:
-            result = subprocess.run(
-                [sys.executable, "-c", script],
-                input=mol_block,
-                text=True,
-                capture_output=True,
-                timeout=20,  # Prevent infinite hangs in OBabel
-            )
-            if result.returncode != 0 or not result.stdout.strip():
-                raise RuntimeError(
-                    f"Subprocess crashed or failed. Error: {result.stderr.strip()}"
-                )
-            out_mol_block = result.stdout
-        except subprocess.TimeoutExpired as exc:
-            raise RuntimeError("Open Babel make3D() timed out.") from exc
-        except Exception as e:
-            raise RuntimeError(f"Open Babel isolated execution failed: {e}") from e
-
-        rd_mol = Chem.MolFromMolBlock(out_mol_block, removeHs=False)
-        if not rd_mol:
-            raise ValueError("Open Babel produced invalid MOL.")
-        rd_mol = Chem.AddHs(rd_mol)
-
-        _adjust_collision_avoidance(rd_mol, _check_halted, _safe_status)
-        opt_method = opt_method or "MMFF94s_RDKIT"
-        backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
-        method_key = _resolve_method_key(opt_method)
-
-        # Best-effort property assignment for UI feedback
-        with suppress_log(AttributeError, RuntimeError, TypeError):
-            rd_mol.SetProp("_pme_optimization_method", opt_method)
-            rd_mol.SetProp("_pme_conversion_backend", "Open Babel")
-        _safe_status(f"Optimizing ({method_key} / {backend})...")
-
-        opt_func = (
-            _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
-        )
-        if not opt_func(
-            rd_mol,
-            method_key,
-            _check_halted,
-            _safe_status,
-            options=options if backend == "RDKIT" else None,
-        ):
-            fallback_success = False
-            if backend == "RDKIT" and "MMFF" in method_key:
-                _safe_status("MMFF optimization failed. Auto-falling back to UFF...")
-                fallback_success = opt_func(
-                    rd_mol, "UFF", _check_halted, _safe_status, options=options
-                )
-                if fallback_success:
-                    with suppress_log(Exception):
-                        rd_mol.SetProp("_pme_optimization_method", "UFF_RDKIT")
-
-            if not fallback_success:
-                _safe_status(
-                    "Warning: Optimization failed. Using unoptimized structure."
-                )
-                with suppress_log(Exception):
-                    rd_mol.ClearProp("_pme_optimization_method")
-
-        if _check_halted():
-            raise WorkerHaltError("Halted")
-        # Final status message before finishing (to ensure it doesn't overwrite error/halt messages)
-        final_opt = "Unoptimized"
-        if rd_mol.HasProp("_pme_optimization_method"):
-            final_opt = rd_mol.GetProp("_pme_optimization_method")
-        opt_label = _OPT_METHOD_LABELS.get(final_opt, final_opt)
-        _safe_status(f"Process completed (Open Babel Conversion / {opt_label}).")
-        _safe_finished((worker_id, rd_mol))
-        return True
-    except WorkerHaltError:
-        raise
-    except (AttributeError, RuntimeError, ValueError, TypeError) as e:
-        if mode == "obabel":
-            raise RuntimeError(f"Open Babel conversion failed: {e}") from e
-        _safe_status(f"Open Babel failed: {e}. Falling back...")
-    return False
-
-
 class CalculationWorker(QObject):
     """QObject worker that runs 3D geometry optimization on a background QThread."""
 
-    status_update = pyqtSignal(str)
-    finished = pyqtSignal(object)
-    error = pyqtSignal(object)
-    start_work = pyqtSignal(str, object)
+    status_update = Signal(str)
+    finished = Signal(object)
+    error = Signal(object)
+    start_work = Signal(str, object)
 
     def __init__(self, parent: Optional[QObject] = None) -> None:
         """Initialize background calculation worker thread."""
@@ -822,7 +624,7 @@ class CalculationWorker(QObject):
         self.halt_all: bool = False
         self.start_work.connect(self.run_calculation)
 
-    @pyqtSlot(str, object)
+    @Slot(str, object)
     def run_calculation(
         self, mol_block: str, options: Optional[Dict[str, Any]] = None
     ) -> None:
@@ -916,14 +718,6 @@ class CalculationWorker(QObject):
                     raise RuntimeError(
                         "RDKit 3D conversion failed: Could not generate (embed) 3D coordinates."
                     )
-
-            # 6. Open Babel Workflow (Fallback)
-            if mode in ("fallback", "obabel"):
-                success = self._run_obabel_workflow(mol_block, options, helpers)
-                if success:
-                    return
-                if mode == "obabel":
-                    raise RuntimeError("Open Babel 3D conversion failed.")
 
             # 7. Final Fallback to Direct
             if mode == "fallback":
@@ -1031,7 +825,7 @@ class CalculationWorker(QObject):
 
         _adjust_collision_avoidance(mol, _check_halted, _safe_status)
         opt_method = options.get("optimization_method") or "MMFF94s_RDKIT"
-        backend = "OBABEL" if "OBABEL" in opt_method.upper() else "RDKIT"
+        backend = "RDKIT"
         method_key = _resolve_method_key(opt_method)
 
         with suppress_log(AttributeError, RuntimeError, TypeError):
@@ -1039,18 +833,16 @@ class CalculationWorker(QObject):
             mol.SetProp("_pme_conversion_backend", "RDKit")
         _safe_status(f"Optimizing ({method_key} / {backend})...")
 
-        opt_func = (
-            _iterative_optimize_obabel if backend == "OBABEL" else _iterative_optimize
-        )
+        opt_func = _iterative_optimize
         if not opt_func(
             mol,
             method_key,
             _check_halted,
             _safe_status,
-            options=options if backend == "RDKIT" else None,
+            options=options,
         ):
             fallback_success = False
-            if backend == "RDKIT" and "MMFF" in method_key:
+            if "MMFF" in method_key:
                 _safe_status("MMFF optimization failed. Auto-falling back to UFF...")
                 fallback_success = opt_func(
                     mol, "UFF", _check_halted, _safe_status, options=options
@@ -1083,21 +875,6 @@ class CalculationWorker(QObject):
         _safe_status(f"Process completed (RDKit Conversion / {opt_label}).")
         _safe_finished((w_id, mol))
         return True
-
-    def _run_obabel_workflow(
-        self, mol_block: str, options: Dict[str, Any], helpers: Dict[str, Any]
-    ) -> bool:
-        """Execute Open Babel 3D conversion."""
-        return _perform_obabel_conversion(
-            mol_block,
-            options.get("conversion_mode", "fallback"),
-            options.get("optimization_method"),
-            options.get("worker_id"),
-            options,
-            helpers["check_halted"],
-            helpers["status"],
-            helpers["finished"],
-        )
 
     def _run_direct_workflow(
         self,

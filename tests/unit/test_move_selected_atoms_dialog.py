@@ -1,5 +1,5 @@
-from PyQt6.QtCore import QEvent, QPointF, Qt
-from PyQt6.QtGui import QMouseEvent
+from PySide6.QtCore import QEvent, QPointF, Qt
+from PySide6.QtGui import QMouseEvent
 
 """
 Unit tests for MoveSelectedAtomsDialog (ui/move_selected_atoms_dialog.py).
@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 # ---------------------------------------------------------------------------
 # Path setup
@@ -333,7 +333,7 @@ def test_show_and_clear_atom_labels(make_dialog):
 
 def test_event_filter_unrelated_obj(make_dialog):
     """eventFilter returns False for events on objects other than the VTK interactor."""
-    from PyQt6.QtWidgets import QWidget
+    from PySide6.QtWidgets import QWidget
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -344,8 +344,8 @@ def test_event_filter_unrelated_obj(make_dialog):
 
 def test_event_filter_double_click(make_dialog):
     """A double-click event resets potential_drag and returns False."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -365,8 +365,8 @@ def test_event_filter_double_click(make_dialog):
 
 def test_event_filter_mouse_press_with_selection(make_dialog):
     """A left-press with atoms already selected delegates to VTK (returns False)."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -386,8 +386,8 @@ def test_event_filter_mouse_press_with_selection(make_dialog):
 
 def test_event_filter_mouse_press_selects_atom(make_dialog):
     """A left-press that hits an atom picks it and returns True."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -416,8 +416,8 @@ def test_event_filter_mouse_press_selects_atom(make_dialog):
 
 def test_event_filter_mouse_press_empty_space(make_dialog):
     """A left-press that misses all atoms returns False."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -441,8 +441,8 @@ def test_event_filter_mouse_press_empty_space(make_dialog):
 
 def test_event_filter_mouse_move_hover_cursor(make_dialog):
     """Mouse-move over a selected atom changes the cursor to OpenHand; otherwise to Arrow."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -478,8 +478,8 @@ def test_event_filter_mouse_move_hover_cursor(make_dialog):
 
 def test_event_filter_mouse_release_consume(make_dialog):
     """A mouse-release is consumed and clears _consume_next_left_release when the flag is set."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -500,8 +500,8 @@ def test_event_filter_mouse_release_consume(make_dialog):
 
 def test_mouse_move_potential_drag_to_actual_drag(make_dialog):
     """A mouse-move beyond the threshold converts a potential drag to an actual drag."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -528,8 +528,8 @@ def test_mouse_move_potential_drag_to_actual_drag(make_dialog):
 
 def test_mouse_move_during_actual_drag(make_dialog):
     """Mouse-move while is_dragging_group is True sets mouse_moved_during_drag."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -554,8 +554,8 @@ def test_mouse_move_during_actual_drag(make_dialog):
 
 def test_mouse_release_no_movement_toggles_atom(make_dialog):
     """A release with no movement calls on_atom_picked to toggle the atom selection."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -581,8 +581,8 @@ def test_mouse_release_no_movement_toggles_atom(make_dialog):
 
 def test_mouse_release_with_movement_resets_drag_state(make_dialog):
     """A release after dragging resets drag state without calling on_atom_picked."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -609,8 +609,8 @@ def test_mouse_release_with_movement_resets_drag_state(make_dialog):
 
 def test_handle_mouse_press_exceptions(make_dialog):
     """eventFilter returns False and does not raise when GetEventPosition throws."""
-    from PyQt6.QtCore import QEvent, Qt, QPointF
-    from PyQt6.QtGui import QMouseEvent
+    from PySide6.QtCore import QEvent, Qt, QPointF
+    from PySide6.QtGui import QMouseEvent
 
     dlg, _, mw = make_dialog()
     plotter = MagicMock()
@@ -801,7 +801,7 @@ def test_box_selection_toggle_button(qapp):
 def test_box_selection_click_to_reset(qapp):
     """Test that a single click clears the selection when Box Selection is ON."""
     from moleditpy.ui.move_selected_atoms_dialog import MoveSelectedAtomsDialog
-    from PyQt6.QtCore import QEvent, QPoint
+    from PySide6.QtCore import QEvent, QPoint
 
     mol = _ethane()
     mw = _make_main_window(mol)

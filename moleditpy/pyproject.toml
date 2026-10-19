@@ -1,13 +1,14 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "MoleditPy"
 
-version = "4.13.0"
+version = "5.0.0"
 
-license = {file = "LICENSE"}
+license = "LGPL-3.0-or-later"
+license-files = ["LICENSE", "COPYING", "THIRD_PARTY_NOTICES.md", "DISTRIBUTION.md", "LICENSING.md"]
 
 authors = [
   { name="HiroYokoyama", email="titech.yoko.hiro@gmail.com" },
@@ -34,12 +35,11 @@ classifiers = [
 
 dependencies = [
   "numpy",
-  "pyqt6 < 6.10; python_version == '3.9'",
-  "pyqt6 < 6.12; python_version != '3.9'",
+  "pyside6-essentials >= 6.9, < 6.10; python_version < '3.10'",
+  "pyside6-essentials >= 6.10, < 6.12; python_version >= '3.10'",
   "pyvista < 0.50",
   "pyvistaqt < 0.14",
-  "rdkit < 2026.4",
-  "openbabel-wheel < 3.2"
+  "rdkit < 2026.4"
 ]
 
 [project.urls]

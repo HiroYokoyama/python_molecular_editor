@@ -8,7 +8,7 @@ from rdkit.Chem import AllChem, rdMolTransforms
 from unittest.mock import MagicMock, patch
 
 # Needs a QApplication before instantiating widgets like QDialogs
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 app = QApplication.instance()
 if app is None:
@@ -220,8 +220,8 @@ def test_custom_interactor_style_distance_logic_matches_rdkit():
 # ==========================================
 # Alignment Dialog logic
 # ==========================================
-@patch("PyQt6.QtWidgets.QMessageBox.information")
-@patch("PyQt6.QtWidgets.QMessageBox.warning")
+@patch("PySide6.QtWidgets.QMessageBox.information")
+@patch("PySide6.QtWidgets.QMessageBox.warning")
 def test_alignment_dialog_logic(mock_warning, mock_info):
     """Verify AlignmentDialog properly aligns given atoms to the target axis."""
     mol = setup_test_molecule("CC")  # Ethane
@@ -261,8 +261,8 @@ def test_alignment_dialog_logic(mock_warning, mock_info):
 # ==========================================
 # Align Plane Dialog logic
 # ==========================================
-@patch("PyQt6.QtWidgets.QMessageBox.information")
-@patch("PyQt6.QtWidgets.QMessageBox.warning")
+@patch("PySide6.QtWidgets.QMessageBox.information")
+@patch("PySide6.QtWidgets.QMessageBox.warning")
 def test_align_plane_dialog_logic(mock_warning, mock_info):
     """Verify AlignPlaneDialog properly aligns selected atoms to the target plane."""
     # Build cyclopropane, which is planar

@@ -1,8 +1,10 @@
 [MAIN]
-extension-pkg-allow-list=PyQt6,numpy,rdkit,pyvista,vtk
+extension-pkg-allow-list=PySide6,shiboken6,numpy,rdkit,pyvista,vtk
 
 # vtk resolves its members at import time, so pylint cannot see them.
 # Keep this pattern narrow: a bare ".*" here silently disables no-member (E1101)
 # for the whole codebase, which is what the previous malformed value
 # "generated-members=generated-members=.*" effectively did.
-generated-members=vtk.*
+# PySide exposes Qt signal descriptors through generated methods in its stubs;
+# Astroid sees those as methods, although the runtime objects support signals.
+generated-members=vtk.*,connect,disconnect,emit

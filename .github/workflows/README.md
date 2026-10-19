@@ -1,362 +1,70 @@
-# GitHub Actions Workflows
+# GitHub Actions workflows
 
-This directory contains the CI, test release, production release, and Zenodo upload workflows for MoleditPy.
+The YAML files are the source of truth for triggers, matrices, and publishing.
+All desktop platforms use the single `moleditpy/` package. Python 3.9–3.14 is
+supported, with PySide6-Essentials (Qt 6.9 on Python 3.9; Qt 6.10–6.11 otherwise).
+Open Babel and PyQt6 are excluded from the core and frozen bundles.
 
-## `tests.yml` - CI Tests
-
-Runs on pushes and pull requests targeting `main`, `master`, or `dev`, and can be manually triggered via `workflow_dispatch`.
-
-Test matrix:
-
-| OS | Python versions |
+| Workflow | Purpose |
 | --- | --- |
-| Ubuntu | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 |
-| Windows | 3.13, 3.14 |
-| macOS | 3.13, 3.14 |
+| `tests.yml` | Unit, integration, E2E and GUI tests, plus pinned lint/type checks. Linux tests Python 3.9–3.14; Windows and macOS test 3.9, 3.13 and 3.14. Windows/Python 3.13 measures coverage. |
+| `full-gui-tests.yml` | Native VTK/PyVista rendering suites on Linux/Python 3.11 and 3.13 and Windows/Python 3.13. Launch probes cover all three OSes and Python 3.9–3.14. Linux and macOS require a working probe; Windows launch and rendering tests can skip when OpenGL is unavailable. macOS runs the isolated subprocess launch test. |
+| `windows-exe-smoke.yml` | Builds the actual main-package Windows executable and checks its version, replaceable Qt libraries, and excluded dependencies. Uploads the tested executable; does not publish a package. |
+| `test-pip-install.yml` | Manual PyPI/TestPyPI install validation across all three OSes and Python 3.9–3.14 (18 combinations). Specify `5.0.0a1` to test the alpha; leaving the version empty selects a stable release. Runs E2E tests with `MOLEDITPY_USE_INSTALLED=1`. |
+| `macos-app.yml` | Reusable/manual Apple Silicon app build, tests, frozen-app validation, ad-hoc signing, and ZIP artifact creation. Can attach an artifact to an existing release when explicitly requested. |
+| `test-release.yml` | Manual packaging rehearsal from `main`, with Windows/macOS artifacts and publication to TestPyPI. Does not create the production release or push a production tag. Use a new TestPyPI version for each upload. |
+| `release.yml` | Manual production PyPI and GitHub publication; stable releases run from `main`, prereleases may run from another branch. |
+| `zenodo.yml` | Separate manual Zenodo publication workflow. |
+| `test-zenodo.yml` | Manual Zenodo Sandbox workflow. The `draft` input controls whether the sandbox record is published. |
 
-The CI workflow installs the main package from `moleditpy/` and runs all test suites (Unit, Integration, E2E, and GUI tests) in headless mode:
+## Manual plugin tests
 
-```bash
-python tests/run_all_tests.py --no-cov --no-report
+Plugin test workflows that install MoleditPy expose a manual `moleditpy_ref`
+input for testing against an app branch, tag, or full commit SHA. Leaving it blank
+preserves normal CI selection: the repository's `MOLEDITPY_REF` variable, when configured, otherwise
+the migration branch `migrate/pyside6-without-openbabel`. Select the plugin's own
+branch separately in the workflow dispatch branch selector. A published app tag
+such as `v5.0.0a1` selects that release's source for plugin compatibility tests.
+
+The main app's `test-pip-install.yml` already accepts an exact published version
+and PyPI/TestPyPI source. This is separate from checking out an app source ref.
+
+## Running tests locally
+
+```sh
+python -m pip install -e moleditpy/
+python -m pip install pytest pytest-qt pytest-mock pytest-cov pytest-timeout
+python tests/run_all_tests.py --pylint
 ```
 
-### Coverage
-
-The `windows-latest` / Python 3.13 matrix entry is marked `coverage: true` and
-instead runs the same suites with coverage enabled, then uploads the result to
-Codecov:
-
-```bash
-python tests/run_all_tests.py --no-report
-python -m coverage xml -o coverage.xml
-```
-
-Only that one entry measures coverage, so the other nine are not slowed down and
-Codecov receives a single complete report per commit rather than ten partial
-ones. The upload needs a `CODECOV_TOKEN` repository secret; if it is missing the
-upload step fails softly and does not turn the job red.
-
-## `test-release.yml` - Test Release
-
-Manually builds a complete release candidate and publishes the Python packages to TestPyPI.
-
-Run it from GitHub Actions:
-
-1. Open **Actions**.
-2. Select **Test Release**.
-3. Click **Run workflow**.
-4. Select the `main` branch.
-5. Enter a test version such as `3.4.1.dev1`.
-
-This workflow:
-
-1. Validates that it is running on `main`.
-2. Validates the version input.
-3. Runs unit and integration tests on `windows-latest` with Python 3.12.
-4. Updates `moleditpy/pyproject.toml` in the temporary runner checkout.
-5. Runs `python scripts/sync_linux_version.py`.
-6. Builds `MoleditPy` and `MoleditPy-linux` distributions.
-7. Builds `dist/MoleditPy/MoleditPy.exe` with PyInstaller from the Linux package source.
-8. Creates `MoleditPy_<version>_win64_portable.zip`.
-9. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
-10. Uploads all built artifacts to the workflow run.
-11. In parallel, calls `macos-app.yml` to build the macOS app bundle (artifact only).
-12. Starts a separate `ubuntu-latest` publishing job.
-13. Publishes both Python packages to TestPyPI.
-
-It does not commit, tag, push, or create a GitHub Release.
-
-## `macos-app.yml` - macOS App Bundle
-
-Builds the self-contained `MoleditPy.app` for Apple Silicon on `macos-latest`. It is a
-reusable workflow: `release.yml` and `test-release.yml` call it, and it can also be
-dispatched on its own.
-
-Run it from GitHub Actions:
-
-1. Open **Actions**.
-2. Select **macOS App Bundle**.
-3. Click **Run workflow**.
-4. Enter the version, for example `4.7.1`. By default the build uses the tag `v<version>`
-   when it exists, and otherwise the branch the workflow was dispatched from; set **ref**
-   to pin some other branch or commit.
-5. Check **Upload the bundle to the existing v<version> release** to attach the ZIP to a
-   release that already exists (uses `gh release upload --clobber`, so re-running replaces
-   the asset). Leave it unchecked to produce a workflow artifact only.
-
-This workflow:
-
-1. Resolves the git ref (callers pass one explicitly - `github.event_name` reports the
-   *caller's* event in a reusable workflow and must not be branched on), checks it out,
-   and validates the version and that the runner is `arm64`.
-2. Updates `moleditpy/pyproject.toml` and runs `python scripts/sync_linux_version.py`.
-3. Installs `moleditpy-linux` and builds `macos-installer/script/MoleditPy.spec` with PyInstaller.
-4. Verifies `Contents/MacOS/MoleditPy` exists and that `Info.plist` carries the release version.
-5. Smoke-tests the frozen bundle with `--version` (catches a broken freeze or a lost version string).
-6. Ad-hoc signs the bundle with `codesign --force --deep --sign -` — required on Apple Silicon — and verifies the signature.
-7. Packs it with `ditto -c -k --keepParent` into `MoleditPy_<version>_macos_arm64.zip`.
-8. Uploads it as an artifact, and to the GitHub Release when dispatched with **attach_to_release**.
-
-The bundle's limitations (no `pip` for plugins, no terminal window — use the log file
-instead, no file associations) are documented in `macos-installer/macos_installer.md` and
-`macos-installer/macos_installer-jp.md`.
-
-## `test-pip-install.yml` - Pip Install Verification
-
-Manually verifies that the published packages install and run correctly on a fresh machine with no local source available.
-
-Run it from GitHub Actions:
-
-1. Open **Actions**.
-2. Select **Test pip install**.
-3. Click **Run workflow**.
-4. Optionally enter a version (e.g. `4.1.4`). Leave blank for the latest published version.
-5. Choose **PyPI** (default) or **TestPyPI** as the install source.
-
-### What it tests
-
-Each matrix leg installs the target package from scratch on a clean runner and then runs the real `tests/e2e/` suite against the installed package. The env var `MOLEDITPY_USE_INSTALLED=1` tells the e2e conftest to use `importlib.util.find_spec` to locate the pip-installed package instead of the local source tree.
-
-The e2e suite covers:
-
-- `test_ethane_conversion.py` — builds a 2D ethane molecule, serialises it to a MOL block, parses it with RDKit, embeds it to 3D (ETKDGv2 + MMFF), and asserts the C–C distance is chemically valid (1.3–1.7 Å).
-- `test_ethane_gui.py` — launches the real `MainWindow` headlessly (VTK/PyVista mocked), draws ethane in the 2D scene, clicks the Convert button, and asserts the resulting 3D mol is correct.
-
-### Test matrix
-
-| Package | OS | Python versions |
-| --- | --- | --- |
-| MoleditPy | Windows, macOS | 3.9–3.14 |
-| MoleditPy-linux | Ubuntu, Windows, macOS | 3.9–3.14 |
-
-Pip download cache is enabled (`cache: 'pip'`) to speed up the 30-leg matrix.
-
-### Notes
-
-- `MOLEDITPY_USE_INSTALLED=1` only affects the e2e test conftest. All other workflows are unaffected and continue to use the local source tree as before.
-- `test_main_package_is_active` is automatically skipped when `MoleditPy-linux` is the active package on Windows/macOS (cross-platform pip-install scenario).
-
-## `release.yml` - Production Release
-
-Manually builds and publishes an official release.
-
-Run it from GitHub Actions:
-
-1. Open **Actions**.
-2. Select **Release**.
-3. Click **Run workflow**.
-4. Select the `main` branch.
-5. Enter a release version such as `3.4.1`. It must equal the `version` already
-   in `moleditpy/pyproject.toml` on `main` — bump that first (in the release PR),
-   or the run stops before it builds anything.
-6. Optionally uncheck **Upload and publish to Zenodo after release** to skip Zenodo (default: checked).
-
-This workflow:
-
-1. Validates that it is running on `main`.
-2. Validates the version input, and rejects it if it does not match the version
-   declared in `moleditpy/pyproject.toml`.
-3. Rejects the release if the tag already exists.
-4. Runs unit and integration tests on `windows-latest` with Python 3.12.
-5. Updates `moleditpy/pyproject.toml`.
-6. Copies the root `README.md` to `moleditpy/README.md` and `moleditpy-linux/README.md` if the content has changed.
-7. Runs `python scripts/sync_linux_version.py`.
-8. Builds `MoleditPy` and `MoleditPy-linux` distributions.
-9. Builds `dist/MoleditPy/MoleditPy.exe` with PyInstaller from the Linux package source.
-10. Creates `MoleditPy_<version>_win64_portable.zip`.
-11. Builds `MoleditPy_<version>_win64_setup.exe` with Inno Setup.
-12. Commits the version bump, README sync, and Linux sync changes, then creates and pushes the release tag.
-13. Before any of the above, calls `macos-app.yml` on `macos-latest` to build `MoleditPy_<version>_macos_arm64.zip`; the Windows job waits on it, so a failed macOS build cannot leave a release tagged but unpublished.
-14. Starts a separate `ubuntu-latest` publishing job.
-15. Publishes both Python packages to PyPI.
-16. Creates a GitHub Release and attaches the distributions, installer, portable ZIP, and macOS app bundle.
-17. If the **Zenodo** checkbox is checked: downloads the release assets and publishes them to the production Zenodo record via `scripts/update_zenodo.py`.
-
-## Release Workflow Architecture
-
-The workflows coordinate building, testing, version synchronizing, package compiling, code signing/packaging, repository tagging, and publishing to multiple indices.
-
-```mermaid
-graph TD
-    A[Manual Dispatch with Version Parameter] --> B[Validate: Must run on main, tag must be new, format checked]
-    B --> C[Run Unit & Integration Tests]
-    C --> D[Update pyproject.toml & Installer Download URLs]
-    D --> E[Sync Linux package versions via scripts/sync_linux_version.py]
-    E --> F[Build moleditpy and moleditpy-linux packages]
-    F --> G[Run PyInstaller windows-installer/script/MoleditPy.spec]
-    G --> H[Create Portable ZIP and compile Inno Setup installer]
-    H --> I[Commit version bumps, create Git tag & push to GitHub]
-    I --> J[Linux Runner: Publish to PyPI and TestPyPI via Trusted Publishing]
-    J --> K[Create GitHub Release and attach all assets]
-    A --> L[macOS Runner: PyInstaller BUNDLE, ad-hoc codesign, ditto zip]
-    L --> B
-    L --> K
-```
-
-### Execution Process & Validation Steps
-
-1. **Safety Checks**:
-   - Ensures the ref branch is strictly `main`.
-   - Confirms that the target tag does not already exist locally/remotely to prevent overwrite.
-2. **Dynamic Replacement & Cross-Compilation Sync**:
-   - Modifies `pyproject.toml` (version tag).
-   - Injects the new download version string into `windows_installer.md`, `windows_installer-jp.md`, `macos_installer.md`, and `macos_installer-jp.md`.
-   - Runs `scripts/sync_linux_version.py` to keep the sibling package `moleditpy-linux/pyproject.toml` in lockstep.
-3. **Stand-alone Executable & Installer Packaging**:
-   - Executes PyInstaller using the specification file `windows-installer/script/MoleditPy.spec`.
-   - Generates the portable compressed folder (`Compress-Archive` in PowerShell).
-   - Generates the Windows wizard installer via Inno Setup CLI (`ISCC.exe`).
-4. **Git Version-Bump Commit**:
-   - Commits versioned configuration files under `github-actions[bot]`.
-   - Creates a local version tag and pushes the commit/tag to GitHub.
-5. **Trusted Publishing (PyPI / TestPyPI)**:
-   - Uses PyPI OIDC trusted publishing. The secondary job on `ubuntu-latest` securely obtains temporary PyPI credentials via OpenID Connect (OIDC) tokens based on the configured repository publisher identity.
-   - Publishes the python packages and updates the GitHub release page with installer files.
-
-## Required PyPI Setup
-
-Both release workflows use PyPI trusted publishing with GitHub Actions OIDC.
-
-Configure trusted publishers for these projects:
-
-- `MoleditPy`
-- `MoleditPy-linux`
-
-For production PyPI, use workflow filename:
-
-```text
-release.yml
-```
-
-For TestPyPI, use workflow filename:
-
-```text
-test-release.yml
-```
-
-Recommended publisher settings:
-
-| Field | Value |
-| --- | --- |
-| Owner | `HiroYokoyama` |
-| Repository | `python_molecular_editor` |
-| Workflow filename | `release.yml` or `test-release.yml` |
-| Environment | empty, unless the workflow later adds one |
-
-## Generated Artifacts
-
-The release workflows generate:
-
-- `dist/moleditpy/*.whl`
-- `dist/moleditpy/*.tar.gz`
-- `dist/moleditpy-linux/*.whl`
-- `dist/moleditpy-linux/*.tar.gz`
-- `dist/windows/MoleditPy_<version>_win64_setup.exe`
-- `dist/windows/MoleditPy_<version>_win64_portable.zip`
-
-## Files Modified During Release
-
-`release.yml` commits these release-time changes:
-
-- `moleditpy/pyproject.toml`
-- `moleditpy/README.md` (if updated from root `README.md`)
-- `moleditpy-linux/` (entire directory, including `README.md` if updated)
-- `windows-installer/script/script.iss`
-- `windows-installer/script/MoleditPy.spec`
-
-`test-release.yml` makes the same version and sync changes only inside the temporary GitHub Actions runner checkout.
-
-## Windows Packaging Chain
-
-Windows packaging uses the Linux package variant because Open Babel is disabled there.
-PyPI publishing runs in a separate Linux job because `pypa/gh-action-pypi-publish` only supports GNU/Linux runners.
-
-Build order:
-
-```text
-moleditpy/pyproject.toml version update
--> scripts/sync_linux_version.py
--> moleditpy-linux package build
--> PyInstaller using windows-installer/script/MoleditPy.spec
--> dist/MoleditPy/MoleditPy.exe
--> portable ZIP from dist/MoleditPy/*
--> Inno Setup installer from dist/MoleditPy/*
-```
-
-## `zenodo.yml` - Zenodo Production Upload
-
-Automates updating the production Zenodo record with built Python distribution packages and source code archives.
-
-### Triggers
-- **Automated**: Triggers when a new GitHub Release is **published**.
-- **Manual**: Can be run manually via `workflow_dispatch` on the Actions tab.
-
-### Manual Inputs
-- `tag`: The release tag to upload (e.g. `3.6.0`). If left blank, it will automatically query and download assets from the latest release.
-- `deposition_id`: Overrides the default production Zenodo Deposition ID (default: `20463243`).
-- `draft`: Boolean flag (default `false`). If checked/true, the upload will remain as a draft version on Zenodo instead of being automatically published.
-
-### Actions Performed
-1. Resolves the target release version tag.
-2. Downloads standard distribution archives (`*.tar.gz` and `*.whl`) from the GitHub release.
-3. Downloads the source code tarball.
-4. Executes `scripts/update_zenodo.py` which:
-   - Obtains a new draft from the Zenodo concept series.
-   - Preserves/copies metadata from the parent version (author profiles, ORCID, affiliations, license rights, and resource types).
-   - Dynamically updates the version name and publication date.
-   - Cleans up and deletes old draft files.
-   - Uploads and registers the new distribution assets.
-   - Publishes the draft (unless `draft` is set to `true`).
-
-## `test-zenodo.yml` - Test Zenodo Sandbox Upload
-
-Manually uploads release packages and source code archives to the Zenodo Sandbox (`sandbox.zenodo.org`) to test metadata mappings and upload workflows.
-
-### Triggers
-- **Manual**: Triggered via `workflow_dispatch`.
-
-### Inputs
-- `tag`: The release tag to upload (defaults to the latest release if empty).
-- `deposition_id`: Overrides the default Sandbox Deposition ID (default: `506735`).
-- `draft`: Boolean flag (default `false`). Set to `true` to keep the upload as a draft in the Sandbox.
-
-This workflow functions identically to the production workflow but targets the Sandbox API using the Sandbox access token.
-
-## Zenodo Release Automation Script (`scripts/update_zenodo.py`)
-
-The `scripts/update_zenodo.py` script automates the update process using the **InvenioRDM REST API** (`/api/records`).
-
-### Command-line Arguments
-
-- `--token`: The Zenodo access token. If not provided, it falls back to the `ZENODO_TOKEN` (or `ZENODO_SANDBOX_TOKEN` for sandbox) environment variables.
-- `--deposition-id`: Concept/Latest version record ID (default: `20463243` for production, `506735` for sandbox).
-- `--version-string`: Mapped version name (e.g. `3.6.0`). If omitted, it automatically extracts the version from `moleditpy/pyproject.toml` and strips any leading `"v"`.
-- `--sandbox`: Uses the Sandbox API endpoints (`sandbox.zenodo.org`) instead of production.
-- `--publish`: Automatically publishes the draft deposition after uploading files.
-- `--dry-run`: Logs execution actions (URLs, request headers/bodies) without making actual HTTP network requests.
-- `files`: Positional arguments specifying the files to upload to the new record version.
-
-### Key API Steps & Endpoints
-
-1. **Create Draft Version**:
-   - `POST /api/records/{deposition_id}/versions`
-   - Creates a new draft version from the parent concept record series.
-2. **Fetch Draft details**:
-   - `GET <draft_self_link>`
-3. **File Lifecycle (InvenioRDM)**:
-   - **Register File**: `POST <draft_files_link>` with payload `[{"key": filename}]`
-   - **Upload Content**: `PUT <draft_files_link>/{filename}/content` with raw binary payload (`application/octet-stream`)
-   - **Commit Upload**: `POST <draft_files_link>/{filename}/commit` with `data=None`
-4. **Metadata Preservation & Mapping**:
-   - Fetches parent record via `GET /api/records/{deposition_id}`.
-   - Verifies target version is unique to prevent database constraint issues on publish.
-   - Cleanses and maps DataCite/InvenioRDM fields to prevent 500 server errors:
-     - `references`: Converts list of raw strings to list of objects `{"reference": ref_str}`.
-     - `publication_date`: Automatically set to today's ISO date string.
-     - `dates`: Corrects legacy formats into typed dates: `{"date": val, "type": {"id": type_id.lower()}}`.
-     - `creators`: Maps personal metadata by parsing full names into `family_name` and `given_name`, preserving ORCID/GND identifiers and institutional affiliations.
-     - `license`: Maps `license.id` dictionary values into the `rights` list parameter: `[{"id": license_id}]`.
-     - `resource_type`: Wraps the type identifier under `{"id": type_id}`.
-   - Updates the draft metadata payload via `PUT <draft_self_link>`.
-5. **Publish Version**:
-   - `POST <draft_publish_link>` (if `--publish` is active).
+Use `QT_QPA_PLATFORM=offscreen`, `QT_API=pyside6`, and
+`PYTEST_QT_API=pyside6` for the regular headless suites. The no-flag runner
+includes unit, integration, E2E and GUI tests. Native full-GUI tests require
+`--full-gui` and a working display/OpenGL context; Linux CI uses xvfb/Mesa.
+`MOLEDITPY_USE_INSTALLED=1` selects the installed package for E2E and full-GUI
+validation instead of prepending the checkout's source directory.
+
+## Production release
+
+1. Set the version in `moleditpy/pyproject.toml`, update the changelog, and pass CI.
+2. Dispatch `release.yml` from the intended branch with that exact version.
+3. Stable versions require `main`. Another branch must use an alpha/beta/rc
+   version such as `5.0.0a1`. The tag must not already exist.
+4. Choose the Zenodo input deliberately. Alpha/beta/rc releases skip Zenodo
+   regardless of that input and are not marked as GitHub's latest stable release.
+
+The workflow validates the version/ref, builds and smoke-tests the macOS app,
+then runs Windows tests and builds the wheel/sdist, executable, portable ZIP,
+and installer. Frozen checks validate version reporting, external Qt libraries,
+and exclusion of Open Babel, PyQt6, and unused Qt add-ons; they do not perform
+an Open Babel conversion. Native rendering is checked by `full-gui-tests.yml`.
+
+After both platform builds succeed, the workflow pushes a new tag, publishes the
+main package to PyPI from a Linux job using trusted publishing, and creates the
+GitHub release. A prerelease tags its dispatched commit without a version-bump
+commit or branch push. A stable release may commit updated version/download
+metadata. The optional final Zenodo job runs only for stable releases.
+
+The shortcut helper and plugin repositories have separate publication processes.
+Releasing the main app does not publish their migration branches or alter the
+retired Linux project's existing PyPI downloads.

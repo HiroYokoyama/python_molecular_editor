@@ -6,17 +6,11 @@ tmp_path target (with NO extension, to also cover extension appending), then
 re-reads the produced file with RDKit / plain parsing to prove it is valid.
 """
 
-import importlib.util
-
 import pytest
-from PyQt6.QtCore import QPointF, Qt
+from PySide6.QtCore import QPointF, Qt
 from rdkit import Chem
 
-_PKG = (
-    "moleditpy_linux"
-    if importlib.util.find_spec("moleditpy_linux") is not None
-    else "moleditpy"
-)
+_PKG = "moleditpy"
 
 
 def _draw_ethane(window):

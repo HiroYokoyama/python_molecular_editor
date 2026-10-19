@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """Integration tests: ethane 2D structure + real 2D→3D conversion, all platforms.
 
-On Linux the moleditpy-linux package is used (mirrors CI / installer behaviour).
-On Windows/macOS the standard moleditpy package is used.
+The unified moleditpy package is used on every platform.
 All tests are headless — no display or Qt window is required.
 """
 
@@ -12,43 +11,22 @@ import platform
 import importlib
 import importlib.util
 import pytest
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 
 # ---------------------------------------------------------------------------
-# Package selection: moleditpy_linux on Linux, moleditpy everywhere else.
-# Set MOLEDITPY_USE_INSTALLED=1 to use whichever package is pip-installed
-# instead of the local source tree (used by the pip-install CI workflow).
-# ---------------------------------------------------------------------------
-_IS_LINUX = sys.platform.startswith("linux")
-
-_LINUX_SRC = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy-linux", "src")
-)
+# The unified package is used on every platform.
+_PKG = "moleditpy"
 _MAIN_SRC = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
 )
-
-if os.environ.get("MOLEDITPY_USE_INSTALLED") == "1":
-    # CI pip-install mode: use whichever package is installed; skip local source.
-    if importlib.util.find_spec("moleditpy_linux") is not None:
-        _PKG = "moleditpy_linux"
-    else:
-        _PKG = "moleditpy"
-elif _IS_LINUX and os.path.isdir(_LINUX_SRC):
-    if _LINUX_SRC not in sys.path:
-        sys.path.insert(0, _LINUX_SRC)
-    _PKG = "moleditpy_linux"
-else:
-    if _MAIN_SRC not in sys.path:
-        sys.path.insert(0, _MAIN_SRC)
-    _PKG = "moleditpy"
+if os.environ.get("MOLEDITPY_USE_INSTALLED") != "1" and _MAIN_SRC not in sys.path:
+    sys.path.insert(0, _MAIN_SRC)
 
 MolecularData = importlib.import_module(f"{_PKG}.core.molecular_data").MolecularData
 CalculationWorker = importlib.import_module(
     f"{_PKG}.ui.calculation_worker"
 ).CalculationWorker
 _pkg_mod = importlib.import_module(_PKG)
-OBABEL_AVAILABLE = getattr(_pkg_mod, "OBABEL_AVAILABLE", False)
 
 _OS_LABEL = platform.system()  # "Windows" / "Linux" / "Darwin"
 
@@ -143,31 +121,11 @@ def test_ethane_conversion_direct(app, qtbot):
 
 
 def test_ethane_conversion_fallback(app, qtbot):
-    """Fallback mode: RDKit → obabel chain must produce a valid 3D mol."""
+    """Fallback mode: RDKit → Direct chain must produce a valid 3D mol."""
     mol = _run_worker_sync(_build_ethane(), "fallback")
     _assert_ethane_3d(mol, "fallback")
 
 
-@pytest.mark.skipif(
-    not OBABEL_AVAILABLE,
-    reason="Open Babel not available on this platform",
-)
-def test_ethane_conversion_obabel(app, qtbot):
-    """Obabel mode: only runs when Open Babel is present (typically Linux)."""
-    mol = _run_worker_sync(_build_ethane(), "obabel")
-    _assert_ethane_3d(mol, "obabel")
-
-
-@pytest.mark.skipif(not _IS_LINUX, reason="Linux-only: verify Linux package is used")
-def test_linux_package_is_active():
-    """On Linux, moleditpy_linux must be the active package."""
-    assert _PKG == "moleditpy_linux"
-
-
-@pytest.mark.skipif(
-    _IS_LINUX or _PKG != "moleditpy",
-    reason="Windows/macOS-only: verify main package is used (skipped when moleditpy_linux is active)",
-)
 def test_main_package_is_active():
-    """On Windows/macOS, moleditpy must be the active package."""
+    """The same import package is active on every supported platform."""
     assert _PKG == "moleditpy"

@@ -1,12 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from pathlib import Path
+import runpy
 
 
 spec_dir = Path(SPECPATH).resolve()
 repo_root = spec_dir.parent.parent
-linux_package_dir = repo_root / 'moleditpy-linux' / 'src' / 'moleditpy_linux'
-src_dir = linux_package_dir.parent  # moleditpy-linux/src/ — makes `import moleditpy_linux` work
+main_package_dir = repo_root / 'moleditpy' / 'src' / 'moleditpy'
+src_dir = main_package_dir.parent  # moleditpy/src/ — makes `import moleditpy` work
+helpers = runpy.run_path(str(repo_root / 'scripts' / 'frozen_build.py'))
+
 
 a = Analysis(
     [str(spec_dir / '_launcher.py')],
@@ -23,12 +26,13 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=helpers['qt_excludes'](),
     noarchive=False,
     optimize=0,
-    datas=[
-        (str(linux_package_dir / 'assets'), 'assets'),
-        (str(linux_package_dir / 'assets'), 'moleditpy_linux/assets'),
+    datas=helpers['license_data'](repo_root) + [
+        (str(main_package_dir / 'assets'), 'assets'),
+        (str(main_package_dir / 'assets'), 'moleditpy/assets'),
+        (str(main_package_dir.parent.parent / 'pyproject.toml'), 'moleditpy'),
     ],
 )
 pyz = PYZ(a.pure)
@@ -49,7 +53,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=[str(linux_package_dir / 'assets' / 'icon.ico')],
+    icon=[str(main_package_dir / 'assets' / 'icon.ico')],
 )
 coll = COLLECT(
     exe,

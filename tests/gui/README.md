@@ -11,8 +11,8 @@ The suite uses the `pytest` framework, leveraging `pytest-qt` for GUI testing an
   * **Testing Framework**: `pytest`
   * **GUI Testing**: `pytest-qt`
   * **Mocking**: `pytest-mock` (and `unittest.mock`)
-  * **Core Application**: `PyQt6`
-  * **Mocked Dependencies**: `RDKit` (for 3D generation), `PyVista` (for 3D rendering), and various `PyQt6` dialogs (`QMessageBox`, `QFileDialog`) to ensure non-blocking test execution.
+  * **Core Application**: `PySide6`
+  * **Mocked Dependencies**: `RDKit` (for 3D generation), `PyVista` (for 3D rendering), and various `PySide6` dialogs (`QMessageBox`, `QFileDialog`) to ensure non-blocking test execution.
 
 ## 3\. Test Structure
 
@@ -24,7 +24,7 @@ This file configures the `pytest` runner:
 
   * **Markers**: Defines custom markers to separate test types:
       * `unit`: For unit tests that do not require a GUI.
-      * `gui`: For tests that interact with the PyQt6 GUI.
+      * `gui`: For tests that interact with the PySide6 GUI.
   * **Configuration**: Sets options like `norecursedirs` to avoid external packages and `addopts` to enforce strict marker usage.
 
 ### `conftest.py`
@@ -64,7 +64,7 @@ This is the primary integration test suite, executing user workflows in a headle
 | **`test_main_window_settings.py`** | **Settings Integration** | Verifies that settings applied in the dialog correctly propagate to the main application. |
 | **`test_main_window_ui_integration.py`** | **UI/Data Sync** | Verifies consistent state between the data model and multiple UI views. |
 | **`test_molecule_scene_events.py`** | **Scene Events** | Detailed verification of mouse and keyboard event filtering in the 2D scene. |
-| **`test_edit_actions_gui_extended.py`** | **Edit Actions GUI** | Verifies the `Rotate2DDialog` GUI in a full PyQt6 context.<br>• **Angle Sync**: Confirms the spinbox and slider remain synchronized during initialization and value changes. |
+| **`test_edit_actions_gui_extended.py`** | **Edit Actions GUI** | Verifies the `Rotate2DDialog` GUI in a full PySide6 context.<br>• **Angle Sync**: Confirms the spinbox and slider remain synchronized during initialization and value changes. |
 
 ## 4\. Setup & Running
 
@@ -76,11 +76,11 @@ Before running the tests, install the required `pytest` plugins:
 pip install pytest pytest-qt pytest-mock
 ```
 
-You will also need the application's main dependencies, such as `PyQt6`.
+You will also need the application's main dependencies, such as `PySide6`.
 
 ## 5\. Headless Mode Compatibility
 
-GUI tests in this directory interact with real `PyQt6` widgets and simulate mouse/keyboard events through the view's coordinate system. These tests are fully stabilized in headless and offscreen environments (`QT_QPA_PLATFORM=offscreen` and `MOLEDITPY_HEADLESS=1`) via strict single-window fixture isolation and safe event loop cleanup to prevent C++ object deletion races.
+GUI tests in this directory interact with real `PySide6` widgets and simulate mouse/keyboard events through the view's coordinate system. These tests are fully stabilized in headless and offscreen environments (`QT_QPA_PLATFORM=offscreen` and `MOLEDITPY_HEADLESS=1`) via strict single-window fixture isolation and safe event loop cleanup to prevent C++ object deletion races.
 
 They are fully enabled and automatically executed in the GitHub Actions CI on the `dev` branch.
 

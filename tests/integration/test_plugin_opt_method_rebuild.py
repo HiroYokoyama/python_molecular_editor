@@ -9,9 +9,9 @@ after any plugin install/uninstall/reload.
 
 from types import SimpleNamespace
 
-from PyQt6.QtCore import QObject
-from PyQt6.QtGui import QAction, QActionGroup
-from PyQt6.QtWidgets import QMenu
+from PySide6.QtCore import QObject
+from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtWidgets import QMenu
 
 from moleditpy.ui.main_window_init import MainInitManager
 from moleditpy.ui.plugin_menu_manager import PluginMenuManager

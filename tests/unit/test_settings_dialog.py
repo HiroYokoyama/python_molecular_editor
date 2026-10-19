@@ -104,7 +104,7 @@ def test_reset_all_settings_yes_resets_and_applies(app):
         patch.object(dialog, "update_ui_from_settings") as mock_update,
         patch.object(dialog, "apply_settings") as mock_apply,
     ):
-        from PyQt6.QtWidgets import QMessageBox
+        from PySide6.QtWidgets import QMessageBox
 
         mock_q.return_value = QMessageBox.StandardButton.Yes
         dialog.reset_all_settings()
@@ -121,7 +121,7 @@ def test_reset_all_settings_no_does_nothing(app):
         patch("moleditpy.ui.settings_dialog.QMessageBox.question") as mock_q,
         patch.object(dialog, "update_ui_from_settings") as mock_update,
     ):
-        from PyQt6.QtWidgets import QMessageBox
+        from PySide6.QtWidgets import QMessageBox
 
         mock_q.return_value = QMessageBox.StandardButton.No
         dialog.reset_all_settings()

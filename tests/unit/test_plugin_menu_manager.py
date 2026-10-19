@@ -3,14 +3,15 @@
 import pytest
 from typing import Optional
 from unittest.mock import MagicMock
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMenu
 
 from moleditpy.ui.plugin_menu_manager import PluginMenuManager
+from moleditpy.ui.menu_utils import add_menu
 
 
 # ---------------------------------------------------------------------------
-# Module-level patch: QAction(text, MagicMock) fails because PyQt6 strictly
+# Module-level patch: QAction(text, MagicMock) fails because PySide6 strictly
 # validates the parent type. Strip the mock parent so tests stay lightweight.
 # ---------------------------------------------------------------------------
 
@@ -24,8 +25,8 @@ def _patch_qaction(monkeypatch, app):
     Windows when this file runs in isolation. The holder gives them an owner
     destroyed in order while the app is alive.
     """
-    from PyQt6.QtCore import QObject
-    from PyQt6.QtGui import QAction as _RealQAction
+    from PySide6.QtCore import QObject
+    from PySide6.QtGui import QAction as _RealQAction
 
     holder = QObject()
 
@@ -33,6 +34,15 @@ def _patch_qaction(monkeypatch, app):
         return _RealQAction(text, holder)
 
     monkeypatch.setattr("moleditpy.ui.plugin_menu_manager.QAction", _safe_qaction)
+    from PySide6.QtWidgets import QMenuBar
+    from moleditpy.ui.menu_utils import add_menu
+
+    def _safe_add_menu(parent, title):
+        if isinstance(parent, (QMenu, QMenuBar)):
+            return add_menu(parent, title)
+        return parent.addMenu(title)
+
+    monkeypatch.setattr("moleditpy.ui.plugin_menu_manager.add_menu", _safe_add_menu)
     yield
     holder.deleteLater()
 
@@ -606,13 +616,13 @@ class TestClearAllPluginActions:
         tagged.data.return_value = "plugin_managed"
         tagged.menu.return_value = None
 
-        sub_menu = MagicMock()
+        sub_menu = MagicMock(spec=QMenu)
         sub_menu.actions.return_value = [tagged]
         sub_action = MagicMock()
         sub_action.data.return_value = None
         sub_action.menu.return_value = sub_menu
 
-        top_menu = MagicMock()
+        top_menu = MagicMock(spec=QMenu)
         top_menu.actions.return_value = [sub_action]
         top_action = MagicMock()
         top_action.menu.return_value = top_menu
@@ -704,10 +714,10 @@ TAG = PluginMenuManager._PLUGIN_ACTION_TAG
 
 def _menubar_with_tools(im, app):
     """Give *im* a real menu bar holding a native 'Tools' menu with two entries."""
-    from PyQt6.QtWidgets import QMenuBar
+    from PySide6.QtWidgets import QMenuBar
 
     bar = QMenuBar()
-    tools = bar.addMenu("Tools")
+    tools = add_menu(bar, "Tools")
     tools.addAction("Native A")
     tools.addAction("Native B")
     im.host.menuBar = MagicMock(return_value=bar)
@@ -797,15 +807,15 @@ class TestPluginSeparatorPlacement:
 
 def _menubar_with_plugin_top_level(im):
     """Build a bar holding a native menu plus a tagged divider and plugin menu."""
-    from PyQt6.QtWidgets import QMenuBar
+    from PySide6.QtWidgets import QMenuBar
 
     bar = QMenuBar()
-    bar.addMenu("Tools").addAction("Native A")
+    add_menu(bar, "Tools").addAction("Native A")
 
     sep = bar.addSeparator()
     sep.setData(TAG)
 
-    plugin_top = bar.addMenu("MyPlugin")
+    plugin_top = add_menu(bar, "MyPlugin")
     plugin_top.menuAction().setData(TAG)
     entry = plugin_top.addAction("Gone")
     entry.setData(TAG)
@@ -841,10 +851,10 @@ class TestClearPluginMenubarEntries:
 
     def test_native_top_level_menu_is_never_removed(self, im, pmm, app):
         """An untagged top-level menu survives even when it is empty."""
-        from PyQt6.QtWidgets import QMenuBar
+        from PySide6.QtWidgets import QMenuBar
 
         bar = QMenuBar()
-        bar.addMenu("Empty Native")
+        add_menu(bar, "Empty Native")
         im.host.menuBar = MagicMock(return_value=bar)
 
         pmm._clear_all_plugin_actions()
@@ -868,10 +878,10 @@ class TestClearPluginMenubarEntries:
 
 def _menubar_with_plugin_menu(im):
     """Give *im* a real menu bar whose only menu is the Plugin menu."""
-    from PyQt6.QtWidgets import QMenuBar
+    from PySide6.QtWidgets import QMenuBar
 
     bar = QMenuBar()
-    plugin_menu = bar.addMenu("&Plugin")
+    plugin_menu = add_menu(bar, "&Plugin")
     im.host.menuBar = MagicMock(return_value=bar)
     im.plugin_menu = plugin_menu
     return bar, plugin_menu
@@ -1083,10 +1093,10 @@ class TestHeaderPin:
 
     def test_pin_outside_the_plugin_menu_is_ignored(self, im, pmm, app):
         """A pin request only means anything inside the Plugin menu."""
-        from PyQt6.QtWidgets import QMenuBar
+        from PySide6.QtWidgets import QMenuBar
 
         bar = QMenuBar()
-        tools = bar.addMenu("Tools")
+        tools = add_menu(bar, "Tools")
         tools.addAction("Native A")
         im.host.menuBar = MagicMock(return_value=bar)
         del im.plugin_menu
@@ -1106,7 +1116,7 @@ class TestHeaderPin:
 
 def _drain_deferred_deletes(app):
     """Run the event-loop turn that deleteLater() waits for."""
-    from PyQt6.QtCore import QCoreApplication, QEvent
+    from PySide6.QtCore import QCoreApplication, QEvent
 
     app.processEvents()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
@@ -1137,7 +1147,7 @@ class TestCleanupDoesNotStrandObjects:
     def test_native_submenu_survives_cleanup(self, im, pmm, app):
         """An empty native submenu is neither removed nor destroyed."""
         _bar, tools = _menubar_with_tools(im, app)
-        native_sub = tools.addMenu("Native Sub")
+        native_sub = add_menu(tools, "Native Sub")
 
         pmm._clear_all_plugin_actions()
         _drain_deferred_deletes(app)

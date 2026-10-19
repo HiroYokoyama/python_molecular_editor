@@ -1,8 +1,8 @@
 """Unit tests for MoleculeScene mouse event handling."""
 
 import math
-from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtGui import QTransform
+from PySide6.QtCore import Qt, QPointF
+from PySide6.QtGui import QTransform
 from moleditpy.ui.molecule_scene import MoleculeScene
 from moleditpy.ui.atom_item import AtomItem
 from moleditpy.ui.bond_item import BondItem
@@ -26,8 +26,8 @@ def create_mock_event(pos=None, button=Qt.MouseButton.LeftButton):
     return event
 
 
-@patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_scene_toggle_radical(mock_drag, mock_release, mock_press, mock_parser_host):
     """Radical mode cycles atom radical count through 0→1→2→0 on successive clicks."""
@@ -55,8 +55,8 @@ def test_scene_toggle_radical(mock_drag, mock_release, mock_press, mock_parser_h
         assert atom_item.radical == 0
 
 
-@patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_scene_toggle_charge(mock_drag, mock_release, mock_press, mock_parser_host):
     """Charge plus/minus modes increment and decrement atom charge correctly."""
@@ -138,7 +138,7 @@ def test_delete_selected_items(mock_parser_host):
                 mock_delete.assert_called()
 
 
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseDoubleClickEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseDoubleClickEvent")
 def test_double_click_select_component(mock_dbl, mock_parser_host):
     """Double-click selects all atoms in the connected component, not isolated ones."""
     scene = setup_scene_with_view(mock_parser_host)
@@ -175,7 +175,7 @@ def test_double_click_select_component(mock_dbl, mock_parser_host):
             assert not atom_iso.setSelected.called
 
 
-@patch("PyQt6.QtWidgets.QGraphicsScene.keyPressEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.keyPressEvent")
 def test_scene_key_event_dispatch(mock_kp, mock_parser_host):
     """Test key events like '4' (template), '.' (radical), +/- (charge)."""
     scene = setup_scene_with_view(mock_parser_host)
@@ -240,9 +240,9 @@ def test_scene_update_template_preview_logic(mock_parser_host):
         assert scene.template_context["items"][0] == atom_item
 
 
-@patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseMoveEvent")
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseMoveEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 def test_scene_drag_create_bond_sequence(
     mock_release, mock_move, mock_press, mock_parser_host
 ):
@@ -280,9 +280,9 @@ def test_scene_drag_create_bond_sequence(
     assert bond.order == 1
 
 
-@patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseMoveEvent")
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseMoveEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 def test_scene_bond_snapping_distance(
     mock_release, mock_move, mock_press, mock_parser_host
 ):
@@ -308,8 +308,8 @@ def _keys_in_sync(scene):
     return set(scene.bond_items) == set(scene.data.bonds)
 
 
-@patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_clicking_a_wedge_again_keeps_bond_items_keyed_like_the_data(
     mock_drag, mock_release, mock_press, mock_parser_host
@@ -387,11 +387,12 @@ def test_right_click_clears_ez_label_whatever_the_key_direction(
 
 def test_purge_on_quit_is_connected_once(mock_parser_host):
     """reinitialize_items runs on every clear but must not stack connections."""
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     scene = setup_scene_with_view(mock_parser_host)
-    app = QApplication.instance()
-    with patch.object(type(app), "aboutToQuit") as signal:
+    app = MagicMock()
+    signal = app.aboutToQuit
+    with patch("moleditpy.ui.molecule_scene.QApplication.instance", return_value=app):
         scene._purge_connected = False
         scene.reinitialize_items()
         scene.reinitialize_items()
@@ -419,8 +420,8 @@ def test_keyboard_hash_flip_keeps_bond_items_keyed_like_the_data(mock_parser_hos
     assert _keys_in_sync(scene)
 
 
-@patch("PyQt6.QtWidgets.QGraphicsScene.mousePressEvent")
-@patch("PyQt6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mousePressEvent")
+@patch("PySide6.QtWidgets.QGraphicsScene.mouseReleaseEvent")
 @patch("moleditpy.ui.molecule_scene.QApplication.startDragDistance", return_value=1000)
 def test_clicking_a_bond_with_another_order_keeps_keys_in_sync(
     mock_drag, mock_release, mock_press, mock_parser_host

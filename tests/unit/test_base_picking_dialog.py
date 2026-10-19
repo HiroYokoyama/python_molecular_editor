@@ -17,8 +17,8 @@ Covers:
 import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeyEvent, QCloseEvent
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent, QCloseEvent
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
@@ -112,8 +112,8 @@ def test_key_none_event_returns_early(app):
 
 def test_key_other_key_passes_to_super(app):
     """Non-Enter key events are forwarded to QDialog.keyPressEvent without error."""
-    from PyQt6.QtGui import QKeyEvent
-    from PyQt6.QtCore import QEvent
+    from PySide6.QtGui import QKeyEvent
+    from PySide6.QtCore import QEvent
 
     dlg, _, _ = _make_dlg(app)
     ev = QKeyEvent(

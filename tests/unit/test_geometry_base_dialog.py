@@ -21,8 +21,8 @@ import sys
 import pytest
 from unittest.mock import MagicMock
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication, QLineEdit, QSlider
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QLineEdit, QSlider
 
 _src = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")

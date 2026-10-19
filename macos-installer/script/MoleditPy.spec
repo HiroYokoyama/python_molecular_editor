@@ -2,14 +2,17 @@
 
 import os
 from pathlib import Path
+import runpy
 
 
 spec_dir = Path(SPECPATH).resolve()
 repo_root = spec_dir.parent.parent
-linux_package_dir = repo_root / 'moleditpy-linux' / 'src' / 'moleditpy_linux'
-src_dir = linux_package_dir.parent  # moleditpy-linux/src/ — makes `import moleditpy_linux` work
+main_package_dir = repo_root / 'moleditpy' / 'src' / 'moleditpy'
+src_dir = main_package_dir.parent  # moleditpy/src/ — makes `import moleditpy` work
+helpers = runpy.run_path(str(repo_root / 'scripts' / 'frozen_build.py'))
 
 app_version = os.environ.get('MOLEDITPY_APP_VERSION', '0.0.0')
+
 
 a = Analysis(
     [str(spec_dir / '_launcher.py')],
@@ -26,15 +29,15 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=helpers['qt_excludes'](),
     noarchive=False,
     optimize=0,
-    datas=[
-        (str(linux_package_dir / 'assets'), 'assets'),
-        (str(linux_package_dir / 'assets'), 'moleditpy_linux/assets'),
+    datas=helpers['license_data'](repo_root) + [
+        (str(main_package_dir / 'assets'), 'assets'),
+        (str(main_package_dir / 'assets'), 'moleditpy/assets'),
         # Frozen apps carry no dist metadata, so constants._get_version() falls
         # back to walking up for a pyproject.toml — ship one where it looks.
-        (str(linux_package_dir.parent.parent / 'pyproject.toml'), 'moleditpy_linux'),
+        (str(main_package_dir.parent.parent / 'pyproject.toml'), 'moleditpy'),
     ],
 )
 pyz = PYZ(a.pure)
@@ -70,7 +73,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='MoleditPy.app',
-    icon=str(linux_package_dir / 'assets' / 'icon.icns'),
+    icon=str(main_package_dir / 'assets' / 'icon.icns'),
     bundle_identifier='io.github.hiroyokoyama.moleditpy',
     version=app_version,
     info_plist={
@@ -78,6 +81,6 @@ app = BUNDLE(
         'CFBundleVersion': app_version,
         'NSHighResolutionCapable': True,
         'LSMinimumSystemVersion': '11.0',
-        'NSHumanReadableCopyright': 'Copyright (C) Hiromichi Yokoyama. GPL-3.0.',
+        'NSHumanReadableCopyright': 'Copyright (C) Hiromichi Yokoyama. LGPL-3.0-or-later.',
     },
 )

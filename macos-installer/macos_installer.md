@@ -9,21 +9,16 @@ This package provides a self-contained `MoleditPy.app` bundle built for macOS: i
 
 ## About This Version
 
-This macOS package uses `moleditpy-linux`, in which the Open Babel library has been disabled due to compatibility issues.
-While features dependent on Open Babel (3D conversion fallback) are unavailable, basic molecular drawing and editing functions operate without issues.
-
-For complex molecules that require Open Babel fallback, 3D conversion may fail. In such cases, please try changing `3D Conversion` to `Direct` in the `Settings`. You can also temporarily switch to this mode by right-clicking the `Convert 2D to 3D` button.
-
+This application bundle is built from the unified `moleditpy` package and uses PySide6-Essentials; Open Babel is not bundled.
 The bundle is built for **Apple Silicon (arm64)** only, and is ad-hoc signed rather than notarized by Apple. On an Intel Mac, or for the full feature set, install with `pip` instead — see [Installation for macOS](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-macOS).
 
 Note: As `pip` is not included in this package, plugins requiring external dependencies cannot be executed. In addition, this bundle runs **without a terminal window**, so console output is only available through the log file. See [Limitations](#limitations) below.
 
 ## Download
 
-Please download the app bundle from the link below.
-The download will start upon clicking.
+Open the latest release page and download the Apple Silicon app bundle asset, `MoleditPy_*_macos_arm64.zip`.
 
-[Download MoleditPy for macOS (Apple Silicon)](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.13.0/MoleditPy_4.13.0_macos_arm64.zip)
+[Latest MoleditPy release](https://github.com/HiroYokoyama/python_molecular_editor/releases/latest)
 
 ## Installation Steps
 

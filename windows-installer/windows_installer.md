@@ -9,24 +9,18 @@ This installer provides a package built for the Windows environment.
 
 ## About This Version
 
-This Windows package uses `moleditpy-linux`, in which the Open Babel library has been disabled due to compatibility issues.
-While features dependent on Open Babel (3D conversion fallback) are unavailable, basic molecular drawing and editing functions operate without issues.  
-
-For complex molecules that require Open Babel fallback, 3D conversion may fail. In such cases, please try changing `3D Conversion` to `Direct` in the `Settings`. You can also temporarily switch to this mode by right-clicking the `Convert 2D to 3D` button.
-
+This application bundle is built from the unified `moleditpy` package and uses PySide6-Essentials; Open Babel is not bundled.
 Note: As `pip` is not included in this package, plugins requiring external dependencies cannot be executed.
 
 
 ## Download
 
-Please download the installer from the link below.
-The download will start upon clicking.
+Open the latest release page and choose the Windows installer or portable ZIP from its assets:
 
-[Download MoleditPy Windows Installer](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.13.0/MoleditPy_4.13.0_win64_setup.exe)
+[Latest MoleditPy release](https://github.com/HiroYokoyama/python_molecular_editor/releases/latest)
 
-A portable version is also available:
-
-[Download MoleditPy Windows Portable](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.13.0/MoleditPy_4.13.0_win64_portable.zip)
+- Installer: `MoleditPy_*_win64_setup.exe`
+- Portable: `MoleditPy_*_win64_portable.zip`
 
 ## Installation Steps
 

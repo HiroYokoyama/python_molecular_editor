@@ -22,7 +22,7 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 _src = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")

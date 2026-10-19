@@ -15,10 +15,10 @@ Covers:
 
 import pytest
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import Qt, QPoint, QEvent, QRectF
-from PyQt6.QtTest import QTest
-from PyQt6.QtGui import QMouseEvent, QWheelEvent
-from PyQt6.QtWidgets import QGraphicsItem, QGraphicsScene
+from PySide6.QtCore import Qt, QPoint, QEvent, QRectF
+from PySide6.QtTest import QTest
+from PySide6.QtGui import QMouseEvent, QWheelEvent
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
 from moleditpy.ui.zoomable_view import ZoomableView
 
 
@@ -183,7 +183,7 @@ def test_mouse_press_pan_sets_cursor_closed_hand(app):
 def test_mouse_press_left_no_shift_passes_to_super(app):
     """Left-button press without Shift does not start panning."""
     view, _ = _make_view(app)
-    from PyQt6.QtCore import QEvent, QPointF
+    from PySide6.QtCore import QEvent, QPointF
 
     ev = QMouseEvent(
         QEvent.Type.MouseButtonPress,
@@ -226,7 +226,7 @@ def test_mouse_move_not_panning_passes_to_super(app):
     """Mouse move without active pan passes the event to the parent class."""
     view, _ = _make_view(app)
     assert view._is_panning is False
-    from PyQt6.QtCore import QEvent, QPointF
+    from PySide6.QtCore import QEvent, QPointF
 
     move_ev = QMouseEvent(
         QEvent.Type.MouseMove,
@@ -313,7 +313,7 @@ def test_mouse_release_not_panning_passes_to_super(app):
     """Mouse release when not panning passes the event to the parent class."""
     view, _ = _make_view(app)
     assert view._is_panning is False
-    from PyQt6.QtCore import QEvent, QPointF
+    from PySide6.QtCore import QEvent, QPointF
 
     rel_ev = QMouseEvent(
         QEvent.Type.MouseButtonRelease,

@@ -28,7 +28,7 @@ def test_chiral_labels_toggle_3d(window, qtbot):
     assert not labels_drawn()
 
     window.init_manager.toggle_chiral_action.setChecked(True)
-    window.init_manager.toggle_chiral_action.triggered.emit(True)
+    window.init_manager.toggle_chiral_action.triggered[bool].emit(True)
 
     assert window.view_3d_manager.show_chiral_labels is True
 
@@ -68,7 +68,7 @@ def test_chiral_labels_mirror_inversion_3d(window, qtbot):
     )
 
     window.init_manager.toggle_chiral_action.setChecked(True)
-    window.init_manager.toggle_chiral_action.triggered.emit(True)
+    window.init_manager.toggle_chiral_action.triggered[bool].emit(True)
 
     qtbot.waitUntil(
         lambda: any(

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
-from PyQt6.QtCore import QPointF
+from PySide6.QtCore import QPointF
 from rdkit import Chem
 from rdkit.Chem import AllChem
 

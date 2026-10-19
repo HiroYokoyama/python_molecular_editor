@@ -128,7 +128,7 @@ def test_update_ui_sets_dependent_option_enabled_state(app):
 
 def test_cleanup_tab_has_title_label(app):
     """Settings2DCleanupTab has a title label at the top."""
-    from PyQt6.QtWidgets import QLabel, QFormLayout
+    from PySide6.QtWidgets import QLabel, QFormLayout
 
     tab = Settings2DCleanupTab(DEFAULT_SETTINGS)
     layout = tab.layout()

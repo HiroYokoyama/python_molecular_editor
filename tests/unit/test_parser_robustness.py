@@ -119,7 +119,7 @@ def test_save_as_xyz_logic(tmp_path):
 
     save_path = str(tmp_path / "test.xyz")
     with patch(
-        "PyQt6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "XYZ")
+        "PySide6.QtWidgets.QFileDialog.getSaveFileName", return_value=(save_path, "XYZ")
     ):
         win.save_as_xyz()
 

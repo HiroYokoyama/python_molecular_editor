@@ -4,9 +4,9 @@ import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import Qt, QMimeData
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent
-from PyQt6.QtWidgets import QCheckBox, QMessageBox, QPushButton, QWidget
+from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtWidgets import QCheckBox, QMessageBox, QPushButton, QWidget
 
 from moleditpy.plugins.plugin_manager_window import PluginManagerWindow
 

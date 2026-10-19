@@ -34,9 +34,9 @@ Covers:
 import json
 import pytest
 from unittest.mock import MagicMock, patch
-from PyQt6.QtCore import QPointF, QRectF, QSize
-from PyQt6.QtGui import QImage, QPainter, QResizeEvent, QShowEvent
-from PyQt6.QtWidgets import QGraphicsScene
+from PySide6.QtCore import QPointF, QRectF, QSize
+from PySide6.QtGui import QImage, QPainter, QResizeEvent, QShowEvent
+from PySide6.QtWidgets import QGraphicsScene
 
 from moleditpy.ui.template_preview_item import TemplatePreviewItem
 from moleditpy.ui.template_preview_view import TemplatePreviewView

@@ -3,7 +3,7 @@
 
 import math
 
-from PyQt6.QtCore import QPoint, QPointF, Qt
+from PySide6.QtCore import QPoint, QPointF, Qt
 
 RING_RADIUS = 45.0
 CENTER = QPointF(0.0, 0.0)

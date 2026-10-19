@@ -5,16 +5,16 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
 from typing import Any, List
 
-from PyQt6.QtCore import QDateTime, QPointF, QRectF, Qt, QTimer
-from PyQt6.QtGui import QColor, QFont, QPainter
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QDateTime, QPointF, QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QFont, QPainter
+from PySide6.QtWidgets import (
     QDialog,
     QGraphicsScene,
     QGridLayout,
@@ -76,8 +76,9 @@ class UserTemplateDialog(QDialog):
         self.resize(800, 600)
 
         # Position window to the top-right of the parent
-        if self.parent():
-            parent_geometry = self.parent().geometry()  # type: ignore[union-attr]
+        parent = self.parentWidget()
+        if parent is not None:
+            parent_geometry = parent.geometry()
             x = parent_geometry.right() - self.width() - 20
             y = parent_geometry.top() + 50
             self.move(x, y)
@@ -297,7 +298,7 @@ class UserTemplateDialog(QDialog):
         layout = QVBoxLayout(widget)
 
         # Preview graphics - use custom view class for better resize handling
-        preview_scene = QGraphicsScene()
+        preview_scene = QGraphicsScene(widget)
         preview_view = TemplatePreviewView(preview_scene)
         preview_view.setFixedSize(160, 140)
         preview_view.setRenderHint(QPainter.RenderHint.Antialiasing)

@@ -5,8 +5,8 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.core.molecular_data import MolecularData
 from moleditpy.ui.compute_logic import ComputeManager
-from PyQt6.QtCore import QPointF
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtCore import QPointF
+from PySide6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
 
 
@@ -52,7 +52,7 @@ class DummyCompute(ComputeManager):
         # to prevent background threads from starting, avoiding random segfaults/aborts.
         from unittest.mock import patch
 
-        with patch("PyQt6.QtCore.QThread.start"):
+        with patch("PySide6.QtCore.QThread.start"):
             ComputeManager._start_calculation_worker(self, mol_block, options, run_id)
 
     @property
@@ -213,13 +213,13 @@ def test_on_calculation_error_reenables_export(mock_parser_host):
 def test_compute_set_optimization_method(mock_parser_host):
     """Verify that setting the optimization method updates both settings and internal state."""
     compute = DummyCompute(mock_parser_host)
-    compute.set_optimization_method("GAFF_OBABEL")
-    assert compute.host.init_manager.settings["optimization_method"] == "GAFF_OBABEL"
+    compute.set_optimization_method("UFF_RDKIT")
+    assert compute.host.init_manager.settings["optimization_method"] == "UFF_RDKIT"
     assert compute.statusBar().showMessage.called
     msg = compute.statusBar().showMessage.call_args[0][0]
-    assert "Optimization" in msg or "GAFF_OBABEL" in msg
+    assert "UFF (RDKit)" in msg
     # Verify internal state that actually affects calculation
-    assert compute.host.init_manager.optimization_method == "GAFF_OBABEL"
+    assert compute.host.init_manager.optimization_method == "UFF_RDKIT"
 
 
 def test_compute_halt_logic(mock_parser_host):
@@ -278,7 +278,7 @@ def test_trigger_conversion_with_atoms(mock_parser_host):
     with (
         patch("moleditpy.ui.compute_logic.CalculationWorker"),
         patch("moleditpy.ui.compute_logic.QThread"),
-        patch("PyQt6.QtCore.QTimer.singleShot"),
+        patch("PySide6.QtCore.QTimer.singleShot"),
     ):
         compute.trigger_conversion()
         assert compute.statusBar().showMessage.called
@@ -372,7 +372,7 @@ def test_trigger_conversion_multiple_frags(mock_parser_host):
         patch.object(compute.data, "to_rdkit_mol", return_value=mol),
         patch("moleditpy.ui.compute_logic.CalculationWorker"),
         patch("moleditpy.ui.compute_logic.QThread"),
-        patch("PyQt6.QtCore.QTimer.singleShot"),
+        patch("PySide6.QtCore.QTimer.singleShot"),
     ):
         compute.trigger_conversion()
         all_messages = [
@@ -415,7 +415,7 @@ def test_optimize_3d_temp_method_override(mock_parser_host):
     with (
         patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
         patch("moleditpy.ui.compute_logic.QThread"),
-        patch("PyQt6.QtCore.QTimer.singleShot"),
+        patch("PySide6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure("MMFF_RDKIT")
 
@@ -487,7 +487,7 @@ def test_optimize_3d_mmff_exception_handling(mock_parser_host):
     with (
         patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
         patch("moleditpy.ui.compute_logic.QThread"),
-        patch("PyQt6.QtCore.QTimer.singleShot"),
+        patch("PySide6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure()
         assert MockWorker.called
@@ -505,7 +505,7 @@ def test_optimize_3d_uff_exception_handling(mock_parser_host):
     with (
         patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
         patch("moleditpy.ui.compute_logic.QThread"),
-        patch("PyQt6.QtCore.QTimer.singleShot"),
+        patch("PySide6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure()
         assert MockWorker.called
@@ -528,7 +528,7 @@ def test_optimize_3d_plugin_method(mock_parser_host):
     with (
         patch("moleditpy.ui.compute_logic.CalculationWorker"),
         patch("moleditpy.ui.compute_logic.QThread"),
-        patch("PyQt6.QtCore.QTimer.singleShot"),
+        patch("PySide6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure()
     msgs = compute.get_status_messages()
@@ -585,7 +585,7 @@ def test_optimize_3d_uff_fallback_failure(mock_parser_host):
     with (
         patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
         patch("moleditpy.ui.compute_logic.QThread"),
-        patch("PyQt6.QtCore.QTimer.singleShot"),
+        patch("PySide6.QtCore.QTimer.singleShot"),
     ):
         compute.optimize_3d_structure()
         assert MockWorker.called
@@ -698,7 +698,7 @@ def test_on_calculation_finished_collision_single_frag(mock_parser_host):
 def test_molecular_data_radical_transfer():
     """Test that radical electrons are transferred correctly to RDKit mol."""
     from moleditpy.core.molecular_data import MolecularData
-    from PyQt6.QtCore import QPointF
+    from PySide6.QtCore import QPointF
 
     data = MolecularData()
     # Adding a carbon with 1 radical electron
@@ -712,7 +712,7 @@ def test_app_state_radical_and_constraint_preservation(mock_parser_host):
     """Test that radicals and constraints are preserved through state round-trip."""
     from moleditpy.ui.app_state import StateManager
     from moleditpy.core.molecular_data import MolecularData
-    from PyQt6.QtCore import QPointF
+    from PySide6.QtCore import QPointF
 
     compute = DummyCompute(mock_parser_host)
     compute.data = MolecularData()  # Use real MolecularData for this test
@@ -802,7 +802,7 @@ def test_optimize_3d_method_persistence(mock_parser_host):
 
 def test_trigger_conversion_early_exits(mock_parser_host):
     """Test early exits in trigger_conversion (empty mol, etc.)."""
-    from PyQt6.QtCore import QPointF
+    from PySide6.QtCore import QPointF
 
     compute = DummyCompute(mock_parser_host)
     compute.data.atoms = {}
@@ -827,7 +827,7 @@ def test_trigger_conversion_early_exits(mock_parser_host):
 def test_check_chemistry_problems_fallback(mock_parser_host):
     """Test the manual valence check when RDKit fails."""
     # from moleditpy.modules.atom_item import AtomItem
-    from PyQt6.QtCore import QPointF
+    from PySide6.QtCore import QPointF
 
     compute = DummyCompute(mock_parser_host)
 
@@ -859,7 +859,7 @@ def test_check_chemistry_problems_fallback(mock_parser_host):
 
 def test_trigger_conversion_happy_path(mock_parser_host):
     """Test trigger_conversion follows the success path until worker setup."""
-    from PyQt6.QtCore import QPointF
+    from PySide6.QtCore import QPointF
 
     compute = DummyCompute(mock_parser_host)
     compute.data.add_atom("C", QPointF(0, 0))
@@ -879,7 +879,7 @@ def test_trigger_conversion_happy_path(mock_parser_host):
                     with (
                         patch("moleditpy.ui.compute_logic.QThread"),
                         patch("moleditpy.ui.compute_logic.CalculationWorker"),
-                        patch("PyQt6.QtCore.QTimer.singleShot"),
+                        patch("PySide6.QtCore.QTimer.singleShot"),
                     ):
                         compute.trigger_conversion()
                         msgs = compute.get_status_messages()
@@ -888,7 +888,7 @@ def test_trigger_conversion_happy_path(mock_parser_host):
 
 def test_trigger_conversion_stereo_enhancement(mock_parser_host):
     """Test trigger_conversion stereo enhancement logic for E/Z bonds."""
-    from PyQt6.QtCore import QPointF
+    from PySide6.QtCore import QPointF
 
     compute = DummyCompute(mock_parser_host)
     compute.data.add_atom("C", QPointF(0, 0))
@@ -905,7 +905,7 @@ def test_trigger_conversion_stereo_enhancement(mock_parser_host):
                 # Mock QThread to prevent actual thread creation in main_window_compute namespace
                 with patch("moleditpy.ui.compute_logic.QThread"):
                     with patch("moleditpy.ui.compute_logic.CalculationWorker"):
-                        with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
+                        with patch("PySide6.QtCore.QTimer.singleShot") as mock_timer:
                             compute.trigger_conversion()
                             assert mock_timer.called
 
@@ -938,7 +938,7 @@ def test_on_calculation_error_updated(mock_parser_host):
 
 def test_trigger_conversion_chemistry_problem_detection(mock_parser_host):
     """Test trigger_conversion detects and flags chemistry problems (valence)."""
-    from PyQt6.QtCore import QPointF
+    from PySide6.QtCore import QPointF
     # Avoid importing AtomItem to prevent QGraphicsItem instantiation in headless test
     # from moleditpy.modules.atom_item import AtomItem
 
@@ -1029,7 +1029,7 @@ def test_trigger_conversion_to_mol_block_priority(mock_parser_host):
         mock_worker_instance.start_work = mock_start_work
 
         # We need to capture the lambda passed to QTimer.singleShot because that's what triggers start_work
-        with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
+        with patch("PySide6.QtCore.QTimer.singleShot") as mock_timer:
             compute.trigger_conversion()
 
             # Verify to_mol_block was called
@@ -1117,7 +1117,7 @@ def test_trigger_conversion_sends_ez_stereo_to_worker(mock_parser_host):
         mock_start_work = MagicMock()
         mock_worker_instance.start_work = mock_start_work
 
-        with patch("PyQt6.QtCore.QTimer.singleShot") as mock_timer:
+        with patch("PySide6.QtCore.QTimer.singleShot") as mock_timer:
             compute.trigger_conversion()
 
             # Execute callback
@@ -1305,7 +1305,7 @@ def test_show_convert_menu_builds_actions(mock_parser_host):
     ):
         menu = MockMenu.return_value
         compute.show_convert_menu(QPointF(1, 2).toPoint())
-    assert MockAction.call_count == 4  # fallback, rdkit, obabel, direct
+    assert MockAction.call_count == 3  # fallback, rdkit, direct
     menu.exec.assert_called_once()
 
 
@@ -1384,7 +1384,7 @@ def test_start_calculation_worker_wires_callbacks(mock_parser_host):
     with (
         patch("moleditpy.ui.compute_logic.QThread") as MockThread,
         patch("moleditpy.ui.compute_logic.CalculationWorker") as MockWorker,
-        patch("PyQt6.QtCore.QTimer.singleShot"),
+        patch("PySide6.QtCore.QTimer.singleShot"),
     ):
         thread = MockThread.return_value
         worker = MockWorker.return_value
@@ -1397,7 +1397,9 @@ def test_start_calculation_worker_wires_callbacks(mock_parser_host):
     with patch.object(compute, "on_calculation_finished") as fin:
         on_finished("result")
         fin.assert_called_once_with("result")
-    # _cleanup removed the thread and quit it
+    # Retain the thread until its finished signal confirms shutdown.
+    assert thread in compute._active_calc_threads
+    compute._calc_receivers[0].cleanup()
     assert thread not in compute._active_calc_threads
     thread.quit.assert_called()
 

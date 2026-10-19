@@ -63,7 +63,7 @@ def test_scene_tab_get_settings_keys(app):
 
 def test_scene_tab_stereo_check_options(app):
     """The stereo check lives on the 3D Scene tab, under its own heading."""
-    from PyQt6.QtWidgets import QLabel
+    from PySide6.QtWidgets import QLabel
 
     tab = Settings3DSceneTab(DEFAULT_SETTINGS)
     tab.update_ui(DEFAULT_SETTINGS)
@@ -318,7 +318,7 @@ def test_model_tab_ball_stick_pick_bond_color(mock_get_color, app):
 
 def test_scene_tab_has_title_label(app):
     """Settings3DSceneTab has a title label at the top."""
-    from PyQt6.QtWidgets import QLabel, QFormLayout
+    from PySide6.QtWidgets import QLabel, QFormLayout
 
     tab = Settings3DSceneTab(DEFAULT_SETTINGS)
     layout = tab.layout()

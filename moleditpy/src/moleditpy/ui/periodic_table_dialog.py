@@ -5,19 +5,19 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
 from typing import Any, Optional
 
-from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QDialog, QGridLayout, QPushButton
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QDialog, QGridLayout, QPushButton
 
 from ..utils.constants import CPK_COLORS, PERIODIC_TABLE_LAYOUT
 
-from PyQt6.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 
 
 def element_button_style(color: QColor) -> str:
@@ -37,7 +37,7 @@ def element_button_style(color: QColor) -> str:
 class PeriodicTableDialog(QDialog):
     """Dialog with a grid of element buttons for selecting an atom symbol."""
 
-    element_selected = pyqtSignal(str)
+    element_selected = Signal(str)
 
     def __init__(self, parent: Optional[Any] = None) -> None:
         """Initialize periodic table element picker dialog."""
@@ -76,5 +76,7 @@ class PeriodicTableDialog(QDialog):
     def on_button_clicked(self) -> None:
         """Emit element_selected with the button's symbol and accept the dialog."""
         b = self.sender()
-        self.element_selected.emit(b.text())  # type: ignore[union-attr]
+        if not isinstance(b, QPushButton):
+            return
+        self.element_selected.emit(b.text())
         self.accept()

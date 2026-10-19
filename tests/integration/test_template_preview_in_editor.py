@@ -3,8 +3,8 @@
 import math
 from unittest.mock import patch
 
-from PyQt6.QtCore import QPointF, QRectF
-from PyQt6.QtGui import QColor, QImage, QPainter
+from PySide6.QtCore import QPointF, QRectF
+from PySide6.QtGui import QColor, QImage, QPainter
 
 PYRIDINE = {
     "name": "pyridine",

@@ -43,6 +43,6 @@ python -m pytest tests/integration -v
 
 ## Requirements
 
-- **PyQt6**: Required for the `CalculationWorker` signals and event loop.
+- **PySide6**: Required for the `CalculationWorker` signals and event loop.
 - **RDKit**: Required for the 3D structure generation and geometry validation.
 - **pytest-qt**: Used to wait for worker signals (`qtbot.waitSignal`).

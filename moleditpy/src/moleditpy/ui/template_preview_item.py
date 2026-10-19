@@ -5,7 +5,7 @@
 MoleditPy — A Python-based molecular editing software
 
 Author: Hiromichi Yokoyama
-License: GPL-3.0 license
+License: LGPL-3.0-or-later
 Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
@@ -15,8 +15,8 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, FrozenSet, List, Optional, Set
 
-from PyQt6.QtCore import QLineF, QPointF, QRectF, Qt
-from PyQt6.QtGui import (
+from PySide6.QtCore import QLineF, QPointF, QRectF, Qt
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QFont,
@@ -24,7 +24,7 @@ from PyQt6.QtGui import (
     QPainterPath,
     QPen,
 )
-from PyQt6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
+from PySide6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 
 from .atom_item import AtomItem
 from .bond_item import BondItem

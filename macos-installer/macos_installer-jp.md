@@ -9,21 +9,16 @@ MoleditPyは、Pythonで構築された、クロスプラットフォームで�
 
 ## このバージョンについて
 
-このmacOS版パッケージは、互換性の問題からOpen Babelライブラリが無効化された`moleditpy-linux`を使用しています。
-Open Babelに依存する機能（3D変換のフォールバック）は利用できませんが、基本的な分子描画および編集機能は問題なく動作します。
-
-Open Babelのフォールバックが必要な複雑な分子では、3D変換が失敗するかもしれません。その場合は、`Settings`から、`3D Conversion`を`Direct`に変更してみてください。`Convert 2D to 3D`ボタンの右クリックで一時的に変更もできます。
-
+このアプリケーションバンドルは全 OS 共通の `moleditpy` パッケージから作成され、PySide6-Essentials を使用します。Open Babel は同梱しません。
 本バンドルは**Apple Silicon（arm64）専用**で、Appleによる公証（notarization）は受けておらず、アドホック署名のみが施されています。Intel Macをお使いの場合、またはすべての機能を利用したい場合は、代わりに`pip`でインストールしてください（[Installation for macOS](https://github.com/HiroYokoyama/python_molecular_editor/wiki/Installation-for-macOS)を参照）。
 
 注意: 本パッケージには`pip`が含まれていないため、外部依存関係（追加パッケージ）を必要とするプラグインは実行できません。さらに、本バンドルは**ターミナルウィンドウを伴わずに起動する**ため、コンソール出力はログファイルからのみ確認できます。詳しくは下記の[制限事項](#制限事項)をご覧ください。
 
 ## ダウンロード
 
-以下のリンクからアプリバンドルをダウンロードしてください。
-クリックするとダウンロードが開始されます。
+最新リリースのページを開き、Assets から Apple Silicon 用のアプリバンドル `MoleditPy_*_macos_arm64.zip` をダウンロードしてください。
 
-[MoleditPy for macOS (Apple Silicon) をダウンロード](https://github.com/HiroYokoyama/python_molecular_editor/releases/download/v4.13.0/MoleditPy_4.13.0_macos_arm64.zip)
+[MoleditPy の最新リリース](https://github.com/HiroYokoyama/python_molecular_editor/releases/latest)
 
 ## インストール手順
 

@@ -9,8 +9,8 @@ import json
 
 import numpy as np
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QFileDialog
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QFileDialog
 
 from benzene import assert_is_2d_benzene, draw_benzene_by_hand, place_benzene_template
 from test_benzene_conversion import (

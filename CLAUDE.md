@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MoleditPy is a Python-based molecular editor (v4.x — see moleditpy/pyproject.toml for the current version) built with PyQt6, RDKit, and PyVista. It provides 2D editing + 3D visualization of molecules with a plugin system.
+MoleditPy is a Python-based molecular editor (v5.x — see moleditpy/pyproject.toml for the current version) built with PySide6, RDKit, and PyVista. It provides 2D editing + 3D visualization of molecules with a plugin system.
 
 ## Development Setup
 
@@ -20,7 +20,7 @@ pip install pytest pytest-qt pytest-cov pytest-timeout
 
 ## Running Tests
 
-Run the full test suite (mirrors CI):
+Run the core CI unit/integration suites:
 ```bash
 MOLEDITPY_HEADLESS=1 QT_QPA_PLATFORM=offscreen python tests/run_all_tests.py --no-cov --no-report --unit --integration
 ```
@@ -85,7 +85,7 @@ The `--pylint` flag on `run_all_tests.py` runs pylint automatically after all te
 
 ## Scope
 
-All code changes go inside `moleditpy/` only. Never edit `moleditpy-linux/` — it is synced from `moleditpy/` separately.
+Application source lives in `moleditpy/`, the single package for Windows, macOS, and Linux. MoleditPy 5 requires Python 3.9–3.14 and PySide6-Essentials. Open Babel is not a core dependency. There is no separate Linux source tree or synchronization step.
 
 ## Code Quality Standards
 
@@ -129,9 +129,9 @@ Plugins are discovered and loaded by `plugins/plugin_manager.py`. The public API
 
 `tests/conftest.py` aggressively mocks VTK and PyVista at import time so unit/integration tests run headless without GPU. Do not import VTK/PyVista in core logic — keep 3D rendering isolated to `view_3d_logic.py`, `custom_interactor_style.py`, and `custom_qt_interactor.py`.
 
-### e2e Tests: Never Hardcode the Package Name
+### e2e Tests: One Package on Every Platform
 
-`tests/e2e/` runs against either the `moleditpy` source tree or the `moleditpy_linux` package, depending on platform and `MOLEDITPY_USE_INSTALLED` (set by the "Test pip install" CI workflow to test the real published package). `tests/e2e/conftest.py` and each e2e test file compute a `_PKG` variable for this (`"moleditpy_linux"` on Linux, `"moleditpy"` otherwise) and import via `importlib.import_module(f"{_PKG}.module.path")`. Never write `import moleditpy...` or `importlib.import_module("moleditpy...")` literally in an e2e test — it will pass locally on Windows/macOS but raise `ModuleNotFoundError` on the Linux CI matrix, which installs `moleditpy_linux`. Copy the `_PKG` detection block from an existing e2e test file (e.g. `test_ethane_conversion.py`) into any new file that imports the package directly.
+`tests/e2e/` and `tests/full_gui/` use `moleditpy` on every platform. Set `MOLEDITPY_USE_INSTALLED=1` to test the installed package instead of adding local source directories. PySide6 is the sole supported Qt binding. Plugin optimization methods use the existing documented callback API.
 
 ## Environment Variables
 
@@ -152,7 +152,7 @@ moleditpy --safe           # skip plugin loading
 
 - `docs/ARCHITECTURE.md` — detailed design decisions and manager patterns
 - `docs/CORE_DATA_STRUCTURES.md` — molecular data model internals
-- `docs/PLUGIN_DEVELOPMENT_MANUAL_V4.md` — plugin API for authors (current)
+- `docs/PLUGIN_DEVELOPMENT_MANUAL_V5.md` — plugin API for authors (current)
 - `docs/old/PLUGIN_DEVELOPMENT_MANUAL_V3.md` — plugin API for authors (v3, archived)
 - `DESIGN_PRINCIPLES.md` — project philosophy
 - `CONTRIBUTING.md` — full contribution workflow and PR checklist

@@ -53,9 +53,9 @@ jobs:
     - name: Report GL / Qt environment
       run: |
         xvfb-run -a --server-args="-screen 0 1600x1200x24" \
-          python -c "import vtk, pyvista, PyQt6.QtCore as c; \
+          python -c "import vtk, pyvista, PySide6.QtCore as c; \
             print('vtk', vtk.VTK_VERSION); print('pyvista', pyvista.__version__); \
-            print('qt', c.QT_VERSION_STR)"
+            print('qt', c.qVersion())"
         xvfb-run -a --server-args="-screen 0 1600x1200x24" glxinfo -B || true
 
     - name: Run Full GUI Tests
@@ -106,17 +106,8 @@ jobs:
 
   # Does the GUI come up on every supported interpreter? A hang or crash here
   # is red — that is the whole point of the probe.
-  # Linux (ubuntu-latest) and macOS (macos-latest): all versions, 3.9 – 3.14.
-  # Windows (windows-latest): 3.10 – 3.14 only; 3.9 has no usable OpenGL
-  # (VTK fails at wglChoosePixelFormatARB). No MOLEDITPY_FULL_GUI_REQUIRED
-  # on Windows: OpenGL there is intermittent, so a skip is an environment
-  # fact, not a regression.
-  # macos-13 is absent: those Intel runners are retired and jobs queue
-  # indefinitely.
-  #
-  # `pyqt6 < 6.10` for 3.9 is macOS-only: 6.10.2 launched fine on Linux but
-  # hung at window creation on macOS (killed at 120 s). 6.9.1 passed all 6
-  # macOS launch tests. Python 3.9 is EOL; the pin stays as-is.
+  # The unified package supports Python 3.9–3.14 on all three platforms.
+  # Windows OpenGL remains optional; Linux and macOS require the probe to pass.
   launch-probe:
     name: launch-probe / ${{ matrix.os }} / py${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
@@ -125,10 +116,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
-        exclude:
-          # No usable OpenGL on the Windows runner for Python 3.9.
-          - os: windows-latest
-            python-version: "3.9"
 
     steps:
     - uses: actions/checkout@v6
@@ -155,9 +142,9 @@ jobs:
         pip install pytest pytest-qt pytest-mock pytest-timeout
         pip install -e moleditpy/
 
-    - name: Show resolved PyQt6 version
+    - name: Show resolved PySide6 version
       shell: bash
-      run: python -c "from PyQt6.QtCore import QT_VERSION_STR, PYQT_VERSION_STR; print('PyQt6', PYQT_VERSION_STR, '/ Qt', QT_VERSION_STR)"
+      run: python -c "import PySide6; from PySide6.QtCore import qVersion; print('PySide6', PySide6.__version__, '/ Qt', qVersion())"
 
     - name: Launch probe (Linux)
       if: runner.os == 'Linux'

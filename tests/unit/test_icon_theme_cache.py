@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-from PyQt6.QtGui import QColor
+from PySide6.QtGui import QColor
 
 from moleditpy.ui.main_window_init import _UNQUERIED, MainInitManager
 

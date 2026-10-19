@@ -16,7 +16,7 @@ def test_init_creates_all_controls(app):
 
 def test_aromatic_torus_thickness_slider_expanding_policy(app):
     """The aromatic torus thickness slider is set to an expanding horizontal policy to ensure full width on macOS."""
-    from PyQt6.QtWidgets import QSizePolicy
+    from PySide6.QtWidgets import QSizePolicy
 
     tab = SettingsOtherTab(DEFAULT_SETTINGS)
     assert (

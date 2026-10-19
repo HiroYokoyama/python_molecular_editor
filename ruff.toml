@@ -15,7 +15,7 @@ target-version = "py39"
 # Raising it to e.g. 120 would silently reflow 56 of them on the next format run.
 # line-length = 88
 
-extend-exclude = ["moleditpy-linux", "moleditpy/src/moleditpy/assets"]
+extend-exclude = ["moleditpy/src/moleditpy/assets"]
 
 
 [lint]

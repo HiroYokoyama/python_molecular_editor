@@ -1,9 +1,9 @@
 """Unit tests for atom and bond item visual rendering."""
 
 import pytest
-from PyQt6.QtCore import QPointF, QRectF
-from PyQt6.QtGui import QPainter, QPainterPath
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QPointF, QRectF
+from PySide6.QtGui import QPainter, QPainterPath
+from PySide6.QtWidgets import (
     QGraphicsScene,
     QStyleOptionGraphicsItem,
     QGraphicsItem,
@@ -262,8 +262,8 @@ def test_bond_hover_effects(mock_parser_host):
 
     # Patch QGraphicsItem's hover events to avoid type checks on mocks
     with (
-        patch("PyQt6.QtWidgets.QGraphicsItem.hoverEnterEvent"),
-        patch("PyQt6.QtWidgets.QGraphicsItem.hoverLeaveEvent"),
+        patch("PySide6.QtWidgets.QGraphicsItem.hoverEnterEvent"),
+        patch("PySide6.QtWidgets.QGraphicsItem.hoverLeaveEvent"),
     ):
         # Hover enter
         bond.hovered = False

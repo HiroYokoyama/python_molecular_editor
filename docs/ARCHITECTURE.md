@@ -3,7 +3,7 @@
 ## Overview
 MoleditPy is a Python-based molecular editing platform designed for the rapid preparation and visualization of chemical structures for DFT calculations. 
 
-The application has undergone a significant architectural modernization, moving from a monolithic inheritance-based design to a **Composition-over-Inheritance** model. This ensures that core chemical logic, UI state management, and visual components are decoupled, highly testable, and robust against crashes in the hybrid Python/C++ environment (PyQt6/VTK).
+The application has undergone a significant architectural modernization, moving from a monolithic inheritance-based design to a **Composition-over-Inheritance** model. This ensures that core chemical logic, UI state management, and visual components are decoupled, highly testable, and robust against crashes in the hybrid Python/C++ environment (PySide6/VTK).
 
 ---
 
@@ -17,7 +17,7 @@ The `MainWindow` (the application's heartbeat) is no longer a collection of inhe
 - **Unified State**: Application state (undo stacks, current selection, mode configuration) is centralized in `StateManager`, ensuring absolute synchronization across decoupled components.
 
 ### 2. "Never Hide Errors" Diagnostic Strategy
-To ensure stability in the hybrid Python/C++ environment (PyQt6/VTK), the application employs a **Diagnostic Hardening** strategy:
+To ensure stability in the hybrid Python/C++ environment (PySide6/VTK), the application employs a **Diagnostic Hardening** strategy:
 
 - **Visible Failures**: We prioritize "loud" failures over silent inconsistencies. Every `hasattr()` check or `try-except` block used for architectural routing should include a diagnostic log (`logging.error()` for routing failures, `logging.debug(..., exc_info=True)` for best-effort suppression) or re-raise.
 - **Active Hardening**: The codebase is instrumented with defensive `else: logging.error()` branches for missing attributes, providing high-fidelity tracebacks directly from the architectural surface.
@@ -31,7 +31,7 @@ To ensure stability in the hybrid Python/C++ environment (PyQt6/VTK), the applic
 | Package | Role | Key Files |
 | :--- | :--- | :--- |
 | **`moleditpy.core`** | **Pure Scientific Logic**: Stateless chemical algorithms and the fundamental data model. | `molecular_data.py`, `mol_geometry.py` |
-| **`moleditpy.ui`** | **GUI & UI Logic**: PyQt6/VTK components, Managers, and I/O logic coupled with the interface. | `main_window.py`, `compute_logic.py`, `io_logic.py`, `view_3d_logic.py` |
+| **`moleditpy.ui`** | **GUI & UI Logic**: PySide6/VTK components, Managers, and I/O logic coupled with the interface. | `main_window.py`, `compute_logic.py`, `io_logic.py`, `view_3d_logic.py` |
 | **`moleditpy.utils`** | **Common Utilities**: Threading helpers, system constants, safe SIP interaction, and default settings. | `constants.py`, `default_settings.py`, `sip_isdeleted_safe.py`, `system_utils.py` |
 | **`moleditpy.plugins`**| **Extension Layer**: Discovery and dynamic loading of Python scripts. | `plugin_manager.py`, `plugin_interface.py` |
 | **`moleditpy.assets`** | **Media Content**: Application icons and graphical assets. | `icon.png`, `icon.ico` |
@@ -60,7 +60,7 @@ To ensure stability in the hybrid Python/C++ environment (PyQt6/VTK), the applic
 ### 1. Separation of Concerns (Logic-UI Decoupling)
 The project identifies a strict boundary between UI presentation and scientific logic:
 - **Pattern**: A UI Manager (e.g., `ComputeManager`) aggregates complex scientific algorithms and interacts with the GUI host via the `self.host` property.
-- **Benefit**: This allows the core chemical logic to be compartmentalized, preventing the intermingling of VTK/RDKit operations with PyQt6 boilerplate.
+- **Benefit**: This allows the core chemical logic to be compartmentalized, preventing the intermingling of VTK/RDKit operations with PySide6 boilerplate.
 
 ### 2. State Management (Single Source of Truth)
 Instead of distributing application states (undo stacks, mode flags, molecule data) across multiple mixins, the application uses a unified **StateManager**:
