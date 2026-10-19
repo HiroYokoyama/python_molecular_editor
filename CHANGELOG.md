@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep user-template preview scenes owned by their thumbnail widgets so PySide6 does not destroy them after creation, leaving saved molecular templates blank.
+
 ---
 
 ## [5.0.0a2] - 2026-10-19

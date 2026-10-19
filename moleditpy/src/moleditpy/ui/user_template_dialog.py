@@ -298,7 +298,7 @@ class UserTemplateDialog(QDialog):
         layout = QVBoxLayout(widget)
 
         # Preview graphics - use custom view class for better resize handling
-        preview_scene = QGraphicsScene()
+        preview_scene = QGraphicsScene(widget)
         preview_view = TemplatePreviewView(preview_scene)
         preview_view.setFixedSize(160, 140)
         preview_view.setRenderHint(QPainter.RenderHint.Antialiasing)

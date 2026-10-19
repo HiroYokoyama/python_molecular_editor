@@ -1,5 +1,6 @@
 """Unit tests for UserTemplateDialog template management."""
 
+import gc
 import json
 import os
 
@@ -82,6 +83,24 @@ class TestTemplateFiles:
 
 
 class TestLoadUserTemplates:
+    def test_preview_scene_survives_event_loop_and_collection(
+        self, make_dialog, tmp_path, qtbot
+    ):
+        """A thumbnail must retain its scene after preview creation returns."""
+        from moleditpy.ui.template_preview_view import TemplatePreviewView
+
+        _write_template(tmp_path)
+        dlg, _mw = make_dialog()
+        dlg.show()
+        qtbot.wait(350)
+        gc.collect()
+        view = dlg.findChild(TemplatePreviewView)
+        assert view is not None
+        assert view.scene() is not None
+        assert view.scene().items()
+        view.redraw_with_current_size()
+        assert view.scene().items()
+
     def test_loads_only_pmetmplt_files(self, make_dialog, tmp_path):
         _write_template(tmp_path, "One")
         _write_template(tmp_path, "Two")
