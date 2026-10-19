@@ -6,6 +6,14 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+---
+
+## [5.0.0] - 2026-10-19
+
+### Changed
+
+- Release the MoleditPy 5 migration as stable: PySide6-Essentials, LGPL-3.0-or-later, a unified package on Windows/macOS/Linux, Python 3.9–3.14 support, and no Open Babel core dependency. See the alpha entries below for the complete migration details.
+
 ### Fixed
 
 - Keep user-template preview scenes owned by their thumbnail widgets so PySide6 does not destroy them after creation, leaving saved molecular templates blank.
