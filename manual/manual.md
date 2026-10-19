@@ -520,7 +520,7 @@ You can open the Plugin Manager via the menu Plugin \> Plugin Manager.... From h
 You can explore and download official plugins from the **Plugin Explorer**: [https://hiroyokoyama.github.io/moleditpy-plugins/explorer/](https://hiroyokoyama.github.io/moleditpy-plugins/explorer/)
 
 > [!TIP]
-> It is highly recommended to install and use the **Plugin Installer** plugin. This allows you to easily browse and install other plugins directly from within MoleditPy, and it automatically verifies the SHA-256 hash of downloaded plugins against the official database to ensure security.
+> It is highly recommended to install and use the **Plugin Installer** plugin. This allows you to easily browse and install other plugins directly from within MoleditPy, and it automatically verifies the SHA-256 hash of downloaded plugins against the registry to detect changed downloads. Plugins are not sandboxed; a matching hash does not establish that their code is safe. See [security policy](../SECURITY.md).
 
 **Updated Examples of Available Plugins:**
 * **ORCA Input Generator Pro:** An advanced tool for generating ORCA inputs, featuring a Block Builder to assist in constructing complex input blocks.
@@ -593,4 +593,4 @@ You can check the version information from the `Help` \> `About` menu.
 
 
 
-Independently developed plugins may use any license, including proprietary licenses; existing plugins retain their licenses. Copied core code and third-party dependencies keep their own license obligations. See [licensing policy](../LICENSING.md) and [binary library replacement instructions](../DISTRIBUTION.md).
+Independently developed plugins may use any license, including proprietary licenses. Read each plugin's own license; historical releases retain their original terms. Copied core code and third-party dependencies keep their own license obligations. See [licensing policy](../LICENSING.md) and [binary library replacement instructions](../DISTRIBUTION.md).
