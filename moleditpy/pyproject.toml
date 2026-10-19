@@ -36,10 +36,10 @@ classifiers = [
 dependencies = [
   "numpy",
   "pyside6-essentials >= 6.9, < 6.10; python_version < '3.10'",
-  "pyside6-essentials >= 6.10, < 6.12; python_version >= '3.10'",
+  "pyside6-essentials >= 6.10, < 6.13; python_version >= '3.10'",
   "pyvista < 0.50",
   "pyvistaqt < 0.14",
-  "rdkit < 2026.4"
+  "rdkit < 2026.10"
 ]
 
 [project.urls]
