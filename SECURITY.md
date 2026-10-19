@@ -4,8 +4,8 @@
 
 | Version | Supported |
 | ------- | --------- |
-| 4.x (latest) | :white_check_mark: |
-| < 4.0 | :x: |
+| 5.x (latest stable release) | :white_check_mark: |
+| 4.x and older | :x: |
 
 Only the latest release receives security fixes.
 
@@ -33,5 +33,9 @@ MoleditPy is a desktop application that runs locally. The primary attack surface
 - **File parsing**: Malformed molecular structure files (`.mol`, `.xyz`, `.pmeprj`, `.pmeraw` etc.) loaded via the UI or drag-and-drop
 - **Plugin system**: Plugins execute arbitrary Python code — only install plugins from trusted sources
 - **SMILES/SMARTS input**: Strings passed to RDKit for parsing
+- **Native libraries**: PySide6/Qt, RDKit and VTK/PyVista process data in the application process; include their versions when reporting crashes
+- **Plugin installation and integrations**: Downloaded Python code, external programs and any HTTP/MCP/SSH services enabled by installed plugins
 
-Out of scope: network attacks, server-side issues (MoleditPy has no network component).
+The core editor does not start an inbound network service by default. Installed plugins can access files, execute programs and communicate over the network with the user's privileges; they are not sandboxed. Report collection or standalone-plugin issues to the relevant repository, and include the plugin name/version and enabled integrations.
+
+A registry SHA-256 check verifies that a download matches the catalogued bytes; it does not establish that the code is safe. Review the source and publisher before installation. Historical version tags are provided for reproducibility and do not receive security fixes. Third-party runtime vulnerabilities may require updating the affected dependency as well as MoleditPy.
