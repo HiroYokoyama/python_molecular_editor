@@ -920,8 +920,8 @@ Combines menu registration, file import, atom selection, undo, and a singleton d
 
 ```python
 from rdkit import Chem
-from PySide6.QtWidgets import QMessageBox, QDockWidget, QLabel, QVBoxLayout, QWidget
-from PySide6.QtCore import Qt
+from PyQt6.QtWidgets import QMessageBox, QDockWidget, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtCore import Qt
 
 PLUGIN_NAME = "Research Assistant"
 PLUGIN_VERSION = "3.1.0"
@@ -983,7 +983,7 @@ A tool that calculates properties and shows them in a popup. Use `context.curren
 
 ```python
 from rdkit.Chem import Descriptors
-from PySide6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QMessageBox
 
 PLUGIN_NAME = "Weight Calculator"
 
@@ -1033,8 +1033,8 @@ def add_sphere(context):
 Use `register_window` to keep panels alive and manage their unique identity across the entire session.
 
 ```python
-from PySide6.QtWidgets import QDockWidget, QLabel, QVBoxLayout, QWidget
-from PySide6.QtCore import Qt
+from PyQt6.QtWidgets import QDockWidget, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtCore import Qt
 
 PLUGIN_NAME = "Info Panel"
 
