@@ -65,7 +65,7 @@ class PluginContext:
                 Anything else is ignored, so unknown values stay forward
                 compatible. Added in 4.8.1 — passing it to an older MoleditPy
                 raises TypeError, so guard the call if your plugin supports
-                both (see PLUGIN_DEVELOPMENT_MANUAL_V4.md).
+                both (see PLUGIN_DEVELOPMENT_MANUAL_V5.md).
         """
         self._manager.register_menu_action(
             self._plugin_name, path, callback, text, icon, shortcut, pin
