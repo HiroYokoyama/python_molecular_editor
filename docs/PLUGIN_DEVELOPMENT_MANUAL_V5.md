@@ -4,7 +4,7 @@
 > [Use this link to download the manual for offline reading or sharing with AI assistants.](https://hiroyokoyama.github.io/python_molecular_editor/docs/PLUGIN_DEVELOPMENT_MANUAL_V5.md)
 
 > [!NOTE]
-> This manual targets **MoleditPy 5**. The namespaced PluginContext API continues from Version 4, while the GUI binding and core dependencies have changed. Historical manuals: [Version 4](PLUGIN_DEVELOPMENT_MANUAL_V4.md) and [Version 3](old/PLUGIN_DEVELOPMENT_MANUAL_V3.md).
+> This manual targets **MoleditPy 5**. The namespaced PluginContext API continues from Version 4, while the GUI binding and core dependencies have changed. Historical manuals: [Version 4](old/PLUGIN_DEVELOPMENT_MANUAL_V4.md) and [Version 3](old/PLUGIN_DEVELOPMENT_MANUAL_V3.md).
 
 MoleditPy 5 uses PySide6-Essentials, RDKit and PyVista on Python 3.9–3.14. Use the documented PluginContext methods below to extend the editor.
 

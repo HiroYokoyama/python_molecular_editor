@@ -1,10 +1,10 @@
 # MoleditPy Plugin Development Manual (Version 4.0)
 
 > [!TIP]
-> [Use this link to download the manual for offline reading or sharing with AI assistants.](https://hiroyokoyama.github.io/python_molecular_editor/docs/PLUGIN_DEVELOPMENT_MANUAL_V4.md)
+> [Use this link to download the manual for offline reading or sharing with AI assistants.](https://hiroyokoyama.github.io/python_molecular_editor/docs/old/PLUGIN_DEVELOPMENT_MANUAL_V4.md)
 
 > [!NOTE]
-> This is the manual for the **Version 4.0** API. For the previous version, see the [Plugin Development Manual (Version 3.0)](old/PLUGIN_DEVELOPMENT_MANUAL_V3.md).
+> This is the manual for the **Version 4.0** API. For the current version, see the [Plugin Development Manual (Version 5.0)](../PLUGIN_DEVELOPMENT_MANUAL_V5.md). For the previous version, see the [Plugin Development Manual (Version 3.0)](PLUGIN_DEVELOPMENT_MANUAL_V3.md).
 
 Welcome to the **Version 4.0** of the MoleditPy Plugin API. This version introduces a fully decoupled, namespaced architecture designed for high stability, clean memory management, and long-term maintainability.
 
