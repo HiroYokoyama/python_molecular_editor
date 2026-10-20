@@ -4,8 +4,8 @@ import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from moleditpy.core.molecular_data import MolecularData
-from moleditpy.ui.compute_logic import ComputeManager
-from PySide6.QtCore import QPointF
+from moleditpy.ui.compute_logic import ComputeManager, _CalculationReceiver
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, QPointF, QThread
 from PySide6.QtWidgets import QMessageBox
 from unittest.mock import MagicMock, patch
 
@@ -1399,7 +1399,12 @@ def test_start_calculation_worker_wires_callbacks(mock_parser_host):
         fin.assert_called_once_with("result")
     # Retain the thread until its finished signal confirms shutdown.
     assert thread in compute._active_calc_threads
-    compute._calc_receivers[0].cleanup()
+    receiver = next(
+        held[0]
+        for held in compute._calc_objects.values()
+        if isinstance(held[0], _CalculationReceiver)
+    )
+    receiver.cleanup()
     assert thread not in compute._active_calc_threads
     thread.quit.assert_called()
 
@@ -1407,6 +1412,38 @@ def test_start_calculation_worker_wires_callbacks(mock_parser_host):
     with patch.object(compute, "on_calculation_error") as err:
         on_error("boom")
         err.assert_called_once_with("boom")
+
+
+def test_calculation_receiver_outlives_its_cleanup_slot(mock_parser_host):
+    """cleanup() must not drop the last reference to its own receiver.
+
+    The receiver has no Qt parent, so losing the last Python reference makes
+    shiboken delete the C++ object at once: inside the queued slot call that
+    is still running on it. Qt has to delete it through deleteLater instead.
+    """
+    compute = DummyCompute(mock_parser_host)
+    thread = QThread()
+    worker = QObject()
+    receiver = _CalculationReceiver(compute, thread, worker)
+    compute._active_calc_threads.append(thread)
+    compute._retain_until_destroyed(thread, worker)
+    compute._retain_until_destroyed(receiver)
+    destroyed = []
+    receiver.destroyed.connect(lambda *_args: destroyed.append("receiver"))
+    thread.destroyed.connect(lambda *_args: destroyed.append("thread"))
+
+    cleanup = receiver.cleanup
+    del receiver, worker
+    cleanup()
+    del cleanup
+    assert destroyed == []
+    assert thread not in compute._active_calc_threads
+
+    thread.deleteLater()
+    del thread
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    assert sorted(destroyed) == ["receiver", "thread"]
+    assert compute._calc_objects == {}
 
 
 def test_on_calculation_finished_restores_atom_props(mock_parser_host):

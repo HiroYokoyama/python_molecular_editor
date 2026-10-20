@@ -86,7 +86,9 @@ class _CalculationReceiver(QObject):
     def cleanup(self) -> None:
         with suppress_log(ValueError):
             self.manager._active_calc_threads.remove(self.calculation_thread)
-            self.manager._calc_receivers.remove(self)
+        # The Python reference goes when Qt has deleted the object (see
+        # _retain_until_destroyed). Releasing it here would let shiboken
+        # delete this receiver inside its own queued slot call.
         self.deleteLater()
 
 
@@ -101,7 +103,8 @@ class ComputeManager:
         self.host = host
         self.last_successful_optimization_method: Optional[str] = None
         self._active_calc_threads: List[QThread] = []
-        self._calc_receivers: List[_CalculationReceiver] = []
+        # id(QObject) -> Python objects kept alive until that QObject is destroyed.
+        self._calc_objects: Dict[int, Tuple[Any, ...]] = {}
         self.halt_ids: Set[int] = set()
         self.next_conversion_id: int = 1
         self.active_worker_ids: Set[int] = set()
@@ -590,6 +593,19 @@ class ComputeManager:
             mol_block, mol, self.host.state_manager.data.bonds
         )
 
+    def _retain_until_destroyed(self, owner: QObject, *extra: Any) -> None:
+        """Keep *owner* (and *extra*) referenced until Qt deletes *owner*.
+
+        These objects have no Qt parent, so shiboken deletes the C++ object
+        as soon as the last Python reference goes. Dropping that reference
+        only from ``destroyed`` leaves every deletion to ``deleteLater``.
+        """
+        key = id(owner)
+        self._calc_objects[key] = (owner, *extra)
+        owner.destroyed.connect(
+            lambda *_args, key=key: self._calc_objects.pop(key, None)
+        )
+
     def _start_calculation_worker(
         self, mol_block: str, options: Dict[str, Any], run_id: int
     ) -> None:
@@ -604,7 +620,11 @@ class ComputeManager:
         worker.error.connect(receiver.error)
         thread.finished.connect(receiver.cleanup)
         thread.finished.connect(thread.deleteLater)
-        self._calc_receivers.append(receiver)
+        # The worker is deleted on its own thread before ~QThread returns, so
+        # it is released with the thread rather than by its own destroyed
+        # signal, which would be emitted off the GUI thread.
+        self._retain_until_destroyed(thread, worker)
+        self._retain_until_destroyed(receiver)
         thread.start()
         QTimer.singleShot(10, lambda: worker.start_work.emit(mol_block, options))
         self._active_calc_threads.append(thread)

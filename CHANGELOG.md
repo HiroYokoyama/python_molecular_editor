@@ -8,6 +8,18 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [5.0.2] - 2026-10-21
+
+### Fixed
+
+- Release the objects behind a 2D-to-3D conversion or 3D optimization only after Qt has deleted them. The result receiver was dropped inside its own queued slot call, so PySide6 destroyed it while Qt was still delivering the event, which could corrupt the heap and crash the application.
+
+### Documentation
+
+- Document optional `PLUGIN_LICENSE`, registry license precedence and supported Python/OS metadata in the plugin development manual.
+
+---
+
 ## [5.0.1] - 2026-10-20
 
 ### Fixed
