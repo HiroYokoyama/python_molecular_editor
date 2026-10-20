@@ -3,6 +3,7 @@
 import gc
 
 from PySide6.QtCore import QPoint, Qt
+from PySide6.QtWidgets import QToolBar
 
 
 def _style_actions(window):
@@ -49,3 +50,18 @@ def test_plugin_style_joins_exclusive_selection(window):
     for action in actions:
         action.trigger()
         assert [candidate for candidate in actions if candidate.isChecked()] == [action]
+
+
+def test_startup_plugin_style_joins_exclusive_selection(window):
+    window.plugin_manager.custom_3d_styles["Startup style"] = {
+        "callback": lambda *_: None
+    }
+    toolbar = QToolBar(window)
+    window.init_manager._add_3d_edit_actions(toolbar)
+    actions = _style_actions(window)
+    assert actions[-1].text() == "Startup style"
+    actions[-1].trigger()
+    assert window.view_3d_manager.current_3d_style == "Startup style"
+    assert [action for action in actions if action.isChecked()] == [actions[-1]]
+    window.view_3d_manager.set_3d_style("Startup style")
+    assert [action for action in actions if action.isChecked()] == [actions[-1]]
