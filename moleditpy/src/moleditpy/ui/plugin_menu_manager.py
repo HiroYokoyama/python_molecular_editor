@@ -463,6 +463,7 @@ class PluginMenuManager:
                 if not any(a.text() == style_name for a in style_menu.actions()):
                     action = QAction(style_name, self._im.host)
                     action.setCheckable(True)
+                    action.setProperty("moleditpy_3d_style", style_name)
                     action.triggered.connect(
                         lambda checked=False, s=style_name: (
                             self._im.host.view_3d_manager.set_3d_style(s)
