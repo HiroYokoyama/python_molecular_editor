@@ -96,12 +96,23 @@ Define these at the top of your script. They are used for the UI and the interna
 | `PLUGIN_NAME` | **(Required)** The human-readable name of the plugin. |
 | `PLUGIN_VERSION` | Version string (e.g., `"1.0.2"` or `"2026.03.31"`). |
 | `PLUGIN_AUTHOR` | Name of the developer. |
+| `PLUGIN_LICENSE` | Optional: SPDX identifier/expression for your plugin code, e.g. `"MIT"` or `"LGPL-3.0-or-later"`. Registry update workflows read this constant without importing the plugin. It describes the existing license; it does not relicense code or dependencies. |
 | `PLUGIN_DESCRIPTION` | A short summary shown in the Plugin Manager. |
 | `PLUGIN_CATEGORY` | Optional category (e.g., `"Analysis"`, `"Visualization"`), used as the sub-menu for `run()`-based plugins. **Applies only when the plugin file sits directly in the plugins root.** If the user filed it inside a category folder, that folder wins — where they put it is their decision, not the plugin's. |
 | `PLUGIN_SUPPORTED_MOLEDITPY_VERSION` | Version specifier matching the host app, e.g. `">=5.0.0, <6.0.0"` for a MoleditPy 5 plugin. |
+| `PLUGIN_SUPPORTED_PYTHON_VERSION` | Optional: supported Python specifier, e.g. `">=3.9, <3.15"`. Registry scripts default visible plugins that omit it to `">=3.10, <3.15"`; declare the actual range explicitly when different. |
+| `PLUGIN_SUPPORTED_OS` | Optional: supported platform tokens from `"Windows"`, `"macOS"`, `"Linux"`, `"WSL"`. Declare restrictions when required by the plugin's execution backend; visible registry entries otherwise default to all four. |
 | `PLUGIN_TAGS` | Optional: List of tags/categories (e.g., `["Utility", "Analysis"]`). |
 | `PLUGIN_DEPENDENCIES` | Optional: List of package dependency strings the plugin **requires**. Supports standard PEP-508 version constraints (e.g. `["numpy>=1.20", "rdkit>=2022.03"]`) or packages without version constraints. |
 | `PLUGIN_OPTIONAL_DEPENDENCIES` | Optional: Same format, for packages that unlock **extra features** but are not needed for the plugin to run (e.g. `["matplotlib>=3.5"]`). The Plugin Installer lists them separately and never warns about them when installing. |
+
+For license metadata, registry workflows use **`PLUGIN_LICENSE` → maintainer
+`license` input → existing registry value → `NOASSERTION`**. The Explorer and
+Plugin Installer display `NOASSERTION` or absent metadata as **Not specified**.
+Existing plugins do not need a new constant or release: maintainers can populate
+the registry from the current license documents, and updates preserve that value
+when the constant is omitted or blank. Include the actual license documents in
+your distribution; separately licensed dependencies and data keep their own terms.
 
 ### 1.4 Folder-based Plugins (Packages)
 For complex plugins, use a folder structure. MoleditPy will treat the folder as a single plugin if it contains an `__init__.py`.

@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Documentation
+
+- Document optional `PLUGIN_LICENSE`, registry license precedence and supported Python/OS metadata in the plugin development manual.
+
 ---
 
 ## [5.0.1] - 2026-10-20
