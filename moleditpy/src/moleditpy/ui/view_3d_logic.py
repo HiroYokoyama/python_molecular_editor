@@ -116,6 +116,13 @@ class View3DManager:
 
     def set_3d_style(self, style_name: str) -> None:
         """Set 3D display style and update view"""
+        style_button = self.host.init_manager.style_button
+        if style_button is not None and style_button.menu() is not None:
+            for action in style_button.menu().actions():
+                if action.isCheckable():
+                    action.setChecked(
+                        action.property("moleditpy_3d_style") == style_name
+                    )
         current_stored_style = getattr(self, "current_3d_style", None)
         if current_stored_style == style_name:
             return

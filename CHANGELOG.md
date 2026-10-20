@@ -8,6 +8,18 @@ All notable changes to this project are recorded here. The format follows
 
 ---
 
+## [5.0.1] - 2026-10-20
+
+### Fixed
+
+- Retain the exclusive 3D style action group and synchronize its check marks when a style is selected from code or a plugin, including Python 3.9 / PySide6 6.9 environments.
+
+### Tests & CI
+
+- Exercise native Qt style selection and dynamically registered plugin styles across the existing Windows, Linux and macOS test matrix.
+
+---
+
 ## [5.0.0] - 2026-10-19
 
 ### Changed

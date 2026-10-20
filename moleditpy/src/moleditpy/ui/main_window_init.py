@@ -99,6 +99,7 @@ class MainInitManager:
         self.toolbar_bottom: Any = None
         self.plugin_toolbar: Optional[QToolBar] = None
         self.tool_group: Optional[QActionGroup] = None
+        self.style_group: Optional[QActionGroup] = None
         self.other_atom_action: Optional[QAction] = None
         self.splitter: Optional[QSplitter] = None
         self.cleanup_button: Optional[QPushButton] = None
@@ -960,7 +961,7 @@ class MainInitManager:
 
         style_menu = QMenu(self.host)
         self.style_button.setMenu(style_menu)
-        style_group = QActionGroup(self.host)
+        self.style_group = style_group = QActionGroup(self.host)
         style_group.setExclusive(True)
 
         for name, key in [
@@ -971,6 +972,7 @@ class MainInitManager:
         ]:
             action = QAction(name, self.host)
             action.setCheckable(True)
+            action.setProperty("moleditpy_3d_style", key)
             if key == "ball_and_stick":
                 action.setChecked(True)
             action.triggered.connect(
@@ -985,6 +987,7 @@ class MainInitManager:
                 if not any(a.text() == style_name for a in style_menu.actions()):
                     action = QAction(style_name, self.host)
                     action.setCheckable(True)
+                    action.setProperty("moleditpy_3d_style", style_name)
                     action.triggered.connect(
                         lambda checked=False, s=style_name: (
                             self.host.view_3d_manager.set_3d_style(s)

@@ -86,6 +86,13 @@ jobs:
         # No suite flags: run_all_tests.py runs all four suites (unit, integration, E2E, GUI)
         python tests/run_all_tests.py --no-cov --no-report
 
+    - name: Check native macOS style menu on Python 3.9
+      if: runner.os == 'macOS' && matrix.python-version == '3.9'
+      env:
+        MOLEDITPY_HEADLESS: "1"
+        QT_QPA_PLATFORM: "cocoa"
+      run: python -m pytest tests/integration/test_style_menu_selection.py -v --timeout=30
+
     - name: Run Tests with Coverage
       if: ${{ matrix.coverage }}
       env:
