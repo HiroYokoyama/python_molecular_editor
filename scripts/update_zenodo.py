@@ -345,6 +345,8 @@ def main() -> None:
     print("\n[2/6] Fetching current draft details...")
     draft = make_request(draft_self_url, headers=headers, method="GET")
     if args.draft_id and draft.get("metadata", {}).get("version") not in (
+        None,
+        "",
         version,
         latest.get("metadata", {}).get("version"),
     ):
