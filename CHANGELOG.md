@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserve native Zenodo draft metadata and resume failed archives by draft ID. Check published versions and asset checksums before creating a draft, and stop on release-asset download errors.
+
 ---
 
 ## [5.0.2] - 2026-10-21

@@ -12,6 +12,10 @@ on:
         required: false
         type: string
         default: "20463243"
+      draft_id:
+        description: "Existing draft ID to resume without creating another version (optional)."
+        required: false
+        type: string
       draft:
         description: "Keep as a draft (do not publish)."
         required: false
@@ -55,10 +59,13 @@ jobs:
           echo "TAG=$TAG" >> $GITHUB_ENV
 
           # Download uploaded release assets (*.tar.gz and *.whl files)
-          gh release download "$TAG" --pattern "*.tar.gz" --pattern "*.whl" --dir dist --skip-existing || true
+          ASSETS=$(gh release view "$TAG" --json assets --jq '.assets[].name | select(endswith(".tar.gz") or endswith(".whl"))')
+          while IFS= read -r asset; do
+            [ -z "$asset" ] || gh release download "$TAG" --pattern "$asset" --dir dist --skip-existing
+          done <<< "$ASSETS"
 
           # Download the source code tarball archive
-          curl -L -o "dist/source.tar.gz" "https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+          curl --fail --location --retry 3 -o "dist/source.tar.gz" "https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
 
           # List the files to verify
           echo "Downloaded assets:"
@@ -67,20 +74,20 @@ jobs:
       - name: Upload and Publish to Zenodo
         env:
           ZENODO_TOKEN: ${{ secrets.ZENODO_TOKEN }}
+          INPUT_DEPOSITION: ${{ inputs.deposition_id }}
+          INPUT_DRAFT_ID: ${{ inputs.draft_id }}
+          INPUT_DRAFT: ${{ inputs.draft }}
         run: |
-          DEP_ARG=""
-          if [ -n "${{ github.event.inputs.deposition_id }}" ]; then
-            DEP_ARG="--deposition-id ${{ github.event.inputs.deposition_id }}"
+          args=()
+          if [ -n "$INPUT_DEPOSITION" ]; then
+            [[ "$INPUT_DEPOSITION" =~ ^[0-9]+$ ]] || exit 1
+            args+=(--deposition-id "$INPUT_DEPOSITION")
           fi
-
-          PUBLISH_ARG="--publish"
-          if [ "${{ github.event.inputs.draft }}" = "true" ]; then
-            PUBLISH_ARG=""
+          if [ -n "$INPUT_DRAFT_ID" ]; then
+            [[ "$INPUT_DRAFT_ID" =~ ^[0-9]+$ ]] || exit 1
+            args+=(--draft-id "$INPUT_DRAFT_ID")
           fi
-
-          # Run the update script, updating metadata and publishing the deposition.
-          python scripts/update_zenodo.py \
-            $PUBLISH_ARG \
-            $DEP_ARG \
-            --version-string "$TAG" \
-            dist/*
+          if [ "$INPUT_DRAFT" != "true" ]; then
+            args+=(--publish)
+          fi
+          python scripts/update_zenodo.py "${args[@]}" --version-string "$TAG" dist/*

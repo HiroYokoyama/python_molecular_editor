@@ -325,8 +325,11 @@ jobs:
         run: |
           mkdir -p dist
           TAG="v${APP_VERSION}"
-          gh release download "$TAG" --pattern "*.tar.gz" --pattern "*.whl" --dir dist --skip-existing || true
-          curl -L -o "dist/source.tar.gz" "https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+          ASSETS=$(gh release view "$TAG" --json assets --jq '.assets[].name | select(endswith(".tar.gz") or endswith(".whl"))')
+          while IFS= read -r asset; do
+            [ -z "$asset" ] || gh release download "$TAG" --pattern "$asset" --dir dist --skip-existing
+          done <<< "$ASSETS"
+          curl --fail --location --retry 3 -o "dist/source.tar.gz" "https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
           echo "Downloaded assets:"
           ls -la dist/
 
