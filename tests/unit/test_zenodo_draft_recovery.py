@@ -181,10 +181,15 @@ def test_missing_local_file_does_not_call_remote_api(monkeypatch, tmp_path):
 
 
 @pytest.mark.parametrize("same_family", [True, False])
+@pytest.mark.parametrize("draft_version", [None, "", "missing", "old", "next", "other"])
 def test_resume_existing_draft_without_creating_a_version(
-    monkeypatch, tmp_path, draft, same_family
+    monkeypatch, tmp_path, draft, same_family, draft_version
 ):
     calls = []
+    if draft_version == "missing":
+        draft["metadata"].pop("version")
+    else:
+        draft["metadata"]["version"] = draft_version
     if not same_family:
         draft["parent"]["id"] = "another-family"
 
@@ -219,11 +224,14 @@ def test_resume_existing_draft_without_creating_a_version(
             return draft
         pytest.fail(f"Unexpected mutation: {method} {url}")
 
-    if same_family:
+    if same_family and draft_version != "other":
         invoke(monkeypatch, tmp_path, request, "--draft-id", "300", "--publish")
         assert ("POST", draft["links"]["publish"]) in calls
     else:
-        with pytest.raises(ValueError, match="different record family"):
+        message = (
+            "different pending version" if same_family else "different record family"
+        )
+        with pytest.raises(ValueError, match=message):
             invoke(monkeypatch, tmp_path, request, "--draft-id", "300", "--publish")
         assert all(method == "GET" for method, _ in calls)
     assert not any(
