@@ -177,3 +177,7 @@ All notable changes must be recorded in `CHANGELOG.md` following [Keep a Changel
 - Categorize changes under `### Added`, `### Changed`, `### Deprecated`, `### Removed`, `### Fixed`, or `### Security` (or `### Documentation` / `### Tests & CI`).
 - **Before bumping versions** (in `moleditpy/pyproject.toml`, `manual/`, etc.), promote the `## [Unreleased]` entries into a new release heading `## [X.Y.Z] - YYYY-MM-DD` and retain an empty `## [Unreleased]` section at the top.
 
+
+## Copied maintenance scripts
+
+See [scripts/COMMON_TOOLS.md](scripts/COMMON_TOOLS.md) for canonical ownership, pinned versions and update instructions. Common script unit tests stay in the canonical repository; retain this repository's own integration checks.

@@ -1,0 +1,11 @@
+{
+  "repository": "HiroYokoyama/moleditpy-common-tools",
+  "version": "1.0.0",
+  "commit": "48916a03f1f1431123e924a7809497425fec778b",
+  "files": {
+    "scripts/update_zenodo.py": {
+      "source": "scripts/update_zenodo.py",
+      "sha256_lf": "5bd391f58e0c7a8491487f70a9b57b24e8c9cb298d5d298e91828edef1365a31"
+    }
+  }
+}
