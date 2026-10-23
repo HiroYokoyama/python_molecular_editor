@@ -14,6 +14,7 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Any, Iterable, Optional, Union
 
 
@@ -31,7 +32,21 @@ def parse_pyproject_version(
     return None
 
 
-DEPOSITION_ID = "20463243"
+def load_config(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    config = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(config, dict):
+        raise ValueError("Zenodo configuration must be a JSON object.")
+    for key in ("deposition_id", "sandbox_deposition_id"):
+        value = config.get(key)
+        if value is not None and (not isinstance(value, str) or not value.isdecimal()):
+            raise ValueError(f"{key} must be a numeric record ID string.")
+    return config
+
+
+CONFIG = load_config(Path(__file__).with_name("zenodo-config.json"))
+DEPOSITION_ID = CONFIG.get("deposition_id")
 
 
 def file_md5(path: str) -> str:
@@ -262,7 +277,11 @@ def main() -> None:
 
     deposition_id = args.deposition_id
     if args.sandbox and deposition_id == DEPOSITION_ID:
-        deposition_id = "506735"
+        deposition_id = CONFIG.get("sandbox_deposition_id")
+        if not deposition_id:
+            raise ValueError(
+                "Pass an explicit Sandbox --deposition-id or configure sandbox_deposition_id."
+            )
     if not deposition_id:
         raise ValueError("No deposition ID: pass --deposition-id.")
 
