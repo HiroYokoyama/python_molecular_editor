@@ -817,6 +817,33 @@ def test_export_with_colors_empty_on_broken_plotter(mock_parser_host):
     assert exporter.export_from_3d_view_with_colors() == []
 
 
+def test_color_export_uses_each_actors_own_mesh(mock_parser_host):
+    colors = np.array([[255, 0, 0], [255, 0, 0], [0, 0, 255], [0, 0, 255]])
+    converted = _XMesh(n_points=4, point_data={"colors": colors})
+    converted.extract_points = MagicMock(
+        side_effect=lambda inds, **_: _XMesh(len(inds))
+    )
+    cell_mesh = _XMesh(n_points=4)
+    cell_mesh.cell_data = {"colors": colors}
+    cell_mesh.cell_data_to_point_data = MagicMock(return_value=converted)
+    vertex_mesh = _XMesh(n_points=4, point_data={"colors": colors})
+    vertex_mesh.extract_points = MagicMock(
+        side_effect=lambda inds, **_: _XMesh(len(inds))
+    )
+    actors = {
+        name: SimpleNamespace(mapper=SimpleNamespace(input=mesh))
+        for name, mesh in (("cell", cell_mesh), ("vertex", vertex_mesh))
+    }
+    exporter = DummyExport(_host_with_actors(mock_parser_host, actors))
+
+    with patch.object(export_logic_mod.pv, "PolyData", _EmptyPoly):
+        result = exporter.export_from_3d_view_with_colors()
+
+    assert len(result) == 4
+    assert converted.extract_points.call_count == 2
+    assert vertex_mesh.extract_points.call_count == 2
+
+
 # ---------------------------------------------------------------------------
 # export_2d_png guards
 # ---------------------------------------------------------------------------

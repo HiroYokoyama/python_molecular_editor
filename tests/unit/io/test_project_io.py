@@ -207,7 +207,7 @@ def test_load_raw_data_success(mock_parser_host, tmp_path):
     """Verify successful loading of a raw project file."""
     io = DummyProjectIo(mock_parser_host)
     raw_file = str(tmp_path / "test.pmeraw")
-    sample_data = {"atoms": {1: "C"}}
+    sample_data = {"atoms": {1: {"symbol": "C", "pos": (0.0, 0.0)}}}
     with open(raw_file, "wb") as f:
         pickle.dump(sample_data, f)
 
@@ -639,7 +639,7 @@ def test_save_raw_data_cancel(io):
 def test_load_raw_data_dialog_success(io, tmp_path):
     """Verify loading via file dialog."""
     load_path = str(tmp_path / "load_test.pmeraw")
-    sample_data = {"atoms": "loaded"}
+    sample_data = {"atoms": {0: {"symbol": "C", "pos": (0.0, 0.0)}}}
     with open(load_path, "wb") as f:
         pickle.dump(sample_data, f)
 

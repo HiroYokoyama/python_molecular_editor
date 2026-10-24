@@ -50,6 +50,7 @@ from rdkit.Chem import (
 
 from ..utils.sdf_records import read_sdf_records
 from ..utils.finite_float import finite_float
+from ..core.project_validation import validate_project_data, validate_raw_project_data
 from .sdf_record_dialog import SdfRecordDialog
 from ..utils.constants import (
     COVALENT_RADII,
@@ -835,6 +836,7 @@ class IOManager:
                 )
                 return
 
+            validate_project_data(json_data)
             if not self.host.edit_actions_manager.clear_all(skip_check=True):
                 return
 
@@ -1262,9 +1264,10 @@ class IOManager:
                 )
                 for i in range(num_atoms):
                     pos = conf.GetAtomPosition(i)
-                    symbol = self.host.view_3d_manager.current_mol.GetAtomWithIdx(
-                        i
-                    ).GetSymbol()
+                    atom = self.host.view_3d_manager.current_mol.GetAtomWithIdx(i)
+                    symbol = atom.GetSymbol()
+                    if atom.GetAtomicNum() == 0 and atom.HasProp("xyz_original_symbol"):
+                        symbol = atom.GetProp("xyz_original_symbol")
                     xyz_lines.append(
                         f"  {symbol:<5}{pos.x:>15.8f}{pos.y:>15.8f}{pos.z:>15.8f}"
                     )
@@ -1322,6 +1325,7 @@ class IOManager:
             # Unpickle before clearing, so an unreadable file keeps the document.
             with open(file_path, "rb") as f:
                 loaded_data = pickle.load(f)
+            validate_raw_project_data(loaded_data)
             if not self.host.edit_actions_manager.clear_all(skip_check=True):
                 return
             self.host.ui_manager.restore_ui_for_editing()
