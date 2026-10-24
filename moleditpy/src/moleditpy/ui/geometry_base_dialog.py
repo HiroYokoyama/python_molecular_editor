@@ -98,9 +98,12 @@ class GeometryBaseDialog(BasePickingDialog):
             if wrap:
                 f_val = (f_val + 180) % 360 - 180
 
-            slider.blockSignals(True)
-            slider.setValue(int(round(f_val * scale)))
-            slider.blockSignals(False)
+            scaled = max(slider.minimum(), min(slider.maximum(), f_val * scale))
+            was_blocked = slider.blockSignals(True)
+            try:
+                slider.setValue(int(round(scaled)))
+            finally:
+                slider.blockSignals(was_blocked)
         except (ValueError, TypeError):
             # Safe defensive fallback catching ValueError, TypeError
             logging.debug("Suppressed non-critical error", exc_info=True)

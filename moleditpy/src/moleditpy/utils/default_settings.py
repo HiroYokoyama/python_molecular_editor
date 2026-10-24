@@ -10,6 +10,10 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
+import copy
+import math
+from typing import Any
+
 from .label_style import DEFAULT_LABEL_SETTINGS
 
 DEFAULT_SETTINGS = {
@@ -96,3 +100,47 @@ DEFAULT_SETTINGS = {
     "cleanup_straighten_bonds_2d": False,
     "cleanup_avoid_clashes_2d": False,
 }
+
+
+def normalize_settings(loaded: dict[str, Any]) -> dict[str, Any]:
+    """Keep plugin settings while replacing unsafe built-in values with defaults."""
+    result = copy.deepcopy(DEFAULT_SETTINGS)
+    result.update(loaded)
+    for key, default in DEFAULT_SETTINGS.items():
+        value = result[key]
+        valid = True
+        if isinstance(default, bool):
+            valid = isinstance(value, bool)
+        elif isinstance(default, (int, float)):
+            try:
+                number = float(value)
+                valid = (
+                    isinstance(value, (int, float))
+                    and not isinstance(value, bool)
+                    and math.isfinite(number)
+                    and 0 <= number <= (2**31 - 1) / 1000
+                )
+                if isinstance(default, int):
+                    valid = valid and number.is_integer()
+                if key.endswith("_resolution") or key in (
+                    "bond_dash_count_2d",
+                    "atom_font_size_2d",
+                ):
+                    valid = valid and number >= 1
+                if valid:
+                    result[key] = int(number) if isinstance(default, int) else number
+            except (ValueError, TypeError, OverflowError):
+                valid = False
+        elif isinstance(default, str):
+            valid = isinstance(value, str) and bool(value.strip())
+        elif isinstance(default, dict):
+            valid = isinstance(value, dict)
+            if valid:
+                result[key] = {
+                    symbol: color
+                    for symbol, color in value.items()
+                    if isinstance(symbol, str) and isinstance(color, str)
+                }
+        if not valid:
+            result[key] = copy.deepcopy(default)
+    return result

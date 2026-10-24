@@ -90,6 +90,12 @@ class _CalculationReceiver(QObject):
         # _retain_until_destroyed). Releasing it here would let shiboken
         # delete this receiver inside its own queued slot call.
         self.deleteLater()
+        if (
+            self.manager._close_after_calculation
+            and not self.manager._active_calc_threads
+        ):
+            self.manager._close_after_calculation = False
+            QTimer.singleShot(0, self.manager.host.close)
 
 
 class ComputeManager:
@@ -103,6 +109,7 @@ class ComputeManager:
         self.host = host
         self.last_successful_optimization_method: Optional[str] = None
         self._active_calc_threads: List[QThread] = []
+        self._close_after_calculation = False
         # id(QObject) -> Python objects kept alive until that QObject is destroyed.
         self._calc_objects: Dict[int, Tuple[Any, ...]] = {}
         self.halt_ids: Set[int] = set()
@@ -119,6 +126,18 @@ class ComputeManager:
     def reset_active_threads(self) -> None:
         """Reset active calculation threads list."""
         self._active_calc_threads = []
+
+    def prepare_calculation_shutdown(self) -> bool:
+        """Cancel calculations and defer window destruction until Qt finishes them."""
+        running = [thread for thread in self._active_calc_threads if thread.isRunning()]
+        if not running:
+            return True
+        self._close_after_calculation = True
+        self.halt_conversion()
+        for thread in running:
+            thread.requestInterruption()
+        self.host.update_status_message("Canceling calculation before closing...")
+        return False
 
     def _safe_disconnect(self, signal: Any) -> None:
         """Disconnect a signal, tolerating one that has nothing connected."""

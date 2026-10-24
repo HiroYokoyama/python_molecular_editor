@@ -224,7 +224,9 @@ class UIManager(QObject):
         Handle application close logic.
         Returns True if close should proceed, False if it should be cancelled.
         """
-        if not self.host.edit_3d_manager.prepare_optimization_shutdown():
+        calculations_ready = self.host.compute_manager.prepare_calculation_shutdown()
+        optimizations_ready = self.host.edit_3d_manager.prepare_optimization_shutdown()
+        if not calculations_ready or not optimizations_ready:
             return False
         # 1. Persist settings
         try:
@@ -271,17 +273,6 @@ class UIManager(QObject):
                         # Safe defensive fallback catching RuntimeError, TypeError
                         logging.debug("Suppressed non-critical error", exc_info=True)
 
-            # Stop calculation threads
-            active_threads = list(
-                getattr(self.host.compute_manager, "_active_calc_threads", []) or []
-            )
-            for thr in active_threads:
-                try:
-                    thr.quit()
-                    thr.wait(200)
-                except (RuntimeError, TypeError):
-                    # Safe defensive fallback catching RuntimeError, TypeError
-                    logging.debug("Suppressed non-critical error", exc_info=True)
         except (AttributeError, RuntimeError, TypeError, ValueError):
             # Safe defensive fallback catching AttributeError, RuntimeError, TypeError, ValueError
             logging.debug("Suppressed non-critical error", exc_info=True)
