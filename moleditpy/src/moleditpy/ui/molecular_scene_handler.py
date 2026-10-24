@@ -48,6 +48,7 @@ class TemplateMixin:
     mode: Any
     removeItem: Any
     views: Any
+    set_atom_rs_label: Any
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize template placement mixin."""
@@ -696,6 +697,7 @@ class TemplateMixin:
             atom_item.symbol == symbol
             and atom_item.charge == charge
             and atom_item.radical == radical
+            and atom_item.rs_label == atom_data.get("rs")
         ):
             return
 
@@ -704,6 +706,7 @@ class TemplateMixin:
             atom_item.symbol = symbol
             atom_item.charge = charge
             atom_item.radical = radical
+            self.set_atom_rs_label(atom_item, atom_data.get("rs"))
 
             record = self.data.atoms.get(atom_item.atom_id)
             if record is not None:
@@ -746,6 +749,7 @@ class TemplateMixin:
             radical = atom_data.get("radical", 0)
 
             atom_id = self.create_atom(symbol, pos, charge, radical)
+            self.set_atom_rs_label(self.atom_items[atom_id], atom_data.get("rs"))
             atom_id_map[atom_data["id"]] = atom_id
 
         # Create bonds (bonds_info is always id-based)

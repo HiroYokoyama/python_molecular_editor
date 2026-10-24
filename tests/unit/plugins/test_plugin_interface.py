@@ -18,6 +18,9 @@ class TestPluginInterface:
         """A main window whose 3D manager reports a loaded molecule."""
         mw = MagicMock()
         mw.view_3d_manager.current_mol = "mock_molecule"
+        mw.set_current_molecule.side_effect = lambda mol: setattr(
+            mw.view_3d_manager, "current_mol", mol
+        )
         return mw
 
     def test_plugin_context_init(self, mock_manager):

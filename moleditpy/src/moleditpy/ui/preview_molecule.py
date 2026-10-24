@@ -20,6 +20,7 @@ from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
 
 from .atom_item import AtomItem
 from .bond_item import BondItem
+from ..core.molecular_data import rs_entry
 
 
 class PreviewScene(QGraphicsScene):
@@ -96,6 +97,7 @@ def build_preview_items(
             radical=int(atom_data.get("radical", 0) or 0),
         )
         item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
+        item.rs_label = rs_entry(atom_data).get("rs")
         item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
         item.setAcceptHoverEvents(False)
         atom_items.append(item)
