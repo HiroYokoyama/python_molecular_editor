@@ -25,10 +25,12 @@ def _patch_qaction(monkeypatch, app):
     Windows when this file runs in isolation. The holder gives them an owner
     destroyed in order while the app is alive.
     """
-    from PySide6.QtCore import QObject
+    from PySide6.QtCore import QCoreApplication, QEvent, QObject
     from PySide6.QtGui import QAction as _RealQAction
+    from shiboken6 import isValid
 
     holder = QObject()
+    menus = []
 
     def _safe_qaction(text: str, parent=None) -> QAction:
         return _RealQAction(text, holder)
@@ -39,12 +41,21 @@ def _patch_qaction(monkeypatch, app):
 
     def _safe_add_menu(parent, title):
         if isinstance(parent, (QMenu, QMenuBar)):
-            return add_menu(parent, title)
+            menu = add_menu(parent, title)
+            # Keep native wrappers alive until this test's explicit teardown,
+            # including on Qt 6.9 where collection can change menu ownership.
+            menus.append(menu)
+            return menu
         return parent.addMenu(title)
 
     monkeypatch.setattr("moleditpy.ui.plugin_menu_manager.add_menu", _safe_add_menu)
     yield
+    for menu in reversed(menus):
+        if isValid(menu):
+            menu.deleteLater()
+            QCoreApplication.sendPostedEvents(menu, QEvent.Type.DeferredDelete)
     holder.deleteLater()
+    QCoreApplication.sendPostedEvents(holder, QEvent.Type.DeferredDelete)
 
 
 # ---------------------------------------------------------------------------
