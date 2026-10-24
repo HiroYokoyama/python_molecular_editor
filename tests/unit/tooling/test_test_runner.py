@@ -44,6 +44,18 @@ def test_fail_fast_disables_native_crash_retry(runner, monkeypatch) -> None:
     run_once.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    "summary", ["=== 23 passed, 2 skipped in 1.0s ===", "23 passed, 2 skipped in 1.0s"]
+)
+def test_counts_ignore_status_words_in_test_ids(runner, summary: str) -> None:
+    output = "tests/test_example.py::test_status[1 passed-1 failed] PASSED\n" + summary
+    assert runner._parse_test_counts(output) == {
+        "passed": 23,
+        "failed": 0,
+        "skipped": 2,
+    }
+
+
 @pytest.mark.parametrize("returncode, summary", [(0, "1 passed"), (1, "1 failed")])
 def test_full_gui_cli_exit_status(
     tmp_path: Path, returncode: int, summary: str

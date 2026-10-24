@@ -69,8 +69,18 @@ def _parse_test_counts(text):
     """Extract passed/failed/skipped counts from a pytest summary line."""
     import re
 
+    summary_lines = [
+        line
+        for line in text.splitlines()
+        if re.match(
+            r"^(?:=+\s*)?\d+ (?:passed|failed|skipped|error|xfailed|xpassed|deselected|warning)",
+            line,
+        )
+    ]
+    summary = summary_lines[-1] if summary_lines else ""
+
     def grab(word):
-        m = re.search(rf"(\d+) {word}", text)
+        m = re.search(rf"(\d+) {word}", summary)
         return int(m.group(1)) if m else 0
 
     return {
