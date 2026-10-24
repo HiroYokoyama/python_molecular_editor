@@ -8,6 +8,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 
 from moleditpy.ui.bond_length_dialog import BondLengthDialog
+from moleditpy.ui.alignment_dialog import AlignmentDialog
 from moleditpy.ui.constrained_optimization_dialog import (
     ConstrainedOptimizationDialog,
     ConstrainedOptimizationThread,
@@ -24,6 +25,28 @@ def install_molecule(window, monkeypatch):
     window.edit_actions_manager.reset_history()
     window.set_has_unsaved_changes(False)
     return mol
+
+
+def test_alignment_dialog_cannot_edit_replaced_molecule(window, monkeypatch):
+    mol = install_molecule(window, monkeypatch)
+    dialog = AlignmentDialog(mol, window, "x", [0, 1], parent=window)
+    window.dialog_manager._open_3d_edit_dialog(dialog)
+    original = mol.GetConformer().GetPositions().copy()
+    replacement = Chem.Mol(mol)
+
+    window.set_current_molecule(replacement)
+
+    assert dialog._invalidated
+    assert not dialog.isEnabled()
+    assert not dialog.isVisible()
+    assert not window.edit_3d_manager.active_3d_dialogs
+    history = list(window.edit_actions_manager.undo_stack)
+    window.view_3d_manager.draw_molecule_3d.reset_mock()
+    dialog.apply_alignment()
+    np.testing.assert_array_equal(mol.GetConformer().GetPositions(), original)
+    np.testing.assert_array_equal(replacement.GetConformer().GetPositions(), original)
+    assert window.edit_actions_manager.undo_stack == history
+    window.view_3d_manager.draw_molecule_3d.assert_not_called()
 
 
 @pytest.mark.parametrize(
