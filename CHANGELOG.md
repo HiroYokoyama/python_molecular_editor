@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [5.0.3] - 2026-10-24
+
+### Changed
+
+- Permit RDKit 2026.9 after validating the complete test suite and native rendering with PySide6 6.11.2. Retain the PySide6 6.12 exclusion and Python <3.15 requirement pending upstream Qt and VTK compatibility.
+
 ### Tests & CI
 
 - Share identical headless rendering stubs and unit/integration Qt teardown fixtures, remove unused test imports, and document coverage-preserving test maintenance. Retain all existing test cases and assertions.
@@ -14,6 +20,23 @@ All notable changes to this project are recorded here. The format follows
 - Wait for the zoom coalescing signal instead of a fixed delay, and retain menu-test wrappers through explicit native teardown to avoid timing- and garbage-collection-sensitive checks.
 
 ### Fixed
+
+- Validate project geometry before replacing the document, so malformed JSON and raw projects preserve the open molecule, history, and plugin state.
+- Cancel active conversion workers and defer application close until their native threads finish, keeping the UI responsive during shutdown.
+- Replace invalid built-in settings with safe defaults while retaining plugin preferences, and clamp extreme geometry inputs before converting slider values.
+
+- Keep each actor's geometry separate when exporting meshes with mixed cell and point colors to OBJ/MTL.
+- Preserve original XYZ pseudo-atom symbols in file and plugin exports instead of replacing them with a wildcard.
+
+- Preserve R/S annotations when saving, previewing, and placing user templates, including replacement of the attachment atom.
+- Invalidate molecule-bound tools when a plugin replaces the active molecule through its public context API.
+
+- Reject non-finite XYZ coordinates and invalid, fractional, or overflowing import charges before they reach molecular calculations.
+- Reject plugin-folder installations that would delete their own source or recursively copy a directory into itself.
+
+- Close axis-alignment dialogs when undo, file import, or calculation replaces their molecule, preventing a missing-method crash and edits to a stale structure.
+
+- Fall back to valid 3D label defaults when settings contain container-valued font families, non-finite or overflowing numbers, or malformed color strings, preventing rendering and settings-dialog crashes.
 
 - Preserve native Zenodo draft metadata and resume failed archives by draft ID. Check published versions and asset checksums before creating a draft, and stop on release-asset download errors.
 

@@ -109,6 +109,15 @@ def _input():
 
 
 class TestSyncInputToSlider:
+    @pytest.mark.parametrize("value", ["1e308", "-1e308"])
+    def test_extreme_finite_input_clamps_without_blocking_signals(self, dlg, value):
+        slider = _slider()
+        dlg._sync_input_to_slider(value, slider, scale=100.0)
+        assert slider.value() == (
+            slider.maximum() if value[0] != "-" else slider.minimum()
+        )
+        assert not slider.signalsBlocked()
+
     def test_valid_float_sets_slider(self, dlg):
         """A valid float string sets the slider to the scaled integer value."""
         s = _slider()

@@ -533,6 +533,7 @@ class ExportManager:
                         # This allows glyphs (where all atoms are in one mesh)
                         # to retain individual atom colors when exporting to OBJ/MTL.
                         try:
+                            color_mesh = mesh_copy
                             colors = None
                             pd = mesh_copy.point_data
                             # Use red/green/blue arrays if available
@@ -559,10 +560,10 @@ class ExportManager:
                             if colors is None and "colors" in mesh_copy.cell_data:
                                 try:
                                     # Convert cell_data to point_data
-                                    temp_mesh = mesh_copy.cell_data_to_point_data()
-                                    if "colors" in temp_mesh.point_data:
+                                    color_mesh = mesh_copy.cell_data_to_point_data()
+                                    if "colors" in color_mesh.point_data:
                                         colors = np.asarray(
-                                            temp_mesh.point_data["colors"]
+                                            color_mesh.point_data["colors"]
                                         )
                                 except (
                                     AttributeError,
@@ -616,15 +617,8 @@ class ExportManager:
                                         if point_inds.size == 0:
                                             continue
                                         try:
-                                            # Use temp_mesh if point data available
-                                            target_mesh = (
-                                                temp_mesh
-                                                if "temp_mesh" in locals()
-                                                else mesh_copy
-                                            )
-
                                             # extract_points with adjacent_cells=False to avoid pulling in neighbors
-                                            submesh = target_mesh.extract_points(
+                                            submesh = color_mesh.extract_points(
                                                 point_inds, adjacent_cells=False
                                             )
 

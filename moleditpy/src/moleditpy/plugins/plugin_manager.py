@@ -260,6 +260,19 @@ class PluginManager:
             if os.path.isdir(file_path):
                 # Copy entire directory
                 dest_path = self._safe_install_path(self.plugin_dir, filename)
+                source = os.path.normcase(os.path.realpath(file_path))
+                destination = os.path.normcase(os.path.realpath(dest_path))
+                if source == destination:
+                    raise ValueError(
+                        "Source and installed package are the same directory"
+                    )
+                if (
+                    os.path.splitdrive(source)[0] == os.path.splitdrive(destination)[0]
+                    and os.path.commonpath([source, destination]) == source
+                ):
+                    raise ValueError(
+                        "Cannot install a package inside its source directory"
+                    )
                 if os.path.exists(dest_path):
                     # Option 1: Overwrite (remove then copy) - safer for clean install
                     if os.path.isdir(dest_path):

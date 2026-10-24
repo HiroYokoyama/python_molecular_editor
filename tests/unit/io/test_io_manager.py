@@ -581,10 +581,13 @@ class TestPromptForChargeInlineValidation:
     """Invalid input must keep the dialog open with an inline error message,
     not silently fall back to charge 0."""
 
-    def test_invalid_charge_blocks_accept_and_shows_error(self, qapp):
+    @pytest.mark.parametrize(
+        "text", ["abc", "nan", "inf", "-inf", "1e999", "1.5", "-2.5", "2147483648"]
+    )
+    def test_invalid_charge_blocks_accept_and_shows_error(self, qapp, text):
         io = IOManager(DummyHost())
         le = MagicMock()
-        le.text.return_value = "abc"
+        le.text.return_value = text
         with (
             patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
             patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
@@ -623,6 +626,16 @@ class TestPromptForChargeInlineValidation:
 # ===========================================================================
 # Tests for XYZ dummy/pseudo-atom handling (any XYZ must load cleanly)
 # ===========================================================================
+
+
+@pytest.mark.parametrize("coordinate", ["nan", "inf", "-inf", "1e999"])
+@pytest.mark.parametrize("axis", [0, 1, 2])
+def test_xyz_rejects_nonfinite_coordinates(qapp, coordinate, axis):
+    io = IOManager(DummyHost())
+    values = ["0", "0", "0"]
+    values[axis] = coordinate
+    with pytest.raises(ValueError):
+        io._mol_from_xyz_lines(["1", "Invalid coordinates", "C " + " ".join(values)])
 
 
 class TestXyzDummyAtoms:

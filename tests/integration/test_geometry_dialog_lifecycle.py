@@ -6,12 +6,76 @@ import numpy as np
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
+from moleditpy.plugins.plugin_interface import PluginContext
 
 from moleditpy.ui.bond_length_dialog import BondLengthDialog
+from moleditpy.ui.alignment_dialog import AlignmentDialog
 from moleditpy.ui.constrained_optimization_dialog import (
     ConstrainedOptimizationDialog,
     ConstrainedOptimizationThread,
 )
+
+
+def test_close_defers_until_conversion_thread_finishes(window, monkeypatch):
+    from PySide6.QtCore import QEvent
+
+    thread = MagicMock()
+    thread.isRunning.return_value = True
+    compute = window.compute_manager
+    compute._active_calc_threads.append(thread)
+    compute.active_worker_ids.add(41)
+    window.set_has_unsaved_changes(False)
+    try:
+        assert not window.ui_manager.handle_close_event(QEvent(QEvent.Type.Close))
+        assert 41 in compute.halt_ids
+        assert not compute.active_worker_ids
+        thread.wait.assert_not_called()
+        thread.quit.assert_not_called()
+    finally:
+        compute._active_calc_threads.clear()
+
+
+def test_calculation_shutdown_resumes_close_after_native_thread_cleanup(
+    window, monkeypatch, qtbot
+):
+    import threading
+    from PySide6.QtCore import QCoreApplication, QEvent
+    from moleditpy.ui.calculation_worker import CalculationWorker
+
+    entered = threading.Event()
+    release = threading.Event()
+    completed = threading.Event()
+
+    def controlled_calculation(worker, _block, options):
+        entered.set()
+        try:
+            if not release.wait(10):
+                worker.error.emit((options["worker_id"], "Test gate timed out"))
+                return
+            worker.finished.emit((options["worker_id"], None))
+        finally:
+            completed.set()
+
+    monkeypatch.setattr(CalculationWorker, "run_calculation", controlled_calculation)
+    close = MagicMock()
+    monkeypatch.setattr(window, "close", close)
+    compute = window.compute_manager
+    compute.active_worker_ids.add(41)
+    compute._start_calculation_worker("unused", {"worker_id": 41}, 41)
+    try:
+        qtbot.waitUntil(entered.is_set, timeout=5000)
+        assert not window.ui_manager.handle_close_event(QEvent(QEvent.Type.Close))
+        assert 41 in compute.halt_ids
+        assert not compute.active_worker_ids
+        close.assert_not_called()
+    finally:
+        release.set()
+        qtbot.waitUntil(lambda: not compute._active_calc_threads, timeout=5000)
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    qtbot.waitUntil(lambda: close.call_count == 1, timeout=5000)
+    assert completed.is_set()
+    assert not compute._calc_objects
+    assert not compute._close_after_calculation
 
 
 def install_molecule(window, monkeypatch):
@@ -26,8 +90,30 @@ def install_molecule(window, monkeypatch):
     return mol
 
 
+def test_alignment_dialog_cannot_edit_replaced_molecule(window, monkeypatch):
+    mol = install_molecule(window, monkeypatch)
+    dialog = AlignmentDialog(mol, window, "x", [0, 1], parent=window)
+    window.dialog_manager._open_3d_edit_dialog(dialog)
+    original = mol.GetConformer().GetPositions().copy()
+    replacement = Chem.Mol(mol)
+
+    window.set_current_molecule(replacement)
+
+    assert dialog._invalidated
+    assert not dialog.isEnabled()
+    assert not dialog.isVisible()
+    assert not window.edit_3d_manager.active_3d_dialogs
+    history = list(window.edit_actions_manager.undo_stack)
+    window.view_3d_manager.draw_molecule_3d.reset_mock()
+    dialog.apply_alignment()
+    np.testing.assert_array_equal(mol.GetConformer().GetPositions(), original)
+    np.testing.assert_array_equal(replacement.GetConformer().GetPositions(), original)
+    assert window.edit_actions_manager.undo_stack == history
+    window.view_3d_manager.draw_molecule_3d.assert_not_called()
+
+
 @pytest.mark.parametrize(
-    "replacement", ["undo", "redo", "clear", "file", "calculation", "setter"]
+    "replacement", ["undo", "redo", "clear", "file", "calculation", "setter", "plugin"]
 )
 def test_replacing_molecule_invalidates_geometry_dialog(
     window, monkeypatch, replacement
@@ -57,6 +143,10 @@ def test_replacing_molecule_invalidates_geometry_dialog(
         window.io_manager.show_xyz_data("data")
     elif replacement == "calculation":
         window.compute_manager.on_calculation_finished(Chem.Mol(mol))
+    elif replacement == "plugin":
+        manager = MagicMock()
+        manager.get_main_window.return_value = window
+        PluginContext(manager, "Test plugin").current_mol = Chem.Mol(mol)
     else:
         window.current_mol = Chem.Mol(mol)
     assert dialog._invalidated

@@ -109,3 +109,24 @@ def test_one_font_size_for_every_kind():
     """The font size setting applies to every label kind alike."""
     settings = {"label_font_size_3d": 30}
     assert {label_kwargs(settings, k)["font_size"] for k, *_ in LABEL_KINDS} == {30}
+
+
+@pytest.mark.parametrize("value", [[], {}, ["arial"]])
+def test_container_font_family_uses_default(value):
+    assert label_kwargs({"label_font_family_3d": value}, "index") == label_kwargs(
+        DEFAULT_SETTINGS, "index"
+    )
+
+
+@pytest.mark.parametrize("key", ["label_font_size_3d", "label_background_opacity_3d"])
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf"), 10**400])
+def test_nonfinite_label_numbers_use_defaults(key, value):
+    assert label_kwargs({key: value}, "index") == label_kwargs(
+        DEFAULT_SETTINGS, "index"
+    )
+
+
+def test_color_with_trailing_newline_uses_default():
+    assert label_kwargs({color_key("index"): "#001122\n"}, "index") == label_kwargs(
+        DEFAULT_SETTINGS, "index"
+    )

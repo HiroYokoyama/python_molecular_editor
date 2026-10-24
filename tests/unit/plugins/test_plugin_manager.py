@@ -11,6 +11,37 @@ from moleditpy.plugins.plugin_manager import PluginManager
 from unittest.mock import MagicMock, patch
 
 
+def test_installing_own_package_preserves_source(tmp_path):
+    manager = PluginManager()
+    manager.plugin_dir = str(tmp_path / "plugins")
+    package = tmp_path / "plugins" / "sample"
+    package.mkdir(parents=True)
+    source = package / "__init__.py"
+    source.write_text("PLUGIN_NAME = 'Sample'\n", encoding="utf-8")
+
+    success, message = manager.install_plugin(str(package))
+
+    assert not success
+    assert "same" in message.lower()
+    assert source.read_text(encoding="utf-8") == "PLUGIN_NAME = 'Sample'\n"
+
+
+def test_installing_parent_of_plugin_directory_preserves_source(tmp_path):
+    manager = PluginManager()
+    package = tmp_path / "sample"
+    package.mkdir()
+    source = package / "__init__.py"
+    source.write_text("PLUGIN_NAME = 'Sample'\n", encoding="utf-8")
+    manager.plugin_dir = str(package / "plugins")
+
+    success, message = manager.install_plugin(str(package))
+
+    assert not success
+    assert "inside" in message.lower()
+    assert source.read_text(encoding="utf-8") == "PLUGIN_NAME = 'Sample'\n"
+    assert not (package / "plugins" / "sample").exists()
+
+
 # =============================================================================
 # get_plugin_info_safe (AST-based metadata extraction)
 # =============================================================================

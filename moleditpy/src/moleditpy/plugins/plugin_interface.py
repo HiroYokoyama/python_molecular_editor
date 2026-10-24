@@ -227,7 +227,7 @@ class PluginContext:
         """Set active RDKit molecule and redraw 3D view."""
         mw = self.get_main_window()
         if mw and hasattr(mw, "view_3d_manager"):
-            mw.view_3d_manager.current_mol = mol
+            mw.set_current_molecule(mol)
             mw.view_3d_manager.draw_molecule_3d(mol)
 
     @property
@@ -613,7 +613,10 @@ class PluginContext:
 
             for i in range(num_atoms):
                 pos = conf.GetAtomPosition(i)
-                symbol = mol.GetAtomWithIdx(i).GetSymbol()
+                atom = mol.GetAtomWithIdx(i)
+                symbol = atom.GetSymbol()
+                if atom.GetAtomicNum() == 0 and atom.HasProp("xyz_original_symbol"):
+                    symbol = atom.GetProp("xyz_original_symbol")
                 xyz_lines.append(
                     f"  {symbol:<5}{pos.x:>15.8f}{pos.y:>15.8f}{pos.z:>15.8f}"
                 )

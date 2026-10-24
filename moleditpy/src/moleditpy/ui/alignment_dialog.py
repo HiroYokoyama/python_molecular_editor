@@ -55,6 +55,7 @@ class AlignmentDialog(QDialog, Dialog3DPickingMixin):
         Dialog3DPickingMixin.__init__(self)
         self.mol = mol
         self.main_window = main_window
+        self._invalidated = False
         self.axis = axis
         self._selected_atoms = SelectionList()
 
@@ -133,7 +134,7 @@ class AlignmentDialog(QDialog, Dialog3DPickingMixin):
 
     def on_atom_picked(self, atom_idx: int) -> None:
         """Handle atom selection event."""
-        if self.main_window.view_3d_manager.current_mol is None:
+        if self._invalidated or self.main_window.view_3d_manager.current_mol is None:
             return
 
         if atom_idx in self.selected_atoms:
@@ -181,8 +182,16 @@ class AlignmentDialog(QDialog, Dialog3DPickingMixin):
         for i, idx in enumerate(self.selected_atoms, 1):
             self.add_selection_label(idx, f"#{i}")
 
+    def invalidate_molecule(self) -> None:
+        """Close the tool before undo, import or calculation replaces its molecule."""
+        self._invalidated = True
+        self.setEnabled(False)
+        self.reject()
+
     def apply_alignment(self) -> None:
         """Apply the specific axial alignment to the molecule."""
+        if self._invalidated:
+            return
         if len(self.selected_atoms) != 2:
             QMessageBox.warning(
                 self, "Warning", "Please select exactly 2 atoms for alignment."

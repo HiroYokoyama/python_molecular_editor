@@ -235,6 +235,7 @@ class TemplatePreviewItem(QGraphicsItem):
                     atom.get("symbol", "C"),
                     atom.get("charge", 0),
                     atom.get("radical", 0),
+                    atom.get("rs"),
                 )
                 for atom in preview_atoms
             ),

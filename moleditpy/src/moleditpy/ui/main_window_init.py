@@ -51,7 +51,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..utils.default_settings import DEFAULT_SETTINGS
+from ..utils.default_settings import normalize_settings
 from ..plugins.plugin_manager import PluginManager
 from ..utils.system_utils import detect_system_dark_mode
 
@@ -552,7 +552,7 @@ class MainInitManager:
                     self._migrate_legacy_settings(loaded_settings)
 
                     # 4. Update settings with loaded values
-                    self.settings.update(loaded_settings)
+                    self.settings = normalize_settings(loaded_settings)
         except (AttributeError, RuntimeError, ValueError, TypeError, IOError):
             # Use defaults on any error
             # Safe defensive fallback catching AttributeError, RuntimeError, ValueError, TypeError, IOError
@@ -633,7 +633,7 @@ class MainInitManager:
     # --- Settings and Plugin Helpers ---
     def _get_default_settings(self) -> Dict[str, Any]:
         """Return a dictionary of default application settings."""
-        return DEFAULT_SETTINGS.copy()
+        return normalize_settings({})
 
     def _migrate_legacy_settings(self, loaded_settings: Dict[str, Any]) -> None:
         """Handle migration of legacy settings keys."""

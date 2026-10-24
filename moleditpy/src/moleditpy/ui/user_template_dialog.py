@@ -36,6 +36,7 @@ from .preview_molecule import (
 from .template_preview_view import TemplatePreviewView
 
 from ..utils.constants import VERSION
+from ..core.molecular_data import rs_entry
 import json
 import logging
 import os
@@ -402,6 +403,7 @@ class UserTemplateDialog(QDialog):
                 "charge": atom.get("charge", 0),
                 "radical": atom.get("radical", 0),
                 "pos": QPointF(atom["x"], atom["y"]),
+                **rs_entry(atom),
             }
             for atom in atoms
         ]
@@ -545,6 +547,7 @@ class UserTemplateDialog(QDialog):
                     "y": pos[1],
                     "charge": atom_info.get("charge", 0),
                     "radical": atom_info.get("radical", 0),
+                    **rs_entry(atom_info),
                 }
             )
 

@@ -886,6 +886,7 @@ class MolecularData:
                     "y": pos[1],
                     "charge": atom_info.get("charge", 0),
                     "radical": atom_info.get("radical", 0),
+                    **rs_entry(atom_info),
                 }
             )
 
