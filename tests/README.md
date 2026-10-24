@@ -12,10 +12,10 @@ pip install pytest pytest-qt pytest-cov pytest-timeout
 
 ## Quick Start: Running Tests
 
-The recommended way to run tests is using the **Unified Runner**, which handles environment setup and executes suites in the correct order (Unit -> Integration -> GUI).
+The recommended way to run tests is using the **Unified Runner**, which handles environment setup and executes suites in the correct order (Unit -> Integration -> E2E -> GUI).
 
 ```bash
-# Run all tests (Unit + Integration + GUI)
+# Run all default suites (Unit + Integration + E2E + GUI)
 python tests/run_all_tests.py
 
 # Run all tests in HEADLESS mode (recommended for CI or background runs/wsl)
@@ -24,6 +24,7 @@ python tests/run_all_tests.py --headless
 # Run specific suites
 python tests/run_all_tests.py --unit
 python tests/run_all_tests.py --integration
+python tests/run_all_tests.py --e2e
 python tests/run_all_tests.py --gui --headless
 
 # Full-GUI tier: real window and real VTK, so it needs a display.
@@ -59,6 +60,22 @@ All suites use a consistent `app` fixture with platform-aware teardown. It perfo
 
 ### 3. Local Fixture Mocks
 Specific directories (like `tests/gui/`) provide further mocks for UI elements, such as replacing the 3D viewport with a dummy widget and auto-answering dialogs.
+
+## Maintaining Tests Without Losing Coverage
+
+Keep existing test cases, parametrized inputs, assertions, and skip conditions
+when cleaning up fixtures or helpers. Prefer small changes to shared setup over
+merging files that use different mocking strategies.
+
+Run the same suites with coverage before and after a cleanup, using the same
+Python environment and options. Save the baseline `.coverage` file before the
+next unified run, which clears it. Compare collected test IDs and per-file
+executed lines as well as the overall percentage; an unchanged percentage can
+hide lost coverage in one module. Investigate any new skips or missing lines.
+
+The default run covers Unit, Integration, E2E, and GUI. The Full-GUI tier still
+requires a separate run with a display and OpenGL context when its fixtures or
+tests change.
 
 ## Test Architecture
 
