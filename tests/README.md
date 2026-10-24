@@ -56,10 +56,17 @@ To maintain high performance and prevent crashes in headless environments, we us
 Applied at the very start of the `pytest` lifecycle. It pre-fills `sys.modules` with mock objects for heavy C++ extensions like **VTK** and **PyVista**. This prevents the real libraries from ever loading in test environments, eliminating GPU-related segmentation faults in CI.
 
 ### 2. Standardized App Teardown
-All suites use a consistent `app` fixture with platform-aware teardown. It performs aggressive cleanup on Windows/Desktop (to prevent `0x80010108` errors) while staying minimal in CI to avoid instability.
+Unit and integration tests inherit the session-scoped `app(qapp)` fixture from
+`tests/conftest.py`. It deletes native widgets and delivers deferred-delete
+events while pytest-qt still retains the application. E2E, GUI, and Full-GUI
+keep their own `app` fixtures for their different window and rendering lifecycles.
 
 ### 3. Local Fixture Mocks
 Specific directories (like `tests/gui/`) provide further mocks for UI elements, such as replacing the 3D viewport with a dummy widget and auto-answering dialogs.
+
+`tests/rendering_stubs.py` holds the identical orientation-widget and PolyData
+stand-ins used by the root and integration fixtures. Picker, plotter, and
+interactor implementations stay local because their behavior differs by tier.
 
 ## Maintaining Tests Without Losing Coverage
 

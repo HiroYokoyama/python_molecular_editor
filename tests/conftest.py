@@ -1,9 +1,16 @@
 import sys
 import os
 import types
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 from unittest import mock
 
+import pytest
+
 from rendering_stubs import DummyAxesWidget, DummyPolyDataMock
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QApplication
 
 # 1. Path setup
 src_root = os.path.abspath(
@@ -163,6 +170,22 @@ class DummyQtInteractorMock(mock.MagicMock):
 pvqt.QtInteractor = DummyQtInteractorMock
 
 
-def pytest_configure(config):
-    """Placeholder hook to ensure pytest sees this as a valid conftest."""
-    pass
+@pytest.fixture(scope="session")
+def app(qapp: "QApplication") -> Iterator["QApplication"]:
+    """Release native widgets before pytest-qt releases the application."""
+    import gc
+
+    from PySide6.QtCore import QCoreApplication, QEvent
+    from PySide6.QtWidgets import QApplication
+    from shiboken6 import isValid
+
+    yield qapp
+
+    # No exec() loop runs here, so deleteLater() needs explicit delivery while
+    # Python event filters still exist, before interpreter shutdown.
+    for widget in QApplication.topLevelWidgets():
+        if isValid(widget):
+            widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    gc.collect()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

@@ -387,7 +387,6 @@ def test_right_click_clears_ez_label_whatever_the_key_direction(
 
 def test_purge_on_quit_is_connected_once(mock_parser_host):
     """reinitialize_items runs on every clear but must not stack connections."""
-    from PySide6.QtWidgets import QApplication
 
     scene = setup_scene_with_view(mock_parser_host)
     app = MagicMock()

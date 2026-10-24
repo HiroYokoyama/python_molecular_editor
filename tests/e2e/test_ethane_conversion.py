@@ -10,7 +10,6 @@ import sys
 import platform
 import importlib
 import importlib.util
-import pytest
 from PySide6.QtCore import QPointF
 
 # ---------------------------------------------------------------------------

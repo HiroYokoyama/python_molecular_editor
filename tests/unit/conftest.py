@@ -1,10 +1,7 @@
 import os
 import sys
-import gc
 import pytest
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QCoreApplication, QEvent, QPointF
-from shiboken6 import isValid
+from PySide6.QtCore import QPointF
 
 # Minimal path setup to ensure moleditpy is discoverable
 src_path = os.path.abspath(
@@ -12,21 +9,6 @@ src_path = os.path.abspath(
 )
 if os.path.isdir(src_path) and src_path not in sys.path:
     sys.path.insert(0, src_path)
-
-
-@pytest.fixture(scope="session")
-def app(qapp):
-    """Keep Qt alive until native widgets and Python callbacks are released."""
-    yield qapp
-
-    # No exec() loop runs in unit tests, so deleteLater() needs explicit delivery.
-    # Do this while Python event filters still exist, before interpreter shutdown.
-    for widget in QApplication.topLevelWidgets():
-        if isValid(widget):
-            widget.deleteLater()
-    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
-    gc.collect()
-    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 @pytest.fixture

@@ -168,22 +168,7 @@ class DummyQtInteractorMock(_parent_class):
 
 pvqt.QtInteractor = DummyQtInteractorMock
 
-from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QCoreApplication, QEvent
-from shiboken6 import isValid
-import gc
-
-
-@pytest.fixture(scope="session")
-def app(qapp):
-    """Release native widgets while the retained QApplication is still alive."""
-    yield qapp
-    for widget in QApplication.topLevelWidgets():
-        if isValid(widget):
-            widget.deleteLater()
-    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
-    gc.collect()
-    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 @pytest.fixture

@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Tests & CI
+
+- Share identical headless rendering stubs and unit/integration Qt teardown fixtures, remove unused test imports, and document coverage-preserving test maintenance. Retain all existing test cases and assertions.
+
 ### Fixed
 
 - Preserve native Zenodo draft metadata and resume failed archives by draft ID. Check published versions and asset checksums before creating a draft, and stop on release-asset download errors.

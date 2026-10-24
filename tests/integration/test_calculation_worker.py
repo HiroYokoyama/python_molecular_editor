@@ -2,7 +2,6 @@
 
 import math
 import pytest
-import sys
 from rdkit import Chem
 import numpy as np
 from rdkit.Chem import AllChem, rdMolTransforms
