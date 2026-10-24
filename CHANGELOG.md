@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [5.0.3] - 2026-10-24
+
 ### Changed
 
 - Permit RDKit 2026.9 after validating the complete test suite and native rendering with PySide6 6.11.2. Retain the PySide6 6.12 exclusion and Python <3.15 requirement pending upstream Qt and VTK compatibility.
