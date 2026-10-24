@@ -92,6 +92,7 @@ least:
 ### 1. Unit Tests (`tests/unit/`)
 **Scope:** Core scientific logic, data structures, and parsers.
 *   Fast, isolated tests mocking all external dependencies.
+*   Grouped into component directories; the unified runner discovers them recursively.
 *   [**Read More**](unit/README.md)
 
 ### 2. Integration Tests (`tests/integration/`)

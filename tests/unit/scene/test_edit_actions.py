@@ -15,7 +15,7 @@ from rdkit import Chem
 
 # Ensure local moleditpy is discoverable
 _workspace_src = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "moleditpy", "src")
 )
 if os.path.isdir(_workspace_src) and _workspace_src not in sys.path:
     sys.path.insert(0, _workspace_src)

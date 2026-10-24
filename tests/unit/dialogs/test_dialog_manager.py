@@ -39,7 +39,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 # Make the local moleditpy package discoverable
 workspace_src_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "moleditpy", "src")
 )
 if os.path.isdir(workspace_src_path) and workspace_src_path not in sys.path:
     sys.path.insert(0, workspace_src_path)

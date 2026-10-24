@@ -1,0 +1,1384 @@
+"""
+Unit tests for IOManager IO logic.
+Covers:
+  - prompt_for_charge
+  - load_xyz_for_3d_viewing
+  - save_3d_as_mol
+
+Follows the same conventions as test_edit_actions_extended.py:
+  - Real PySide6 via a session-scoped QApplication
+  - DummyHost with all required sub-managers
+  - Module-level patch targets (no local imports in production code)
+"""
+
+import os
+import sys
+from pathlib import Path
+import pytest
+from unittest.mock import MagicMock, patch
+
+
+@pytest.fixture(autouse=True)
+def _defer_ui_timers(monkeypatch):
+    """These parser hosts are mocks; native timer delivery is tested separately."""
+    monkeypatch.setattr("moleditpy.ui.io_logic.QTimer.singleShot", MagicMock())
+
+
+from PySide6.QtCore import QPointF
+from PySide6.QtWidgets import QApplication, QDialog
+
+# Make the local moleditpy package discoverable
+workspace_src_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "moleditpy", "src")
+)
+if os.path.isdir(workspace_src_path) and workspace_src_path not in sys.path:
+    sys.path.insert(0, workspace_src_path)
+
+from moleditpy.ui.io_logic import IOManager
+from rdkit import Chem
+from rdkit.Chem import AllChem
+
+
+# ---------------------------------------------------------------------------
+# Shared QApplication fixture (session-scoped — one instance for all tests)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def qapp():
+    app = QApplication.instance() or QApplication([])
+    return app
+
+
+# ---------------------------------------------------------------------------
+# DummyHost — mirrors DummyHost in test_edit_actions_extended.py
+# ---------------------------------------------------------------------------
+
+
+class DummyHost:
+    def __init__(self):
+        self.statusBar_mock = MagicMock()
+        self.settings = {}
+        self.is_xyz_derived = False
+        self.initialization_complete = True
+        self.is_restoring_state = False
+
+        # Child managers
+        self.init_manager = MagicMock()
+        self.init_manager.settings = self.settings
+        self.init_manager.current_file_path = ""
+        self.state_manager = MagicMock()
+        self.state_manager.check_unsaved_changes.return_value = True
+        self.state_manager.has_unsaved_changes = False
+        self.state_manager.data = MagicMock()
+        self.state_manager.data.atoms = {}
+        self.ui_manager = MagicMock()
+        self.view_3d_manager = MagicMock()
+        self.view_3d_manager.current_mol = None
+        self.view_3d_manager.atom_id_to_rdkit_idx_map = {}
+        self.view_3d_manager.plotter = MagicMock()
+        self.edit_actions_manager = MagicMock()
+        self.edit_actions_manager.clear_all.return_value = True
+        self.plugin_manager = MagicMock()
+
+    def statusBar(self):
+        return self.statusBar_mock
+
+    def push_undo_state(self):
+        pass
+
+    def set_current_molecule(self, mol):
+        self.view_3d_manager.current_mol = mol
+
+    def set_current_file_path(self, path):
+        self.init_manager.current_file_path = path
+
+    def set_has_unsaved_changes(self, value):
+        self.state_manager.has_unsaved_changes = value
+
+    def set_atom_id_to_rdkit_idx_map(self, mapping):
+        self.view_3d_manager.atom_id_to_rdkit_idx_map = mapping
+
+    def update_status_message(self, message, timeout=0):
+        if timeout == 0:
+            self.statusBar_mock.showMessage(message)
+        else:
+            self.statusBar_mock.showMessage(message, timeout)
+
+
+# ===========================================================================
+# Tests for prompt_for_charge
+# ===========================================================================
+
+# Key insight: QDialog is now a module-level import in io_logic.py, so we
+# patch "moleditpy.ui.io_logic.QDialog".  The method checks:
+#     if dialog.exec() != QDialog.DialogCode.Accepted
+# With our patch, both QDialog (class) and the dialog instance come from
+# the MockDialog; so we must return MockDialog.DialogCode.Accepted from exec()
+# to pass the "Accepted" branch.  Returning anything else → Rejected path.
+
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def _make_charge_dialog(line_edit_text="0", accepted=True, skip_btn_class=None):
+    """Patch all Qt widgets used by prompt_for_charge."""
+    le = MagicMock()
+    le.text.return_value = line_edit_text
+    btn_patch = (
+        patch("moleditpy.ui.io_logic.QPushButton", skip_btn_class)
+        if skip_btn_class is not None
+        else patch("moleditpy.ui.io_logic.QPushButton")
+    )
+    with (
+        patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
+        patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
+        patch("moleditpy.ui.io_logic.QVBoxLayout"),
+        patch("moleditpy.ui.io_logic.QHBoxLayout"),
+        patch("moleditpy.ui.io_logic.QLabel"),
+        patch("moleditpy.ui.io_logic.QDialogButtonBox"),
+        btn_patch,
+    ):
+        dlg = MagicMock()
+        code = MockDlg.DialogCode.Accepted if accepted else MockDlg.DialogCode.Rejected
+        dlg.exec.return_value = code
+        MockDlg.return_value = dlg
+        yield MockDlg, le
+
+
+class TestPromptForCharge:
+    def _make_io(self):
+        return IOManager(DummyHost())
+
+    @pytest.mark.parametrize(
+        "text,expected_charge",
+        [
+            ("0", 0),
+            ("2", 2),
+            ("-1", -1),
+            ("abc", 0),  # non-numeric falls back to 0
+        ],
+    )
+    def test_accept_returns_charge(self, qapp, text, expected_charge):
+        """Accepted dialog returns the entered charge, ok=True, skip=False."""
+        io = self._make_io()
+        with _make_charge_dialog(line_edit_text=text, accepted=True):
+            charge, ok, skip = io.prompt_for_charge()
+        assert charge == expected_charge
+        assert ok is True
+        assert skip is False
+
+    def test_cancel_returns_none_false_false(self, qapp):
+        """Cancelled dialog returns charge=None, ok=False, skip=False."""
+        io = self._make_io()
+        with _make_charge_dialog(accepted=False):
+            charge, ok, skip = io.prompt_for_charge()
+        assert charge is None
+        assert ok is False
+        assert skip is False
+
+    def test_skip_chemistry_returns_zero_true_true(self, qapp):
+        """Skip button returns charge=0, ok=True, skip=True."""
+        io = self._make_io()
+        captured_cb = []
+
+        class FakeSkipBtn:
+            def __init__(self, *a, **k):
+                pass
+
+            @property
+            def clicked(self):
+                class _Sig:
+                    def connect(self_, cb):
+                        captured_cb.append(cb)
+
+                return _Sig()
+
+        with _make_charge_dialog(skip_btn_class=FakeSkipBtn) as (MockDlg, _):
+            dlg = MockDlg.return_value
+            accepted = MockDlg.DialogCode.Accepted
+
+            def _exec():
+                if captured_cb:
+                    captured_cb[0]()
+                return accepted
+
+            dlg.exec.side_effect = _exec
+            charge, ok, skip = io.prompt_for_charge()
+
+        assert charge == 0
+        assert ok is True
+        assert skip is True
+
+
+# ===========================================================================
+# Tests for load_xyz_for_3d_viewing
+# ===========================================================================
+
+
+class TestLoadXYZFor3DViewing:
+    """Tests for IOManager.load_xyz_for_3d_viewing()."""
+
+    @staticmethod
+    def _dummy_mol():
+        mol = MagicMock()
+        mol.HasProp.return_value = False
+        mol.GetNumBonds.return_value = 0
+        return mol
+
+    def test_explicit_path_skips_dialog(self, qapp, tmp_path):
+        """Passing file_path directly bypasses the file dialog."""
+        xyz = tmp_path / "mol.xyz"
+        xyz.write_text("2\ntest\nC  0.0  0.0  0.0\nO  1.2  0.0  0.0\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        mol = self._dummy_mol()
+        io.load_xyz_file = MagicMock(return_value=mol)
+
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+
+        io.load_xyz_file.assert_called_once_with(str(xyz))
+        host.edit_actions_manager.clear_all.assert_called_once_with(skip_check=True)
+        assert host.view_3d_manager.current_mol is mol
+
+    def test_dialog_provides_path(self, qapp, tmp_path):
+        """Without explicit path, QFileDialog is shown and its result used."""
+        xyz = tmp_path / "mol.xyz"
+        xyz.write_text("2\ntest\nC  0.0  0.0  0.0\nO  1.2  0.0  0.0\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        mol = self._dummy_mol()
+        io.load_xyz_file = MagicMock(return_value=mol)
+
+        with (
+            patch(
+                "moleditpy.ui.io_logic.QFileDialog.getOpenFileName",
+                return_value=(str(xyz), None),
+            ),
+            patch("moleditpy.ui.io_logic.QTimer"),
+        ):
+            io.load_xyz_for_3d_viewing()
+
+        io.load_xyz_file.assert_called_once_with(str(xyz))
+        assert host.view_3d_manager.current_mol is mol
+
+    def test_dialog_cancelled_is_noop(self, qapp):
+        """Empty string from dialog → early return, no state change."""
+        host = DummyHost()
+        io = IOManager(host)
+        io.load_xyz_file = MagicMock()
+
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getOpenFileName", return_value=("", None)
+        ):
+            io.load_xyz_for_3d_viewing()
+
+        io.load_xyz_file.assert_not_called()
+        assert host.view_3d_manager.current_mol is None
+
+    def test_load_failure_shows_error(self, qapp, tmp_path):
+        """load_xyz_file returning None shows error on status bar."""
+        xyz = tmp_path / "bad.xyz"
+        xyz.write_text("0\n\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        io.load_xyz_file = MagicMock(return_value=None)
+
+        with (
+            patch("moleditpy.ui.io_logic.QTimer"),
+            patch("moleditpy.ui.io_logic.QMessageBox"),
+        ):
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+
+        host.statusBar_mock.showMessage.assert_called()
+        assert host.view_3d_manager.current_mol is None
+
+    def test_ui_modes_enabled_on_success(self, qapp, tmp_path):
+        """3D viewer UI mode methods are called after successful load."""
+        xyz = tmp_path / "mol.xyz"
+        xyz.write_text("2\ntest\nC  0.0  0.0  0.0\nO  1.2  0.0  0.0\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        mol = self._dummy_mol()
+        io.load_xyz_file = MagicMock(return_value=mol)
+
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+
+        host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+        host.ui_manager.enable_3d_features.assert_called_once_with(True)
+
+    def test_is_xyz_derived_with_skip_prop(self, qapp, tmp_path):
+        """is_xyz_derived=True when _xyz_skip_checks property is set on mol."""
+        xyz = tmp_path / "mol.xyz"
+        xyz.write_text("2\ntest\nC  0.0  0.0  0.0\nO  1.2  0.0  0.0\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        mol = MagicMock()
+        mol.HasProp.return_value = True
+        mol.GetIntProp.return_value = 1
+        mol.GetNumBonds.return_value = 0
+        io.load_xyz_file = MagicMock(return_value=mol)
+
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+
+        assert host.is_xyz_derived is True
+
+    def test_is_xyz_derived_from_zero_bonds(self, qapp, tmp_path):
+        """is_xyz_derived=True when molecule has 0 bonds (no skip flag)."""
+        xyz = tmp_path / "mol.xyz"
+        xyz.write_text("2\ntest\nC  0.0  0.0  0.0\nO  1.2  0.0  0.0\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        mol = MagicMock()
+        mol.HasProp.return_value = False
+        mol.GetNumBonds.return_value = 0
+        io.load_xyz_file = MagicMock(return_value=mol)
+
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+
+        assert host.is_xyz_derived is True
+
+    def test_current_file_path_updated(self, qapp, tmp_path):
+        """init_manager.current_file_path is updated to the loaded file."""
+        xyz = tmp_path / "mol.xyz"
+        xyz.write_text("2\ntest\nC  0.0  0.0  0.0\nO  1.2  0.0  0.0\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        io.load_xyz_file = MagicMock(return_value=self._dummy_mol())
+
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+
+        assert host.init_manager.current_file_path == str(xyz)
+
+    def test_unsaved_changes_checked_exactly_once(self, qapp, tmp_path):
+        """XYZ load must check unsaved changes exactly once across the full call chain."""
+        xyz = tmp_path / "mol.xyz"
+        xyz.write_text("2\ntest\nC  0.0  0.0  0.0\nO  1.2  0.0  0.0\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        mol = self._dummy_mol()
+        with (
+            patch.object(io, "_mol_from_xyz_lines", return_value=mol),
+            patch("moleditpy.ui.io_logic.QTimer"),
+        ):
+            # load_xyz_file is NOT mocked, so the real parser helper runs
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+
+        assert host.state_manager.check_unsaved_changes.call_count == 1
+
+    def test_load_xyz_file_parser_does_not_prompt_unsaved_changes(self, qapp, tmp_path):
+        """load_xyz_file() is a low-level parser helper and must never prompt."""
+        xyz = tmp_path / "mol.xyz"
+        xyz.write_text("2\ntest\nC  0.0  0.0  0.0\nO  1.2  0.0  0.0\n")
+
+        host = DummyHost()
+        io = IOManager(host)
+        mol = self._dummy_mol()
+        with patch.object(io, "_mol_from_xyz_lines", return_value=mol):
+            res = io.load_xyz_file(str(xyz))
+
+        assert res is mol
+        assert host.state_manager.check_unsaved_changes.call_count == 0
+
+
+class TestShowXYZData:
+    """Tests for IOManager.show_xyz_data()."""
+
+    def test_sets_current_mol_and_draws(self, qapp):
+        """XYZ text display sets current_mol and enters 3D viewer mode."""
+        host = DummyHost()
+        io = IOManager(host)
+        mol = MagicMock()
+        mol.HasProp.return_value = True
+        mol.GetIntProp.return_value = 1
+        mol.GetNumBonds.return_value = 0
+        io.load_xyz_block = MagicMock(return_value=mol)
+
+        result = io.show_xyz_data("- 0.0 0.0 0.0\n", "plugin result")
+
+        assert result is mol
+        assert host.view_3d_manager.current_mol is mol
+        host.view_3d_manager.draw_molecule_3d.assert_called_once_with(mol)
+        host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+        host.ui_manager.enable_3d_features.assert_called_once_with(True)
+        assert host.is_xyz_derived is True
+
+    def test_unsaved_changes_checked_exactly_once(self, qapp):
+        """show_xyz_data checks unsaved changes exactly once."""
+        host = DummyHost()
+        io = IOManager(host)
+        mol = MagicMock()
+        mol.HasProp.return_value = False
+        mol.GetNumBonds.return_value = 0
+        with patch.object(io, "_mol_from_xyz_lines", return_value=mol):
+            io.show_xyz_data("2\ntest\nC 0 0 0\nO 1 0 0\n", "text")
+
+        assert host.state_manager.check_unsaved_changes.call_count == 1
+
+    def test_load_xyz_block_parser_does_not_prompt_unsaved_changes(self, qapp):
+        """load_xyz_block() is a low-level parser helper and must never prompt."""
+        host = DummyHost()
+        io = IOManager(host)
+        mol = MagicMock()
+        with patch.object(io, "_mol_from_xyz_lines", return_value=mol):
+            res = io.load_xyz_block("2\ntest\nC 0 0 0\nO 1 0 0\n")
+
+        assert res is mol
+        assert host.state_manager.check_unsaved_changes.call_count == 0
+
+
+# ===========================================================================
+# Tests for save_3d_as_mol
+# ===========================================================================
+
+
+class TestSave3DAsMol:
+    """Tests for IOManager.save_3d_as_mol()."""
+
+    @staticmethod
+    def _make_io_with_mol(smiles="C"):
+        host = DummyHost()
+        io = IOManager(host)
+        mol = Chem.MolFromSmiles(smiles)
+        AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
+        host.view_3d_manager.current_mol = mol
+        return io, host
+
+    def test_no_mol_shows_error_no_dialog(self, qapp):
+        """current_mol is None → error message, dialog never opened."""
+        host = DummyHost()
+        io = IOManager(host)
+        host.view_3d_manager.current_mol = None
+
+        with patch("moleditpy.ui.io_logic.QFileDialog.getSaveFileName") as mock_dlg:
+            io.save_3d_as_mol()
+
+        mock_dlg.assert_not_called()
+        host.statusBar_mock.showMessage.assert_called_with(
+            "Error: No 3D structure to save."
+        )
+
+    def test_dialog_cancelled_writes_nothing(self, qapp, tmp_path):
+        """Empty path from dialog → no file written."""
+        io, host = self._make_io_with_mol()
+        out = tmp_path / "out.mol"
+
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getSaveFileName", return_value=("", None)
+        ):
+            io.save_3d_as_mol()
+
+        assert not out.exists()
+
+    def test_mol_file_written(self, qapp, tmp_path):
+        """MOL file is created and non-empty."""
+        io, host = self._make_io_with_mol("CCO")
+        out = tmp_path / "out.mol"
+
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
+            return_value=(str(out), None),
+        ):
+            io.save_3d_as_mol()
+
+        assert out.exists()
+        assert out.stat().st_size > 0
+
+    def test_header_line_replaced(self, qapp, tmp_path):
+        """Second line is replaced with 'MoleditPy Ver. ... 3D'."""
+        io, host = self._make_io_with_mol("C")
+        out = tmp_path / "header.mol"
+
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
+            return_value=(str(out), None),
+        ):
+            io.save_3d_as_mol()
+
+        lines = out.read_text(encoding="utf-8").splitlines()
+        assert len(lines) > 1
+        assert "MoleditPy Ver." in lines[1]
+        assert "3D" in lines[1]
+
+    def test_success_status_message(self, qapp, tmp_path):
+        """Status bar shows success message after saving."""
+        io, host = self._make_io_with_mol("C")
+        out = tmp_path / "success.mol"
+
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
+            return_value=(str(out), None),
+        ):
+            io.save_3d_as_mol()
+
+        host.statusBar_mock.showMessage.assert_called()
+        msg = host.statusBar_mock.showMessage.call_args[0][0]
+        assert "saved" in msg.lower() or "3D" in msg
+
+    def test_exception_shows_error_message(self, qapp, tmp_path):
+        """RuntimeError during MolToMolBlock shows error on status bar."""
+        io, host = self._make_io_with_mol("C")
+        out = tmp_path / "err.mol"
+
+        with (
+            patch(
+                "moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
+                return_value=(str(out), None),
+            ),
+            patch(
+                "moleditpy.ui.io_logic.Chem.MolToMolBlock",
+                side_effect=RuntimeError("boom"),
+            ),
+        ):
+            io.save_3d_as_mol()
+
+        host.statusBar_mock.showMessage.assert_called()
+        msg = host.statusBar_mock.showMessage.call_args[0][0]
+        assert "error" in msg.lower()
+
+
+# ===========================================================================
+# Regression tests for code-review fixes
+# ===========================================================================
+
+
+class TestSave3DAsMolExtension:
+    """save_3d_as_mol must append .mol when the user omits the extension."""
+
+    def test_missing_extension_is_appended(self, qapp, tmp_path):
+        host = DummyHost()
+        io = IOManager(host)
+        mol = Chem.MolFromSmiles("CCO")
+        AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
+        host.view_3d_manager.current_mol = mol
+
+        out_no_ext = tmp_path / "bare_name"
+        with patch(
+            "moleditpy.ui.io_logic.QFileDialog.getSaveFileName",
+            return_value=(str(out_no_ext), None),
+        ):
+            io.save_3d_as_mol()
+
+        assert not out_no_ext.exists()
+        assert (tmp_path / "bare_name.mol").exists()
+
+
+class TestPromptForChargeInlineValidation:
+    """Invalid input must keep the dialog open with an inline error message,
+    not silently fall back to charge 0."""
+
+    def test_invalid_charge_blocks_accept_and_shows_error(self, qapp):
+        io = IOManager(DummyHost())
+        le = MagicMock()
+        le.text.return_value = "abc"
+        with (
+            patch("moleditpy.ui.io_logic.QDialog") as MockDlg,
+            patch("moleditpy.ui.io_logic.QLineEdit", return_value=le),
+            patch("moleditpy.ui.io_logic.QVBoxLayout"),
+            patch("moleditpy.ui.io_logic.QHBoxLayout"),
+            patch("moleditpy.ui.io_logic.QLabel") as MockLabel,
+            patch("moleditpy.ui.io_logic.QDialogButtonBox") as MockBox,
+            patch("moleditpy.ui.io_logic.QPushButton"),
+        ):
+            dlg = MockDlg.return_value
+            dlg.exec.return_value = MockDlg.DialogCode.Rejected
+            io.prompt_for_charge()
+
+            # The OK handler was connected to the inline validator
+            validator = MockBox.return_value.accepted.connect.call_args[0][0]
+
+            dlg.accept.reset_mock()
+            MockLabel.return_value.setText.reset_mock()
+
+            # Invalid text: dialog stays open, error message set inline
+            validator()
+            dlg.accept.assert_not_called()
+            msgs = [
+                str(c[0][0])
+                for c in MockLabel.return_value.setText.call_args_list
+                if c[0]
+            ]
+            assert any("Invalid charge" in m for m in msgs)
+
+            # Valid text: dialog accepts
+            le.text.return_value = "-2"
+            validator()
+            dlg.accept.assert_called_once()
+
+
+# ===========================================================================
+# Tests for XYZ dummy/pseudo-atom handling (any XYZ must load cleanly)
+# ===========================================================================
+
+
+class TestXyzDummyAtoms:
+    """A dummy/pseudo atom label must map to the RDKit wildcard (*) without
+    the load appearing to fail. Regression: probing the periodic table with a
+    non-element label used to make RDKit print an 'Element 'Xx' not found'
+    violation to stderr, which reads as a load failure."""
+
+    def _io(self):
+        host = DummyHost()
+        host.init_manager.settings = {
+            "skip_chemistry_checks": False,
+            "always_ask_charge": False,
+        }
+        return IOManager(host)
+
+    @pytest.mark.parametrize("label", ["Xx", "XX", "X1", "Bq", "DA", "Q", "LP"])
+    def test_dummy_label_normalizes_to_wildcard(self, qapp, label):
+        io = self._io()
+        symbol, is_dummy = io._normalize_xyz_symbol(label)
+        assert symbol == "*"
+        assert is_dummy is True
+
+    @pytest.mark.parametrize(
+        "label,expected", [("C", "C"), ("fe", "Fe"), ("og", "Og"), ("H", "H")]
+    )
+    def test_real_element_preserved(self, qapp, label, expected):
+        io = self._io()
+        symbol, is_dummy = io._normalize_xyz_symbol(label)
+        assert symbol == expected
+        assert is_dummy is False
+
+    def test_dummy_atom_xyz_loads_to_mol(self, qapp):
+        io = self._io()
+        xyz = "3\n\nXx 0 0 0\nC 0 0 1.0\nO 0 1.2 0\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol is not None
+        assert mol.GetNumAtoms() == 3
+        assert mol.GetAtomWithIdx(0).GetSymbol() == "*"
+        # binary round-trips (used for undo/redo and .pmeprj persistence)
+        assert Chem.Mol(mol.ToBinary()).GetNumAtoms() == 3
+
+    def test_normalize_does_not_emit_rdkit_violation(self, qapp, tmp_path):
+        """Normalizing a non-element label must not print a C++ periodic-table
+        violation to stderr — that stderr noise is the user-visible symptom."""
+        io = self._io()
+        # Capture at the file-descriptor level: RDKit's C++ logger writes to the
+        # underlying stderr fd, not Python's sys.stderr.
+        err_path = tmp_path / "stderr.txt"
+        saved_fd = os.dup(2)
+        with open(err_path, "w") as fh:
+            os.dup2(fh.fileno(), 2)
+            try:
+                for label in ["Xx", "XX", "X1", "Bq", "Zz", "Qq"]:
+                    io._normalize_xyz_symbol(label)
+            finally:
+                os.dup2(saved_fd, 2)
+                os.close(saved_fd)
+        captured = err_path.read_text()
+        assert "not found" not in captured, captured
+        assert "Violation" not in captured, captured
+
+
+class TestXyzLoadRobustness:
+    """Any structurally-parseable XYZ must yield a molecule (never None),
+    even when bond perception fails or the atom-count header is wrong."""
+
+    def _io(self, **settings):
+        host = DummyHost()
+        base = {"skip_chemistry_checks": False, "always_ask_charge": False}
+        base.update(settings)
+        host.init_manager.settings = base
+        return IOManager(host)
+
+    def test_bond_estimation_failure_still_loads_atoms(self, qapp):
+        io = self._io()
+        io.estimate_bonds_from_distances = MagicMock(
+            side_effect=RuntimeError("bond perception blew up")
+        )
+        xyz = "3\n\nXx 0 0 0\nC 0 0 1.0\nO 0 1.2 0\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol is not None
+        assert mol.GetNumAtoms() == 3
+        assert mol.GetNumBonds() == 0
+
+    def test_truncated_atom_count_loads_available_rows(self, qapp):
+        io = self._io()
+        # header claims 5 atoms, only 2 rows present
+        xyz = "5\n\nXx 0 0 0\nC 0 0 1.0\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol is not None
+        assert mol.GetNumAtoms() == 2
+
+    def test_ambiguous_hydrogen_bonds_to_its_nearest_neighbour(self, qapp):
+        """H is monovalent, so only one partner wins; it must be the closest.
+
+        The rule used to accept whichever partner came first by atom index, so
+        the same geometry produced different connectivity depending only on the
+        order the file listed its atoms.
+        """
+        # skip_chemistry_checks routes to the distance-based perceiver rather
+        # than RDKit's DetermineBonds, which is the code under test here.
+        io_mgr = self._io(skip_chemistry_checks=True)
+        # H lies 1.05 A from the carbon and 0.95 A from the oxygen.
+        c_first = "3\nt\nC 0.0 0.0 0.0\nO 2.0 0.0 0.0\nH 1.05 0.0 0.0\n"
+        o_first = "3\nt\nO 0.0 0.0 0.0\nC 2.0 0.0 0.0\nH 0.95 0.0 0.0\n"
+
+        for xyz in (c_first, o_first):
+            mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+            partners = set()
+            for bond in mol.GetBonds():
+                symbols = {
+                    mol.GetAtomWithIdx(bond.GetBeginAtomIdx()).GetSymbol(),
+                    mol.GetAtomWithIdx(bond.GetEndAtomIdx()).GetSymbol(),
+                }
+                if "H" in symbols:
+                    partners |= symbols - {"H"}
+            assert partners == {"O"}, f"H bonded to {partners} for:\n{xyz}"
+
+    def test_bond_perception_is_independent_of_atom_order(self, qapp):
+        """Shuffling the rows of a real molecule must not change its bonds."""
+        io_mgr = self._io(skip_chemistry_checks=True)
+        rows = [
+            ("O", 1.1, 0.2, 0.0),
+            ("C", 0.0, -0.6, 0.0),
+            ("C", -1.2, 0.2, 0.0),
+            ("H", 1.9, -0.3, 0.0),
+            ("H", 0.0, -1.2, 0.9),
+            ("H", 0.0, -1.2, -0.9),
+            ("H", -1.2, 1.3, 0.0),
+            ("H", -2.1, -0.2, 0.0),
+            ("H", -1.2, 0.2, 1.05),
+        ]
+
+        def topology(ordered):
+            xyz = "%d\nt\n%s\n" % (
+                len(ordered),
+                "\n".join("%s %.4f %.4f %.4f" % r for r in ordered),
+            )
+            mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+            conf = mol.GetConformer()
+            bonds = []
+            for bond in mol.GetBonds():
+                i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+                pair = tuple(
+                    sorted(
+                        (
+                            mol.GetAtomWithIdx(i).GetSymbol(),
+                            mol.GetAtomWithIdx(j).GetSymbol(),
+                        )
+                    )
+                )
+                length = conf.GetAtomPosition(i).Distance(conf.GetAtomPosition(j))
+                bonds.append((pair, round(length, 3)))
+            return sorted(bonds)
+
+        reference = topology(rows)
+        assert len(reference) == 8  # ethanol: 2 C-C/C-O plus 6 C-H/O-H
+        assert topology(list(reversed(rows))) == reference
+        assert topology(rows[3:] + rows[:3]) == reference
+
+    def test_hash_title_line_keeps_the_first_atom(self, qapp):
+        """A '#' title must not be filtered out.
+
+        Dropping it shifted every atom row up one against the fixed
+        atom_start of 2, so water silently loaded as H2.
+        """
+        io_mgr = self._io()
+        xyz = "3\n# water, generated\nO 0.0 0.0 0.0\nH 0.96 0.0 0.0\nH -0.24 0.93 0.0\n"
+        mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+        assert [a.GetSymbol() for a in mol.GetAtoms()] == ["O", "H", "H"]
+
+    def test_leading_hash_comment_before_count_is_skipped(self, qapp):
+        """Comments ahead of the count line are metadata and still skipped."""
+        io_mgr = self._io()
+        xyz = "# generated\n2\ntitle\nC 0.0 0.0 0.0\nO 0.0 0.0 1.2\n"
+        mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+        assert [a.GetSymbol() for a in mol.GetAtoms()] == ["C", "O"]
+
+    def test_headerless_xyz_still_drops_interleaved_comments(self, qapp):
+        """With no count line there is no title, so comments stay droppable."""
+        io_mgr = self._io()
+        xyz = "# gen\nO 0.0 0.0 0.0\n# mid\nH 0.96 0.0 0.0\nH -0.24 0.93 0.0\n"
+        mol = io_mgr._mol_from_xyz_lines(xyz.splitlines())
+        assert [a.GetSymbol() for a in mol.GetAtoms()] == ["O", "H", "H"]
+
+    def test_skip_checks_with_bond_failure_loads(self, qapp):
+        io = self._io(skip_chemistry_checks=True)
+        io.estimate_bonds_from_distances = MagicMock(
+            side_effect=ValueError("bad geometry")
+        )
+        xyz = "2\n\nC 0 0 0\nO 0 0 1.2\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol is not None
+        assert mol.GetNumAtoms() == 2
+
+
+class TestXyzGhostAtomColumns:
+    """Ghost-atom rows may carry a separator/label column, e.g. 'XX : x y z'.
+    Coordinates must be read from the numeric columns, not blindly from
+    parts[1..3] (which would hit the ':' and fail the whole file)."""
+
+    def _io(self):
+        host = DummyHost()
+        host.init_manager.settings = {
+            "skip_chemistry_checks": False,
+            "always_ask_charge": False,
+        }
+        return IOManager(host)
+
+    def test_extract_coords_skips_separator_column(self, qapp):
+        io = self._io()
+        assert io._extract_xyz_coords([":", "1", "2", "3"]) == (1.0, 2.0, 3.0)
+        assert io._extract_xyz_coords(["1", "2", "3"]) == (1.0, 2.0, 3.0)
+        # trailing extra column (e.g. a charge) is ignored
+        assert io._extract_xyz_coords(["1", "2", "3", "0.5"]) == (1.0, 2.0, 3.0)
+        # too few numbers -> None (caller raises a clear per-line error)
+        assert io._extract_xyz_coords(["1", "2"]) is None
+
+    def test_mixed_standard_and_ghost_columns_load(self, qapp):
+        io = self._io()
+        xyz = (
+            "5\n\n"
+            "C   -53.9 38.9 -0.9\n"
+            "H   -51.6 42.7  1.1\n"
+            "XX : -80.5 39.9 -3.0\n"
+            "XX : -19.6 38.8 -3.2\n"
+            "XX : -51.7 36.8 -1.6\n"
+        )
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol is not None
+        assert mol.GetNumAtoms() == 5
+        symbols = [mol.GetAtomWithIdx(i).GetSymbol() for i in range(5)]
+        assert symbols == ["C", "H", "*", "*", "*"]
+        # the ghost atoms kept their real coordinates (not shifted by the ':')
+        pos2 = mol.GetConformer().GetAtomPosition(2)
+        assert round(pos2.x, 1) == -80.5
+        assert round(pos2.z, 1) == -3.0
+
+
+class TestXyzNonStandardWarning:
+    """A non-standard column layout loads successfully but must be flagged: the
+    parser records a count property and load_xyz_for_3d_viewing surfaces it on
+    the status bar. Standard files stay silent."""
+
+    def _io(self):
+        host = DummyHost()
+        host.init_manager.settings = {
+            "skip_chemistry_checks": False,
+            "always_ask_charge": False,
+        }
+        return IOManager(host), host
+
+    def test_is_numeric_token(self, qapp):
+        io, _ = self._io()
+        assert io._is_numeric_token("1.5") is True
+        assert io._is_numeric_token("-3.0e2") is True
+        assert io._is_numeric_token(":") is False
+        assert io._is_numeric_token("XX") is False
+
+    def test_parser_records_nonstandard_row_count(self, qapp):
+        io, _ = self._io()
+        xyz = "3\n\nC 0 0 0\nXX : 1 0 0\nXX : 0 1 0\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert mol.HasProp("_xyz_nonstandard_rows")
+        assert mol.GetIntProp("_xyz_nonstandard_rows") == 2
+
+    def test_parser_no_property_for_standard_file(self, qapp):
+        io, _ = self._io()
+        xyz = "2\n\nC 0 0 0\nO 0 0 1.2\n"
+        mol = io._mol_from_xyz_lines(xyz.splitlines())
+        assert not mol.HasProp("_xyz_nonstandard_rows")
+
+    def test_status_bar_warns_on_nonstandard(self, qapp, tmp_path):
+        io, host = self._io()
+        xyz = tmp_path / "ghost.xyz"
+        xyz.write_text("3\n\nC 0 0 0\nXX : 1 0 0\nXX : 0 1 0\n")
+        with (
+            patch("moleditpy.ui.io_logic.QTimer"),
+            patch("moleditpy.ui.io_logic.QMessageBox"),
+        ):
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert any("non-standard columns in 2 row" in m for m in msgs), msgs
+
+    def test_status_bar_silent_on_standard(self, qapp, tmp_path):
+        io, host = self._io()
+        xyz = tmp_path / "std.xyz"
+        xyz.write_text("2\n\nC 0 0 0\nO 0 0 1.2\n")
+        with (
+            patch("moleditpy.ui.io_logic.QTimer"),
+            patch("moleditpy.ui.io_logic.QMessageBox"),
+        ):
+            io.load_xyz_for_3d_viewing(file_path=str(xyz))
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert msgs
+        assert all("non-standard" not in m for m in msgs), msgs
+
+
+class TestLoadMolFileProperties:
+    """load_mol_file must carry per-atom properties into the 2D editor."""
+
+    @staticmethod
+    def _run(mock_parser_host, tmp_path, mol_text):
+        from moleditpy.ui.io_logic import IOManager
+
+        path = tmp_path / "in.mol"
+        path.write_text(mol_text, encoding="utf-8")
+
+        io = IOManager(mock_parser_host)
+        mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file(file_path=str(path))
+        return mock_parser_host.state_manager.data
+
+    def test_radical_survives_mol_import(self, mock_parser_host, tmp_path):
+        """An M RAD block must reach the editor; the count used to be dropped."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        c = source.add_atom("C", (0.0, 0.0), radical=1)
+        o = source.add_atom("O", (50.0, 0.0))
+        source.add_bond(c, o, order=1)
+        mol_text = source.to_mol_block()
+        assert "M  RAD" in mol_text
+
+        data = self._run(mock_parser_host, tmp_path, mol_text)
+
+        radicals = [a for a in data.atoms.values() if a.get("radical", 0)]
+        assert len(radicals) == 1
+        assert radicals[0]["symbol"] == "C"
+        assert radicals[0]["radical"] == 1
+
+    def test_charge_survives_mol_import(self, mock_parser_host, tmp_path):
+        """The companion property must keep working."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        n = source.add_atom("N", (0.0, 0.0), charge=1)
+        c = source.add_atom("C", (50.0, 0.0))
+        source.add_bond(n, c, order=1)
+
+        data = self._run(mock_parser_host, tmp_path, source.to_mol_block())
+
+        charged = [a for a in data.atoms.values() if a.get("charge", 0)]
+        assert len(charged) == 1
+        assert charged[0]["symbol"] == "N"
+        assert charged[0]["charge"] == 1
+
+    def test_shift_jis_title_line_does_not_block_import(
+        self, mock_parser_host, tmp_path
+    ):
+        """A MOL file authored on a Japanese locale (Shift-JIS title line) must
+        still import instead of raising UnicodeDecodeError on a strict utf-8 open."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        c = source.add_atom("C", (0.0, 0.0))
+        o = source.add_atom("O", (50.0, 0.0))
+        source.add_bond(c, o, order=1)
+        mol_text = source.to_mol_block()
+
+        # Replace the MOL title line (line 1) with Japanese text and write the
+        # whole file as Shift-JIS (cp932), the common Windows-JP encoding.
+        lines = mol_text.splitlines()
+        lines[0] = "エタノール分子"
+        mol_text_jp = "\n".join(lines) + "\n"
+
+        path = tmp_path / "in.mol"
+        path.write_bytes(mol_text_jp.encode("cp932"))
+
+        io = IOManager(mock_parser_host)
+        mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file(file_path=str(path))
+
+        data = mock_parser_host.state_manager.data
+        assert len(data.atoms) == 2
+
+    def test_shift_jis_sdf_title_line_does_not_block_import(
+        self, mock_parser_host, tmp_path
+    ):
+        """SDMolSupplier reads the file itself and cannot see the flexible
+        decoding used for .mol files, so .sdf import routes the first record
+        through MolFromMolBlock instead; a Shift-JIS title line must not
+        block that."""
+        from moleditpy.core.molecular_data import MolecularData
+
+        source = MolecularData()
+        c = source.add_atom("C", (0.0, 0.0))
+        o = source.add_atom("O", (50.0, 0.0))
+        source.add_bond(c, o, order=1)
+        lines = source.to_mol_block().splitlines()
+        lines[0] = "メタノール分子"
+        sdf_text_jp = "\n".join(lines) + "\n$$$$\n"
+
+        path = tmp_path / "in.sdf"
+        path.write_bytes(sdf_text_jp.encode("cp932"))
+
+        io = IOManager(mock_parser_host)
+        mock_parser_host.init_manager.view_2d.mapToScene.return_value = QPointF(0, 0)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file(file_path=str(path))
+
+        data = mock_parser_host.state_manager.data
+        assert len(data.atoms) == 2
+
+
+class TestLoadMolFileFor3DViewingEncoding:
+    """load_mol_file_for_3d_viewing must tolerate non-UTF-8 MOL/SDF files."""
+
+    @staticmethod
+    def _water_mol_block():
+        """Build a MOL block for a water molecule with embedded 3D coordinates."""
+        from rdkit import Chem
+        from rdkit.Chem import AllChem
+
+        mol = Chem.AddHs(Chem.MolFromSmiles("O"))
+        AllChem.EmbedMolecule(mol, randomSeed=42)
+        return Chem.MolToMolBlock(mol)
+
+    def test_shift_jis_mol_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        """Shift-JIS (cp932) encoded MOL file with Japanese title loads properly in 3D viewer."""
+        lines = self._water_mol_block().splitlines()
+        lines[0] = "水分子"
+        mol_text_jp = "\n".join(lines) + "\n"
+
+        path = tmp_path / "water.mol"
+        path.write_bytes(mol_text_jp.encode("cp932"))
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
+        assert host.view_3d_manager.current_mol is not None
+        assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+    def test_shift_jis_sdf_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        """Shift-JIS (cp932) encoded SDF file with Japanese title loads properly in 3D viewer."""
+        lines = self._water_mol_block().splitlines()
+        lines[0] = "水分子"
+        sdf_text_jp = "\n".join(lines) + "\n$$$$\n"
+
+        path = tmp_path / "water.sdf"
+        path.write_bytes(sdf_text_jp.encode("cp932"))
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
+        assert host.view_3d_manager.current_mol is not None
+        assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+    def test_euc_jp_mol_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        """EUC-JP encoded MOL file (e.g. 'あああ') loads properly in 3D viewer."""
+        lines = self._water_mol_block().splitlines()
+        lines[0] = "あああ"
+        mol_text_jp = "\n".join(lines) + "\n"
+
+        path = tmp_path / "water_euc.mol"
+        path.write_bytes(mol_text_jp.encode("euc_jp"))
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
+        assert host.view_3d_manager.current_mol is not None
+        assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+    def test_euc_jp_sdf_file_loads_in_3d_viewer(self, qapp, tmp_path):
+        """EUC-JP encoded SDF file loads properly in 3D viewer."""
+        lines = self._water_mol_block().splitlines()
+        lines[0] = "あああ"
+        sdf_text_jp = "\n".join(lines) + "\n$$$$\n"
+
+        path = tmp_path / "water_euc.sdf"
+        path.write_bytes(sdf_text_jp.encode("euc_jp"))
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        msgs = [c[0][0] for c in host.statusBar_mock.showMessage.call_args_list if c[0]]
+        assert all("error" not in m.lower() and "failed" not in m.lower() for m in msgs)
+        assert host.view_3d_manager.current_mol is not None
+        assert host.view_3d_manager.current_mol.GetNumAtoms() == 3
+
+    def test_load_mol_file_for_3d_viewing_checks_unsaved_changes_once(
+        self, qapp, tmp_path
+    ):
+        """load_mol_file_for_3d_viewing checks unsaved changes exactly once."""
+        path = tmp_path / "water.mol"
+        path.write_text(self._water_mol_block())
+
+        host = DummyHost()
+        io = IOManager(host)
+        with patch("moleditpy.ui.io_logic.QTimer"):
+            io.load_mol_file_for_3d_viewing(file_path=str(path))
+
+        assert host.state_manager.check_unsaved_changes.call_count == 1
+
+
+class TestFlexibleEncodingAndBlockLoader:
+    """Regression tests for flexible encoding order and _load_mol_block_text."""
+
+    def test_euc_jp_preferred_over_cp932(self, tmp_path):
+        """EUC-JP bytes (such as 'あ') would decode to mojibake under CP932 without erroring.
+        Flexible read must attempt euc_jp before cp932 to preserve original text."""
+        test_file = tmp_path / "japanese_euc.txt"
+        euc_bytes = "あああ\n".encode("euc_jp")
+        test_file.write_bytes(euc_bytes)
+
+        lines = IOManager._read_text_lines_flexible(str(test_file))
+        assert lines == ["あああ\n"]
+
+    @pytest.mark.parametrize(
+        "text, encoding",
+        [
+            ("he said “hi” — ok", "cp1252"),
+            ("caf\xe9 na\xefve r\xe9sum\xe9", "latin-1"),
+            ("1.09 \xc5 (Angstr\xf6m)", "latin-1"),
+            ("エタノール 分子", "cp932"),
+            ("エタノール 分子", "euc_jp"),
+            ("エタノール 分子", "utf-8"),
+        ],
+    )
+    def test_western_comments_survive_alongside_japanese_ones(
+        self, tmp_path: Path, text: str, encoding: str
+    ) -> None:
+        """A Western-encoded comment must not be read as Japanese, or vice versa.
+
+        "1.09 Å (Angström)" is the case that needs the private-use check: those
+        bytes are also valid CP932, so the chain used to accept that decoding
+        and hand back "1.09 ﾅ (Angstr)".
+        """
+        path = tmp_path / "comment.xyz"
+        path.write_bytes(("2\n" + text + "\nC 0 0 0\nH 1 0 0\n").encode(encoding))
+
+        assert IOManager._read_text_lines_flexible(str(path))[1].rstrip("\n") == text
+
+    def test_cp932_gaiji_comment_remains_authoritative(self, tmp_path: Path) -> None:
+        """CP932 gaiji bytes must not be replaced by a clean CP1252 decoding."""
+        path = tmp_path / "gaiji.xyz"
+        path.write_bytes(b"2\n\xf0\x40\nC 0 0 0\nH 1 0 0\n")
+
+        assert IOManager._read_text_lines_flexible(str(path))[1] == "\ue000\n"
+
+    def test_load_mol_block_text_mol_and_sdf(self, tmp_path):
+        """_load_mol_block_text reads and fixes V2000 counts line for both .mol and .sdf."""
+        host = DummyHost()
+        io = IOManager(host)
+
+        mol_content = (
+            "Test\n"
+            "  MoleditPy\n"
+            "\n"
+            "  1  0  0  0  0  0  0  0  0  0999 V2000\n"
+            "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0\n"
+            "M  END\n"
+        )
+        mol_path = tmp_path / "test.mol"
+        mol_path.write_text(mol_content, encoding="utf-8")
+
+        sdf_content = mol_content + "$$$$\n" + "SecondRecord\n$$$$\n"
+        sdf_path = tmp_path / "test.sdf"
+        sdf_path.write_text(sdf_content, encoding="utf-8")
+
+        res_mol = io._load_mol_block_text(str(mol_path))
+        assert "M  END" in res_mol
+        assert "999 V2000" in res_mol
+
+        res_sdf = io._load_mol_block_text(str(sdf_path))
+        assert "M  END" in res_sdf
+        assert "999 V2000" in res_sdf
+        assert "SecondRecord" not in res_sdf
+
+    def _one_atom_record(self, title="Test"):
+        return (
+            title
+            + chr(10)
+            + "  MoleditPy"
+            + chr(10)
+            + chr(10)
+            + "  1  0  0  0  0  0  0  0  0  0999 V2000"
+            + chr(10)
+            + "    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0"
+            + chr(10)
+            + "M  END"
+            + chr(10)
+        )
+
+    def test_sdf_data_fields_survive_the_import(self, tmp_path):
+        """An SDF's data fields must reach the molecule, not be dropped.
+
+        Reading an SDF as a bare MOL block parses the atoms but silently
+        discards every "> <TAG>" field the record carries.
+        """
+        io = IOManager(DummyHost())
+        sdf = tmp_path / "tagged.sdf"
+        sdf.write_text(
+            self._one_atom_record("First")
+            + "> <NAME>"
+            + chr(10)
+            + "Methane"
+            + chr(10)
+            + chr(10)
+            + "> <MW>"
+            + chr(10)
+            + "16.04"
+            + chr(10)
+            + chr(10)
+            + "$$$$"
+            + chr(10)
+            + self._one_atom_record("Second")
+            + "$$$$"
+            + chr(10),
+            encoding="utf-8",
+        )
+
+        # Two records now open the selector; pick the first, as the
+        # first-record-only reader used to do implicitly.
+        with patch("moleditpy.ui.io_logic.SdfRecordDialog") as dialog_cls:
+            dialog = dialog_cls.return_value
+            dialog.exec.return_value = QDialog.DialogCode.Accepted
+            dialog.selected_record.side_effect = lambda: dialog_cls.call_args.args[0][0]
+            mol = io._read_mol_or_sdf(str(sdf))
+
+        assert mol is not None
+        assert mol.GetProp("_Name") == "First"
+        assert mol.GetPropsAsDict()["NAME"] == "Methane"
+        assert mol.GetPropsAsDict()["MW"] == 16.04
+
+    def test_sdf_data_fields_survive_a_cp932_file(self, tmp_path):
+        """Data fields and non-UTF-8 encoding must work together, not one or the other."""
+        io = IOManager(DummyHost())
+        sdf = tmp_path / "jp.sdf"
+        sdf.write_bytes(
+            (
+                self._one_atom_record()
+                + "> <"
+                + "備考"
+                + ">"
+                + chr(10)
+                + "メタン"
+                + chr(10)
+                + chr(10)
+                + "$$$$"
+                + chr(10)
+            ).encode("cp932")
+        )
+
+        mol = io._read_mol_or_sdf(str(sdf))
+
+        assert mol is not None
+        assert mol.GetPropsAsDict()["備考"] == "メタン"
+
+    def test_unreadable_sdf_falls_back_without_raising(self, tmp_path):
+        """A record the SD supplier rejects returns None rather than propagating."""
+        io = IOManager(DummyHost())
+        sdf = tmp_path / "junk.sdf"
+        sdf.write_text("not a molecule at all" + chr(10), encoding="utf-8")
+
+        assert io._read_mol_or_sdf(str(sdf)) is None
+
+
+class TestMolToSceneStereo:
+    """Double-bond geometry must survive the MOL file -> 2D scene conversion."""
+
+    @staticmethod
+    def _load(tmp_path, smiles):
+        from rdkit.Chem import AllChem
+
+        mol = Chem.MolFromSmiles(smiles)
+        AllChem.Compute2DCoords(mol)
+        path = tmp_path / "geom.mol"
+        path.write_text(Chem.MolToMolBlock(mol), encoding="utf-8")
+
+        host = DummyHost()
+        host.init_manager.scene.create_atom.side_effect = range(mol.GetNumAtoms())
+        IOManager(host).load_mol_file(str(path))
+        return [
+            call.kwargs["bond_stereo"]
+            for call in host.init_manager.scene.create_bond.call_args_list
+        ]
+
+    def test_trans_double_bond_arrives_as_e(self, tmp_path):
+        """A trans alkene must reach create_bond as bond_stereo 4 (E), not 0.
+
+        The scene draws the geometry from this code alone; losing it here is
+        how an E double bond silently becomes an undefined one on import.
+        """
+        assert 4 in self._load(tmp_path, r"F/C=C/F")
+
+    def test_cis_double_bond_arrives_as_z(self, tmp_path):
+        """The mirror case: a cis alkene must reach create_bond as bond_stereo 3."""
+        assert 3 in self._load(tmp_path, r"F/C=C\F")
+
+    def test_plain_double_bond_stays_undefined(self, tmp_path):
+        """A double bond with no geometry must not be given one."""
+        assert set(self._load(tmp_path, "C=C")) == {0}
+
+    def test_the_two_alanine_enantiomers_arrive_wedged_opposite_ways(self, tmp_path):
+        """A chiral centre must reach the scene as a wedge (1) or a hash (2).
+
+        MolFromMolBlock returns the wedging as atom chiral tags and leaves
+        every GetBondDir() at NONE; load_mol_file's WedgeMolBonds call is what
+        puts the directions back. Drop that call and both enantiomers arrive
+        as plain lines -- the drawing stops distinguishing them, while still
+        looking like a successful import.
+        """
+        r = self._load(tmp_path, "N[C@@H](C)C(=O)O")
+        s = self._load(tmp_path, "N[C@H](C)C(=O)O")
+
+        assert set(r) & {1, 2} and set(s) & {1, 2}
+        assert r != s
+
+
+class TestXyzBlockEntryPoints:
+    """load_xyz_block and show_xyz_data are the paths plugins hand XYZ text to."""
+
+    def test_load_xyz_block_reports_unparsable_text(self):
+        """Bad XYZ text returns None and says so, rather than raising at the caller."""
+        host = DummyHost()
+
+        assert IOManager(host).load_xyz_block("not xyz at all") is None
+        assert (
+            "Error parsing XYZ data"
+            in (host.statusBar_mock.showMessage.call_args[0][0])
+        )
+
+    def test_show_xyz_data_enters_the_3d_viewer(self):
+        """A good block is drawn, switches the window to 3D, and clears the dirty flag."""
+        host = DummyHost()
+        xyz = chr(10).join(["2", "hydrogen", "H 0.0 0.0 0.0", "H 0.0 0.0 0.74"])
+
+        mol = IOManager(host).show_xyz_data(xyz, source_name="probe.xyz")
+
+        assert mol is not None
+        host.view_3d_manager.draw_molecule_3d.assert_called_once()
+        host.ui_manager.enter_3d_viewer_mode.assert_called_once()
+        assert host.state_manager.has_unsaved_changes is False
+        assert "probe.xyz" in host.statusBar_mock.showMessage.call_args[0][0]
+
+    def test_show_xyz_data_returns_none_on_bad_text(self):
+        """An unparsable block stops before touching the 3D view."""
+        host = DummyHost()
+
+        assert IOManager(host).show_xyz_data("not xyz at all") is None
+        host.view_3d_manager.draw_molecule_3d.assert_not_called()

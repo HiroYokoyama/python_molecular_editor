@@ -25,7 +25,7 @@ from unittest.mock import MagicMock, patch
 from PySide6.QtWidgets import QApplication
 
 _src = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "moleditpy", "src")
 )
 if os.path.isdir(_src) and _src not in sys.path:
     sys.path.insert(0, _src)
