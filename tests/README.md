@@ -126,7 +126,7 @@ To simplify human review of the test suite, the following generated reports are 
 Both of the following are written by a full `run_all_tests.py` run and are **not committed** — generate them locally when you want them:
 
 *   **Assertion Catalog** (`assertion_catalog.md`): A comprehensive list of test assertions, mapping test names and descriptions to their core verification logic.
-*   **Coverage Report** (`coverage_report.md`): A Markdown-formatted summary of the combined coverage (Unit + Integration + GUI) across the entire codebase. Per-commit coverage, with history and per-PR diffs, is on [Codecov](https://codecov.io/gh/HiroYokoyama/python_molecular_editor).
+*   **Coverage Report** (`coverage_report.md`): A Markdown-formatted summary of the combined coverage (Unit + Integration + E2E + GUI) across the entire codebase. Per-commit coverage, with history and per-PR diffs, is on [Codecov](https://codecov.io/gh/HiroYokoyama/python_molecular_editor).
 
 ### Running Coverage Locally
 

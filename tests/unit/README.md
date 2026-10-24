@@ -120,4 +120,8 @@ use `python tests/run_all_tests.py --unit --headless -- -k settings`.
 | **`dialogs/test_user_template_dialog.py`** | **User Template Management Dialog** | Verifies `UserTemplateDialog` management UI.<br>• **Template Operations**: Tests listing, selecting, previewing, and deleting custom user templates.<br>• **Error Handling**: Validates corrupt template JSON handling and confirmation prompts. |
 
 ## Mocking Strategy
-These tests use a `MockMainWindow` (defined in `conftest.py`) which simulates the host environment with standardized `CalculationWorker`, `MolecularData`, and logic implementations from the `core` and `ui` packages.
+The shared `mock_parser_host` fixture in `conftest.py` provides a manager-based
+host with real `MolecularData`. Individual files keep specialized hosts where
+their component needs a different setup. The session-scoped `app` fixture is
+inherited from `tests/conftest.py`; component directories do not change its
+lifetime or cleanup order.
