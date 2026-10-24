@@ -1059,9 +1059,9 @@ def test_open_project(window, qtbot, monkeypatch):
             "bonds": [{"atom1": 0, "atom2": 1, "order": 1, "stereo": 0}],
             "next_atom_id": 2,
         },
-        "3d_structure": "null",
+        "3d_structure": None,
         "note": "No 3D structure available. Generate 3D coordinates first.",
-        "last_successful_optimization_method": "null",
+        "last_successful_optimization_method": None,
     }
 
     # 2. Mock QFileDialog and json.load
