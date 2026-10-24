@@ -15,6 +15,8 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- Fall back to valid 3D label defaults when settings contain container-valued font families, non-finite or overflowing numbers, or malformed color strings, preventing rendering and settings-dialog crashes.
+
 - Preserve native Zenodo draft metadata and resume failed archives by draft ID. Check published versions and asset checksums before creating a draft, and stop on release-asset download errors.
 
 ---

@@ -13,6 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import re
+import math
 from collections.abc import Mapping
 from typing import Any, Dict, Tuple
 
@@ -79,7 +80,7 @@ def _get(settings: Any, key: str) -> Any:
 def _color(settings: Any, key: str) -> str:
     """A stored color if it is a valid #RRGGBB, else the default."""
     value = _get(settings, key)
-    if isinstance(value, str) and _HEX_COLOR.match(value):
+    if isinstance(value, str) and _HEX_COLOR.fullmatch(value):
         return value
     return str(DEFAULT_LABEL_SETTINGS[key])
 
@@ -88,7 +89,12 @@ def _number(settings: Any, key: str, low: float, high: float) -> float:
     """A stored number clamped to [low, high], else the default."""
     value = _get(settings, key)
     if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return min(max(float(value), low), high)
+        try:
+            number = float(value)
+        except OverflowError:
+            return float(DEFAULT_LABEL_SETTINGS[key])
+        if math.isfinite(number):
+            return min(max(number, low), high)
     return float(DEFAULT_LABEL_SETTINGS[key])
 
 
@@ -101,7 +107,7 @@ def _flag(settings: Any, key: str) -> bool:
 def _family(settings: Any) -> str:
     """A stored VTK font family, else the default."""
     value = _get(settings, FONT_FAMILY_KEY)
-    if value in {family for family, _ in FONT_FAMILIES}:
+    if isinstance(value, str) and value in {family for family, _ in FONT_FAMILIES}:
         return str(value)
     return str(DEFAULT_LABEL_SETTINGS[FONT_FAMILY_KEY])
 
