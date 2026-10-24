@@ -470,7 +470,15 @@ try:
 except BaseException:
     pass
 """
-        exec(code)
+        with patch.dict(sys.modules):
+            exec(code)
+
+    def test_imports_fallback_restores_module_state(self):
+        """The fallback probe cannot disable plugin APIs in subsequent tests."""
+        from moleditpy.plugins import plugin_interface
+
+        self.test_imports_fallback()
+        assert sys.modules["moleditpy.plugins.plugin_interface"] is plugin_interface
 
     def test_get_set_main_window(self):
         """get_main_window returns the value set by set_main_window."""

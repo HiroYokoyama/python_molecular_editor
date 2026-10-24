@@ -167,7 +167,8 @@ def run_suite(
                     flush=True,
                 )
                 continue
-            # All retries exhausted — report the actual failure
+            # Ordinary pytest failures must not be hidden by rerunning the suite.
+            return returncode
         return returncode
     except Exception as e:
         print(f"Error running {name} tests: {e}")
@@ -404,6 +405,7 @@ if __name__ == "__main__":
         ("INTEGRATION", INTEGRATION_DIR),
         ("E2E", E2E_DIR),
         ("GUI", GUI_DIR),
+        ("FULL_GUI", FULL_GUI_DIR),
     ]:
         status = results.get(name, "SKIPPED")
         counts = SUITE_COUNTS.get(name)

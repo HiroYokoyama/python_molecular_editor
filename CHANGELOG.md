@@ -10,6 +10,7 @@ All notable changes to this project are recorded here. The format follows
 
 - Share identical headless rendering stubs and unit/integration Qt teardown fixtures, remove unused test imports, and document coverage-preserving test maintenance. Retain all existing test cases and assertions.
 - Organize unit tests into component directories, replace vague historical filenames, and discover nested tests from all five tiers in the assertion catalog.
+- Restore module state after the plugin import-fallback test so component ordering cannot affect later tests. Report ordinary test-runner failures immediately and include Full-GUI failures in the final exit status.
 
 ### Fixed
 
