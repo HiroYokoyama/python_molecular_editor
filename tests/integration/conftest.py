@@ -4,6 +4,8 @@ import sys
 import types
 from unittest import mock as _mock
 
+from rendering_stubs import DummyAxesWidget, DummyPolyDataMock
+
 # 1. Path setup
 src_root = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
@@ -43,26 +45,6 @@ class DummyCellPicker:
 
 vtk.vtkCellPicker = DummyCellPicker
 vtk.vtkAxesActor = _mock.MagicMock
-
-
-class DummyAxesWidget:
-    def SetOrientationMarker(self, marker):
-        pass
-
-    def SetInteractor(self, interactor):
-        pass
-
-    def SetViewport(self, *a):
-        pass
-
-    def On(self):
-        pass
-
-    def Off(self):
-        pass
-
-    def SetInteractive(self, v):
-        pass
 
 
 vtk.vtkOrientationMarkerWidget = DummyAxesWidget
@@ -142,25 +124,6 @@ class DummyPlotterMinimal:
 
 
 pyv.Plotter = DummyPlotterMinimal
-
-
-class DummyPolyDataMock(_mock.MagicMock):
-    def __init__(self, *a, **k):
-        super().__init__(*a, **k)
-        self.point_data = {}
-        self.cell_data = {}
-
-    def __getitem__(self, key):
-        return _mock.MagicMock()
-
-    def __setitem__(self, key, val):
-        pass
-
-    def glyph(self, *a, **k):
-        return _mock.MagicMock()
-
-    def tube(self, *a, **k):
-        return _mock.MagicMock()
 
 
 pyv.PolyData = DummyPolyDataMock
