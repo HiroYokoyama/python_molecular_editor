@@ -15,6 +15,9 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- Reject non-finite XYZ coordinates and invalid, fractional, or overflowing import charges before they reach molecular calculations.
+- Reject plugin-folder installations that would delete their own source or recursively copy a directory into itself.
+
 - Close axis-alignment dialogs when undo, file import, or calculation replaces their molecule, preventing a missing-method crash and edits to a stale structure.
 
 - Fall back to valid 3D label defaults when settings contain container-valued font families, non-finite or overflowing numbers, or malformed color strings, preventing rendering and settings-dialog crashes.

@@ -13,6 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import logging
+import math
 import os
 import json
 import pickle
@@ -48,6 +49,7 @@ from rdkit.Chem import (
 )
 
 from ..utils.sdf_records import read_sdf_records
+from ..utils.finite_float import finite_float
 from .sdf_record_dialog import SdfRecordDialog
 from ..utils.constants import (
     COVALENT_RADII,
@@ -242,11 +244,14 @@ class IOManager:
         nums: list[float] = []
         for tok in tokens:
             try:
-                nums.append(float(tok))
+                value = float(tok)
             except ValueError:
                 if nums:
                     break  # trailing non-numeric column after the coordinates
                 continue  # leading label/separator column before the coordinates
+            if not math.isfinite(value):
+                return None
+            nums.append(value)
             if len(nums) == 3:
                 break
         if len(nums) == 3:
@@ -521,11 +526,17 @@ class IOManager:
         layout.addLayout(hl)
         result = {"accepted": False, "skip": False}
 
+        def _charge_value() -> int:
+            value = finite_float(line_edit.text().strip() or "0")
+            if not value.is_integer() or not -(2**31) <= value < 2**31:
+                raise ValueError("Charge must be a supported integer")
+            return int(value)
+
         def _accept_if_valid() -> None:
             """Validate charge input and accept the dialog if valid."""
             # Invalid input: show inline error and keep the dialog open
             try:
-                int(float(line_edit.text().strip() or "0"))
+                _charge_value()
             except ValueError:
                 error_label.setText("Invalid charge: enter an integer (e.g. 0, -1, 2).")
                 dialog.adjustSize()
@@ -544,7 +555,7 @@ class IOManager:
         if result["skip"]:
             return 0, True, True
         try:
-            val = int(float(line_edit.text().strip() or "0"))
+            val = _charge_value()
             return val, True, False
         except ValueError:
             # Unreachable via OK (validated inline)
