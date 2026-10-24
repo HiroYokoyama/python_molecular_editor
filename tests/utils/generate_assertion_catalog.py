@@ -1,5 +1,6 @@
 import ast
-import os
+from pathlib import Path
+from typing import Optional
 
 
 def extract_assertions(filepath):
@@ -62,34 +63,26 @@ def extract_assertions(filepath):
     return results
 
 
-def generate_catalog():
-    # Adjusted for tests/utils/ location
-    utils_dir = os.path.dirname(os.path.abspath(__file__))
-    tests_dir = os.path.dirname(utils_dir)
-    os.path.dirname(tests_dir)
-    output_file = os.path.join(tests_dir, "assertion_catalog.md")
+def generate_catalog(tests_dir: Optional[Path] = None) -> None:
+    if tests_dir is None:
+        tests_dir = Path(__file__).resolve().parents[1]
+    output_file = tests_dir / "assertion_catalog.md"
 
-    subdirs = ["unit", "integration", "gui"]
+    subdirs = ["unit", "integration", "e2e", "gui", "full_gui"]
 
     markdown_lines = ["# Test Assertions Catalog", ""]
 
     for subdir in subdirs:
-        target_path = os.path.join(tests_dir, subdir)
-        if not os.path.exists(target_path):
+        target_path = tests_dir / subdir
+        if not target_path.is_dir():
             continue
 
-        test_files = [
-            f
-            for f in os.listdir(target_path)
-            if f.startswith("test_") and f.endswith(".py")
-        ]
-
-        for test_file in sorted(test_files):
-            rel_path = f"tests/{subdir}/{test_file}".replace("\\", "/")
+        for test_file in sorted(target_path.rglob("test_*.py")):
+            rel_path = f"tests/{test_file.relative_to(tests_dir).as_posix()}"
             markdown_lines.append(f"## {rel_path}")
             markdown_lines.append("")
 
-            file_results = extract_assertions(os.path.join(target_path, test_file))
+            file_results = extract_assertions(test_file)
             for res in file_results:
                 markdown_lines.append(f"### {res['name']}")
                 markdown_lines.append(f"_{res['description']}_")
@@ -98,8 +91,7 @@ def generate_catalog():
                     markdown_lines.append(f"- {ass}")
                 markdown_lines.append("")
 
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write("\n".join(markdown_lines))
+    output_file.write_text("\n".join(markdown_lines), encoding="utf-8")
 
     print(f"Assertion catalog updated: {output_file}")
 

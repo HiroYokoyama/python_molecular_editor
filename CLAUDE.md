@@ -27,7 +27,7 @@ MOLEDITPY_HEADLESS=1 QT_QPA_PLATFORM=offscreen python tests/run_all_tests.py --n
 
 Run a single test file:
 ```bash
-MOLEDITPY_HEADLESS=1 python tests/run_all_tests.py --unit --no-cov --no-report -- tests/unit/test_molecular_data.py
+MOLEDITPY_HEADLESS=1 python tests/run_all_tests.py --unit --no-cov --no-report -- tests/unit/core/test_molecular_data.py
 ```
 
 Run a single test by name:

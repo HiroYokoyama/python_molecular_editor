@@ -1,5 +1,5 @@
 """
-tests/unit/test_plugin_context.py
+tests/unit/plugins/test_plugin_context.py
 
 Unit tests for PluginContext.mark_project_modified() — the V4 API
 that notifies the application of unsaved changes via a stable context method
@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 
 # Ensure moleditpy is importable
 _SRC = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "moleditpy", "src")
 )
 if _SRC not in sys.path:
     sys.path.insert(0, _SRC)

@@ -1,7 +1,16 @@
 import sys
 import os
 import types
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 from unittest import mock
+
+import pytest
+
+from rendering_stubs import DummyAxesWidget, DummyPolyDataMock
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QApplication
 
 # 1. Path setup
 src_root = os.path.abspath(
@@ -62,26 +71,6 @@ class DummyCellPicker:
 
     def GetActor(self):
         return None
-
-
-class DummyAxesWidget:
-    def SetOrientationMarker(self, marker):
-        pass
-
-    def SetInteractor(self, interactor):
-        pass
-
-    def SetViewport(self, *a):
-        pass
-
-    def On(self):
-        pass
-
-    def Off(self):
-        pass
-
-    def SetInteractive(self, v):
-        pass
 
 
 class DummyInteractorStyle:
@@ -160,25 +149,6 @@ class DummyPlotterMinimal:
 pyv.Plotter = DummyPlotterMinimal
 
 
-class DummyPolyDataMock(mock.MagicMock):
-    def __init__(self, *a, **k):
-        super().__init__(*a, **k)
-        self.point_data = {}
-        self.cell_data = {}
-
-    def __getitem__(self, key):
-        return mock.MagicMock()
-
-    def __setitem__(self, key, val):
-        pass
-
-    def glyph(self, *a, **k):
-        return mock.MagicMock()
-
-    def tube(self, *a, **k):
-        return mock.MagicMock()
-
-
 pyv.PolyData = DummyPolyDataMock
 
 # pyvistaqt mocks
@@ -200,6 +170,22 @@ class DummyQtInteractorMock(mock.MagicMock):
 pvqt.QtInteractor = DummyQtInteractorMock
 
 
-def pytest_configure(config):
-    """Placeholder hook to ensure pytest sees this as a valid conftest."""
-    pass
+@pytest.fixture(scope="session")
+def app(qapp: "QApplication") -> Iterator["QApplication"]:
+    """Release native widgets before pytest-qt releases the application."""
+    import gc
+
+    from PySide6.QtCore import QCoreApplication, QEvent
+    from PySide6.QtWidgets import QApplication
+    from shiboken6 import isValid
+
+    yield qapp
+
+    # No exec() loop runs here, so deleteLater() needs explicit delivery while
+    # Python event filters still exist, before interpreter shutdown.
+    for widget in QApplication.topLevelWidgets():
+        if isValid(widget):
+            widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    gc.collect()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

@@ -16,7 +16,7 @@ Covers:
 import pytest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import Qt, QPoint, QEvent, QRectF
-from PySide6.QtTest import QTest
+from PySide6.QtTest import QSignalSpy
 from PySide6.QtGui import QMouseEvent, QWheelEvent
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
 from moleditpy.ui.zoomable_view import ZoomableView
@@ -401,8 +401,10 @@ class _GeometryProbe(QGraphicsItem):
 
 
 def _settle(view):
-    """Let the coalescing timer fire."""
-    QTest.qWait(view._geometry_timer.interval() + 80)
+    """Wait for the coalescing event rather than a fixed wall-clock delay."""
+    timeout = QSignalSpy(view._geometry_timer.timeout)
+    if not timeout.wait(1000):
+        pytest.fail("The zoom geometry timer did not fire")
 
 
 def test_scale_notifies_items_of_geometry_change(app):

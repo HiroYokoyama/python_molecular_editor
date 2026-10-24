@@ -69,8 +69,18 @@ def _parse_test_counts(text):
     """Extract passed/failed/skipped counts from a pytest summary line."""
     import re
 
+    summary_lines = [
+        line
+        for line in text.splitlines()
+        if re.match(
+            r"^(?:=+\s*)?\d+ (?:passed|failed|skipped|error|xfailed|xpassed|deselected|warning)",
+            line,
+        )
+    ]
+    summary = summary_lines[-1] if summary_lines else ""
+
     def grab(word):
-        m = re.search(rf"(\d+) {word}", text)
+        m = re.search(rf"(\d+) {word}", summary)
         return int(m.group(1)) if m else 0
 
     return {
@@ -167,7 +177,8 @@ def run_suite(
                     flush=True,
                 )
                 continue
-            # All retries exhausted — report the actual failure
+            # Ordinary pytest failures must not be hidden by rerunning the suite.
+            return returncode
         return returncode
     except Exception as e:
         print(f"Error running {name} tests: {e}")
@@ -404,6 +415,7 @@ if __name__ == "__main__":
         ("INTEGRATION", INTEGRATION_DIR),
         ("E2E", E2E_DIR),
         ("GUI", GUI_DIR),
+        ("FULL_GUI", FULL_GUI_DIR),
     ]:
         status = results.get(name, "SKIPPED")
         counts = SUITE_COUNTS.get(name)

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 _SRC = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "moleditpy", "src")
 )
 if _SRC not in sys.path:
     sys.path.insert(0, _SRC)

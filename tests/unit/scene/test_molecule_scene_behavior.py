@@ -1,7 +1,7 @@
 """
 Additional coverage tests for ui/molecule_scene.py.
 
-Fills gaps left by existing test_scene_interactions.py / test_scene_advanced.py.
+Fills gaps left by existing test_scene_interactions.py / test_scene_mouse_workflows.py.
 
 Covers:
   - get_setting: safe gateway to settings with fallback
@@ -27,7 +27,7 @@ from PySide6.QtGui import QTransform
 # ---------------------------------------------------------------------------
 
 _src = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "moleditpy", "src")
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "moleditpy", "src")
 )
 if os.path.isdir(_src) and _src not in sys.path:
     sys.path.insert(0, _src)

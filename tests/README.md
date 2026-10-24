@@ -12,10 +12,10 @@ pip install pytest pytest-qt pytest-cov pytest-timeout
 
 ## Quick Start: Running Tests
 
-The recommended way to run tests is using the **Unified Runner**, which handles environment setup and executes suites in the correct order (Unit -> Integration -> GUI).
+The recommended way to run tests is using the **Unified Runner**, which handles environment setup and executes suites in the correct order (Unit -> Integration -> E2E -> GUI).
 
 ```bash
-# Run all tests (Unit + Integration + GUI)
+# Run all default suites (Unit + Integration + E2E + GUI)
 python tests/run_all_tests.py
 
 # Run all tests in HEADLESS mode (recommended for CI or background runs/wsl)
@@ -24,6 +24,7 @@ python tests/run_all_tests.py --headless
 # Run specific suites
 python tests/run_all_tests.py --unit
 python tests/run_all_tests.py --integration
+python tests/run_all_tests.py --e2e
 python tests/run_all_tests.py --gui --headless
 
 # Full-GUI tier: real window and real VTK, so it needs a display.
@@ -55,10 +56,33 @@ To maintain high performance and prevent crashes in headless environments, we us
 Applied at the very start of the `pytest` lifecycle. It pre-fills `sys.modules` with mock objects for heavy C++ extensions like **VTK** and **PyVista**. This prevents the real libraries from ever loading in test environments, eliminating GPU-related segmentation faults in CI.
 
 ### 2. Standardized App Teardown
-All suites use a consistent `app` fixture with platform-aware teardown. It performs aggressive cleanup on Windows/Desktop (to prevent `0x80010108` errors) while staying minimal in CI to avoid instability.
+Unit and integration tests inherit the session-scoped `app(qapp)` fixture from
+`tests/conftest.py`. It deletes native widgets and delivers deferred-delete
+events while pytest-qt still retains the application. E2E, GUI, and Full-GUI
+keep their own `app` fixtures for their different window and rendering lifecycles.
 
 ### 3. Local Fixture Mocks
 Specific directories (like `tests/gui/`) provide further mocks for UI elements, such as replacing the 3D viewport with a dummy widget and auto-answering dialogs.
+
+`tests/rendering_stubs.py` holds the identical orientation-widget and PolyData
+stand-ins used by the root and integration fixtures. Picker, plotter, and
+interactor implementations stay local because their behavior differs by tier.
+
+## Maintaining Tests Without Losing Coverage
+
+Keep existing test cases, parametrized inputs, assertions, and skip conditions
+when cleaning up fixtures or helpers. Prefer small changes to shared setup over
+merging files that use different mocking strategies.
+
+Run the same suites with coverage before and after a cleanup, using the same
+Python environment and options. Save the baseline `.coverage` file before the
+next unified run, which clears it. Compare collected test IDs and per-file
+executed lines as well as the overall percentage; an unchanged percentage can
+hide lost coverage in one module. Investigate any new skips or missing lines.
+
+The default run covers Unit, Integration, E2E, and GUI. The Full-GUI tier still
+requires a separate run with a display and OpenGL context when its fixtures or
+tests change.
 
 ## Test Architecture
 
@@ -68,6 +92,7 @@ least:
 ### 1. Unit Tests (`tests/unit/`)
 **Scope:** Core scientific logic, data structures, and parsers.
 *   Fast, isolated tests mocking all external dependencies.
+*   Grouped into component directories; the unified runner discovers them recursively.
 *   [**Read More**](unit/README.md)
 
 ### 2. Integration Tests (`tests/integration/`)
@@ -101,7 +126,7 @@ To simplify human review of the test suite, the following generated reports are 
 Both of the following are written by a full `run_all_tests.py` run and are **not committed** — generate them locally when you want them:
 
 *   **Assertion Catalog** (`assertion_catalog.md`): A comprehensive list of test assertions, mapping test names and descriptions to their core verification logic.
-*   **Coverage Report** (`coverage_report.md`): A Markdown-formatted summary of the combined coverage (Unit + Integration + GUI) across the entire codebase. Per-commit coverage, with history and per-PR diffs, is on [Codecov](https://codecov.io/gh/HiroYokoyama/python_molecular_editor).
+*   **Coverage Report** (`coverage_report.md`): A Markdown-formatted summary of the combined coverage (Unit + Integration + E2E + GUI) across the entire codebase. Per-commit coverage, with history and per-PR diffs, is on [Codecov](https://codecov.io/gh/HiroYokoyama/python_molecular_editor).
 
 ### Running Coverage Locally
 

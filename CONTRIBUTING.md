@@ -47,7 +47,7 @@ MoleditPy uses a hybrid approach to quality assurance: **Automated Unit Tests** 
 ### A. Automated Tests & Coverage
 * Core files in `moleditpy/src/moleditpy/core/` related to molecular geometry or data structures (e.g., `molecular_data.py`), or files related to calculation/parsing (e.g., `calculation_worker.py` and `io_logic.py` in `moleditpy/src/moleditpy/ui/`) **MUST** have unit tests.
 * **Target Coverage:** Maintain or exceed **80%** full application coverage.
-* Any new public method added to `plugin_interface.py` (`PluginContext` or `Plugin3DController`) **MUST** have a corresponding test in `tests/unit/test_plugin_interface.py`.
+* Any new public method added to `plugin_interface.py` (`PluginContext` or `Plugin3DController`) **MUST** have a corresponding test in `tests/unit/plugins/test_plugin_interface.py`.
 
 ### B. Error Handling — No Hiding, No Crashing
 
