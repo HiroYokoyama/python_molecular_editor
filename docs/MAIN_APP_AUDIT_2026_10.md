@@ -39,6 +39,22 @@ Every confirmed defect has a regression. Existing test assertions are retained;
 two raw-file test fixtures now contain valid atom records instead of placeholder
 strings that the real loader could never restore.
 
+## Final validation
+
+- `tests/run_all_tests.py --headless --pylint -x`: 3,032 passed, 3 skipped
+  with RDKit 2026.9.1 and PySide6 6.11.2. Pylint: 9.46/10; score record updated.
+- Application statement coverage increased from 91.81% (17,014/18,532) to
+  91.96% (17,205/18,709). Mapping unchanged source lines across the diff found
+  all 20,818 previously executed unchanged lines still executed.
+- AST comparison retained every one of the 4,100 original `assert` statements.
+  The audit adds 103 headless regression cases and one native regression.
+- Native Qt/VTK suite: 36 passed. Visually inspected the rendered molecule and
+  alignment dialog, and verified alignment followed by molecule replacement.
+- Python 3.9 / PySide6 6.9: 2,912 unit/integration tests passed, 3 skipped.
+- Ruff formatting/checks and mypy for Windows, Linux, and macOS passed.
+- The GUI project fixture now uses JSON null values rather than the string
+  `"null"`; every existing assertion remains in place.
+
 ## Dependency decision
 
 [PR #168](https://github.com/HiroYokoyama/python_molecular_editor/pull/168)
