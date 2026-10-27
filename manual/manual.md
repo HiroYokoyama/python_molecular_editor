@@ -214,6 +214,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
   * **Rotate 2D...:** Select `Edit` \> `Rotate 2D...` (Ctrl+R) from the menu to open a dialog for rotating the 2D molecule by a specified angle.
   * **Add Hydrogens:** Select `Edit` \> `Add Hydrogens` from the menu to explicitly add hydrogen atoms based on the current bonding.
   * **Remove Hydrogens:** Select `Edit` \> `Remove Hydrogens` from the menu to remove all hydrogen atoms.
+  * **Adjust Charge:** Select `Edit` \> `Adjust Charge` (Ctrl+E), below Remove Hydrogens, to repair invalid formal charges on B/C/N/O atoms when exactly one of -1, 0, or +1 passes RDKit's valence check (for example, four-bonded nitrogen becomes +1). Valid existing charges, radicals, unsupported elements, and ambiguous cases are preserved. Bonds and hydrogens are unchanged. Supports Undo/Redo; this does not predict protonation states or partial charges.
   * **Clear All:** To delete all atoms and bonds on the canvas, execute `Edit` \> `Clear All` (Ctrl+Shift+C) from the menu.
   * **Show Chiral Labels:** Check `View` \> `Show Chiral Labels` from the menu to display R/S labels for chiral centers. Label colors, sizes and font are set in `Settings` \> `Settings...` \> **3D Labels**.
 
@@ -512,7 +513,7 @@ You can open the Plugin Manager via the menu Plugin \> Plugin Manager.... From h
 * **Status Column:** Displays colored status information (such as green **Loaded**, gray **Disabled**, gray **No Entry Point**, or red **Error**).
 
 ### 9.2. Installing Plugins
-* **Drag & Drop:** Open the Plugin Manager and drag & drop a `.py` or `.zip` file into the window to install it easily. During installation, the Plugin Manager will calculate and display the **SHA-256 hash** of the file so you can verify its integrity before confirming.
+* **Drag & Drop:** Open the Plugin Manager and drag & drop a `.py` or `.zip` file into the window to install it easily. During installation, the Plugin Manager will calculate and display the **SHA-256 hash** of the file so you can compare it with the reviewed file's hash before confirming.
 * **CLI (Command Line):** You can install plugins headlessly by running moleditpy --install-plugin [PATH] from your terminal.
 * **Manual Install:** You can manually place custom scripts in the ~/.moleditpy/plugins directory.
 
@@ -520,7 +521,7 @@ You can open the Plugin Manager via the menu Plugin \> Plugin Manager.... From h
 You can explore and download official plugins from the **Plugin Explorer**: [https://hiroyokoyama.github.io/moleditpy-plugins/explorer/](https://hiroyokoyama.github.io/moleditpy-plugins/explorer/)
 
 > [!TIP]
-> It is highly recommended to install and use the **Plugin Installer** plugin. This allows you to easily browse and install other plugins directly from within MoleditPy, and it automatically verifies the SHA-256 hash of downloaded plugins against the registry to detect changed downloads. Plugins are not sandboxed; a matching hash does not establish that their code is safe. See [security policy](../SECURITY.md).
+> It is highly recommended to install and use the **Plugin Installer** plugin. This allows you to easily browse and install other plugins directly from within MoleditPy, and it automatically compares each download's SHA-256 hash with the official registry to confirm that the file is unchanged from the reviewed version. A mismatch blocks installation. Plugins run with the same user permissions as MoleditPy and are not sandboxed. See [security policy](../SECURITY.md).
 
 **Updated Examples of Available Plugins:**
 * **ORCA Input Generator Pro:** An advanced tool for generating ORCA inputs, featuring a Block Builder to assist in constructing complex input blocks.
@@ -558,6 +559,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 | `Ctrl`+`X` | Cut Selection | 
 | `Ctrl`+`V` | Paste | 
 | `Ctrl`+`A` | Select All | 
+| `Ctrl`+`E` | Adjust Charge |
 | `Ctrl`+`R` | Rotate 2D Molecule | 
 | `Ctrl`+`N` | New | 
 | `Ctrl`+`O` | Open Project... | 
@@ -581,7 +583,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 5.0
+  * **Version:** 5.1
   * **Author:** Hiromichi Yokoyama
   * **License:** LGPL-3.0-or-later
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING, TypedDict
 import numpy as np
 
 from ..core.mol_geometry import identify_valence_problems
+from ..core.formal_charge import infer_charge_adjustments
 from .app_state import _serialize_constraints
 
 # RDKit imports (explicit to satisfy flake8 and used features)
@@ -679,6 +680,39 @@ class EditActionsManager:
             with suppress_log(AttributeError, RuntimeError, TypeError):
                 # Suppress transient errors during UI status reporting.
                 self.host.statusBar().showMessage("Error removing hydrogen atoms.")  # type: ignore[union-attr]
+
+    def adjust_formal_charges(self) -> None:
+        """Repair unambiguous invalid formal charges as one undoable edit."""
+        data = self.host.state_manager.data
+        if not data.atoms:
+            self.host.statusBar().showMessage(  # type: ignore[union-attr]
+                "No molecule available to adjust charges.", 2000
+            )
+            return
+
+        changes = infer_charge_adjustments(data)
+        if not changes:
+            self.host.statusBar().showMessage(  # type: ignore[union-attr]
+                "No unambiguous charge corrections found. Existing charges preserved.",
+                4000,
+            )
+            return
+
+        scene = self.host.init_manager.scene
+        for atom_id, charge in changes.items():
+            item = scene.atom_items.get(atom_id)
+            if item is not None:
+                item.prepareGeometryChange()
+                item.charge = charge
+                item.update_style()
+            data.atoms[atom_id]["charge"] = charge
+        scene.update_all_items()
+        self.push_undo_state()
+        self.host.statusBar().showMessage(  # type: ignore[union-attr]
+            f"Adjusted formal charges on {len(changes)} atoms. "
+            "Ambiguous cases left unchanged.",
+            4000,
+        )
 
     def add_hydrogen_atoms(self) -> None:
         """Compute and add explicit hydrogens in 2D view using RDKit."""

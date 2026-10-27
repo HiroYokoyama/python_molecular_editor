@@ -1334,6 +1334,17 @@ class MainInitManager:
         )
         edit_menu.addAction(remove_hydrogen_action)
 
+        adjust_charge_action = QAction("Adjust Charge", self.host)
+        adjust_charge_action.setShortcut(QKeySequence("Ctrl+E"))
+        adjust_charge_action.setToolTip(
+            "Repair unambiguous invalid B/C/N/O formal charges using RDKit; "
+            "preserve valid charges and ambiguous cases"
+        )
+        adjust_charge_action.triggered.connect(
+            self.host.edit_actions_manager.adjust_formal_charges
+        )
+        edit_menu.addAction(adjust_charge_action)
+
         edit_menu.addSeparator()
         rotate_2d_action = QAction("Rotate 2D...", self.host)
         rotate_2d_action.setShortcut(QKeySequence("Ctrl+R"))
