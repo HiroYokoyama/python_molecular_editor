@@ -12,6 +12,10 @@ All notable changes to this project are recorded here. The format follows
 
 - Add **Edit > Adjust Charge** (Ctrl+E) below Remove Hydrogens to repair unambiguous invalid B/C/N/O formal charges using RDKit, with undo support. Preserve valid existing charges, radicals, and ambiguous cases without changing bonds or adding hydrogens.
 
+### Tests & CI
+
+- Give the fresh-process Qt binding integration test time to reach its own 60-second subprocess deadline and clean up, instead of interrupting cold macOS native-library imports at the runner's 30-second default.
+
 ## [5.0.3] - 2026-10-24
 
 ### Changed

@@ -9,7 +9,10 @@ import pytest
 
 
 @pytest.mark.parametrize("previous_binding", [None, "pyqt6"])
+@pytest.mark.timeout(90)
 def test_app_selects_pyside6_before_pyvistaqt(previous_binding):
+    # Cold native-library imports may exceed the runner's 30-second default.
+    # Allow the child's 60-second deadline plus process cleanup to finish.
     environment = {**os.environ, "QT_QPA_PLATFORM": "offscreen"}
     environment.pop("QT_API", None)
     if previous_binding is not None:
