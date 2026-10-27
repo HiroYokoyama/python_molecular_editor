@@ -86,6 +86,25 @@ def test_empty_graph():
     assert infer_charge_adjustments(MolecularData()) == {}
 
 
+@pytest.mark.parametrize(
+    "missing_endpoint,reverse,order",
+    [(True, False, 1), (True, True, 1), (False, False, 4)],
+    ids=["missing-second-atom", "missing-first-atom", "unsupported-bond-order"],
+)
+def test_uninterpretable_bond_prevents_charge_guess(missing_endpoint, reverse, order):
+    data, center = star("N", [1, 1, 1, 1])
+    assert infer_charge_adjustments(data) == {center: 1}
+    other = data.add_atom("C", (10, 10))
+    if missing_endpoint:
+        del data.atoms[other]
+    edge = (other, center) if reverse else (center, other)
+    data.bonds[edge] = {"order": order, "stereo": 0}
+    before = copy.deepcopy((data.atoms, data.bonds))
+
+    assert infer_charge_adjustments(data) == {}
+    assert (data.atoms, data.bonds) == before
+
+
 def test_action_updates_model_and_item_once(mock_parser_host):
     host = mock_parser_host
     data, center = star("N", [1, 1, 1, 1])
