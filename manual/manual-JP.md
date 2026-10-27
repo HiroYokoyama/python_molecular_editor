@@ -211,6 +211,7 @@ MoleditPy のメインウィンドウは、主に以下の要素で構成され�
   * **Rotate 2D...:** メニューの `Edit` \> `Rotate 2D...` (Ctrl+R) を選択すると、角度を指定して 2D 分子を回転させるダイアログが開きます。ショートカットキーとしても利用できます。
   * **Add Hydrogens:** メニューの `Edit` \> `Add Hydrogens` を選択すると、現在の結合状態に基づいて水素原子を明示的に追加します。
   * **Remove Hydrogens:** メニューの `Edit` \> `Remove Hydrogens` を選択すると、すべての水素原子を削除します。
+  * **Adjust Charge:** Remove Hydrogens の下にある `Edit` \> `Adjust Charge` (Ctrl+E) は、B/C/N/O 原子の形式電荷が不正で、-1、0、+1 のうち RDKit の原子価チェックを通過する候補が一つだけの場合に補正します（例：結合次数の合計が 4 の窒素を +1 に補正）。有効な既存電荷、ラジカル、未対応元素、曖昧なケースは維持します。結合や水素は変更せず、Undo/Redo に対応します。プロトン化状態や部分電荷を予測する機能ではありません。
   * **Clear All:** キャンバス上のすべての原子と結合を削除するには、メニューの `Edit` \> `Clear All` (Ctrl+Shift+C) を実行します。
   * **Show Chiral Labels:** メニューの `View` \> `Show Chiral Labels` をチェックすると、不斉中心の R/S ラベルを表示できます。ラベルの色・サイズ・フォントは `Settings` \> `Settings...` \> **3D Labels** で設定できます。
 
@@ -542,6 +543,7 @@ MoleditPyは、Pythonスクリプトによる機能の拡張をサポートし�
 | `Ctrl`+`X` | Cut Selection | 
 | `Ctrl`+`V` | Paste | 
 | `Ctrl`+`A` | Select All | 
+| `Ctrl`+`E` | Adjust Charge |
 | `Ctrl`+`R` | Rotate 2D Molecule | 
 | `Ctrl`+`N` | New | 
 | `Ctrl`+`O` | Open Project... | 
@@ -566,7 +568,7 @@ MoleditPyは、Pythonスクリプトによる機能の拡張をサポートし�
 
 ## 11\. バージョン情報・ライセンス
 
-  * **バージョン:** 5.0
+  * **バージョン:** 5.1
   * **作者:** Hiromichi Yokoyama
   * **ライセンス:** LGPL-3.0-or-later
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

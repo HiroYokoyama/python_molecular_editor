@@ -214,6 +214,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
   * **Rotate 2D...:** Select `Edit` \> `Rotate 2D...` (Ctrl+R) from the menu to open a dialog for rotating the 2D molecule by a specified angle.
   * **Add Hydrogens:** Select `Edit` \> `Add Hydrogens` from the menu to explicitly add hydrogen atoms based on the current bonding.
   * **Remove Hydrogens:** Select `Edit` \> `Remove Hydrogens` from the menu to remove all hydrogen atoms.
+  * **Adjust Charge:** Select `Edit` \> `Adjust Charge` (Ctrl+E), below Remove Hydrogens, to repair invalid formal charges on B/C/N/O atoms when exactly one of -1, 0, or +1 passes RDKit's valence check (for example, four-bonded nitrogen becomes +1). Valid existing charges, radicals, unsupported elements, and ambiguous cases are preserved. Bonds and hydrogens are unchanged. Supports Undo/Redo; this does not predict protonation states or partial charges.
   * **Clear All:** To delete all atoms and bonds on the canvas, execute `Edit` \> `Clear All` (Ctrl+Shift+C) from the menu.
   * **Show Chiral Labels:** Check `View` \> `Show Chiral Labels` from the menu to display R/S labels for chiral centers. Label colors, sizes and font are set in `Settings` \> `Settings...` \> **3D Labels**.
 
@@ -558,6 +559,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 | `Ctrl`+`X` | Cut Selection | 
 | `Ctrl`+`V` | Paste | 
 | `Ctrl`+`A` | Select All | 
+| `Ctrl`+`E` | Adjust Charge |
 | `Ctrl`+`R` | Rotate 2D Molecule | 
 | `Ctrl`+`N` | New | 
 | `Ctrl`+`O` | Open Project... | 
@@ -581,7 +583,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 5.0
+  * **Version:** 5.1
   * **Author:** Hiromichi Yokoyama
   * **License:** LGPL-3.0-or-later
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [5.1.0] - 2026-10-27
+
+### Added
+
+- Add **Edit > Adjust Charge** (Ctrl+E) below Remove Hydrogens to repair unambiguous invalid B/C/N/O formal charges using RDKit, with undo support. Preserve valid existing charges, radicals, and ambiguous cases without changing bonds or adding hydrogens.
+
 ## [5.0.3] - 2026-10-24
 
 ### Changed
