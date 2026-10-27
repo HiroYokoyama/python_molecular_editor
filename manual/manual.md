@@ -513,7 +513,7 @@ You can open the Plugin Manager via the menu Plugin \> Plugin Manager.... From h
 * **Status Column:** Displays colored status information (such as green **Loaded**, gray **Disabled**, gray **No Entry Point**, or red **Error**).
 
 ### 9.2. Installing Plugins
-* **Drag & Drop:** Open the Plugin Manager and drag & drop a `.py` or `.zip` file into the window to install it easily. During installation, the Plugin Manager will calculate and display the **SHA-256 hash** of the file so you can verify its integrity before confirming.
+* **Drag & Drop:** Open the Plugin Manager and drag & drop a `.py` or `.zip` file into the window to install it easily. During installation, the Plugin Manager will calculate and display the **SHA-256 hash** of the file so you can compare it with the reviewed file's hash before confirming.
 * **CLI (Command Line):** You can install plugins headlessly by running moleditpy --install-plugin [PATH] from your terminal.
 * **Manual Install:** You can manually place custom scripts in the ~/.moleditpy/plugins directory.
 
@@ -521,7 +521,7 @@ You can open the Plugin Manager via the menu Plugin \> Plugin Manager.... From h
 You can explore and download official plugins from the **Plugin Explorer**: [https://hiroyokoyama.github.io/moleditpy-plugins/explorer/](https://hiroyokoyama.github.io/moleditpy-plugins/explorer/)
 
 > [!TIP]
-> It is highly recommended to install and use the **Plugin Installer** plugin. This allows you to easily browse and install other plugins directly from within MoleditPy, and it automatically verifies the SHA-256 hash of downloaded plugins against the registry to detect changed downloads. Plugins are not sandboxed; a matching hash does not establish that their code is safe. See [security policy](../SECURITY.md).
+> It is highly recommended to install and use the **Plugin Installer** plugin. This allows you to easily browse and install other plugins directly from within MoleditPy, and it automatically compares each download's SHA-256 hash with the official registry to confirm that the file is unchanged from the reviewed version. A mismatch blocks installation. Plugins run with the same user permissions as MoleditPy and are not sandboxed. See [security policy](../SECURITY.md).
 
 **Updated Examples of Available Plugins:**
 * **ORCA Input Generator Pro:** An advanced tool for generating ORCA inputs, featuring a Block Builder to assist in constructing complex input blocks.
