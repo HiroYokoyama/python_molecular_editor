@@ -335,6 +335,77 @@ def test_carbon_mode_click_on_carbon_grows_like_key_1(scene_setup, monkeypatch):
     assert len(window.edit_actions_manager.undo_stack) == 1
 
 
+def test_atom_mode_double_click_counts_as_two_clicks(scene_setup, monkeypatch):
+    """A double-click on a carbon in carbon mode grows two carbons and selects nothing."""
+    scene, window, view, data = scene_setup
+
+    a1_id = scene.create_atom("C", QPointF(0, 0))
+    a1_item = scene.atom_items[a1_id]
+
+    scene.mode = "atom_C"
+    scene.current_atom_symbol = "C"
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: a1_item)
+
+    mouse_press(scene, QPointF(0, 0), Qt.MouseButton.LeftButton)
+    mouse_release(scene, QPointF(0, 0), Qt.MouseButton.LeftButton)
+
+    event = MagicMock()
+    event.scenePos.return_value = QPointF(0, 0)
+    event.button.return_value = Qt.MouseButton.LeftButton
+    event.modifiers.return_value = Qt.KeyboardModifier.NoModifier
+    with patch(
+        "PySide6.QtWidgets.QGraphicsScene.mouseDoubleClickEvent"
+    ) as default_handler:
+        scene.mouseDoubleClickEvent(event)
+    mouse_release(scene, QPointF(0, 0), Qt.MouseButton.LeftButton)
+
+    default_handler.assert_not_called()
+    assert len(data.atoms) == 3
+    assert len(data.bonds) == 2
+    assert len(a1_item.bonds) == 2
+    assert not scene.selectedItems()
+    assert len(window.edit_actions_manager.undo_stack) == 2
+
+
+@pytest.mark.parametrize(
+    "button, modifiers",
+    [
+        (Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier),
+        (Qt.MouseButton.MiddleButton, Qt.KeyboardModifier.NoModifier),
+        (Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ShiftModifier),
+    ],
+)
+def test_atom_mode_non_drawing_double_click_is_not_a_click(
+    scene_setup, monkeypatch, button, modifiers
+):
+    """Right (delete) and middle/Shift (pan) double-clicks must not act as a second click."""
+    scene, window, view, data = scene_setup
+
+    a1_id = scene.create_atom("C", QPointF(0, 0))
+    a2_id = scene.create_atom("C", QPointF(50, 0))
+    a1_item = scene.atom_items[a1_id]
+    scene.create_bond(a1_item, scene.atom_items[a2_id])
+
+    scene.mode = "atom_C"
+    scene.current_atom_symbol = "C"
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: a1_item)
+
+    event = MagicMock()
+    event.scenePos.return_value = QPointF(0, 0)
+    event.button.return_value = button
+    event.modifiers.return_value = modifiers
+    with (
+        patch.object(scene, "mousePressEvent") as press,
+        patch("PySide6.QtWidgets.QGraphicsScene.mouseDoubleClickEvent") as default,
+    ):
+        scene.mouseDoubleClickEvent(event)
+
+    press.assert_not_called()
+    default.assert_called_once()
+    assert len(data.atoms) == 2
+    assert len(data.bonds) == 1
+
+
 def test_carbon_mode_click_on_heteroatom_changes_symbol(scene_setup, monkeypatch):
     """Clicking a non-carbon atom in carbon mode still converts it to carbon."""
     scene, window, view, data = scene_setup

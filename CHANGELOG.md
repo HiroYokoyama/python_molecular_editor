@@ -11,6 +11,7 @@ All notable changes to this project are recorded here. The format follows
 ### Changed
 
 - In Carbon (`C`) mode, clicking an existing carbon in the 2D editor now adds a new single-bonded carbon, the same as hovering over it and pressing `1`. Clicking an atom of another element still converts it to carbon.
+- In atom drawing modes, a double-click now counts as two single clicks (double-clicking a carbon in C mode adds two carbons) instead of selecting the atom under the cursor.
 
 ## [5.1.0] - 2026-10-27
 
