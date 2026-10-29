@@ -162,7 +162,7 @@ Select a drawing mode by clicking a button on the main toolbar or pressing the c
     2.  In 'Select' mode, select items and press the `Delete` or `Backspace` key.
   * **Changing an Element:**
     1.  Select the button for the element you want to change to from the toolbar.
-    2.  Click an existing atom to change its element.
+    2.  Click an existing atom to change its element. In Carbon (`C`) mode, clicking an existing carbon instead adds a new carbon with a single bond, the same as hovering over it and pressing `1`.
     3.  Alternatively, hover the mouse cursor over an atom and press the keyboard shortcut (e.g., 'N' for Nitrogen).
   * **Changing Bond Order:**
     1.  Select the button for the bond type you want to change to from the toolbar.

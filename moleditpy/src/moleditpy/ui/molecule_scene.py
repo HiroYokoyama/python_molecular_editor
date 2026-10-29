@@ -827,8 +827,16 @@ class MoleculeScene(
             order_to_use = self.bond_order if self.mode.startswith("bond") else None
             stereo_to_use = self.bond_stereo if self.mode.startswith("bond") else None
             if is_click:
-                # Short click: Update existing atom symbol (atom mode only)
+                # Short click on a carbon in carbon mode grows a chain like key 1
                 if (
+                    self.mode == "atom_C"
+                    and self.start_atom.symbol == "C"
+                    and self.current_atom_symbol == "C"
+                ):
+                    self.grow_carbon_from_atom(self.start_atom, 1)
+                    self.data_changed_in_event = True
+                # Short click: Update existing atom symbol (atom mode only)
+                elif (
                     self.mode.startswith("atom")
                     and self.start_atom.symbol != self.current_atom_symbol
                 ):

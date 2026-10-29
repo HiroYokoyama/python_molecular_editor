@@ -936,6 +936,34 @@ class KeyboardMixin:
 
     temp_line: Optional[QGraphicsLineItem]
 
+    def grow_carbon_from_atom(self, start_atom: Any, target_order: int = 1) -> None:
+        """Bond a new carbon (or a nearby atom) to start_atom, as the 1/2/3 keys do."""
+        new_pos_offset = self._calculate_new_atom_position(
+            start_atom, DEFAULT_BOND_LENGTH, target_order
+        )
+        target_pos = start_atom.pos() + new_pos_offset
+
+        snap_dist = self.get_setting("bond_snapping_distance_2d", 14.0)
+        near_atom = self.find_atom_near(target_pos, tol=snap_dist)
+
+        if near_atom and near_atom is not start_atom:
+            self.create_bond(
+                start_atom, near_atom, bond_order=target_order, bond_stereo=0
+            )
+        else:
+            new_atom_id = self.create_atom("C", target_pos)
+            self.create_bond(
+                start_atom,
+                self.atom_items[new_atom_id],
+                bond_order=target_order,
+                bond_stereo=0,
+            )
+
+        if target_order != 3:
+            self.placement_direction_clockwise = not getattr(
+                self, "placement_direction_clockwise", True
+            )
+
     def _calculate_new_atom_position(
         self, start_atom: Any, bond_length: Any, target_order: int = 1
     ) -> Any:
@@ -1405,46 +1433,7 @@ class KeyboardMixin:
                         start_atom = selected_atoms[0]
 
                 if start_atom:
-                    start_pos = start_atom.pos()
-                    bond_len = DEFAULT_BOND_LENGTH
-                    new_pos_offset = self._calculate_new_atom_position(
-                        start_atom, bond_len, target_order
-                    )
-
-                    # SNAP_DISTANCE is a module-level constant
-                    target_pos = start_pos + new_pos_offset
-
-                    # Find nearby atom
-                    near_atom = None
-                    snap_dist = self.get_setting("bond_snapping_distance_2d", 14.0)
-                    near_atom = self.find_atom_near(target_pos, tol=snap_dist)
-
-                    if near_atom and near_atom is not start_atom:
-                        # Bond if exists
-                        self.create_bond(
-                            start_atom,
-                            near_atom,
-                            bond_order=target_order,
-                            bond_stereo=0,
-                        )
-                    else:
-                        # Create new atom and bond
-                        new_atom_id = self.create_atom("C", target_pos)
-                        new_atom_item = self.atom_items[new_atom_id]
-                        self.create_bond(
-                            start_atom,
-                            new_atom_item,
-                            bond_order=target_order,
-                            bond_stereo=0,
-                        )
-
-                    if target_order != 3:
-                        if hasattr(self, "placement_direction_clockwise"):
-                            self.placement_direction_clockwise = (
-                                not self.placement_direction_clockwise
-                            )
-                        else:
-                            self.placement_direction_clockwise = False
+                    self.grow_carbon_from_atom(start_atom, target_order)
                     self.clearSelection()
                     self.update_all_items()
                     self.window.edit_actions_manager.push_undo_state()
