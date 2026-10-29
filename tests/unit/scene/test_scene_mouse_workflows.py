@@ -308,6 +308,52 @@ def test_atom_mode_short_click_near_atom_does_not_fuse(scene_setup, monkeypatch)
     assert len(data.atoms) == 2
 
 
+def test_carbon_mode_click_on_carbon_grows_like_key_1(scene_setup, monkeypatch):
+    """Clicking an existing carbon in carbon mode adds a bonded carbon, like key 1."""
+    scene, window, view, data = scene_setup
+
+    a1_id = scene.create_atom("C", QPointF(0, 0))
+    a1_item = scene.atom_items[a1_id]
+
+    scene.mode = "atom_C"
+    scene.current_atom_symbol = "C"
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: a1_item)
+
+    mouse_press(scene, QPointF(0, 0), Qt.MouseButton.LeftButton)
+    mouse_release(scene, QPointF(0, 0), Qt.MouseButton.LeftButton)
+
+    from moleditpy.utils.constants import DEFAULT_BOND_LENGTH
+
+    assert len(data.atoms) == 2
+    assert len(data.bonds) == 1
+    (bond,) = data.bonds.values()
+    assert bond["order"] == 1
+    new_id = next(i for i in data.atoms if i != a1_id)
+    assert data.atoms[new_id]["symbol"] == "C"
+    x, y = data.atoms[new_id]["pos"]
+    assert abs((x * x + y * y) ** 0.5 - DEFAULT_BOND_LENGTH) < 1e-6
+    assert len(window.edit_actions_manager.undo_stack) == 1
+
+
+def test_carbon_mode_click_on_heteroatom_changes_symbol(scene_setup, monkeypatch):
+    """Clicking a non-carbon atom in carbon mode still converts it to carbon."""
+    scene, window, view, data = scene_setup
+
+    n_id = scene.create_atom("N", QPointF(0, 0))
+    n_item = scene.atom_items[n_id]
+
+    scene.mode = "atom_C"
+    scene.current_atom_symbol = "C"
+    monkeypatch.setattr(scene, "itemAt", lambda pos, transform=None: n_item)
+
+    mouse_press(scene, QPointF(0, 0), Qt.MouseButton.LeftButton)
+    mouse_release(scene, QPointF(0, 0), Qt.MouseButton.LeftButton)
+
+    assert data.atoms[n_id]["symbol"] == "C"
+    assert len(data.atoms) == 1
+    assert len(data.bonds) == 0
+
+
 def test_benzene_terminal_120_deg_alignment(scene_setup, monkeypatch):
     """Test that pressing 4 at a terminal atom aligns the benzene ring at 120 degrees."""
     scene, window, view, data = scene_setup
