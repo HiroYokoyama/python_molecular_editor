@@ -1081,8 +1081,13 @@ class MoleculeScene(
                 # On any unexpected error, fall back to default handling
                 logging.warning(f"Error in connected component selection: {e}")
 
-        elif self.mode.startswith("atom"):
-            # Count the second click of a double-click as another single click
+        elif (
+            self.mode.startswith("atom")
+            and event.button() == Qt.MouseButton.LeftButton
+            and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+        ):
+            # Count the second click of a double-click as another single click;
+            # right (delete) and middle/Shift (pan) double-clicks are left alone
             self.mousePressEvent(event)
             return
         elif self.mode in ["bond_2_5"]:
