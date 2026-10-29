@@ -1081,8 +1081,11 @@ class MoleculeScene(
                 # On any unexpected error, fall back to default handling
                 logging.warning(f"Error in connected component selection: {e}")
 
-        elif self.mode in ["bond_2_5"] or self.mode.startswith("atom"):
-            # Atom modes act on single clicks only; a double-click must not select
+        elif self.mode.startswith("atom"):
+            # Count the second click of a double-click as another single click
+            self.mousePressEvent(event)
+            return
+        elif self.mode in ["bond_2_5"]:
             event.accept()
             return
 

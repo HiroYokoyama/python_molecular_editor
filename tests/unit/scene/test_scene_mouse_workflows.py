@@ -335,8 +335,8 @@ def test_carbon_mode_click_on_carbon_grows_like_key_1(scene_setup, monkeypatch):
     assert len(window.edit_actions_manager.undo_stack) == 1
 
 
-def test_atom_mode_double_click_is_ignored(scene_setup, monkeypatch):
-    """A double-click in atom mode adds one carbon and selects nothing."""
+def test_atom_mode_double_click_counts_as_two_clicks(scene_setup, monkeypatch):
+    """A double-click on a carbon in carbon mode grows two carbons and selects nothing."""
     scene, window, view, data = scene_setup
 
     a1_id = scene.create_atom("C", QPointF(0, 0))
@@ -359,9 +359,11 @@ def test_atom_mode_double_click_is_ignored(scene_setup, monkeypatch):
     mouse_release(scene, QPointF(0, 0), Qt.MouseButton.LeftButton)
 
     default_handler.assert_not_called()
-    event.accept.assert_called_once()
-    assert len(data.atoms) == 2
+    assert len(data.atoms) == 3
+    assert len(data.bonds) == 2
+    assert len(a1_item.bonds) == 2
     assert not scene.selectedItems()
+    assert len(window.edit_actions_manager.undo_stack) == 2
 
 
 def test_carbon_mode_click_on_heteroatom_changes_symbol(scene_setup, monkeypatch):
