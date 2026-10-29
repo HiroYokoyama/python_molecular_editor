@@ -1081,7 +1081,8 @@ class MoleculeScene(
                 # On any unexpected error, fall back to default handling
                 logging.warning(f"Error in connected component selection: {e}")
 
-        elif self.mode in ["bond_2_5"]:
+        elif self.mode in ["bond_2_5"] or self.mode.startswith("atom"):
+            # Atom modes act on single clicks only; a double-click must not select
             event.accept()
             return
 
