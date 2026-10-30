@@ -183,6 +183,10 @@ class EditActionsManager:
             if self.host.view_3d_manager.current_mol
             else None,
             "constraints_3d": self._constraints_for_comparison(),
+            # Saved with the project, so a change to it alone is a change.
+            "last_successful_optimization_method": getattr(
+                self.host.compute_manager, "last_successful_optimization_method", None
+            ),
         }
 
         last_state_for_comparison = None
@@ -209,6 +213,9 @@ class EditActionsManager:
                 "mol_3d": last_state.get("mol_3d", None),
                 "mol_3d_atom_ids": last_state.get("mol_3d_atom_ids", None),
                 "constraints_3d": last_state.get("constraints_3d") or [],
+                "last_successful_optimization_method": last_state.get(
+                    "last_successful_optimization_method"
+                ),
             }
 
         if (

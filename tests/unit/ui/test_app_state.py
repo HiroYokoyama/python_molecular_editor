@@ -782,3 +782,31 @@ def test_project_load_restores_the_method_after_the_molecule(clearing_window):
 
     assert mw.view_3d_manager.current_mol is not None
     assert mw.compute_manager.last_successful_optimization_method == "MMFF94s (RDKit)"
+
+
+def test_failed_3d_restore_restores_no_method(clearing_window):
+    """A snapshot whose 3D molecule cannot be rebuilt brings back no method."""
+    mw = clearing_window
+    mw.view_3d_manager.current_mol = _methane_3d()
+    mw.compute_manager.last_successful_optimization_method = "UFF (RDKit)"
+    state = mw.get_current_state()
+    state["mol_3d"] = b"not an RDKit molecule"
+    mw.set_state_from_data(state)
+    assert mw.view_3d_manager.current_mol is None
+    assert mw.compute_manager.last_successful_optimization_method is None
+
+
+def test_project_with_a_broken_3d_block_restores_no_method(clearing_window):
+    mw = clearing_window
+    aid = mw.state_manager.data.add_atom("C", QPointF(0, 0))
+    mol = _methane_3d()
+    mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", aid)
+    mw.view_3d_manager.current_mol = mol
+    mw.compute_manager.last_successful_optimization_method = "MMFF94s (RDKit)"
+    json_data = mw.create_json_data()
+    json_data["3d_structure"]["mol_binary_base64"] = "!!not base64!!"
+
+    mw.load_from_json_data(json_data)
+
+    assert mw.view_3d_manager.current_mol is None
+    assert mw.compute_manager.last_successful_optimization_method is None

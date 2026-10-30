@@ -11,7 +11,7 @@ All notable changes to this project are recorded here. The format follows
 ### Fixed
 
 - Clear the recorded last optimization method when a different 3D structure replaces the current one (opening an XYZ or other file, a structure set by a plugin, or clearing the 3D view). It used to stay from the previous structure, so a project saved afterwards recorded the wrong method and plugins that check it, such as HOMA Analyzer, saw a force field that had never touched the loaded structure.
-- Undo and redo now restore the optimization method together with the 3D structure, and projects keep the saved method when they are opened.
+- Undo and redo now restore the optimization method together with the 3D structure, and projects keep the saved method when they are opened. An optimization that changes only the recorded method is a new undo step and marks the project as modified, and a 3D structure that cannot be restored no longer brings back its method.
 
 ## [5.1.1] - 2026-10-29
 

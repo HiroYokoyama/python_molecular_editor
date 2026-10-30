@@ -269,10 +269,13 @@ class StateManager:
             ):
                 self.host.ui_manager.enable_3d_edit_actions(True)
 
-        # Restored after the 3D molecule, whose replacement clears it.
+        # Restored after the 3D molecule, whose replacement clears it, and only
+        # with that molecule: a failed 3D restore leaves nothing it describes.
         with suppress_log(AttributeError, RuntimeError, TypeError):
             self.host.set_last_successful_optimization_method(
                 loaded_data.get("last_successful_optimization_method")
+                if self.host.view_3d_manager.current_mol is not None
+                else None
             )
 
         # Update labels after undo/redo
@@ -717,7 +720,10 @@ class StateManager:
                 self.host.set_current_molecule(None)
 
         # Restore the last successful optimization method after the 3D molecule:
-        # setting a new molecule clears the method of the previous one.
+        # setting a new molecule clears the method of the previous one. Without
+        # a restored molecule there is nothing for the method to describe.
         method = json_data.get("last_successful_optimization_method", None)
+        if self.host.view_3d_manager.current_mol is None:
+            method = None
         with suppress_log(AttributeError, RuntimeError, TypeError):
             self.host.set_last_successful_optimization_method(method)
