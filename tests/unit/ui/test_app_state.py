@@ -716,3 +716,69 @@ def test_update_realtime_info_reports_formula_and_atom_count(mock_parser_host):
     sm.update_realtime_info()
     msg = mock_parser_host.update_formula_label.call_args.args[0]
     assert "Formula:" in msg and "Atoms:" in msg
+
+
+class ClearingMainWindow(DummyMainWindow):
+    """set_current_molecule clears the method of the replaced molecule, as MainWindow does."""
+
+    def set_current_molecule(self, mol):
+        if mol is not self.view_3d_manager.current_mol:
+            self.compute_manager.last_successful_optimization_method = None
+        self.view_3d_manager.current_mol = mol
+
+
+@pytest.fixture
+def clearing_window(app):
+    return ClearingMainWindow()
+
+
+def _methane_3d():
+    mol = Chem.AddHs(Chem.MolFromSmiles("C"))
+    AllChem.EmbedMolecule(mol, randomSeed=7)
+    return mol
+
+
+def test_undo_snapshot_carries_the_optimization_method(clearing_window):
+    """Undo/redo restore the method with the structure it described."""
+    mw = clearing_window
+    mw.view_3d_manager.current_mol = _methane_3d()
+    mw.compute_manager.last_successful_optimization_method = "MMFF94s (RDKit)"
+    optimized = mw.get_current_state()
+    assert optimized["last_successful_optimization_method"] == "MMFF94s (RDKit)"
+
+    mw.compute_manager.last_successful_optimization_method = None
+    unoptimized = mw.get_current_state()
+
+    mw.set_state_from_data(optimized)
+    assert mw.compute_manager.last_successful_optimization_method == "MMFF94s (RDKit)"
+    mw.set_state_from_data(unoptimized)
+    assert mw.compute_manager.last_successful_optimization_method is None
+
+
+def test_state_without_the_key_restores_no_method(clearing_window):
+    """Older .pmeraw files have no method: the restored structure has none."""
+    mw = clearing_window
+    mw.view_3d_manager.current_mol = _methane_3d()
+    state = mw.get_current_state()
+    del state["last_successful_optimization_method"]
+    mw.compute_manager.last_successful_optimization_method = "UFF (RDKit)"
+    mw.set_state_from_data(state)
+    assert mw.compute_manager.last_successful_optimization_method is None
+
+
+def test_project_load_restores_the_method_after_the_molecule(clearing_window):
+    """The saved method survives the new molecule clearing the previous one."""
+    mw = clearing_window
+    aid = mw.state_manager.data.add_atom("C", QPointF(0, 0))
+    mol = _methane_3d()
+    mol.GetAtomWithIdx(0).SetIntProp("_original_atom_id", aid)
+    mw.view_3d_manager.current_mol = mol
+    mw.compute_manager.last_successful_optimization_method = "MMFF94s (RDKit)"
+    json_data = mw.create_json_data()
+
+    mw.view_3d_manager.current_mol = _methane_3d()  # something else on screen
+    mw.compute_manager.last_successful_optimization_method = "UFF (RDKit)"
+    mw.load_from_json_data(json_data)
+
+    assert mw.view_3d_manager.current_mol is not None
+    assert mw.compute_manager.last_successful_optimization_method == "MMFF94s (RDKit)"

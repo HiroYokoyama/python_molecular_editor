@@ -682,11 +682,8 @@ class ComputeManager:
         self.host.view_3d_manager.draw_molecule_3d(mol)
         self._remove_calculating_text()
         self._refresh_ui_state()
-        self.host.edit_actions_manager.push_undo_state()
-        if self.host.view_3d_manager.plotter:
-            self.host.view_3d_manager.plotter.reset_camera()  # type: ignore[call-arg]
-
-        # Record the successful optimization method from mol property or current setting
+        # Record the successful optimization method from mol property or current
+        # setting, before the undo snapshot so that undo/redo carry it.
         try:
             method_key = None
             if mol and mol.HasProp("_pme_optimization_method"):
@@ -701,6 +698,9 @@ class ComputeManager:
         except (AttributeError, TypeError):
             # Safe defensive fallback catching AttributeError, TypeError
             logging.debug("Suppressed non-critical error", exc_info=True)
+        self.host.edit_actions_manager.push_undo_state()
+        if self.host.view_3d_manager.plotter:
+            self.host.view_3d_manager.plotter.reset_camera()  # type: ignore[call-arg]
 
         # Update 3D interactive features (hovers, menus)
         self.host.view_3d_manager.setup_3d_hover()

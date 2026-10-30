@@ -800,6 +800,21 @@ def test_optimize_3d_method_persistence(mock_parser_host):
     assert compute.last_successful_optimization_method == "MMFF94s (RDKit)"
 
 
+def test_optimization_method_is_recorded_before_the_undo_snapshot(mock_parser_host):
+    """The snapshot pushed after an optimization must carry its method."""
+    compute = DummyCompute(mock_parser_host)
+    mol = Chem.MolFromSmiles("C")
+    AllChem.EmbedMolecule(mol, randomSeed=42)
+    mol.SetProp("_pme_optimization_method", "UFF_RDKIT")
+    compute.last_successful_optimization_method = None
+    seen_at_push = []
+    mock_parser_host.edit_actions_manager.push_undo_state.side_effect = lambda: (
+        seen_at_push.append(compute.last_successful_optimization_method)
+    )
+    compute.on_calculation_finished(mol)
+    assert seen_at_push == ["UFF (RDKit)"]
+
+
 def test_trigger_conversion_early_exits(mock_parser_host):
     """Test early exits in trigger_conversion (empty mol, etc.)."""
     from PySide6.QtCore import QPointF
