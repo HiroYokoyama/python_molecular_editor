@@ -132,9 +132,15 @@ class MainWindow(QMainWindow):
     # --- Mediator Methods ---
 
     def set_current_molecule(self, mol: Optional[Chem.Mol]) -> None:
-        """Set the current 3D molecule and trigger rendering updates."""
+        """Set the current 3D molecule and trigger rendering updates.
+
+        A different molecule clears the last optimization method, which
+        described the previous structure; callers that set the molecule as the
+        result of an optimization record the method afterwards.
+        """
         if mol is not self.view_3d_manager.current_mol:
             self.edit_3d_manager.invalidate_molecule_dialogs()
+            self.compute_manager.last_successful_optimization_method = None
         self.view_3d_manager.current_mol = mol
 
     def set_3d_atom_positions(self, positions: Any) -> None:

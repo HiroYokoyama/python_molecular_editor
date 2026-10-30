@@ -736,16 +736,7 @@ class ConstrainedOptimizationDialog(QDialog, Dialog3DPickingMixin):
             except (AttributeError, RuntimeError, ValueError, TypeError) as e:
                 logging.warning("Failed to save constraints post-optimization: %s", e)
 
-            # Update 3D view
-            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
-            self.main_window.view_3d_manager.update_chiral_labels()
-            self.main_window.edit_actions_manager.push_undo_state()
-            self.main_window.state_manager.has_unsaved_changes = True
-            self.main_window.state_manager.update_window_title()
-            status_bar = self.main_window.statusBar()
-            if status_bar is not None:
-                status_bar.showMessage("Constrained optimization finished.")
-
+            # Record the method before the undo snapshot so undo/redo carry it.
             try:
                 constrained_method_name = f"Constrained_{ff_name}"
                 self.main_window.compute_manager.last_successful_optimization_method = (
@@ -755,6 +746,16 @@ class ConstrainedOptimizationDialog(QDialog, Dialog3DPickingMixin):
                 logging.warning(
                     "Failed to set last_successful_optimization_method: %s", e
                 )
+
+            # Update 3D view
+            self.main_window.view_3d_manager.draw_molecule_3d(self.mol)
+            self.main_window.view_3d_manager.update_chiral_labels()
+            self.main_window.edit_actions_manager.push_undo_state()
+            self.main_window.state_manager.has_unsaved_changes = True
+            self.main_window.state_manager.update_window_title()
+            status_bar = self.main_window.statusBar()
+            if status_bar is not None:
+                status_bar.showMessage("Constrained optimization finished.")
 
         except (AttributeError, RuntimeError, ValueError, TypeError) as e:
             logging.exception("Optimization failed: %s", e)

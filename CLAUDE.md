@@ -25,6 +25,15 @@ Run the core CI unit/integration suites:
 MOLEDITPY_HEADLESS=1 QT_QPA_PLATFORM=offscreen python tests/run_all_tests.py --no-cov --no-report --unit --integration
 ```
 
+If PyQt6 is installed in the same environment (plugin work often installs it),
+pytest-qt picks PyQt6 instead of PySide6 and every test using the `window`
+fixture errors with `TypeError: Need to pass a QWidget to addWidget:
+<moleditpy.ui.main_window.MainWindow ...>` — about 60 unit failures and 100
+integration errors that look like a regression but are not. Pin the binding:
+```bash
+PYTEST_QT_API=pyside6 QT_API=pyside6 MOLEDITPY_HEADLESS=1 QT_QPA_PLATFORM=offscreen python tests/run_all_tests.py --no-cov --no-report --unit --integration
+```
+
 Run a single test file:
 ```bash
 MOLEDITPY_HEADLESS=1 python tests/run_all_tests.py --unit --no-cov --no-report -- tests/unit/core/test_molecular_data.py
@@ -139,6 +148,7 @@ Plugins are discovered and loaded by `plugins/plugin_manager.py`. The public API
 |----------|---------|
 | `MOLEDITPY_HEADLESS=1` | Disables GUI features that require a display |
 | `QT_QPA_PLATFORM=offscreen` | Qt headless rendering for CI/test |
+| `PYTEST_QT_API=pyside6` | Makes pytest-qt use PySide6 when PyQt6 is also installed (see Running Tests) |
 
 ## Running the Application
 

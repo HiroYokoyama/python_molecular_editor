@@ -233,6 +233,9 @@ class View3DManager:
         # 3. End with background and axes if mol is None or empty
         if mol is None or mol.GetNumAtoms() == 0:
             self.atom_actor = None
+            if self.current_mol is not None:
+                # The structure is gone, and with it what its method described.
+                self.host.set_last_successful_optimization_method(None)
             self.current_mol = None
             self.plotter.render()  # type: ignore[union-attr]
             return

@@ -580,6 +580,7 @@ def test_push_undo_state_detects_constraint_change(monkeypatch):
     host.state_manager.data.bonds = {}
     host.state_manager.data.next_atom_id = 0
     host.edit_3d_manager.constraints_3d = []
+    host.compute_manager.last_successful_optimization_method = None
 
     mgr = EditActionsManager(host)
     monkeypatch.setattr(mgr, "update_implicit_hydrogens", lambda: None)
@@ -606,6 +607,47 @@ def test_push_undo_state_detects_constraint_change(monkeypatch):
     host.edit_3d_manager.constraints_3d = [["Distance", [0, 1], 1.54, 1.0e5]]
     mgr.push_undo_state()
     assert len(mgr.undo_stack) == 2
+
+
+def test_push_undo_state_detects_optimization_method_change(monkeypatch):
+    """An optimization that leaves the coordinates as they were still changes
+    the recorded method, which the project saves: it must be a new entry."""
+    host = MagicMock()
+    host.is_restoring_state = False
+    host.view_3d_manager.current_mol = None
+    host.state_manager.data.atoms = {}
+    host.state_manager.data.bonds = {}
+    host.state_manager.data.next_atom_id = 0
+    host.edit_3d_manager.constraints_3d = []
+    host.compute_manager.last_successful_optimization_method = None
+
+    mgr = EditActionsManager(host)
+    monkeypatch.setattr(mgr, "update_implicit_hydrogens", lambda: None)
+    monkeypatch.setattr(mgr, "update_undo_redo_actions", lambda: None)
+
+    def _state():
+        return {
+            "atoms": {},
+            "bonds": {},
+            "_next_atom_id": 0,
+            "constraints_3d": [],
+            "last_successful_optimization_method": (
+                host.compute_manager.last_successful_optimization_method
+            ),
+        }
+
+    host.state_manager.get_current_state.side_effect = _state
+
+    mgr.push_undo_state()
+    mgr.push_undo_state()
+    assert len(mgr.undo_stack) == 1
+
+    host.compute_manager.last_successful_optimization_method = "MMFF94s (RDKit)"
+    mgr.push_undo_state()
+    assert len(mgr.undo_stack) == 2
+    assert mgr.undo_stack[-1]["last_successful_optimization_method"] == (
+        "MMFF94s (RDKit)"
+    )
 
 
 # ---------------------------------------------------------------------------

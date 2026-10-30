@@ -706,6 +706,27 @@ class TestCancelAndUndoIntegrity:
 
         assert seen_at_push == [[["Distance", [0, 1], 1.54, 1.0e5]]]
 
+    def test_finished_records_the_method_before_undo_push(self, make_dialog):
+        """Undo/redo snapshots carry the method, so it must be set first."""
+        dlg = make_dialog()
+        compute = dlg.main_window.compute_manager
+        compute.last_successful_optimization_method = None
+        seen_at_push = []
+        dlg.main_window.edit_actions_manager.push_undo_state.side_effect = lambda: (
+            seen_at_push.append(compute.last_successful_optimization_method)
+        )
+        mock_conf = MagicMock()
+        pos_mock = MagicMock()
+        pos_mock.x = pos_mock.y = pos_mock.z = 0.0
+        mock_conf.GetAtomPosition.return_value = pos_mock
+        dlg.main_window.view_3d_manager.atom_positions_3d = {
+            i: [0, 0, 0] for i in range(dlg.mol.GetNumAtoms())
+        }
+
+        dlg._on_optimization_finished("MMFF94s", mock_conf)
+
+        assert seen_at_push == ["Constrained_MMFF94s"]
+
 
 # ---------------------------------------------------------------------------
 # ConstrainedOptimizationThread

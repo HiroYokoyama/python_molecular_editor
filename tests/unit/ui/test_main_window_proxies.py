@@ -140,3 +140,36 @@ def test_draw_molecule_3d_none_mol(app):
     mw.draw_molecule_3d(None)
     assert mw.view_3d_manager.current_mol is None
     mw.view_3d_manager.draw_molecule_3d.assert_called_once_with(None)
+
+
+# ---------------------------------------------------------------------------
+# Last optimization method follows the molecule
+# ---------------------------------------------------------------------------
+
+
+def test_new_molecule_clears_last_optimization_method(app):
+    """A different molecule (a loaded file, a plugin result) drops the old method."""
+    mw = _make_window()
+    mw.view_3d_manager.current_mol = MagicMock()
+    mw.compute_manager.last_successful_optimization_method = "MMFF94s (RDKit)"
+    mw.set_current_molecule(MagicMock())
+    assert mw.compute_manager.last_successful_optimization_method is None
+
+
+def test_same_molecule_keeps_last_optimization_method(app):
+    """Re-setting the current molecule (a redraw) keeps its method."""
+    mw = _make_window()
+    mol = MagicMock()
+    mw.view_3d_manager.current_mol = mol
+    mw.compute_manager.last_successful_optimization_method = "UFF (RDKit)"
+    mw.set_current_molecule(mol)
+    mw.current_mol = mol
+    assert mw.compute_manager.last_successful_optimization_method == "UFF (RDKit)"
+
+
+def test_clearing_the_molecule_clears_last_optimization_method(app):
+    mw = _make_window()
+    mw.view_3d_manager.current_mol = MagicMock()
+    mw.compute_manager.last_successful_optimization_method = "GAFF (Open Babel)"
+    mw.clear_3d_view()
+    assert mw.compute_manager.last_successful_optimization_method is None

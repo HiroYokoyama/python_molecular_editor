@@ -1664,3 +1664,22 @@ def test_ez_labels_skipped_when_3d_perception_fails(mock_parser_host):
     ):
         view3d.show_ez_labels_3d(mol)
     view3d.plotter.add_point_labels.assert_not_called()
+
+
+def test_view_3d_draw_none_clears_last_optimization_method(app, mock_parser_host):
+    """Drawing nothing over a molecule also drops the method that described it."""
+    mock_parser_host.init_manager.settings.update({"background_color": "#000000"})
+    mock_parser_host.edit_3d_manager = MagicMock()
+    mock_parser_host.set_last_successful_optimization_method = MagicMock()
+    view3d = _make_view3d(mock_parser_host)
+    view3d.plotter = MagicMock()
+
+    view3d.current_mol = MagicMock()
+    view3d.draw_standard_3d_style(None)
+    mock_parser_host.set_last_successful_optimization_method.assert_called_once_with(
+        None
+    )
+
+    mock_parser_host.set_last_successful_optimization_method.reset_mock()
+    view3d.draw_standard_3d_style(None)  # nothing was shown: nothing to clear
+    mock_parser_host.set_last_successful_optimization_method.assert_not_called()

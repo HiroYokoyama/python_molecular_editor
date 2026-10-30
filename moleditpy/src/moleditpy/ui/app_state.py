@@ -127,6 +127,9 @@ class StateManager:
         state["constraints_3d"] = _serialize_constraints(
             self.host.edit_3d_manager.constraints_3d
         )
+        state["last_successful_optimization_method"] = getattr(
+            self.host.compute_manager, "last_successful_optimization_method", None
+        )
 
         return state
 
@@ -265,6 +268,15 @@ class StateManager:
                 and self.host.view_3d_manager.current_mol.GetNumAtoms() > 0
             ):
                 self.host.ui_manager.enable_3d_edit_actions(True)
+
+        # Restored after the 3D molecule, whose replacement clears it, and only
+        # with that molecule: a failed 3D restore leaves nothing it describes.
+        with suppress_log(AttributeError, RuntimeError, TypeError):
+            self.host.set_last_successful_optimization_method(
+                loaded_data.get("last_successful_optimization_method")
+                if self.host.view_3d_manager.current_mol is not None
+                else None
+            )
 
         # Update labels after undo/redo
         self.host.edit_3d_manager.update_2d_measurement_labels()
@@ -573,10 +585,6 @@ class StateManager:
 
         # 3D viewer mode
         is_3d_mode = json_data.get("is_3d_viewer_mode", False)
-        # Restore last successful optimization method if present in file
-        method = json_data.get("last_successful_optimization_method", None)
-        with suppress_log(AttributeError, RuntimeError, TypeError):
-            self.host.set_last_successful_optimization_method(method)
 
         # Plugin State Restoration (Phase 3)
         self._preserved_plugin_data = {}  # Reset preserved data on new load
@@ -710,3 +718,12 @@ class StateManager:
             except (RuntimeError, ValueError, TypeError, binascii.Error) as e:
                 logging.warning(f"Could not restore 3D molecular data: {e}")
                 self.host.set_current_molecule(None)
+
+        # Restore the last successful optimization method after the 3D molecule:
+        # setting a new molecule clears the method of the previous one. Without
+        # a restored molecule there is nothing for the method to describe.
+        method = json_data.get("last_successful_optimization_method", None)
+        if self.host.view_3d_manager.current_mol is None:
+            method = None
+        with suppress_log(AttributeError, RuntimeError, TypeError):
+            self.host.set_last_successful_optimization_method(method)
