@@ -6,10 +6,6 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
-### Security
-
-- Upgrade the pinned Pylint lint toolchain to 4.0.9 to prevent arbitrary code execution through a tampered stats cache (CVE-2026-114608).
-
 ## [5.1.1] - 2026-10-29
 
 ### Changed
