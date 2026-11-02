@@ -251,7 +251,7 @@ jobs:
           if ($env:IS_PRERELEASE -ne "true") {
             git add moleditpy/pyproject.toml moleditpy/README.md windows-installer/script/script.iss windows-installer/script/MoleditPy.spec windows-installer/windows_installer.md windows-installer/windows_installer-jp.md macos-installer/script/MoleditPy.spec macos-installer/macos_installer.md macos-installer/macos_installer-jp.md
             if (git diff --staged --name-only) {
-              git commit -m "Bump version to ${env:APP_VERSION}" -m "Assisted-by: GPT-6.1 Sol"
+              git commit -m "Bump version to ${env:APP_VERSION}"
             }
             git push origin HEAD:${{ github.ref_name }}
           }
