@@ -502,6 +502,39 @@ def test_clear_all(window, qtbot):
 
 
 @pytest.mark.gui
+def test_clear_all_without_saving(window, qtbot, monkeypatch):
+    """Clear without Saving: clears a modified document with no prompt."""
+    scene = window.init_manager.scene
+
+    # 1. Draw something and mark the document as modified, so a prompted
+    # clear would normally show the unsaved-changes dialog.
+    window.ui_manager.set_mode("atom_C")
+    scene.create_atom("C", QPointF(0, 0))
+    window.edit_actions_manager.push_undo_state()
+    window.state_manager.has_unsaved_changes = True
+
+    # Any dialog here fails the test: the whole point of the unprompted
+    # clear is resetting without asking (CI cannot answer QMessageBox).
+    def _no_dialog(*args, **kwargs):
+        pytest.fail("QMessageBox.question was called by the unprompted clear")
+
+    monkeypatch.setattr(
+        "PySide6.QtWidgets.QMessageBox.question", _no_dialog, raising=False
+    )
+
+    # 2. Trigger the unprompted clear
+    window.edit_actions_manager.clear_all_without_saving()
+    qtbot.wait(50)
+
+    # 3. Verify state was reset
+    assert len(window.state_manager.data.atoms) == 0
+    assert len(window.state_manager.data.bonds) == 0
+    assert window.view_3d_manager.current_mol is None
+    assert window.state_manager.has_unsaved_changes is False
+    assert len(window.edit_actions_manager.undo_stack) == 1
+
+
+@pytest.mark.gui
 def test_copy_paste(window, qtbot, monkeypatch):
     """Edit: Test for copy & paste operations."""
     scene = window.init_manager.scene

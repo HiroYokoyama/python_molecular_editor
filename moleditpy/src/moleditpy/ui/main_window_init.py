@@ -1386,6 +1386,13 @@ class MainInitManager:
         clear_all_action.triggered.connect(self.host.edit_actions_manager.clear_all)
         edit_menu.addAction(clear_all_action)
 
+        clear_no_save_action = QAction("Clear without Saving", self.host)
+        clear_no_save_action.setShortcut(QKeySequence("Ctrl+Shift+X"))
+        clear_no_save_action.triggered.connect(
+            self.host.edit_actions_manager.clear_all_without_saving
+        )
+        edit_menu.addAction(clear_no_save_action)
+
     def _init_view_menu(self, menu_bar: Any) -> None:
         """Initialize the View menu."""
         view_menu = add_menu(menu_bar, "&View")

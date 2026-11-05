@@ -1078,6 +1078,16 @@ class EditActionsManager:
         self.host.update_status_message("Cleared all data.")
         return True
 
+    def clear_all_without_saving(self) -> bool:
+        """Clear the entire document, skipping the unsaved-changes prompt.
+
+        Thin wrapper over :meth:`clear_all` so the prompted clears (New,
+        Clear All) and the unprompted one share a single implementation.
+        Meant for direct menu wiring: the action label already states the
+        outcome, so asking again would be redundant.
+        """
+        return self.clear_all(skip_check=True)
+
     def clear_2d_editor(self, push_to_undo: bool = True) -> None:
         """Reset the 2D molecule data and clear the scene, optionally pushing undo."""
         # Clear 2D editor (no undo push)

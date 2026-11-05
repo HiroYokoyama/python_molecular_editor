@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- New Edit ▸ "Clear without Saving" action (Ctrl+Shift+X) that resets the 2D scene, 3D view, undo stack and file state in one step, skipping the unsaved-changes prompt shown by New and Clear All. Useful to reset the workspace after importing a file that has no project worth saving.
+
 ## [5.1.3] - 2026-11-05
 
 ### Fixed

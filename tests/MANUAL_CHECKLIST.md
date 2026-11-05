@@ -37,6 +37,7 @@ This comprehensive checklist is designed to verify that **MoleditPy** functions 
 - [ ] **Clean Up**: Does the 2D Clean Up function correctly organize the structure coordinates?
 - [ ] **Hydrogen Management**: Do the "Add Hydrogens" and "Remove Hydrogens" functions update the graph correctly?
 - [ ] **Clear All**: Does the "Clear All" function successfully wipe the canvas?
+- [ ] **Clear without Saving**: Does Edit ▸ "Clear without Saving" wipe the canvas immediately, with no unsaved-changes dialog, while "Clear All" still asks when there are unsaved changes?
 
 ### Templates
 - [ ] **Standard Templates**: Can standard rings (e.g., Benzene) be placed and merged with existing structures?
