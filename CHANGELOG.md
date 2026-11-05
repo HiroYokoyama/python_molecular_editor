@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [5.1.3] - 2026-11-05
+
+### Fixed
+
+- A file dragged onto the main window is always taken as a copy. Holding Shift during a drag from Windows Explorer proposes a move, and accepting that could make Explorer delete the original file. A drag that offers only a move is now refused.
+
 ## [5.1.2] - 2026-10-31
 
 ### Fixed

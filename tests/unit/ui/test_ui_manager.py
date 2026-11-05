@@ -1,6 +1,6 @@
 """Unit tests for UIManager robustness and edge cases."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from moleditpy.ui.ui_manager import UIManager
 
 
@@ -385,7 +385,8 @@ def test_drag_enter_accepts_known_extension():
     ui = _make_ui_manager()
     event = _drag_event_with_files("C:/mols/foo.mol")
     ui.handle_drag_enter_event(event)
-    event.acceptProposedAction.assert_called_once()
+    event.setDropAction.assert_called_once_with(Qt.DropAction.CopyAction)
+    event.accept.assert_called_once()
 
 
 def test_drag_enter_ignores_unknown_extension_without_plugins():
@@ -394,7 +395,7 @@ def test_drag_enter_ignores_unknown_extension_without_plugins():
     event = _drag_event_with_files("C:/mols/foo.docx")
     ui.handle_drag_enter_event(event)
     event.ignore.assert_called_once()
-    event.acceptProposedAction.assert_not_called()
+    event.accept.assert_not_called()
 
 
 def test_drag_enter_accepts_unknown_extension_with_plugin_handler():
@@ -402,7 +403,8 @@ def test_drag_enter_accepts_unknown_extension_with_plugin_handler():
     ui.host.plugin_manager.drop_handlers = [{"callback": MagicMock()}]
     event = _drag_event_with_files("C:/mols/foo.custom")
     ui.handle_drag_enter_event(event)
-    event.acceptProposedAction.assert_called_once()
+    event.setDropAction.assert_called_once_with(Qt.DropAction.CopyAction)
+    event.accept.assert_called_once()
 
 
 def test_drag_enter_ignores_null_mime():
@@ -422,7 +424,8 @@ def test_drop_project_file_opens_project():
     ui.host.io_manager.open_project_file.assert_called_once_with(
         file_path="C:/mols/session.pmeprj"
     )
-    event.acceptProposedAction.assert_called_once()
+    event.setDropAction.assert_called_once_with(Qt.DropAction.CopyAction)
+    event.accept.assert_called_once()
 
 
 def test_drop_mol_file_on_2d_loads_into_editor():
@@ -471,7 +474,8 @@ def test_drop_plugin_handler_wins_over_builtin():
     ui.handle_drop_event(event)
     handler.assert_called_once_with("C:/mols/mol.mol")
     ui.host.io_manager.load_mol_file.assert_not_called()
-    event.acceptProposedAction.assert_called_once()
+    event.setDropAction.assert_called_once_with(Qt.DropAction.CopyAction)
+    event.accept.assert_called_once()
 
 
 def test_drop_broken_plugin_handler_falls_through_to_builtin():
@@ -706,3 +710,93 @@ def test_close_event_ignores_when_handler_blocks():
     mgr.closeEvent(event)
     event.ignore.assert_called_once()
     event.accept.assert_not_called()
+
+
+def _real_file_event(event_type, tmp_path, actions, name="a.mol"):
+    """A real Qt event with Shift held, the way Explorer asks for a move."""
+    from PySide6.QtCore import QMimeData, QPoint, QPointF, QUrl
+    from PySide6.QtGui import QDragEnterEvent, QDropEvent
+
+    path = tmp_path / name
+    path.write_text("x", encoding="utf-8")
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(path))])
+    shift = Qt.KeyboardModifier.ShiftModifier
+    left = Qt.MouseButton.LeftButton
+    if event_type == "drag":
+        event = QDragEnterEvent(QPoint(1, 1), actions, mime, left, shift)
+    else:
+        event = QDropEvent(QPointF(1, 1), actions, mime, left, shift)
+    # The event does not own its mime data, which has to outlive it.
+    event.keepalive = mime
+    # The form QUrl gives back: forward slashes on Windows too.
+    return event, path.as_posix()
+
+
+COPY_OR_MOVE = Qt.DropAction.CopyAction | Qt.DropAction.MoveAction
+
+
+def test_a_shift_drag_is_shown_as_a_copy(qapp, tmp_path):
+    event, _path = _real_file_event("drag", tmp_path, COPY_OR_MOVE)
+    assert event.proposedAction() == Qt.DropAction.MoveAction
+
+    manager = MagicMock()
+    manager._accept_as_copy = UIManager._accept_as_copy
+    UIManager.handle_drag_enter_event(manager, event)
+
+    assert event.isAccepted()
+    assert event.dropAction() == Qt.DropAction.CopyAction
+
+
+def test_a_shift_drop_is_a_copy_not_a_move(qapp, tmp_path):
+    event, path = _real_file_event("drop", tmp_path, COPY_OR_MOVE, "a.pmeprj")
+    assert event.proposedAction() == Qt.DropAction.MoveAction
+    host = MagicMock()
+    host.plugin_manager.drop_handlers = []
+    manager = MagicMock(host=host)
+    manager._accept_as_copy = UIManager._accept_as_copy
+
+    with patch("moleditpy.ui.ui_manager.QTimer"):
+        UIManager.handle_drop_event(manager, event)
+
+    host.io_manager.open_project_file.assert_called_once_with(file_path=path)
+    assert event.isAccepted()
+    assert event.dropAction() == Qt.DropAction.CopyAction
+
+
+def test_a_plugin_claimed_shift_drop_is_a_copy(qapp, tmp_path):
+    event, path = _real_file_event("drop", tmp_path, COPY_OR_MOVE, "list.pmejdb")
+    callback = MagicMock(return_value=True)
+    host = MagicMock()
+    host.plugin_manager.drop_handlers = [{"callback": callback}]
+    manager = MagicMock(host=host)
+    manager._accept_as_copy = UIManager._accept_as_copy
+
+    UIManager.handle_drop_event(manager, event)
+
+    callback.assert_called_once_with(path)
+    assert event.dropAction() == Qt.DropAction.CopyAction
+
+
+def test_a_source_that_can_only_move_is_refused_before_anything_opens(qapp, tmp_path):
+    event, _path = _real_file_event(
+        "drop", tmp_path, Qt.DropAction.MoveAction, "a.pmeprj"
+    )
+    host = MagicMock()
+    manager = MagicMock(host=host)
+    manager._accept_as_copy = UIManager._accept_as_copy
+
+    UIManager.handle_drop_event(manager, event)
+
+    assert not event.isAccepted()
+    host.io_manager.open_project_file.assert_not_called()
+
+
+def test_a_drag_that_can_only_move_is_refused(qapp, tmp_path):
+    event, _path = _real_file_event("drag", tmp_path, Qt.DropAction.MoveAction)
+    manager = MagicMock()
+    manager._accept_as_copy = UIManager._accept_as_copy
+
+    UIManager.handle_drag_enter_event(manager, event)
+
+    assert not event.isAccepted()
