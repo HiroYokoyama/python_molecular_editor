@@ -1329,7 +1329,8 @@ def test_drag_drop_mol_file_on_3d_view(window, qtbot, monkeypatch):
 
     # 5. Verify load_mol_file_for_3d_viewing was called
     mock_load_3d.assert_called_once_with(file_path="/fake/drop.mol")
-    mock_event.acceptProposedAction.assert_called_once()
+    mock_event.setDropAction.assert_called_once_with(Qt.DropAction.CopyAction)
+    mock_event.accept.assert_called_once()
 
 
 @pytest.mark.gui
@@ -1361,7 +1362,8 @@ def test_drag_drop_mol_file_on_2d_view(window, qtbot, monkeypatch):
 
     # 5. Verify load_mol_file was called
     mock_load_2d.assert_called_once_with(file_path="/fake/drop.mol")
-    mock_event.acceptProposedAction.assert_called_once()
+    mock_event.setDropAction.assert_called_once_with(Qt.DropAction.CopyAction)
+    mock_event.accept.assert_called_once()
 
 
 @pytest.mark.gui
