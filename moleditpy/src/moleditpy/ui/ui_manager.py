@@ -13,7 +13,7 @@ DOI: 10.5281/zenodo.17268532
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import vtk
 
@@ -371,7 +371,7 @@ class UIManager(QObject):
             logging.debug("Style watchdog check failed", exc_info=True)
 
     @staticmethod
-    def _accept_as_copy(event) -> None:
+    def _accept_as_copy(event: Union[QDragEnterEvent, QDropEvent]) -> None:
         """Accept a file drag as a copy, or refuse it if the source cannot copy.
 
         Never acceptProposedAction(): Shift during a drag from Explorer proposes
