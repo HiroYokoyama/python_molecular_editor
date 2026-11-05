@@ -790,3 +790,13 @@ def test_a_source_that_can_only_move_is_refused_before_anything_opens(qapp, tmp_
 
     assert not event.isAccepted()
     host.io_manager.open_project_file.assert_not_called()
+
+
+def test_a_drag_that_can_only_move_is_refused(qapp, tmp_path):
+    event, _path = _real_file_event("drag", tmp_path, Qt.DropAction.MoveAction)
+    manager = MagicMock()
+    manager._accept_as_copy = UIManager._accept_as_copy
+
+    UIManager.handle_drag_enter_event(manager, event)
+
+    assert not event.isAccepted()
