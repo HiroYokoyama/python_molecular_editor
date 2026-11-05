@@ -370,6 +370,20 @@ class UIManager(QObject):
         except (AttributeError, RuntimeError):
             logging.debug("Style watchdog check failed", exc_info=True)
 
+    @staticmethod
+    def _accept_as_copy(event) -> None:
+        """Accept a file drag as a copy, or refuse it if the source cannot copy.
+
+        Never acceptProposedAction(): Shift during a drag from Explorer proposes
+        a move, and accepting one tells Explorer the file now lives here, so it
+        removes the original. MoleditPy only ever reads a dropped file.
+        """
+        if event.possibleActions() & Qt.DropAction.CopyAction:
+            event.setDropAction(Qt.DropAction.CopyAction)
+            event.accept()
+        else:
+            event.ignore()
+
     def handle_drag_enter_event(self, event: QDragEnterEvent) -> None:
         """Internal handler for drag enter event (bypasses PyQt type checks in tests)."""
         mime_data = event.mimeData()
@@ -384,13 +398,13 @@ class UIManager(QObject):
             file_lower = url.toLocalFile().lower()
             # 1. Built-in extensions
             if file_lower.endswith((".pmeraw", ".pmeprj", ".mol", ".sdf", ".xyz")):
-                event.acceptProposedAction()
+                self._accept_as_copy(event)
                 return
 
             # 2. Plugin drop handlers (accept if any handlers exist)
             plugin_mgr = getattr(self.host, "plugin_manager", None)
             if plugin_mgr and getattr(plugin_mgr, "drop_handlers", []):
-                event.acceptProposedAction()
+                self._accept_as_copy(event)
                 return
 
         event.ignore()
@@ -406,13 +420,17 @@ class UIManager(QObject):
         if not file_path:
             event.ignore()
             return
+        # Before anything opens: a source that can only move is refused outright.
+        if not event.possibleActions() & Qt.DropAction.CopyAction:
+            event.ignore()
+            return
 
         # 1. Plugin Handlers
         plugin_mgr = getattr(self.host, "plugin_manager", None)
         for handler_def in getattr(plugin_mgr, "drop_handlers", []):
             try:
                 if handler_def["callback"](file_path):
-                    event.acceptProposedAction()
+                    self._accept_as_copy(event)
                     return
             except Exception:  # plugins have full app access; catch everything to prevent app-wide crash
                 logging.warning("Error in plugin drop handler", exc_info=True)
@@ -422,7 +440,7 @@ class UIManager(QObject):
         if file_lower.endswith((".pmeraw", ".pmeprj")):
             self.host.io_manager.open_project_file(file_path=file_path)
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
-            event.acceptProposedAction()
+            self._accept_as_copy(event)
         elif file_lower.endswith((".mol", ".sdf")):
             # Robust check for drop target using childAt
             drag_point = event.position().toPoint()
@@ -450,11 +468,11 @@ class UIManager(QObject):
                 self.host.io_manager.load_mol_file(file_path=file_path)
                 QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
 
-            event.acceptProposedAction()
+            self._accept_as_copy(event)
         elif file_lower.endswith(".xyz"):
             self.host.io_manager.load_xyz_for_3d_viewing(file_path=file_path)
             QTimer.singleShot(100, self.host.view_3d_manager.fit_to_view)
-            event.acceptProposedAction()
+            self._accept_as_copy(event)
         else:
             self.host.statusBar().showMessage(f"Unsupported file type: {file_path}")
             event.ignore()
