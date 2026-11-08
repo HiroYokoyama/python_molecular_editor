@@ -82,7 +82,72 @@ except Exception as e:
 * **Avoid Broad Exceptions:** Minimize the use of `try-except Exception` blocks. Always prefer granular, specific exception types (e.g., `AttributeError`, `ValueError`, `RuntimeError`, `OSError`) to prevent masking unexpected bugs. Use broad `Exception` only at the highest level of a UI slot or when interfacing with unpredictable C-extensions.
 * **Manual Testing:** For UI changes, you must verify the behavior using the **Manual Test Checklist**. Please confirm in your PR description that you have manually verified the fix.
 
-## 5. Pull Request Process
+## 5. Core Feature Acceptance Policy
+
+MoleditPy follows the design philosophy:
+
+**"Simplicity at the Core. Limitless Potential in the Extensions."**
+
+We welcome contributions that improve MoleditPy. However, not every useful feature needs to become part of the core application.
+
+Our goal is to keep the core simple, stable, safe, and maintainable while allowing users to customize and extend their workflows through plugins.
+
+### What Belongs in the Core?
+
+We generally welcome contributions that:
+
+- Fix bugs or improve stability, performance, and reliability.
+- Improve essential molecular editing, visualization, and file handling functionality.
+- Improve the usability, accessibility, or safety of existing features.
+- Refactor code to improve maintainability without introducing unnecessary complexity.
+- Improve testing, documentation, or development infrastructure.
+- Enhance the plugin system or provide broadly useful APIs for extensions.
+
+Core features should provide a clear benefit to the application's fundamental functionality and remain safe and predictable for general users.
+
+### What Belongs in a Plugin?
+
+Features that are useful primarily for specific users or workflows are generally better suited as plugins.
+
+Examples include:
+
+- Specialized scientific calculations, analyses, or visualizations.
+- Integrations with external scientific software.
+- Workflow-specific automation and productivity tools.
+- Optional UI customizations or specialized shortcuts.
+
+Such features can still be valuable contributions to the MoleditPy ecosystem, even if they are not included in the core.
+
+### How Are New Features Evaluated?
+
+When reviewing feature proposals and pull requests, maintainers consider:
+
+1. **General usefulness:** Does the feature improve MoleditPy's fundamental functionality?
+2. **Safety and usability:** Is the feature appropriate and predictable for general users?
+3. **Maintainability:** Can the feature be maintained without introducing unnecessary long-term complexity?
+4. **Extensibility:** Could the feature be implemented as a plugin instead?
+
+These are guidelines rather than strict rules. Features do not need to be used by every user to justify inclusion in the core.
+
+Even well-implemented and thoroughly tested features may be better suited as plugins.
+
+### Plugin Flexibility and Compatibility
+
+Plugin developers are free to access internal core APIs when necessary. However, internal APIs are not guaranteed to remain stable across MoleditPy versions.
+
+Plugins that depend on internal implementation details may require updates when the core changes.
+
+Contributors are also welcome to propose improvements to the public plugin API when they would provide broadly reusable functionality.
+
+### Before Submitting a Feature PR
+
+For significant new features, we encourage contributors to open an Issue to discuss whether the feature belongs in the core or would be better implemented as a plugin.
+
+A decision not to merge a feature into the core does not necessarily mean the feature is unwanted or poorly implemented. It may simply be better suited to an optional extension.
+
+**We value all contributions and aim to keep MoleditPy both easy to use and flexible enough to support diverse scientific workflows.**
+
+## 6. Pull Request Process
 
 1.  **Branching:** Create a new branch for your feature or fix (e.g., `feature/new-bond-algo` or `fix/dialog-layout`).
 2.  **Verification:**
@@ -91,7 +156,7 @@ except Exception as e:
 3.  **Description:** Describe your changes clearly. If it's a UI change, screenshots are highly appreciated.
 4.  **Review:** Wait for a maintainer to review your code. We may ask for changes to meet the Pylint score or logging requirements.
 
-## 6. License
+## 7. License
 
 By contributing, you agree that your contributions will be licensed under the project's [LICENSE](./LICENSE).
 
