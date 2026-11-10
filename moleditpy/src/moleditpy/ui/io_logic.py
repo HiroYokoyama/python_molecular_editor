@@ -1290,9 +1290,9 @@ class IOManager:
         box.setText("This file is in the legacy raw (pickle) format.")
         box.setInformativeText(
             f"{os.path.basename(file_path)}\n\n"
-            "Raw project files can execute arbitrary code when opened. "
-            "Only open .pmeraw files that you created yourself or received "
-            "from a source you trust.\n\n"
+            "Raw project files are a legacy binary format. MoleditPy refuses "
+            "any code embedded in them, but only open .pmeraw files that you "
+            "created yourself or received from a source you trust.\n\n"
             "The .pmeprj format is safe and is recommended instead."
         )
         open_button = box.addButton("Open", QMessageBox.ButtonRole.AcceptRole)
