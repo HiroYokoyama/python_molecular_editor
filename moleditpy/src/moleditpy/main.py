@@ -231,10 +231,6 @@ def setup_logging() -> None:
 
 def main() -> None:
     """Parse CLI arguments, configure logging, and launch the GUI."""
-    # Here rather than in __main__, which the frozen launcher does not run.
-    print("-----------------------------------------------------")
-    print("MoleditPy - A Python-based molecular editing software")
-    print("-----------------------------------------------------\n", flush=True)
     setup_logging()
 
     if sys.platform == "win32":
@@ -262,6 +258,10 @@ def main() -> None:
     )
     # parse_known_args so Qt's own argv flags (e.g. -platform) are passed through
     args, remaining = parser.parse_known_args()
+
+    print("-----------------------------------------------------")
+    print("MoleditPy - A Python-based molecular editing software")
+    print("-----------------------------------------------------\n", flush=True)
 
     if args.install_plugin:
         plugin_path = os.path.abspath(args.install_plugin)
