@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The start-up banner appears promptly again. Since 5.2.0 it was printed from `main()` — so the application bundles and the `moleditpy` command show it — but only after the whole UI tree had been imported, which delayed it by seconds. `MainWindow` is now imported after argument parsing, just before it is instantiated, so the banner follows parsing directly and `--version`/`--help` and the headless `--install-plugin` path no longer pay the UI import cost at all.
+
 ## [5.2.0] - 2026-11-10
 
 ### Added

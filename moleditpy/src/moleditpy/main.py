@@ -29,7 +29,23 @@ from .utils.constants import VERSION
 from PySide6.QtCore import QtMsgType, QThread, QTimer, qInstallMessageHandler
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from .ui.main_window import MainWindow
+# MainWindow is NOT imported here: its UI tree (pyvista/VTK and every UI
+# module) costs seconds to import, which would delay both the startup
+# banner printed in main() and the --version/--help exits. main() imports
+# it after argument parsing, just before it is instantiated. The module
+# __getattr__ below keeps ``moleditpy.main.MainWindow`` resolving lazily
+# for any existing code that imports it from here.
+
+
+def __getattr__(name: str) -> Any:
+    """Resolve ``MainWindow`` lazily (PEP 562); see the note above."""
+    if name == "MainWindow":
+        from .ui.main_window import MainWindow
+
+        globals()["MainWindow"] = MainWindow  # cache like a real import
+        return MainWindow
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 _QT_LOG_LEVEL = {
     QtMsgType.QtDebugMsg: logging.DEBUG,
@@ -322,6 +338,11 @@ def main() -> None:
         else:
             print("Installation aborted.")
             sys.exit(0)
+
+    # Deferred until after the banner and argument parsing (see the note at
+    # the top of this module): --version/--help have already exited and the
+    # headless --install-plugin path has already returned by this point.
+    from .ui.main_window import MainWindow
 
     app = QApplication([sys.argv[0]] + remaining)
     qInstallMessageHandler(_qt_message_handler)
