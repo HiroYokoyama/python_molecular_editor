@@ -17,7 +17,7 @@ All notable changes to this project are recorded here. The format follows
 
 - The Windows and macOS application bundles print the start-up banner in the terminal again, as does the `moleditpy` command. It was printed only by `python -m moleditpy`.
 - **File > Import** with a plugin opener now shows a status bar message when the plugin fails or declines the file, instead of doing nothing.
-- The start-up banner now appears immediately after argument parsing. Since 5.2.0 it was delayed by the full UI import cost; `MainWindow` is now imported lazily just before it is instantiated.
+- The start-up banner now appears immediately after argument parsing. `MainWindow` is imported lazily just before it is instantiated, so the banner is no longer delayed by the full UI import cost.
 
 ## [5.1.3] - 2026-11-05
 
