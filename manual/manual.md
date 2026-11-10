@@ -378,7 +378,7 @@ Perform various file operations from the `File` menu in the menu bar.
 ### 6.1. Project Files (.pmeprj (Python Molecular Editor Project File))
 
   * **New (Ctrl+N):** Clears all current work and starts a new session. A confirmation dialog will appear if there are unsaved changes.
-  * **Open Project... (Ctrl+O):** Opens a previously saved project file (.pmeprj or .pmeraw). Because a .pmeraw file is a Python pickle that can execute arbitrary code when it is read, opening one always asks for confirmation first (`Cancel` is the default button) — from the menu, from a drag-and-drop, and from the command line alike. Only open .pmeraw files you created yourself or received from a source you trust.
+  * **Open Project... (Ctrl+O):** Opens a previously saved project file (.pmeprj or .pmeraw). A .pmeraw file is a Python pickle; MoleditPy reads it with a restricted loader that rejects any code embedded in the file, but because it is a legacy format opening one always asks for confirmation first (`Cancel` is the default button) — from the menu, from a drag-and-drop, and from the command line alike. Only open .pmeraw files you created yourself or received from a source you trust.
   * **Save Project (Ctrl+S):** Overwrites the current project file with the current work (2D structure, generated 3D structure, etc.). If no file name is set, the "Save As" dialog will open. **.pmeprj (JSON format) is the recommended format.** A file opened from .pmeraw is treated as read-only: `Ctrl+S` never writes the legacy pickle back, and opens "Save As" (which only writes .pmeprj) instead.
   * **Save Project As... (Ctrl+Shift+S):** Saves the current work as a project file (.pmeprj) with a new name or location.
 
