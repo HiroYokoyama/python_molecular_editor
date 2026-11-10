@@ -50,7 +50,11 @@ from rdkit.Chem import (
 
 from ..utils.sdf_records import read_sdf_records
 from ..utils.finite_float import finite_float
-from ..core.project_validation import validate_project_data, validate_raw_project_data
+from ..core.project_validation import (
+    load_raw_project,
+    validate_project_data,
+    validate_raw_project_data,
+)
 from .sdf_record_dialog import SdfRecordDialog
 from ..utils.constants import (
     COVALENT_RADII,
@@ -1324,7 +1328,7 @@ class IOManager:
         try:
             # Unpickle before clearing, so an unreadable file keeps the document.
             with open(file_path, "rb") as f:
-                loaded_data = pickle.load(f)
+                loaded_data = load_raw_project(f)
             validate_raw_project_data(loaded_data)
             if not self.host.edit_actions_manager.clear_all(skip_check=True):
                 return

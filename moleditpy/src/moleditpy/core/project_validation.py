@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import base64
 import math
-from typing import Any
+import pickle
+from typing import Any, BinaryIO
 
 import numpy as np
 from rdkit import Chem
+
+from .molecular_data import PointTuple
 
 
 def _integer(value: Any, minimum: int = 0) -> int:
@@ -93,6 +96,36 @@ def validate_project_data(data: dict[str, Any]) -> None:
         seen.add(index)
         for axis in ("x", "y", "z"):
             _coordinate(atom.get(axis, 0.0))
+
+
+# The only non-builtin type a raw snapshot contains: 2D atom positions are
+# PointTuple, a plain tuple subclass whose reconstruction runs no user code.
+_RAW_PROJECT_CLASSES: dict[tuple[str, str], type] = {
+    ("moleditpy.core.molecular_data", "PointTuple"): PointTuple,
+}
+
+
+class _RestrictedUnpickler(pickle.Unpickler):
+    """Unpickler that refuses every global reference except PointTuple.
+
+    A raw project snapshot is otherwise built from dicts, lists, tuples,
+    strings, bytes and numbers, none of which needs ``find_class``. Any other
+    reference is a pickle trying to import a callable, which is the
+    arbitrary-code-execution vector of the format.
+    """
+
+    def find_class(self, module: str, name: str) -> Any:
+        try:
+            return _RAW_PROJECT_CLASSES[(module, name)]
+        except KeyError:
+            raise pickle.UnpicklingError(
+                f"Raw project files may not reference {module}.{name}"
+            ) from None
+
+
+def load_raw_project(stream: BinaryIO) -> Any:
+    """Unpickle a .pmeraw stream without allowing any imports or calls."""
+    return _RestrictedUnpickler(stream).load()
 
 
 def validate_raw_project_data(data: Any) -> None:
