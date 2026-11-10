@@ -1267,4 +1267,4 @@ Thank you for contributing to the MoleditPy ecosystem! If you encounter any bugs
 
 ---
 
-*Documents the MoleditPy 5 plugin API and PySide6 migration. Updated 2026-10-19.*
+*Documents the MoleditPy 5 plugin API and PySide6 migration, as of MoleditPy 5.2.0. Updated 2026-11-10.*
