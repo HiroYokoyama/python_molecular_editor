@@ -338,7 +338,7 @@ def main() -> None:
     app = QApplication([sys.argv[0]] + remaining)
     qInstallMessageHandler(_qt_message_handler)
     # Resolves through __getattr__ unless monkeypatched (e.g. by launch-probe)
-    MainWindow = getattr(sys.modules[__name__], "MainWindow")
+    MainWindow = sys.modules[__name__].MainWindow
     window = MainWindow(initial_file=args.file, safe_mode=args.safe)
     window.show()
 
