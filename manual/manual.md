@@ -583,7 +583,7 @@ You can explore and download official plugins from the **Plugin Explorer**: [htt
 
 ## 11\. Version / License
 
-  * **Version:** 5.1
+  * **Version:** 5.2
   * **Author:** Hiromichi Yokoyama
   * **License:** LGPL-3.0-or-later
   * **Repository:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

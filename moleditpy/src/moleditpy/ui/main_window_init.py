@@ -308,8 +308,10 @@ class MainInitManager:
             for opener_info in openers:
                 try:
                     callback = opener_info["callback"]
-                    # Try to call the opener
-                    callback(file_path)
+                    # Only an explicit False declines the file; None, the
+                    # documented return of older plugins, still means handled.
+                    if callback(file_path) is False:
+                        continue
 
                     self.current_file_path = file_path
                     self.host.state_manager.update_window_title()
