@@ -348,3 +348,25 @@ def test_read_startup_log_settings_non_object_json(tmp_path, content):
     with patch("os.path.expanduser", return_value=str(tmp_path)):
         result = _read_startup_log_settings()
     assert result == (False, False)
+
+def test_main_module_getattr_lazy_imports_mainwindow(monkeypatch):
+    """moleditpy.main.MainWindow resolves lazily via PEP 562."""
+    import moleditpy.main as main_mod
+
+    # If it was already cached in globals, delete it temporarily for the test
+    monkeypatch.delattr(main_mod, "MainWindow", raising=False)
+
+    cls = main_mod.MainWindow
+    from moleditpy.ui.main_window import MainWindow as RealMainWindow
+
+    assert cls is RealMainWindow
+    assert main_mod.MainWindow is RealMainWindow
+
+
+def test_main_module_getattr_raises_on_unknown_attribute():
+    """Accessing an unknown attribute raises AttributeError."""
+    import moleditpy.main as main_mod
+
+    with pytest.raises(AttributeError, match="has no attribute 'NoSuchAttribute'"):
+        _ = main_mod.NoSuchAttribute
+

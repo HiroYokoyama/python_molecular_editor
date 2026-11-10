@@ -29,7 +29,19 @@ from .utils.constants import VERSION
 from PySide6.QtCore import QtMsgType, QThread, QTimer, qInstallMessageHandler
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from .ui.main_window import MainWindow
+# MainWindow is imported lazily in main() to avoid paying its heavy UI
+# import cost on --version/--help and --install-plugin exits.
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy-import MainWindow on first access (PEP 562)."""
+    if name == "MainWindow":
+        from .ui.main_window import MainWindow
+
+        globals()["MainWindow"] = MainWindow  # cache like a real import
+        return MainWindow
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 _QT_LOG_LEVEL = {
     QtMsgType.QtDebugMsg: logging.DEBUG,
@@ -325,6 +337,8 @@ def main() -> None:
 
     app = QApplication([sys.argv[0]] + remaining)
     qInstallMessageHandler(_qt_message_handler)
+    # Resolves through __getattr__ unless monkeypatched (e.g. by launch-probe)
+    MainWindow = sys.modules[__name__].MainWindow
     window = MainWindow(initial_file=args.file, safe_mode=args.safe)
     window.show()
 
