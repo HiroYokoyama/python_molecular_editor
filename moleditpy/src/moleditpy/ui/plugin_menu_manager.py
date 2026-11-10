@@ -656,9 +656,14 @@ class PluginMenuManager:
                         ext = os.path.splitext(fpath)[1].lower()
                         if ext in m:
                             try:
-                                m[ext](fpath)
+                                handled = m[ext](fpath)
                             except Exception:
                                 logging.exception("Plugin file opener error (%s)", n)
+                                handled = False
+                            if handled is False:
+                                self._im.host.statusBar().showMessage(
+                                    f"{n} could not open {os.path.basename(fpath)}"
+                                )
                                 return
                             self._im.current_file_path = fpath
                             self._im.host.state_manager.update_window_title()

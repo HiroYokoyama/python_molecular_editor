@@ -10,10 +10,6 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-print("-----------------------------------------------------")
-print("MoleditPy - A Python-based molecular editing software")
-print("-----------------------------------------------------\n")
-
 try:
     from .main import main  # type: ignore
 except ImportError:

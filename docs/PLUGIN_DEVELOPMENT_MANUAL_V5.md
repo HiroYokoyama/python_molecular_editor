@@ -159,7 +159,8 @@ The `context` object passed to `initialize(context)` is your safe proxy to the a
 | **UI** | `refresh_ui()` | Sync info panel, undo buttons, and title bar after an edit |
 | **UI** | `set_3d_features_enabled(bool)` | Enable / disable the 3D panel and related actions |
 | **UI** | `set_analysis_enabled(bool)` | Enable / disable the Analysis menu action |
-| **Files** | `register_file_opener(ext, cb, priority)` | Handle a file extension (Import + CLI) |
+| **Files** | `register_file_opener(ext, cb, priority)` | Handle a file extension (Import + CLI); return `False` to decline |
+| **App** | `moleditpy_version` | Version of the running application (5.2.0+) |
 | **Files** | `register_drop_handler(cb, priority)` | Handle drag-and-drop onto the window |
 | **Files** | `set_current_file(path)` | Name *path* in the window title as the open file |
 | **Files** | `get_current_file()` | Path the application currently has open, or `None` |
@@ -322,7 +323,7 @@ These methods allow your plugin to handle external files and drag-and-drop event
 #### `register_file_opener(extension, callback, priority=0)`
 Register a handler for opening a specific file type. Used for the **File > Import** menu and **Command Line** startup. If multiple plugins register the same extension, all appear in the Import menu as separate entries (e.g., "Import .xyz (Plugin A)"). For CLI/open commands, the plugin with the highest priority wins.
 - **extension** (`str`): File extension including the dot (e.g., `".xyz"`, `".cub"`).
-- **callback** (`Callable[[str], None]`): Function that receives the absolute file path and handles the loading logic.
+- **callback** (`Callable[[str], Optional[bool]]`): Function that receives the absolute file path and handles the loading logic. Return `False` to decline a file that is not yours (an extension such as `.out` or `.log` is shared by many programs): the next opener, or the built-in loader, is then tried. Any other return value, including `None`, means the file was handled.
 - **priority** (`int`): Higher values run first. Use **negative values** (e.g., `-1`) for fallback handlers that only run when no other plugin claims the file.
 
 ```python
@@ -330,6 +331,27 @@ context.register_file_opener(".xyz", open_xyz)          # standard
 context.register_file_opener(".xyz", my_opener, priority=100)   # takes precedence
 context.register_file_opener(".xyz", fallback, priority=-1)     # last resort
 ```
+
+Declining with `False` needs MoleditPy 5.2.0. An older host treats `False` as handled, and there the only way to pass a file on is to raise an exception, which the host logs with a traceback. A plugin that supports both checks `moleditpy_version`, which older hosts do not have:
+
+```python
+def _can_decline(context):
+    version = getattr(context, "moleditpy_version", "")
+    try:
+        return tuple(int(part) for part in version.split(".")[:2]) >= (5, 2)
+    except ValueError:
+        return False
+
+def open_out(path):
+    if not is_my_format(path):
+        if _can_decline(context):
+            return False
+        raise ValueError(f"{path} is not my format")
+    load(path)
+```
+
+#### `moleditpy_version`
+The version of the running application as a string, e.g. `"5.2.0"`. Added in 5.2.0; read it with `getattr(context, "moleditpy_version", "")` when the plugin also runs on older hosts.
 
 #### `register_drop_handler(callback, priority=0)`
 Register a handler for files dropped onto the main 2D/3D editor window. **This is distinct from `register_file_opener`** — drop handlers are only triggered by drag-and-drop, not by the Import menu or command-line file arguments. Register both if you need both paths.

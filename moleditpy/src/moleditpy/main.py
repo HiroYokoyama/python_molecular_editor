@@ -231,6 +231,10 @@ def setup_logging() -> None:
 
 def main() -> None:
     """Parse CLI arguments, configure logging, and launch the GUI."""
+    # Here rather than in __main__, which the frozen launcher does not run.
+    print("-----------------------------------------------------")
+    print("MoleditPy - A Python-based molecular editing software")
+    print("-----------------------------------------------------\n", flush=True)
     setup_logging()
 
     if sys.platform == "win32":

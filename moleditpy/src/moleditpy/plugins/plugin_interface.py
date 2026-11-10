@@ -186,6 +186,14 @@ class PluginContext:
         """
         return self._manager.get_main_window()
 
+    @property
+    def moleditpy_version(self) -> str:
+        """Version of the running application, e.g. "5.2.0" (5.2.0 and later)."""
+        # Imported here: plugin test suites import this module without Qt or RDKit.
+        from ..utils.constants import VERSION
+
+        return VERSION
+
     def show_status_message(self, message: str, timeout: int = 3000) -> None:
         """
         Display a temporary message in the status bar of the main window.
@@ -308,15 +316,21 @@ class PluginContext:
         )
 
     def register_file_opener(
-        self, extension: str, callback: Callable[[str], None], priority: int = 0
+        self,
+        extension: str,
+        callback: Callable[[str], Optional[bool]],
+        priority: int = 0,
     ) -> None:
         """
         Register a handler for opening a specific file extension.
 
         Args:
             extension: File extension including dot, e.g. ".xyz".
-            callback: Function taking (file_path) -> None.
+            callback: Function taking (file_path) -> Optional[bool].
                       Should load the file into the main window.
+                      Return False to decline the file, so that the next
+                      opener or the built-in loader is tried (5.2.0 and
+                      later). Any other value, including None, means handled.
             priority: Higher priority handlers are tried first (default 0).
         """
         self._manager.register_file_opener(

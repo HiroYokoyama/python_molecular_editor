@@ -187,6 +187,13 @@ class TestPluginInterface:
         assert isinstance(controller, Plugin3DController)
         assert controller._mw == mock_main_window
 
+    def test_moleditpy_version_is_the_application_version(self, mock_manager):
+        from moleditpy.utils.constants import VERSION
+
+        version = PluginContext(mock_manager, "TestPlugin").moleditpy_version
+        assert version == VERSION
+        assert version.split(".")[0].isdigit()
+
     def test_get_main_window(self, mock_manager, mock_main_window):
         """Test get_main_window delegation."""
         mock_manager.get_main_window.return_value = mock_main_window

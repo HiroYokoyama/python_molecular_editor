@@ -27,6 +27,67 @@ def test_load_command_line_file_with_plugin(window, monkeypatch):
     assert window.init_manager.current_file_path == test_file
 
 
+def _open_with(window, monkeypatch, callbacks, name="job.testext"):
+    """Run the command-line open with *callbacks* as the openers, in order."""
+    window.plugin_manager.file_openers = {
+        ".testext": [
+            {"callback": cb, "plugin": f"Plugin{i}"} for i, cb in enumerate(callbacks)
+        ]
+    }
+    monkeypatch.setattr(
+        os.path, "exists", lambda x: True if x == name else os.path.exists(x)
+    )
+    window.init_manager.current_file_path = None
+    window.init_manager.load_command_line_file(name)
+    return name
+
+
+def test_an_opener_returning_false_passes_the_file_on(window, monkeypatch):
+    declines = MagicMock(return_value=False)
+    takes = MagicMock(return_value=None)
+    never = MagicMock(return_value=None)
+
+    name = _open_with(window, monkeypatch, [declines, takes, never])
+
+    declines.assert_called_once_with(name)
+    takes.assert_called_once_with(name)
+    never.assert_not_called()
+    assert window.init_manager.current_file_path == name
+
+
+def test_declining_an_opener_logs_nothing(window, monkeypatch, caplog):
+    with caplog.at_level("WARNING"):
+        _open_with(window, monkeypatch, [MagicMock(return_value=False), MagicMock()])
+    assert "Plugin opener failed" not in caplog.text
+
+
+def test_only_false_declines(window, monkeypatch):
+    """Falsy values other than False are what an old plugin may happen to return."""
+    for value in (None, 0, "", [], True):
+        first = MagicMock(return_value=value)
+        second = MagicMock()
+        name = _open_with(window, monkeypatch, [first, second])
+        second.assert_not_called()
+        assert window.init_manager.current_file_path == name
+
+
+def test_a_raising_opener_still_passes_the_file_on(window, monkeypatch):
+    takes = MagicMock(return_value=None)
+    name = _open_with(window, monkeypatch, [MagicMock(side_effect=ValueError), takes])
+    takes.assert_called_once_with(name)
+    assert window.init_manager.current_file_path == name
+
+
+def test_a_file_every_opener_declines_is_not_recorded_as_open(window, monkeypatch):
+    _open_with(
+        window,
+        monkeypatch,
+        [MagicMock(return_value=False), MagicMock(side_effect=ValueError)],
+    )
+    assert window.init_manager.current_file_path is None
+    assert "Unsupported file type" in window.statusBar().currentMessage()
+
+
 def test_load_command_line_file_default_extensions(window, monkeypatch):
     """Test that load_command_line_file handles standard extensions."""
     # Mock the specific loading methods called by load_command_line_file

@@ -6,6 +6,18 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [5.2.0] - 2026-11-10
+
+### Added
+
+- A plugin file opener can return `False` to decline a file. The next opener for that extension, or the built-in loader, is then tried, and the file is not recorded as the open one. Until now the only way to pass a file on was to raise an exception, which logged a warning with a traceback for every file a plugin correctly left to another. Any other return value, including the `None` that existing plugins return, still means the file was handled.
+- `PluginContext.moleditpy_version` gives a plugin the version of the running application.
+
+### Fixed
+
+- The Windows and macOS application bundles print the start-up banner in the terminal again, as does the `moleditpy` command. It was printed only by `python -m moleditpy`.
+- **File > Import** with a plugin opener now shows a status bar message when the plugin fails or declines the file, instead of doing nothing.
+
 ## [5.1.3] - 2026-11-05
 
 ### Fixed

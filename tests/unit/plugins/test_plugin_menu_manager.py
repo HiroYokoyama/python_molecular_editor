@@ -603,6 +603,39 @@ class TestIntegratePluginFileOpeners:
         im.import_menu.addSeparator.assert_called_once()
         im.import_menu.addAction.assert_called_once()
 
+    def _import(self, im, pmm, monkeypatch, callback):
+        """Trigger the Import action for one opener with a chosen file."""
+        im.host.plugin_manager.file_openers = {
+            ".xyz": [{"callback": callback, "plugin": "XYZPlugin"}]
+        }
+        im.current_file_path = "before"
+        monkeypatch.setattr(
+            "moleditpy.ui.plugin_menu_manager.QFileDialog.getOpenFileName",
+            lambda *a, **k: ("job.xyz", ""),
+        )
+        pmm.integrate_plugin_file_openers()
+        im.import_menu.addAction.call_args[0][0].trigger()
+
+    def test_a_handled_file_becomes_the_current_file(self, im, pmm, monkeypatch):
+        cb = MagicMock(return_value=None)
+        self._import(im, pmm, monkeypatch, cb)
+        cb.assert_called_once_with("job.xyz")
+        assert im.current_file_path == "job.xyz"
+        im.host.state_manager.update_window_title.assert_called_once()
+
+    def test_a_declined_file_is_not_claimed_and_is_reported(self, im, pmm, monkeypatch):
+        self._import(im, pmm, monkeypatch, MagicMock(return_value=False))
+        assert im.current_file_path == "before"
+        im.host.state_manager.update_window_title.assert_not_called()
+        assert "job.xyz" in im.host.statusBar.return_value.showMessage.call_args[0][0]
+
+    def test_a_failing_opener_is_not_claimed_and_is_reported(
+        self, im, pmm, monkeypatch
+    ):
+        self._import(im, pmm, monkeypatch, MagicMock(side_effect=ValueError("bad")))
+        assert im.current_file_path == "before"
+        im.host.statusBar.return_value.showMessage.assert_called_once()
+
 
 # ---------------------------------------------------------------------------
 # _clear_all_plugin_actions
