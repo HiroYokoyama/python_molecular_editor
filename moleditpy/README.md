@@ -39,7 +39,7 @@ moleditpy
 
 The first launch can take a while as RDKit and the other libraries initialize. A [Windows installer](https://hiroyokoyama.github.io/python_molecular_editor/windows-installer/windows_installer), a [macOS app bundle](https://hiroyokoyama.github.io/python_molecular_editor/macos-installer/macos_installer), and a [Docker image](https://github.com/HiroYokoyama/python_molecular_editor_docker) are also available.
 
-> **Security note:** the legacy `.pmeraw` project format uses Python pickle, which can execute arbitrary code when loaded. Only open `.pmeraw` files you created yourself, and use the JSON-based `.pmeprj` format for sharing.
+> **Security note:** the legacy `.pmeraw` project format uses Python pickle. MoleditPy loads it with a restricted unpickler that rejects any code embedded in the file, but only open `.pmeraw` files you created yourself, and use the JSON-based `.pmeprj` format for sharing.
 
 To install the application directly without the shortcut helper:
 
