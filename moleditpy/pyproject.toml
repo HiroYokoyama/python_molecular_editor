@@ -38,7 +38,8 @@ dependencies = [
   "pyside6-essentials >= 6.9, < 6.10; python_version < '3.10'",
   "pyside6-essentials >= 6.10, < 6.12; python_version >= '3.10'",
   "pyvista < 0.50",
-  "pyvistaqt < 0.14",
+  "pyvistaqt < 0.12; python_version < '3.10'",
+  "pyvistaqt >= 0.13, < 0.14; python_version >= '3.10'",
   "rdkit < 2026.10"
 ]
 
