@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import base64
+import io
 import math
 import pickle
+import pickletools
 from typing import Any, BinaryIO
 
 import numpy as np
@@ -123,9 +125,42 @@ class _RestrictedUnpickler(pickle.Unpickler):
             ) from None
 
 
+# Everything a snapshot needs: data, containers, memo and framing, plus the
+# global lookup and NEWOBJ that rebuild a PointTuple. Left out on purpose are
+# the opcodes that call or configure an object (REDUCE, BUILD, INST, OBJ,
+# NEWOBJ_EX), persistent IDs, out-of-band buffers and the EXT opcodes: a cached
+# copyreg extension is returned without ever reaching find_class.
+_RAW_PROJECT_OPCODES = frozenset(
+    {
+        "PROTO", "FRAME", "STOP", "MARK", "POP", "POP_MARK", "DUP",
+        "MEMOIZE", "GET", "BINGET", "LONG_BINGET", "PUT", "BINPUT", "LONG_BINPUT",
+        "NONE", "NEWTRUE", "NEWFALSE",
+        "INT", "BININT", "BININT1", "BININT2", "LONG", "LONG1", "LONG4",
+        "FLOAT", "BINFLOAT",
+        "STRING", "BINSTRING", "SHORT_BINSTRING",
+        "UNICODE", "SHORT_BINUNICODE", "BINUNICODE", "BINUNICODE8",
+        "BINBYTES", "SHORT_BINBYTES", "BINBYTES8", "BYTEARRAY8",
+        "EMPTY_LIST", "LIST", "APPEND", "APPENDS",
+        "EMPTY_TUPLE", "TUPLE", "TUPLE1", "TUPLE2", "TUPLE3",
+        "EMPTY_DICT", "DICT", "SETITEM", "SETITEMS",
+        "EMPTY_SET", "ADDITEMS", "FROZENSET",
+        "GLOBAL", "STACK_GLOBAL", "NEWOBJ",
+    }
+)  # fmt: skip
+
+
 def load_raw_project(stream: BinaryIO) -> Any:
     """Unpickle a .pmeraw stream without allowing any imports or calls."""
-    return _RestrictedUnpickler(stream).load()
+    data = stream.read()
+    try:
+        for opcode, _argument, _position in pickletools.genops(data):
+            if opcode.name not in _RAW_PROJECT_OPCODES:
+                raise pickle.UnpicklingError(
+                    f"Raw project files may not use the {opcode.name} pickle opcode"
+                )
+    except (ValueError, OverflowError, IndexError, TypeError) as exc:
+        raise pickle.UnpicklingError(f"Malformed raw project file: {exc}") from exc
+    return _RestrictedUnpickler(io.BytesIO(data)).load()
 
 
 def validate_raw_project_data(data: Any) -> None:
