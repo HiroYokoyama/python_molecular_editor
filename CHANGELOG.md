@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [5.2.1] - 2026-11-11
+
+### Security
+
+- Opening a legacy `.pmeraw` project no longer runs code embedded in the file. The pickle is read with a restricted unpickler that accepts only the plain containers, numbers, strings and the `PointTuple` position type a snapshot contains; any other reference is rejected with "Invalid project file format" before anything is executed. Pickle opcodes that call an object or fetch a cached `copyreg` extension are refused as well. The confirmation warning shown before opening a `.pmeraw` file remains.
+
 ## [5.2.0] - 2026-11-10
 
 ### Added

@@ -308,7 +308,10 @@ def test_load_raw_data_error_paths(mock_parser_host):
         )
 
         with patch("builtins.open", MagicMock()):
-            with patch("pickle.load", side_effect=pickle.UnpicklingError("Corrupt")):
+            with patch(
+                "moleditpy.ui.io_logic.load_raw_project",
+                side_effect=pickle.UnpicklingError("Corrupt"),
+            ):
                 io.load_raw_data("dummy_data")
                 io.statusBar().showMessage.assert_called_with(
                     "Invalid project file format: Corrupt"
@@ -1113,3 +1116,122 @@ def test_failed_temp_cleanup_logs_and_preserves_original_save_error(
     assert len(list(tmp_path.glob("*.tmp"))) == 1
     assert "Failed to remove temporary project file" in caplog.text
     assert "Temporary file is locked" in caplog.text
+
+
+class _Payload:
+    """Pickles to a call of os.system-like code; must never be reconstructed."""
+
+    def __reduce__(self):
+        return (os.path.exists, ("/this/path/must/not/be/checked",))
+
+
+def test_load_raw_data_refuses_pickle_globals(mock_parser_host, tmp_path):
+    """A .pmeraw that references any importable callable is rejected unloaded."""
+    io = DummyProjectIo(mock_parser_host)
+    raw_file = str(tmp_path / "malicious.pmeraw")
+    with open(raw_file, "wb") as f:
+        pickle.dump({"atoms": {}, "payload": _Payload()}, f)
+
+    with (
+        patch.object(io, "_confirm_pickle_load", return_value=True),
+        patch("os.path.exists", wraps=os.path.exists) as spy_exists,
+        patch.object(io, "_report_load_error") as report,
+    ):
+        io.load_raw_data(raw_file)
+
+    assert not any(
+        call.args and call.args[0] == "/this/path/must/not/be/checked"
+        for call in spy_exists.call_args_list
+    ), "the pickled callable was executed"
+    report.assert_called_once()
+    assert "Invalid project file format" in report.call_args.args[1]
+    assert "may not" in report.call_args.args[1]
+    io.host.edit_actions_manager.clear_all.assert_not_called()
+    io.host.state_manager.set_state_from_data.assert_not_called()
+
+
+def test_load_raw_project_accepts_builtin_snapshot(tmp_path):
+    """A genuine snapshot (containers, numbers, bytes) still unpickles."""
+    from moleditpy.core.molecular_data import PointTuple
+    from moleditpy.core.project_validation import load_raw_project
+
+    snapshot = {
+        "atoms": {
+            1: {"symbol": "C", "pos": PointTuple((0.0, 1.5)), "charge": 0, "rs": "R"}
+        },
+        "bonds": {(1, 2): {"order": 1, "stereo": 0}},
+        "_next_atom_id": 3,
+        "version": "5.2.0",
+        "mol_3d": b"\x00binary",
+        "mol_3d_atom_ids": [1, None],
+        "is_3d_viewer_mode": False,
+        "constraints_3d": [["bond", [0, 1], 1.5, 1.0e5]],
+        "last_successful_optimization_method": None,
+    }
+    raw_file = tmp_path / "ok.pmeraw"
+    with open(raw_file, "wb") as f:
+        pickle.dump(snapshot, f)
+    with open(raw_file, "rb") as f:
+        loaded = load_raw_project(f)
+    assert loaded == snapshot
+    assert isinstance(loaded["atoms"][1]["pos"], PointTuple)
+
+
+def test_load_raw_project_refuses_cached_copyreg_extension():
+    """An EXT opcode returns a cached extension without calling find_class.
+
+    Once any ordinary unpickle in the process has resolved a registered
+    extension code, the object sits in pickle's extension cache and a raw
+    project could fetch and call it. The opcode itself must be refused.
+    """
+    import copyreg
+    import io
+
+    from moleditpy.core.project_validation import load_raw_project
+
+    code = 0x7FFFFF00
+    copyreg.add_extension("os.path", "exists", code)
+    try:
+        payload = (
+            pickle.PROTO
+            + b"\x02"
+            + pickle.EXT4
+            + code.to_bytes(4, "little")
+            + pickle.SHORT_BINUNICODE
+            + b"\x01."
+            + pickle.TUPLE1
+            + pickle.REDUCE
+            + pickle.STOP
+        )
+        assert pickle.loads(payload) is True  # primes the extension cache
+        with pytest.raises(pickle.UnpicklingError, match="EXT4"):
+            load_raw_project(io.BytesIO(payload))
+    finally:
+        copyreg.remove_extension("os.path", "exists", code)
+        copyreg.clear_extension_cache()
+
+
+@pytest.mark.parametrize(
+    "opcode", ["REDUCE", "BUILD", "INST", "OBJ", "NEWOBJ_EX", "PERSID", "BINPERSID"]
+)
+def test_load_raw_project_refuses_calling_opcodes(opcode):
+    """No opcode that calls or configures an object is accepted, whatever it holds."""
+    import io
+
+    from moleditpy.core.project_validation import load_raw_project
+
+    payload = (
+        pickle.PROTO + b"\x04" + pickle.NONE + getattr(pickle, opcode) + pickle.STOP
+    )
+    with pytest.raises(pickle.UnpicklingError):
+        load_raw_project(io.BytesIO(payload))
+
+
+@pytest.mark.parametrize("data", [b"", b"\x80", b"\x80\x04\x95\xff", b"not a pickle"])
+def test_load_raw_project_reports_malformed_data_as_unpickling_error(data):
+    import io
+
+    from moleditpy.core.project_validation import load_raw_project
+
+    with pytest.raises((pickle.UnpicklingError, EOFError)):
+        load_raw_project(io.BytesIO(data))
