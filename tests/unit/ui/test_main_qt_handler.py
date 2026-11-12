@@ -370,3 +370,26 @@ def test_main_module_getattr_raises_on_unknown_attribute():
     with pytest.raises(AttributeError, match="has no attribute 'NoSuchAttribute'"):
         _ = main_mod.NoSuchAttribute
 
+
+
+def test_main_opens_the_window_through_the_lazy_module_attribute(monkeypatch):
+    """main() resolves MainWindow through the module, so a replacement is used."""
+    import moleditpy.main as main_mod
+
+    window = MagicMock()
+    window_class = MagicMock(return_value=window)
+    app = MagicMock()
+    app.exec.return_value = 0
+    monkeypatch.setattr(main_mod, "MainWindow", window_class, raising=False)
+    monkeypatch.setattr(main_mod, "QApplication", MagicMock(return_value=app))
+    monkeypatch.setattr(main_mod, "qInstallMessageHandler", MagicMock())
+    monkeypatch.setattr(main_mod, "setup_logging", MagicMock())
+    monkeypatch.setattr(main_mod, "ctypes", MagicMock())
+    monkeypatch.setattr(main_mod, "QTimer", MagicMock())
+    monkeypatch.setattr(main_mod.sys, "argv", ["moleditpy", "--safe", "example.mol"])
+    with pytest.raises(SystemExit) as exited:
+        main_mod.main()
+    assert exited.value.code == 0
+    window_class.assert_called_once_with(initial_file="example.mol", safe_mode=True)
+    window.show.assert_called_once()
+    app.exec.assert_called_once()
