@@ -349,6 +349,7 @@ def test_read_startup_log_settings_non_object_json(tmp_path, content):
         result = _read_startup_log_settings()
     assert result == (False, False)
 
+
 def test_main_module_getattr_lazy_imports_mainwindow(monkeypatch):
     """moleditpy.main.MainWindow resolves lazily via PEP 562."""
     import moleditpy.main as main_mod
@@ -369,7 +370,6 @@ def test_main_module_getattr_raises_on_unknown_attribute():
 
     with pytest.raises(AttributeError, match="has no attribute 'NoSuchAttribute'"):
         _ = main_mod.NoSuchAttribute
-
 
 
 def test_main_opens_the_window_through_the_lazy_module_attribute(monkeypatch):
