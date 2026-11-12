@@ -1235,3 +1235,19 @@ def test_load_raw_project_reports_malformed_data_as_unpickling_error(data):
 
     with pytest.raises((pickle.UnpicklingError, EOFError)):
         load_raw_project(io.BytesIO(data))
+
+
+def test_load_raw_project_refuses_a_global_other_than_point_tuple():
+    """A bare global reference passes the opcode check and reaches find_class.
+
+    Pickling a function writes only its module and name, with no call, so the
+    opcode allowlist accepts it. find_class must still refuse every global but
+    PointTuple, or the next object on the stack could be that callable.
+    """
+    import io
+
+    from moleditpy.core.project_validation import load_raw_project
+
+    payload = pickle.dumps({"atoms": {}, "hook": os.path.join})
+    with pytest.raises(pickle.UnpicklingError, match="may not reference"):
+        load_raw_project(io.BytesIO(payload))
