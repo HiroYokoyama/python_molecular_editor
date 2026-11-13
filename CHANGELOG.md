@@ -6,6 +6,12 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [5.2.2] - 2026-11-14
+
+### Fixed
+
+- On macOS 27 the main window never appeared with PySide6 6.10 or later: the process stayed busy repainting the 3D view. On Python 3.10 and later MoleditPy now requires pyvistaqt 0.13, which fixes the repaint loop, so a fresh `pip install -U moleditpy` gets a working combination ([#195](https://github.com/HiroYokoyama/python_molecular_editor/issues/195)).
+
 ## [5.2.1] - 2026-11-11
 
 ### Security
