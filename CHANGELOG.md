@@ -6,6 +6,10 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Save, Save As and the PME Project (`.pmeprj`) export no longer refuse an empty document with "Nothing to save". A project with no molecule is written with the data plugins store through their save handlers, so a plugin whose state does not depend on a molecule can be saved and reopened on its own. Saving the legacy `.pmeraw` format, which carries no plugin data, still requires a molecule.
+
 ## [5.2.2] - 2026-11-14
 
 ### Fixed

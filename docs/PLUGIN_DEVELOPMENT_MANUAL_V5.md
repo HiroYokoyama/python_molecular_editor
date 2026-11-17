@@ -503,6 +503,7 @@ Manage how your plugin interacts with the application's overall lifecycle and th
 #### `register_save_handler(callback)`
 Register a callback to save custom state into the application's project file.
 - **callback** (`Callable[[], dict]`): Must return a dictionary of JSON-serializable data.
+- **Note**: A project is saved even when the document has no molecule, so state that does not depend on a molecule is kept on its own. Your save handler may therefore run with an empty editor.
 
 #### `register_load_handler(callback)`
 Register a callback to restore custom state from the project file.
