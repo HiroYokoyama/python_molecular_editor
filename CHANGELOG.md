@@ -6,6 +6,14 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Python 3.15 is supported. PySide6 6.11 does not install on Python 3.15, so this needs PySide6 6.12.1.
+
+### Changed
+
+- On Python 3.10 and later MoleditPy requires PySide6-Essentials 6.12.1 or later within 6.12. Versions 6.10 and 6.11 had a reference-count defect that breaks `None` on Windows with Python 3.14 ([PYSIDE-3424](https://bugreports.qt.io/browse/PYSIDE-3424)), and 6.12.0 aborts Python 3.10 and 3.11 after repeated signal emissions ([PYSIDE-3474](https://bugreports.qt.io/browse/PYSIDE-3474)); 6.12.1 fixes both. Python 3.9 keeps PySide6 6.9.
+
 ## [5.2.3] - 2026-11-18
 
 ### Changed

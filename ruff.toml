@@ -6,7 +6,7 @@
 
 # Must be set explicitly. Without it ruff reports
 # `linter.unresolved_target_version = none` and falls back to its own default
-# instead of the package's requires-python (">=3.9, <3.15"), which silently
+# instead of the package's requires-python (">=3.9, <3.16"), which silently
 # changes which pyupgrade-style rules apply.
 target-version = "py39"
 
