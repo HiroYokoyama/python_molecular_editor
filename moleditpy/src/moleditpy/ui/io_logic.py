@@ -662,13 +662,6 @@ class IOManager:
 
     def save_project(self) -> None:
         """Save (Ctrl+S) - Defaults to PMEPRJ format."""
-        if (
-            not self.host.state_manager.data.atoms
-            and not self.host.view_3d_manager.current_mol
-        ):
-            self.host.statusBar().showMessage("Error: Nothing to save.")
-            return
-
         current_path = self.host.init_manager.current_file_path
         if current_path and current_path.lower().endswith(".pmeraw"):
             # Never write the legacy pickle back; Save As only emits .pmeprj.
@@ -698,14 +691,6 @@ class IOManager:
 
     def save_project_as(self) -> None:
         """Save As (Ctrl+Shift+S) — always saves in PMEPRJ format."""
-
-        if (
-            not self.host.state_manager.data.atoms
-            and not self.host.view_3d_manager.current_mol
-        ):
-            self.host.statusBar().showMessage("Error: Nothing to save.")
-            return
-
         default_path = self._get_default_path()
 
         file_path, _ = QFileDialog.getSaveFileName(
@@ -769,13 +754,6 @@ class IOManager:
 
     def save_as_json(self) -> None:
         """Save as PME Project (JSON) format."""
-        if (
-            not self.host.state_manager.data.atoms
-            and not self.host.view_3d_manager.current_mol
-        ):
-            self.host.statusBar().showMessage("Error: Nothing to save.")
-            return
-
         default_path = self._get_default_path()
 
         try:

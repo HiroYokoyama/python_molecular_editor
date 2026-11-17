@@ -92,13 +92,50 @@ class DummyProjectIo(IOManager):
         return True  # Default to allow in tests
 
 
-def test_save_project_no_data(mock_parser_host):
-    """Verify error message when trying to save an empty project."""
+def test_save_project_no_molecule_still_saves(mock_parser_host, tmp_path):
+    """An empty document saves: plugins may keep state without a molecule."""
     io = DummyProjectIo(mock_parser_host)
     io.host.state_manager.data.atoms = {}
     io.host.view_3d_manager.current_mol = None
-    io.save_project()
-    io.statusBar().showMessage.assert_called_with("Error: Nothing to save.")
+    project_file = str(tmp_path / "plugin_only.pmeprj")
+    io.host.init_manager.current_file_path = project_file
+
+    with patch.object(
+        io.host.state_manager,
+        "create_json_data",
+        return_value={"format": "PME Project", "plugins": {"demo": {"k": 1}}},
+    ):
+        io.save_project()
+
+    with open(project_file, "r", encoding="utf-8") as f:
+        assert json.load(f)["plugins"] == {"demo": {"k": 1}}
+    for call in io.statusBar().showMessage.call_args_list:
+        assert call.args != ("Error: Nothing to save.",)
+
+
+@pytest.mark.parametrize("action", ["save_project_as", "save_as_json"])
+def test_save_as_no_molecule_still_saves(mock_parser_host, tmp_path, action):
+    """Save As and the JSON export accept an empty document too."""
+    io = DummyProjectIo(mock_parser_host)
+    io.host.state_manager.data.atoms = {}
+    io.host.view_3d_manager.current_mol = None
+    save_path = str(tmp_path / "plugin_only.pmeprj")
+
+    with (
+        patch(
+            "PySide6.QtWidgets.QFileDialog.getSaveFileName",
+            return_value=(save_path, "*.pmeprj"),
+        ),
+        patch.object(
+            io.host.state_manager,
+            "create_json_data",
+            return_value={"format": "PME Project", "plugins": {"demo": {"k": 1}}},
+        ),
+    ):
+        getattr(io, action)()
+
+    with open(save_path, "r", encoding="utf-8") as f:
+        assert json.load(f)["plugins"] == {"demo": {"k": 1}}
 
 
 def test_save_project_overwrite_json(mock_parser_host, tmp_path):
