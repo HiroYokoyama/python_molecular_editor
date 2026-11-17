@@ -1,16 +1,16 @@
 # GitHub Actions workflows
 
 The YAML files are the source of truth for triggers, matrices, and publishing.
-All desktop platforms use the single `moleditpy/` package. Python 3.9–3.14 is
+All desktop platforms use the single `moleditpy/` package. Python 3.9–3.15 is
 supported, with PySide6-Essentials (Qt 6.9 on Python 3.9; Qt 6.10–6.11 otherwise).
 Open Babel and PyQt6 are excluded from the core and frozen bundles.
 
 | Workflow | Purpose |
 | --- | --- |
-| `tests.yml` | Unit, integration, E2E and GUI tests, plus pinned lint/type checks. Linux tests Python 3.9–3.14; Windows and macOS test 3.9, 3.13 and 3.14. Windows/Python 3.13 measures coverage. |
-| `full-gui-tests.yml` | Native VTK/PyVista rendering suites on Linux/Python 3.11 and 3.13 and Windows/Python 3.13. Launch probes cover all three OSes and Python 3.9–3.14. Linux and macOS require a working probe; Windows launch and rendering tests can skip when OpenGL is unavailable. macOS runs the isolated subprocess launch test. |
+| `tests.yml` | Unit, integration, E2E and GUI tests, plus pinned lint/type checks. Linux tests Python 3.9–3.15; Windows and macOS test 3.9, 3.13, 3.14 and 3.15. Windows/Python 3.13 measures coverage. |
+| `full-gui-tests.yml` | Native VTK/PyVista rendering suites on Linux/Python 3.11 and 3.13 and Windows/Python 3.13. Launch probes cover all three OSes and Python 3.9–3.15. Linux and macOS require a working probe; Windows launch and rendering tests can skip when OpenGL is unavailable. macOS runs the isolated subprocess launch test. |
 | `windows-exe-smoke.yml` | Builds the actual main-package Windows executable and checks its version, replaceable Qt libraries, and excluded dependencies. Uploads the tested executable; does not publish a package. |
-| `test-pip-install.yml` | Manual PyPI/TestPyPI install validation across all three OSes and Python 3.9–3.14 (18 combinations). Specify `5.0.0a1` to test the alpha; leaving the version empty selects a stable release. Runs E2E tests with `MOLEDITPY_USE_INSTALLED=1`. |
+| `test-pip-install.yml` | Manual PyPI/TestPyPI install validation across all three OSes and Python 3.9–3.15 (21 combinations). Specify `5.0.0a1` to test the alpha; leaving the version empty selects a stable release. Runs E2E tests with `MOLEDITPY_USE_INSTALLED=1`. |
 | `macos-app.yml` | Reusable/manual Apple Silicon app build, tests, frozen-app validation, ad-hoc signing, and ZIP artifact creation. Can attach an artifact to an existing release when explicitly requested. |
 | `test-release.yml` | Manual packaging rehearsal from `main`, with Windows/macOS artifacts and publication to TestPyPI. Does not create the production release or push a production tag. Use a new TestPyPI version for each upload. |
 | `release.yml` | Manual production PyPI and GitHub publication; stable releases run from `main`, prereleases may run from another branch. |

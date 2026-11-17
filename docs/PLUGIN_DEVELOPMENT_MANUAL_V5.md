@@ -6,7 +6,7 @@
 > [!NOTE]
 > This manual targets **MoleditPy 5**. The namespaced PluginContext API continues from Version 4, while the GUI binding and core dependencies have changed. Historical manuals: [Version 4](old/PLUGIN_DEVELOPMENT_MANUAL_V4.md) and [Version 3](old/PLUGIN_DEVELOPMENT_MANUAL_V3.md).
 
-MoleditPy 5 uses PySide6-Essentials, RDKit and PyVista on Python 3.9–3.14. Use the documented PluginContext methods below to extend the editor.
+MoleditPy 5 uses PySide6-Essentials, RDKit and PyVista on Python 3.9–3.15. Use the documented PluginContext methods below to extend the editor.
 
 > [!IMPORTANT]
 > **API PHILOSOPHY**: In Version 5.0, it is strongly recommended that you avoid accessing the `MainWindow` directly via monkey-patching or unverified attributes. Instead, you should use the stable methods provided by the `PluginContext`. 

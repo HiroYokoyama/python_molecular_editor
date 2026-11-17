@@ -31,7 +31,7 @@ python -m pip install moleditpy-installer
 python -m moleditpy_installer
 ```
 
-The first command installs MoleditPy and the shortcut helper; the second creates shortcuts and file associations. The same `moleditpy` package is used on Windows, macOS, and Linux. MoleditPy 5 requires Python 3.9–3.14. For an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before upgrading. The core uses PySide6-Essentials and does not require Open Babel. Start the app from the shortcut or with:
+The first command installs MoleditPy and the shortcut helper; the second creates shortcuts and file associations. The same `moleditpy` package is used on Windows, macOS, and Linux. MoleditPy 5 requires Python 3.9–3.15. For an existing environment, uninstall `moleditpy-linux` and `openbabel-wheel` before upgrading. The core uses PySide6-Essentials and does not require Open Babel. Start the app from the shortcut or with:
 
 ```bash
 moleditpy
