@@ -148,7 +148,7 @@ moleditpy --list-plugins
 
 This works like `python -m HighValuePlugin ARGS...` run from the plugin's parent folder: `__main__.py` runs as `__main__`, `sys.argv[1:]` holds `ARGS` unchanged (options included, so `argparse` in the plugin sees them as given), and `sys.exit(code)` sets the process's exit status. MoleditPy creates no `QApplication` and no main window and does not call `initialize()`; a plugin that wants a window creates its own `QApplication`.
 
-- Only enabled package plugins with a `__main__.py` can be run; single-file plugins cannot. The name is the folder name, which must be a valid Python identifier. Folders inside category folders are found too. `--list-plugins` prints each runnable plugin and its folder.
+- Only enabled package plugins with a `__main__.py` can be run; single-file plugins cannot. The name is the folder name, which must be a valid Python identifier. Folders inside category folders are found too. `--list-plugins` prints every installed plugin and marks the runnable ones `[run]`.
 - The package's `__init__.py` is imported first, as with `python -m`, so it must import without a running editor. Keep imports that need the main window inside `initialize()`.
 - `--safe` loads no plugins, so it cannot be combined with `--run-plugin`.
 

@@ -96,7 +96,7 @@ moleditpy
 | `moleditpy --safe` | Start in **safe mode**: all plugins are skipped on launch. Use this if a plugin is causing a crash or preventing startup. |
 | `moleditpy --install-plugin [PATH]` | Install a plugin from a `.py`, `.zip`, or folder in headless mode (requires manual confirmation). |
 | `moleditpy --run-plugin NAME [ARGS]` (`-r`) | Run an installed plugin on its own, without opening the editor. Everything after `NAME` is passed to the plugin unchanged. Only plugins that support it (a package plugin with a `__main__.py`) can be run. |
-| `moleditpy --list-plugins` | List the installed plugins that can be run with `--run-plugin`. |
+| `moleditpy --list-plugins` | List every installed plugin with its name, version and folder. Plugins that can be started with `--run-plugin` are marked `[run]`, disabled ones `[disabled]`. Works in safe mode too. |
 
 **Windows Installer**
 

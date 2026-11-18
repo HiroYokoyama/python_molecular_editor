@@ -1,4 +1,15 @@
-"""Run a plugin package's ``__main__`` from the command line, without the editor.
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+MoleditPy — A Python-based molecular editing software
+
+Author: Hiromichi Yokoyama
+License: LGPL-3.0-or-later
+Repo: https://github.com/HiroYokoyama/python_molecular_editor
+DOI: 10.5281/zenodo.17268532
+
+Run a plugin package's ``__main__`` from the command line, without the editor.
 
 ``moleditpy --run-plugin NAME ARGS...`` behaves like ``python -m NAME ARGS...``
 run from the plugin's own folder: a package plugin opts in by shipping a
@@ -9,51 +20,119 @@ whatever it needs, and its exit status becomes the process's.
 import os
 import runpy
 import sys
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, TextIO
 
 from .plugin_manager import PluginManager
 
 
-def runnable_plugins(manager: Optional[PluginManager] = None) -> Dict[str, List[str]]:
-    """Map each runnable plugin name to the package folders that provide it.
+@dataclass(frozen=True)
+class InstalledPlugin:
+    """One plugin found in the plugin folder, read without importing it."""
 
-    A runnable plugin is an enabled package plugin (a folder with
-    ``__init__.py``) that also has ``__main__.py``. Folders are found the way
-    the editor discovers plugins, category folders included. More than one
-    folder under one name is reported, not resolved.
+    name: str
+    path: str
+    display_name: str
+    version: str
+    package: bool
+    enabled: bool
+    has_main: bool
+
+    @property
+    def runnable(self) -> bool:
+        """Whether ``--run-plugin`` can run this plugin."""
+        return (
+            self.package
+            and self.enabled
+            and self.has_main
+            and (self.name.isidentifier())
+        )
+
+
+def installed_plugins(manager: Optional[PluginManager] = None) -> List[InstalledPlugin]:
+    """Return every installed plugin, the way the editor discovers them.
+
+    Package plugins (folders with ``__init__.py``) and single-file plugins are
+    both included, in and below category folders, enabled or not. Metadata is
+    read by parsing, so no plugin code runs.
     """
     manager = manager or PluginManager()
-    found: Dict[str, List[str]] = {}
+    found: List[InstalledPlugin] = []
     if not os.path.isdir(manager.plugin_dir):
         return found
+
+    def add(entry: str, name: str, path: str, package: bool, has_main: bool) -> None:
+        info = manager.get_plugin_info_safe(entry, fallback_name=name)
+        found.append(
+            InstalledPlugin(
+                name=name,
+                path=path,
+                display_name=str(info.get("name", name)),
+                version=str(info.get("version", "Unknown")),
+                package=package,
+                enabled=not manager.is_plugin_disabled(entry),
+                has_main=has_main,
+            )
+        )
+
     for root, dirs, files in os.walk(manager.plugin_dir):
         dirs[:] = sorted(
             d for d in dirs if not d.startswith("__") and not d.startswith(".")
         )
-        if "__init__.py" not in files:
+        if "__init__.py" in files:
+            dirs[:] = []
+            add(
+                os.path.join(root, "__init__.py"),
+                os.path.basename(root),
+                root,
+                True,
+                "__main__.py" in files,
+            )
             continue
-        dirs[:] = []
-        if "__main__.py" not in files:
-            continue
-        if manager.is_plugin_disabled(os.path.join(root, "__init__.py")):
-            continue
-        name = os.path.basename(root)
-        if name.isidentifier():
-            found.setdefault(name, []).append(root)
+        for filename in sorted(files):
+            if filename.endswith(".py") and not filename.startswith("__"):
+                path = os.path.join(root, filename)
+                add(path, os.path.splitext(filename)[0], path, False, False)
     return found
+
+
+def runnable_plugins(manager: Optional[PluginManager] = None) -> Dict[str, List[str]]:
+    """Map each runnable plugin name to the package folders that provide it.
+
+    More than one folder under one name is reported, not resolved.
+    """
+    runnable: Dict[str, List[str]] = {}
+    for plugin in installed_plugins(manager):
+        if plugin.runnable:
+            runnable.setdefault(plugin.name, []).append(plugin.path)
+    return runnable
 
 
 def list_plugins(
     manager: Optional[PluginManager] = None, out: Optional[TextIO] = None
 ) -> int:
-    """Print the runnable plugins, one per line, and return an exit status."""
+    """Print every installed plugin and whether it can be run; return 0."""
+    manager = manager or PluginManager()
     out = out or sys.stdout
-    plugins = runnable_plugins(manager)
+    plugins = installed_plugins(manager)
+    print(f"Plugin folder: {manager.plugin_dir}", file=out)
     if not plugins:
-        print("No plugin can be run from the command line.", file=out)
+        print("No plugins are installed.", file=out)
         return 0
-    for name in sorted(plugins):
-        print(f"{name}\t{plugins[name][0]}", file=out)
+    print("(run: can be started with --run-plugin NAME)\n", file=out)
+    for plugin in sorted(plugins, key=lambda p: (p.name.lower(), p.path)):
+        flags = []
+        if plugin.runnable:
+            flags.append("run")
+        if not plugin.enabled:
+            flags.append("disabled")
+        label = f"[{', '.join(flags)}]" if flags else ""
+        where = os.path.relpath(plugin.path, manager.plugin_dir)
+        print(
+            f"  {plugin.name:<28} {label:<16} {plugin.display_name} "
+            f"{plugin.version}  ({where})",
+            file=out,
+        )
     return 0
 
 

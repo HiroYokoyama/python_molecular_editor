@@ -94,14 +94,38 @@ def test_a_missing_plugin_folder_lists_nothing(tmp_path):
     pm.plugin_dir = str(tmp_path / "absent")
     out = io.StringIO()
     assert plugin_runner.list_plugins(pm, out) == 0
-    assert "No plugin can be run" in out.getvalue()
+    assert "No plugins are installed." in out.getvalue()
 
 
-def test_list_plugins_prints_name_and_folder(manager, name):
-    folder = make_package(Path(manager.plugin_dir), name)
+def plugin_lines(manager):
     out = io.StringIO()
     assert plugin_runner.list_plugins(manager, out) == 0
-    assert out.getvalue() == f"{name}\t{folder}\n"
+    return {
+        line.split()[0]: line
+        for line in out.getvalue().splitlines()
+        if line.startswith("  ")
+    }
+
+
+def test_list_plugins_shows_every_plugin_and_marks_the_runnable(manager, name):
+    base = Path(manager.plugin_dir)
+    make_package(base, name)
+    plain = make_package(base / "Utility", "plain_package", main_source=None)
+    (plain / "__init__.py").write_text(
+        'PLUGIN_NAME = "Plain Tool"\nPLUGIN_VERSION = "2.1"\n', encoding="utf-8"
+    )
+    (base / "single.py").write_text("", encoding="utf-8")
+    off = make_package(base, "off_package")
+    manager.disabled_plugins = {manager.plugin_path_key(str(off / "__init__.py"))}
+
+    lines = plugin_lines(manager)
+    assert set(lines) == {name, "plain_package", "single", "off_package"}
+    assert "[run]" in lines[name]
+    assert "[run" not in lines["plain_package"]
+    assert "Plain Tool 2.1" in lines["plain_package"]
+    assert "Utility" in lines["plain_package"]
+    assert "[run" not in lines["single"]
+    assert "[disabled]" in lines["off_package"]
 
 
 def test_run_passes_arguments_and_restores_state(manager, name, record):
@@ -167,13 +191,18 @@ def test_run_plugin_flag_hands_later_options_to_the_plugin(
         "x.json",
         "--safe",
     ]
-    assert "MoleditPy" not in capsys.readouterr().out
+    assert "MoleditPy - A Python-based" in capsys.readouterr().out
 
 
-def test_list_plugins_flag(manager, name, capsys):
+def test_list_plugins_flag_prints_the_banner_and_works_in_safe_mode(
+    manager, name, capsys
+):
     make_package(Path(manager.plugin_dir), name)
-    assert run_main(["--list-plugins"], manager) == 0
-    assert name in capsys.readouterr().out
+    assert run_main(["--safe", "--list-plugins"], manager) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("-----")
+    assert "MoleditPy - A Python-based" in out
+    assert name in out
 
 
 def test_run_plugin_without_a_name_is_an_error(manager, capsys):

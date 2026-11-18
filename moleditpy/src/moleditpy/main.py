@@ -242,14 +242,14 @@ def setup_logging() -> None:
 
 
 def _run_plugin_command(args: argparse.Namespace) -> int:
-    """Handle --run-plugin / --list-plugins; no banner, window or QApplication."""
+    """Handle --run-plugin / --list-plugins; no window or QApplication."""
     from .plugins.plugin_runner import list_plugins, run_plugin
 
+    if args.list_plugins:
+        return list_plugins()
     if args.safe:
         print("Error: --safe loads no plugins, so it cannot run one.", file=sys.stderr)
         return 2
-    if args.list_plugins:
-        return list_plugins()
     if not args.run_plugin:
         print("Error: --run-plugin needs a plugin name.", file=sys.stderr)
         return 2
@@ -294,17 +294,18 @@ def main() -> None:
     parser.add_argument(
         "--list-plugins",
         action="store_true",
-        help="List the plugins that --run-plugin can run, then exit",
+        help="List the installed plugins, marking those --run-plugin can run, "
+        "then exit",
     )
     # parse_known_args so Qt's own argv flags (e.g. -platform) are passed through
     args, remaining = parser.parse_known_args()
 
-    if args.run_plugin is not None or args.list_plugins:
-        sys.exit(_run_plugin_command(args))
-
     print("-----------------------------------------------------")
     print("MoleditPy - A Python-based molecular editing software")
     print("-----------------------------------------------------\n", flush=True)
+
+    if args.run_plugin is not None or args.list_plugins:
+        sys.exit(_run_plugin_command(args))
 
     if args.install_plugin:
         plugin_path = os.path.abspath(args.install_plugin)
