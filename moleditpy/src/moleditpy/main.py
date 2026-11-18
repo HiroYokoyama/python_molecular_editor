@@ -321,11 +321,16 @@ def main() -> None:
     args, remaining = parser.parse_known_args(argv)
     remaining += qt_options
 
+    # Before the banner: a plugin's output may be read by another program
+    # (`moleditpy -r job_server status | jq`), so nothing else goes to stdout.
+    if args.run_plugin is not None and not args.list_plugins:
+        sys.exit(_run_plugin_command(args))
+
     print("-----------------------------------------------------")
     print("MoleditPy - A Python-based molecular editing software")
     print("-----------------------------------------------------\n", flush=True)
 
-    if args.run_plugin is not None or args.list_plugins:
+    if args.list_plugins:
         sys.exit(_run_plugin_command(args))
 
     if args.install_plugin:

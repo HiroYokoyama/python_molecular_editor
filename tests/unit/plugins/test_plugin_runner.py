@@ -191,7 +191,8 @@ def test_run_plugin_flag_hands_later_options_to_the_plugin(
         "x.json",
         "--safe",
     ]
-    assert "MoleditPy - A Python-based" in capsys.readouterr().out
+    # No banner: the plugin's stdout may be read by another program.
+    assert capsys.readouterr().out == ""
 
 
 def test_list_plugins_flag_prints_the_banner_and_works_in_safe_mode(

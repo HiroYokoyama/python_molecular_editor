@@ -8,7 +8,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Added
 
-- `moleditpy --run-plugin NAME [ARGS]` (short `-r`) runs an installed plugin on its own, without opening the editor, and `moleditpy --list-plugins` lists every installed plugin, marking those that can be run this way. A package plugin opts in by shipping a `__main__.py`; it runs like `python -m NAME ARGS` with the plugin's parent folder on the import path (the working directory is unchanged), receives every argument after its name unchanged, and its exit status becomes the process's. `--safe` cannot be combined with `--run-plugin`. Both commands print the usual startup banner.
+- `moleditpy --run-plugin NAME [ARGS]` (short `-r`) runs an installed plugin on its own, without opening the editor, and `moleditpy --list-plugins` lists every installed plugin, marking those that can be run this way. A package plugin opts in by shipping a `__main__.py`; it runs like `python -m NAME ARGS` with the plugin's parent folder on the import path (the working directory is unchanged), receives every argument after its name unchanged, and its exit status becomes the process's. `--safe` cannot be combined with `--run-plugin`. `--run-plugin` prints no startup banner, so a plugin's output can be piped to another program; `--list-plugins` prints it as usual.
 
 ## [5.2.3] - 2026-11-18
 
