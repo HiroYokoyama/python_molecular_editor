@@ -214,3 +214,54 @@ def test_safe_mode_cannot_run_a_plugin(manager, name, capsys):
     make_package(Path(manager.plugin_dir), name)
     assert run_main(["--safe", "-r", name], manager) == 2
     assert "--safe" in capsys.readouterr().err
+
+
+def test_a_relative_argument_resolves_from_the_callers_folder(
+    manager, name, record, tmp_path, monkeypatch
+):
+    make_package(Path(manager.plugin_dir), name)
+    caller = tmp_path / "caller"
+    caller.mkdir()
+    monkeypatch.chdir(caller)
+    (Path(manager.plugin_dir) / name / "__main__.py").write_text(
+        MAIN_SOURCE.replace('"argv": sys.argv', '"argv": [os.getcwd()]'),
+        encoding="utf-8",
+    )
+    assert plugin_runner.run_plugin(name, ["input.inp"], manager) == 0
+    assert json.loads(record.read_text(encoding="utf-8"))["argv"] == [str(caller)]
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["-reverse"], ["mol.mol", "-reverse"], ["-reverse", "--safe", "mol.mol"]],
+)
+def test_qt_reverse_is_not_read_as_run_plugin(argv):
+    from moleditpy.main import _split_qt_options
+
+    ours, qt = _split_qt_options(argv)
+    assert qt == ["-reverse"]
+    assert "-reverse" not in ours
+
+
+def test_reverse_after_run_plugin_belongs_to_the_plugin():
+    from moleditpy.main import _split_qt_options
+
+    argv = ["--safe", "-r", "tool", "-reverse"]
+    assert _split_qt_options(argv) == (argv, [])
+
+
+def test_reverse_reaches_qt_and_opens_the_editor(monkeypatch):
+    seen = {}
+
+    class StopAtQt(Exception):
+        pass
+
+    def fake_qapplication(argv):
+        seen["argv"] = argv
+        raise StopAtQt
+
+    monkeypatch.setattr(sys, "argv", ["moleditpy", "-reverse"])
+    monkeypatch.setattr("moleditpy.main.QApplication", fake_qapplication)
+    with pytest.raises(StopAtQt):
+        main()
+    assert seen["argv"][1:] == ["-reverse"]

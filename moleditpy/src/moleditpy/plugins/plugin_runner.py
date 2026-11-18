@@ -13,9 +13,11 @@ DOI: 10.5281/zenodo.17268532
 # Run a plugin package's ``__main__`` from the command line, without the editor.
 #
 # ``moleditpy --run-plugin NAME ARGS...`` behaves like ``python -m NAME ARGS...``
-# run from the plugin's own folder: a package plugin opts in by shipping a
-# ``__main__.py``. No QApplication or main window is created; the plugin builds
-# whatever it needs, and its exit status becomes the process's.
+# with the plugin's parent folder put on sys.path; the working directory is left
+# alone, so relative paths in ARGS mean what they meant to the caller. A package
+# plugin opts in by shipping a ``__main__.py``. No QApplication or main window
+# is created; the plugin builds whatever it needs, and its exit status becomes
+# the process's.
 
 import os
 import runpy

@@ -20,7 +20,7 @@ import sys
 import argparse
 import time
 import traceback
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .utils.constants import VERSION
 
@@ -241,6 +241,25 @@ def setup_logging() -> None:
     sys.excepthook = handle_exception
 
 
+# Qt options argparse would read as "-r" plus an attached value.
+_QT_OPTIONS_STARTING_WITH_R = ("-reverse",)
+
+
+def _split_qt_options(argv: List[str]) -> Tuple[List[str], List[str]]:
+    """Set aside Qt options that collide with ``-r``, up to ``-r`` itself.
+
+    After ``-r NAME`` every argument belongs to the plugin, ``-reverse`` too.
+    """
+    ours: List[str] = []
+    qt: List[str] = []
+    for index, arg in enumerate(argv):
+        if arg in ("-r", "--run-plugin"):
+            ours.extend(argv[index:])
+            break
+        (qt if arg in _QT_OPTIONS_STARTING_WITH_R else ours).append(arg)
+    return ours, qt
+
+
 def _run_plugin_command(args: argparse.Namespace) -> int:
     """Handle --run-plugin / --list-plugins; no window or QApplication."""
     from .plugins.plugin_runner import list_plugins, run_plugin
@@ -298,7 +317,9 @@ def main() -> None:
         "then exit",
     )
     # parse_known_args so Qt's own argv flags (e.g. -platform) are passed through
-    args, remaining = parser.parse_known_args()
+    argv, qt_options = _split_qt_options(sys.argv[1:])
+    args, remaining = parser.parse_known_args(argv)
+    remaining += qt_options
 
     print("-----------------------------------------------------")
     print("MoleditPy - A Python-based molecular editing software")
