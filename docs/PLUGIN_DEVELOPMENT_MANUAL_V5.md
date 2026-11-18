@@ -137,6 +137,21 @@ def initialize(context):
     context.add_menu_action("Tools/Process", lambda: process_data(context))
 ```
 
+### 1.5 Running a Package Plugin from the Command Line
+A package plugin can also be started on its own, without the editor, by shipping a `__main__.py` next to its `__init__.py`:
+
+```text
+moleditpy --run-plugin HighValuePlugin ARGS...
+moleditpy -r HighValuePlugin ARGS...
+moleditpy --list-plugins
+```
+
+This works like `python -m HighValuePlugin ARGS...` with the plugin's parent folder on `sys.path`. The working directory is not changed, so relative paths, including file arguments, resolve from wherever the command was run. `__main__.py` runs as `__main__`, `sys.argv[1:]` holds `ARGS` unchanged (options included, so `argparse` in the plugin sees them as given), and `sys.exit(code)` sets the process's exit status. MoleditPy creates no `QApplication` and no main window and does not call `initialize()`; a plugin that wants a window creates its own `QApplication`.
+
+- Only enabled package plugins with a `__main__.py` can be run; single-file plugins cannot. The name is the folder name, which must be a valid Python identifier. Folders inside category folders are found too. `--list-plugins` prints every installed plugin and marks the runnable ones `[run]`.
+- The package's `__init__.py` is imported first, as with `python -m`, so it must import without a running editor. Keep imports that need the main window inside `initialize()`.
+- `--safe` loads no plugins, so it cannot be combined with `--run-plugin`.
+
 ---
 
 ## 2. Core API: The PluginContext Reference

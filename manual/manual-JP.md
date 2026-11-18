@@ -96,6 +96,8 @@ moleditpy
 | `moleditpy --version` | バージョン番号を表示して終了する |
 | `moleditpy --safe` | **セーフモード**で起動する: 起動時にすべてのプラグインの読み込みをスキップします。プラグインが原因でクラッシュしたり、起動できない場合にお使いください。 |
 | `moleditpy --install-plugin [パス]` | プラグイン (.py, .zip, フォルダ) をヘッドレスモードでインストールします（要手動確認）。 |
+| `moleditpy --run-plugin 名前 [引数]` (`-r`) | インストール済みのプラグインを、エディタを開かずに単独で実行します。`名前` 以降の引数はそのままプラグインに渡されます。実行できるのは対応したプラグイン（`__main__.py` を持つフォルダ型プラグイン）だけです。 |
+| `moleditpy --list-plugins` | インストール済みのすべてのプラグインを、名前・バージョン・フォルダとともに一覧表示します。`--run-plugin` で起動できるものには `[run]`、無効化されているものには `[disabled]` が付きます。セーフモードでも使えます。 |
 
 **Windows向けインストーラー**
 
@@ -568,7 +570,7 @@ MoleditPyは、Pythonスクリプトによる機能の拡張をサポートし�
 
 ## 11\. バージョン情報・ライセンス
 
-  * **バージョン:** 5.2
+  * **バージョン:** 5.3
   * **作者:** Hiromichi Yokoyama
   * **ライセンス:** LGPL-3.0-or-later
   * **リポジトリ:** [https://github.com/HiroYokoyama/python\_molecular\_editor](https://github.com/HiroYokoyama/python_molecular_editor)

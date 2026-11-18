@@ -20,7 +20,7 @@ import sys
 import argparse
 import time
 import traceback
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .utils.constants import VERSION
 
@@ -241,6 +241,40 @@ def setup_logging() -> None:
     sys.excepthook = handle_exception
 
 
+# Qt options argparse would read as "-r" plus an attached value.
+_QT_OPTIONS_STARTING_WITH_R = ("-reverse",)
+
+
+def _split_qt_options(argv: List[str]) -> Tuple[List[str], List[str]]:
+    """Set aside Qt options that collide with ``-r``, up to ``-r`` itself.
+
+    After ``-r NAME`` every argument belongs to the plugin, ``-reverse`` too.
+    """
+    ours: List[str] = []
+    qt: List[str] = []
+    for index, arg in enumerate(argv):
+        if arg in ("-r", "--run-plugin"):
+            ours.extend(argv[index:])
+            break
+        (qt if arg in _QT_OPTIONS_STARTING_WITH_R else ours).append(arg)
+    return ours, qt
+
+
+def _run_plugin_command(args: argparse.Namespace) -> int:
+    """Handle --run-plugin / --list-plugins; no window or QApplication."""
+    from .plugins.plugin_runner import list_plugins, run_plugin
+
+    if args.list_plugins:
+        return list_plugins()
+    if args.safe:
+        print("Error: --safe loads no plugins, so it cannot run one.", file=sys.stderr)
+        return 2
+    if not args.run_plugin:
+        print("Error: --run-plugin needs a plugin name.", file=sys.stderr)
+        return 2
+    return run_plugin(args.run_plugin[0], args.run_plugin[1:])
+
+
 def main() -> None:
     """Parse CLI arguments, configure logging, and launch the GUI."""
     setup_logging()
@@ -268,12 +302,36 @@ def main() -> None:
         metavar="PATH",
         help="Install a plugin from a .py file, .zip, or folder (Headless)",
     )
+    parser.add_argument(
+        "-r",
+        "--run-plugin",
+        nargs=argparse.REMAINDER,
+        metavar="NAME [ARGS]",
+        help="Run a plugin's command line without opening the editor, like "
+        "'python -m NAME ARGS'; everything after NAME goes to the plugin",
+    )
+    parser.add_argument(
+        "--list-plugins",
+        action="store_true",
+        help="List the installed plugins, marking those --run-plugin can run, "
+        "then exit",
+    )
     # parse_known_args so Qt's own argv flags (e.g. -platform) are passed through
-    args, remaining = parser.parse_known_args()
+    argv, qt_options = _split_qt_options(sys.argv[1:])
+    args, remaining = parser.parse_known_args(argv)
+    remaining += qt_options
+
+    # Before the banner: a plugin's output may be read by another program
+    # (`moleditpy -r job_server status | jq`), so nothing else goes to stdout.
+    if args.run_plugin is not None and not args.list_plugins:
+        sys.exit(_run_plugin_command(args))
 
     print("-----------------------------------------------------")
     print("MoleditPy - A Python-based molecular editing software")
     print("-----------------------------------------------------\n", flush=True)
+
+    if args.list_plugins:
+        sys.exit(_run_plugin_command(args))
 
     if args.install_plugin:
         plugin_path = os.path.abspath(args.install_plugin)
