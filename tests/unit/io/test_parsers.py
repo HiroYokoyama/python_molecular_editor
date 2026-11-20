@@ -517,6 +517,59 @@ def test_save_as_mol_no_current_path(mock_parser_host, tmp_path):
     assert os.path.exists(save_path)
 
 
+@pytest.mark.parametrize("always_ask", [False, True])
+def test_load_xyz_transition_metal_uses_distance_bonds(
+    mock_parser_host, tmp_path, always_ask
+):
+    """Regression: RDKit's DetermineBonds has no valences for d-block metals and
+    fails at every charge, so the charge prompt could only end in Skip or
+    Cancel. A metal complex now goes straight to distance-based bonds."""
+    parser = DummyParserExt(mock_parser_host)
+    xyz_path = tmp_path / "cisplatin.xyz"
+    xyz_path.write_text(
+        "5\ncis-PtCl2(NH3)2 heavy atoms\n"
+        "Pt 0.000 0.000 0.000\n"
+        "Cl 2.300 0.000 0.000\n"
+        "Cl 0.000 2.300 0.000\n"
+        "N -2.050 0.000 0.000\n"
+        "N 0.000 -2.050 0.000\n"
+    )
+    parser.settings["skip_chemistry_checks"] = False
+    parser.settings["always_ask_charge"] = always_ask
+    mock_rd_mod.DetermineBonds.reset_mock()
+    mock_rd_mod.DetermineBonds.side_effect = RuntimeError("no valences defined")
+    parser.prompt_for_charge = MagicMock(return_value=(None, False, False))
+    try:
+        mol = parser.load_xyz_file(str(xyz_path))
+    finally:
+        mock_rd_mod.DetermineBonds.side_effect = None
+    assert mol is not None
+    parser.prompt_for_charge.assert_not_called()
+    mock_rd_mod.DetermineBonds.assert_not_called()
+    assert mol.GetIntProp("_xyz_skip_checks") == 1
+    assert sorted(
+        b.GetOtherAtom(mol.GetAtomWithIdx(0)).GetSymbol()
+        for b in mol.GetAtomWithIdx(0).GetBonds()
+    ) == ["Cl", "Cl", "N", "N"]
+    message = mock_parser_host.statusBar().showMessage.call_args[0][0]
+    assert "Pt" in message
+
+
+def test_load_xyz_main_group_metal_still_tries_rdkit(mock_parser_host, tmp_path):
+    """Elements RDKit has valences for (Na here) keep the RDKit path."""
+    parser = DummyParserExt(mock_parser_host)
+    xyz_path = tmp_path / "nacl.xyz"
+    xyz_path.write_text("2\nNaCl\nNa 0.0 0.0 0.0\nCl 2.36 0.0 0.0\n")
+    parser.settings["skip_chemistry_checks"] = False
+    parser.settings["always_ask_charge"] = False
+    mock_rd_mod.DetermineBonds.reset_mock()
+    mock_rd_mod.DetermineBonds.side_effect = None
+    mol = parser.load_xyz_file(str(xyz_path))
+    assert mol is not None
+    mock_rd_mod.DetermineBonds.assert_called_once()
+    assert not mol.HasProp("_xyz_skip_checks")
+
+
 def test_load_xyz_skip_chemistry_via_button(mock_parser_host, tmp_path):
     """Verify skip chemistry check flag is set when user chooses to skip."""
     parser = DummyParserExt(mock_parser_host)

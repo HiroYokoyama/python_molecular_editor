@@ -707,9 +707,12 @@ class View3DManager:
 
                 is_overridden = bond_idx in self._plugin_bond_color_overrides
 
-                if (
-                    bt == Chem.rdchem.BondType.SINGLE
-                    or bt == Chem.rdchem.BondType.AROMATIC
+                # Every bond type other than double or triple (single, aromatic,
+                # dative, zero, ...) is drawn as one cylinder, so coordination
+                # bonds read from MOL/SDF files are not silently dropped.
+                if bt not in (
+                    Chem.rdchem.BondType.DOUBLE,
+                    Chem.rdchem.BondType.TRIPLE,
                 ):
                     if (
                         current_style == "ball_and_stick"

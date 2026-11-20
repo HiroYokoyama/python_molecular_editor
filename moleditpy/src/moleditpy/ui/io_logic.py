@@ -395,9 +395,28 @@ class IOManager:
                 _set_prop(candidate, "_xyz_charge", charge_val)
                 return candidate
 
-        if skip_checks or has_dummy_atoms:
+        # RDKit's DetermineBonds has no valence table for d- and f-block metals,
+        # so it fails for them at every charge; asking for one is pointless.
+        periodic_table = Chem.GetPeriodicTable()
+        no_valence_symbols = sorted(
+            {
+                atom.GetSymbol()
+                for atom in mol.GetAtoms()
+                if atom.GetAtomicNum() > 0
+                and list(periodic_table.GetValenceList(atom.GetAtomicNum())) == [-1]
+            }
+        )
+
+        if skip_checks or has_dummy_atoms or no_valence_symbols:
             final_mol = _process(0, use_rd_determine=False)
             _set_prop(final_mol, "_xyz_skip_checks", 1)
+            if no_valence_symbols and not (skip_checks or has_dummy_atoms):
+                status_bar = self.host.statusBar()
+                if status_bar:
+                    status_bar.showMessage(
+                        "Bonds estimated from distances: RDKit cannot assign bond "
+                        f"orders to {', '.join(no_valence_symbols)}."
+                    )
         else:
             final_mol = None
             # First try with charge 0 (per user's 'first try with 0 then ask' requirement)
