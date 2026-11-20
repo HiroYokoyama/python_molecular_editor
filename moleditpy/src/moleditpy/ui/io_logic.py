@@ -73,6 +73,7 @@ class IOManager:
 
     def __init__(self, host: Any = None) -> None:
         """Initialize IOManager handling molecular file loading and saving."""
+        self._charge_prompt_note = ""
         if host is not None:
             self.host = host
 
@@ -396,7 +397,7 @@ class IOManager:
                 return candidate
 
         # RDKit's DetermineBonds has no valence table for d- and f-block metals,
-        # so it fails for them at every charge; asking for one is pointless.
+        # so it fails for them at every charge.
         periodic_table = Chem.GetPeriodicTable()
         no_valence_symbols = sorted(
             {
@@ -407,16 +408,38 @@ class IOManager:
             }
         )
 
-        if skip_checks or has_dummy_atoms or no_valence_symbols:
+        def _ask_charge() -> Tuple[Any, bool, bool]:
+            """Ask for the total charge: (charge, accepted, skip chemistry)."""
+            prompt_fn = getattr(self, "prompt_for_charge", None)
+            if callable(prompt_fn):
+                result = prompt_fn()
+                if isinstance(result, tuple) and len(result) == 3:
+                    return result
+            return 0, True, False
+
+        if skip_checks or has_dummy_atoms:
             final_mol = _process(0, use_rd_determine=False)
             _set_prop(final_mol, "_xyz_skip_checks", 1)
-            if no_valence_symbols and not (skip_checks or has_dummy_atoms):
-                status_bar = self.host.statusBar()
-                if status_bar:
-                    status_bar.showMessage(
-                        "Bonds estimated from distances: RDKit cannot assign bond "
-                        f"orders to {', '.join(no_valence_symbols)}."
-                    )
+        elif no_valence_symbols:
+            # Bonds can only come from distances, but the charge is still worth
+            # recording, so the dialog says why and keeps the charge entered.
+            elements = ", ".join(no_valence_symbols)
+            self._charge_prompt_note = (
+                f"RDKit cannot assign bond orders to {elements}, so bonds will be "
+                "estimated from interatomic distances."
+            )
+            try:
+                charge_val, ok, skip_flag = _ask_charge()
+            finally:
+                self._charge_prompt_note = ""
+            if not ok:
+                return None
+            final_mol = _process(
+                0 if skip_flag or charge_val is None else int(charge_val),
+                use_rd_determine=False,
+            )
+            _set_prop(final_mol, "_xyz_skip_checks", 1)
+            final_mol.SetProp("_xyz_no_valence_elements", elements)
         else:
             final_mol = None
             # First try with charge 0 (per user's 'first try with 0 then ask' requirement)
@@ -431,14 +454,7 @@ class IOManager:
             if final_mol is None:
                 while True:
                     prompt_fn = getattr(self, "prompt_for_charge", None)
-                    if callable(prompt_fn):
-                        result = prompt_fn()
-                        if isinstance(result, tuple) and len(result) == 3:
-                            charge_val, ok, skip_flag = result
-                        else:
-                            charge_val, ok, skip_flag = 0, True, False
-                    else:
-                        charge_val, ok, skip_flag = 0, True, False
+                    charge_val, ok, skip_flag = _ask_charge()
 
                     if not ok:
                         return None
@@ -471,6 +487,18 @@ class IOManager:
         if not os.environ.get("MOLEDITPY_HEADLESS"):
             parent = self.host if isinstance(self.host, QWidget) else None
             QMessageBox.warning(parent, title, message)
+
+    @staticmethod
+    def _xyz_load_note(mol: Any) -> str:
+        """Status-bar suffix saying why chemistry was skipped automatically."""
+        with suppress_log(AttributeError, KeyError, RuntimeError, TypeError):
+            if mol.HasProp("_xyz_no_valence_elements"):
+                elements = mol.GetProp("_xyz_no_valence_elements")
+                return (
+                    f" (chemistry skipped: RDKit has no bond orders for {elements}; "
+                    "bonds estimated from distances)"
+                )
+        return ""
 
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
         """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
@@ -516,7 +544,7 @@ class IOManager:
 
             if self.host.statusBar():
                 self.host.statusBar().showMessage(
-                    f"3D Viewer Mode: Loaded {source_name}"
+                    f"3D Viewer Mode: Loaded {source_name}" + self._xyz_load_note(mol)
                 )
             self.host.edit_actions_manager.reset_history()
             self.host.set_has_unsaved_changes(False)
@@ -544,6 +572,11 @@ class IOManager:
         hl = QHBoxLayout()
         hl.addWidget(btn_box)
         hl.addWidget(skip_btn)
+        note = getattr(self, "_charge_prompt_note", "")
+        if note:
+            note_label = QLabel(note, dialog)
+            note_label.setWordWrap(True)
+            layout.addWidget(note_label)
         layout.addWidget(QLabel("Enter total molecular charge:"))
         layout.addWidget(line_edit)
         layout.addWidget(error_label)
@@ -1118,6 +1151,7 @@ class IOManager:
 
             if self.host.statusBar():
                 message = f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
+                message += self._xyz_load_note(mol)
                 nonstandard = 0
                 with suppress_log(AttributeError, KeyError, RuntimeError, TypeError):
                     if mol.HasProp("_xyz_nonstandard_rows"):
