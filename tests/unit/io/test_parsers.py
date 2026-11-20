@@ -5,7 +5,7 @@ import sys
 import pytest
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from moleditpy.ui.io_logic import IOManager
+from moleditpy.ui.io_logic import IOManager, XyzLoadCancelled
 from PySide6.QtCore import QPointF, QTimer
 from PySide6.QtWidgets import QApplication, QDialog
 from unittest.mock import MagicMock, patch
@@ -381,9 +381,8 @@ def test_load_xyz_charge_loop_cancel(mock_parser_host, tmp_path):
     path.write_text("1\nC\nC 0 0 0\n")
     parser.settings["skip_chemistry_checks"] = False
     parser.settings["always_ask_charge"] = True
-    result = parser.load_xyz_file(str(path))
-    assert result is None
-    assert parser.xyz_load_cancelled is True
+    with pytest.raises(XyzLoadCancelled):
+        parser.load_xyz_file(str(path))
 
 
 def test_load_xyz_unrecognized_symbol_as_dummy(mock_parser_host, tmp_path):
@@ -570,9 +569,9 @@ def test_load_xyz_transition_metal_cancel(mock_parser_host, tmp_path):
     xyz_path.write_text(_CISPLATIN_XYZ)
     parser.settings["skip_chemistry_checks"] = False
     parser.confirm_distance_bonds = MagicMock(return_value=False)
-    assert parser.load_xyz_file(str(xyz_path)) is None
+    with pytest.raises(XyzLoadCancelled):
+        parser.load_xyz_file(str(xyz_path))
     parser.confirm_distance_bonds.assert_called_once()
-    assert parser.xyz_load_cancelled is True
 
 
 def test_load_xyz_for_3d_viewing_cancel_is_not_an_error(mock_parser_host, tmp_path):
@@ -599,7 +598,58 @@ def test_load_xyz_for_3d_viewing_unreadable_file_is_an_error(
     parser._report_load_error = MagicMock()
     parser.load_xyz_for_3d_viewing(str(xyz_path))
     parser._report_load_error.assert_called_once()
-    assert parser.xyz_load_cancelled is False
+    assert "XYZ Load failed" in parser._report_load_error.call_args[0][1]
+
+
+def test_load_xyz_for_3d_viewing_charge_dialog_cancel(mock_parser_host, tmp_path):
+    """Cancelling the charge dialog (an organic file RDKit rejects at charge 0)
+    is reported as a cancel too, not as a load failure."""
+    parser = DummyParserExt(mock_parser_host)
+    path = tmp_path / "ion.xyz"
+    path.write_text("1\nC\nC 0 0 0\n")
+    parser.settings["skip_chemistry_checks"] = False
+    parser.settings["always_ask_charge"] = True
+    parser.prompt_for_charge = MagicMock(return_value=(None, False, False))
+    parser._report_load_error = MagicMock()
+    parser.load_xyz_for_3d_viewing(str(path))
+    parser._report_load_error.assert_not_called()
+    assert mock_parser_host.statusBar().showMessage.call_args[0][0] == "Open cancelled."
+
+
+def test_load_xyz_block_cancel_returns_none(mock_parser_host):
+    """load_xyz_block keeps its None-for-nothing-loaded contract on cancel."""
+    parser = DummyParserExt(mock_parser_host)
+    parser.settings["skip_chemistry_checks"] = False
+    parser.confirm_distance_bonds = MagicMock(return_value=False)
+    assert parser.load_xyz_block(_CISPLATIN_XYZ) is None
+    assert (
+        mock_parser_host.statusBar().showMessage.call_args[0][0]
+        == "XYZ load cancelled."
+    )
+
+
+def test_load_xyz_several_metals_named_once_in_order(mock_parser_host):
+    """Every element without RDKit valences is named once, alphabetically."""
+    parser = DummyParserExt(mock_parser_host)
+    parser.settings["skip_chemistry_checks"] = False
+    parser.confirm_distance_bonds = MagicMock(return_value=True)
+    xyz = "4\nmixed\nPt 0 0 0\nFe 5 0 0\nPt 10 0 0\nCl 12.3 0 0\n"
+    mol = parser.load_xyz_block(xyz)
+    parser.confirm_distance_bonds.assert_called_once_with("Fe, Pt")
+    assert mol.GetProp("_xyz_no_valence_elements") == "Fe, Pt"
+
+
+def test_load_xyz_dummy_atoms_with_metal_skip_without_asking(mock_parser_host):
+    """Ghost atoms already skip chemistry silently; a metal does not add a
+    question to that path."""
+    parser = DummyParserExt(mock_parser_host)
+    parser.settings["skip_chemistry_checks"] = False
+    parser.confirm_distance_bonds = MagicMock()
+    mol = parser.load_xyz_block("2\nghost\nX 0 0 0\nFe 2 0 0\n")
+    assert mol is not None
+    parser.confirm_distance_bonds.assert_not_called()
+    assert not mol.HasProp("_xyz_no_valence_elements")
+    assert IOManager._xyz_load_note(mol) == ""
 
 
 def test_load_xyz_transition_metal_skip_setting_stays_silent(

@@ -1429,6 +1429,20 @@ class TestXyzBlockEntryPoints:
         assert message.startswith("3D Viewer Mode: Loaded lacl.xyz")
         assert "chemistry skipped" in message and "La" in message
 
+    def test_show_xyz_data_cancel_leaves_the_document_alone(self):
+        """Cancelling the confirmation returns None before clearing or drawing."""
+        host = DummyHost()
+        xyz = chr(10).join(["2", "LaCl", "La 0.0 0.0 0.0", "Cl 0.0 0.0 2.7"])
+        io = IOManager(host)
+        io.confirm_distance_bonds = MagicMock(return_value=False)
+
+        assert io.show_xyz_data(xyz, source_name="lacl.xyz") is None
+        host.edit_actions_manager.clear_all.assert_not_called()
+        host.view_3d_manager.draw_molecule_3d.assert_not_called()
+        assert host.statusBar_mock.showMessage.call_args[0][0] == (
+            "XYZ load cancelled."
+        )
+
     def test_show_xyz_data_returns_none_on_bad_text(self):
         """An unparsable block stops before touching the 3D view."""
         host = DummyHost()

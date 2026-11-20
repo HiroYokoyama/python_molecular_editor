@@ -68,14 +68,15 @@ class SdfSelectionCancelled(Exception):
     """The user closed the SDF record selector without choosing a molecule."""
 
 
+class XyzLoadCancelled(Exception):
+    """The user cancelled a dialog while an XYZ structure was being loaded."""
+
+
 class IOManager:
     """Independent manager for IO actions (Load/Save), ported from Mixins."""
 
     def __init__(self, host: Any = None) -> None:
         """Initialize IOManager handling molecular file loading and saving."""
-        # Set when the user cancels a dialog during the last XYZ load, so the
-        # caller can tell a cancel from a file that could not be read.
-        self.xyz_load_cancelled = False
         if host is not None:
             self.host = host
 
@@ -283,8 +284,10 @@ class IOManager:
         return symbol, False
 
     def _mol_from_xyz_lines(self, raw_lines: list[str]) -> Any:
-        """Create an RDKit molecule from XYZ text lines."""
-        self.xyz_load_cancelled = False
+        """Create an RDKit molecule from XYZ text lines.
+
+        Raises XyzLoadCancelled if the user cancels a dialog it opens.
+        """
         lines = [ln.strip() for ln in raw_lines]
         # Only leading comments are metadata. In a headed XYZ the second line is
         # the title and may itself begin with '#', so discarding every '#' line
@@ -417,10 +420,8 @@ class IOManager:
         elif no_valence_symbols:
             # A charge would not change distance-based bonds, so only confirm.
             elements = ", ".join(no_valence_symbols)
-            confirm_fn = getattr(self, "confirm_distance_bonds", None)
-            if callable(confirm_fn) and not confirm_fn(elements):
-                self.xyz_load_cancelled = True
-                return None
+            if not self.confirm_distance_bonds(elements):
+                raise XyzLoadCancelled()
             final_mol = _process(0, use_rd_determine=False)
             _set_prop(final_mol, "_xyz_skip_checks", 1)
             final_mol.SetProp("_xyz_no_valence_elements", elements)
@@ -448,8 +449,7 @@ class IOManager:
                         charge_val, ok, skip_flag = 0, True, False
 
                     if not ok:
-                        self.xyz_load_cancelled = True
-                        return None
+                        raise XyzLoadCancelled()
                     if skip_flag:
                         final_mol = _process(0, use_rd_determine=False)
                         _set_prop(final_mol, "_xyz_skip_checks", 1)
@@ -481,19 +481,22 @@ class IOManager:
             QMessageBox.warning(parent, title, message)
 
     @staticmethod
-    def _xyz_load_note(mol: Any) -> str:
+    def _xyz_load_note(mol: Chem.Mol) -> str:
         """Status-bar suffix saying why chemistry was skipped automatically."""
-        with suppress_log(AttributeError, KeyError, RuntimeError, TypeError):
-            if mol.HasProp("_xyz_no_valence_elements"):
-                elements = mol.GetProp("_xyz_no_valence_elements")
-                return (
-                    f" (chemistry skipped: RDKit has no bond orders for {elements}; "
-                    "bonds estimated from distances)"
-                )
-        return ""
+        if not mol.HasProp("_xyz_no_valence_elements"):
+            return ""
+        elements = mol.GetProp("_xyz_no_valence_elements")
+        return (
+            f" (chemistry skipped: RDKit has no bond orders for {elements}; "
+            "bonds estimated from distances)"
+        )
 
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
-        """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
+        """Load XYZ file and create RDKit Mol with charge prompt and bond determination.
+
+        Returns None if the file cannot be parsed; raises XyzLoadCancelled if
+        the user cancels a dialog.
+        """
         try:
             return self._mol_from_xyz_lines(self._read_text_lines_flexible(file_path))
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
@@ -501,9 +504,15 @@ class IOManager:
             return None
 
     def load_xyz_block(self, xyz_text: str) -> Optional[Any]:
-        """Load XYZ text and create an RDKit Mol without opening a file dialog."""
+        """Load XYZ text and create an RDKit Mol without opening a file dialog.
+
+        Returns None if the text cannot be parsed or the user cancels a dialog.
+        """
         try:
             return self._mol_from_xyz_lines(xyz_text.splitlines())
+        except XyzLoadCancelled:
+            self.host.statusBar().showMessage("XYZ load cancelled.")
+            return None
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
             self.host.statusBar().showMessage(f"Error parsing XYZ data: {e}")
             return None
@@ -1127,9 +1136,6 @@ class IOManager:
 
         try:
             mol = self.load_xyz_file(file_path)
-            if mol is None and self.xyz_load_cancelled:
-                self.host.statusBar().showMessage("Open cancelled.")
-                return
             if mol is None:
                 raise ValueError("Failed to create molecule from XYZ file.")
 
@@ -1175,6 +1181,8 @@ class IOManager:
             self.host.edit_actions_manager.reset_history()
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
+        except XyzLoadCancelled:
+            self.host.statusBar().showMessage("Open cancelled.")
         except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
             self._report_load_error("XYZ Load Error", f"XYZ Load failed: {e}")
 
