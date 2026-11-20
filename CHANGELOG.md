@@ -11,7 +11,8 @@ All notable changes to this project are recorded here. The format follows
 ### Fixed
 
 - Coordination (dative) bonds were missing from the 3D view. A MOL or SDF file opened in the 3D viewer kept its metal–ligand bonds in the molecule, but only single, aromatic, double and triple bonds were drawn; every other bond type, including dative, now draws as a single bond.
-- An XYZ file containing a transition metal, lanthanide or actinide could only be loaded with **Skip chemistry**: RDKit cannot assign bond orders to those elements, so the **Import XYZ Charge** dialog failed for every charge entered. For such a file the dialog now opens once, says which elements are responsible, and loads the structure with distance-based bonds while keeping the charge entered (Skip chemistry records charge 0). The status bar notes that chemistry was skipped.
+- An XYZ file containing a transition metal, lanthanide or actinide could only be loaded with **Skip chemistry**: RDKit cannot assign bond orders to those elements, so the **Import XYZ Charge** dialog failed for every charge entered. Such a file no longer asks for a charge, which would not change the result: an OK/Cancel message names the elements and says bonds will be estimated from interatomic distances, and OK loads the structure that way. The status bar notes that chemistry was skipped.
+- Cancelling a dialog while opening an XYZ file reported "XYZ Load failed: Failed to create molecule from XYZ file." It now only says "Open cancelled."
 
 ## [5.3.0] - 2026-11-18
 

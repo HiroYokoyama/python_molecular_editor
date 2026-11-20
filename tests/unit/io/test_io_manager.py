@@ -178,19 +178,6 @@ class TestPromptForCharge:
         assert ok is False
         assert skip is False
 
-    def test_note_explains_why_bonds_come_from_distances(self, qapp):
-        """A note set by the XYZ loader is shown above the charge field."""
-        io = self._make_io()
-        io._charge_prompt_note = "RDKit cannot assign bond orders to La"
-        with (
-            _make_charge_dialog(accepted=True),
-            patch("moleditpy.ui.io_logic.QLabel") as MockLabel,
-        ):
-            io.prompt_for_charge()
-        texts = [c.args[0] for c in MockLabel.call_args_list if c.args]
-        assert "RDKit cannot assign bond orders to La" in texts
-        MockLabel.return_value.setWordWrap.assert_called_with(True)
-
     def test_skip_chemistry_returns_zero_true_true(self, qapp):
         """Skip button returns charge=0, ok=True, skip=True."""
         io = self._make_io()
@@ -1376,6 +1363,26 @@ class TestMolToSceneStereo:
         assert r != s
 
 
+class TestConfirmDistanceBonds:
+    """The OK/Cancel question for elements RDKit has no bond orders for."""
+
+    @pytest.mark.parametrize("button,expected", [("Ok", True), ("Cancel", False)])
+    def test_answer(self, qapp, monkeypatch, button, expected):
+        monkeypatch.delenv("MOLEDITPY_HEADLESS", raising=False)
+        io = IOManager(DummyHost())
+        with patch("moleditpy.ui.io_logic.QMessageBox") as box:
+            box.information.return_value = getattr(box.StandardButton, button)
+            assert io.confirm_distance_bonds("La") is expected
+        args = box.information.call_args[0]
+        assert "La" in args[2] and "distances" in args[2]
+
+    def test_headless_goes_ahead_without_a_dialog(self, qapp, monkeypatch):
+        monkeypatch.setenv("MOLEDITPY_HEADLESS", "1")
+        with patch("moleditpy.ui.io_logic.QMessageBox") as box:
+            assert IOManager(DummyHost()).confirm_distance_bonds("Fe") is True
+        box.information.assert_not_called()
+
+
 class TestXyzBlockEntryPoints:
     """load_xyz_block and show_xyz_data are the paths plugins hand XYZ text to."""
 
@@ -1403,19 +1410,21 @@ class TestXyzBlockEntryPoints:
         assert "probe.xyz" in host.statusBar_mock.showMessage.call_args[0][0]
 
     def test_show_xyz_data_says_why_lanthanide_chemistry_was_skipped(self):
-        """A lanthanide gets distance bonds without the charge dialog, and the
-        final status message, which replaces any earlier one, says so."""
+        """A lanthanide gets distance bonds after one confirmation instead of the
+        charge dialog, and the final status message, which replaces any earlier
+        one, says so."""
         host = DummyHost()
         xyz = chr(10).join(["2", "LaCl", "La 0.0 0.0 0.0", "Cl 0.0 0.0 2.7"])
         io = IOManager(host)
-        io.prompt_for_charge = MagicMock(return_value=(2, True, False))
+        io.prompt_for_charge = MagicMock()
+        io.confirm_distance_bonds = MagicMock(return_value=True)
 
         mol = io.show_xyz_data(xyz, source_name="lacl.xyz")
 
         assert mol is not None and mol.GetNumBonds() == 1
         assert mol.GetIntProp("_xyz_skip_checks") == 1
-        assert mol.GetIntProp("_xyz_charge") == 2
-        io.prompt_for_charge.assert_called_once()
+        io.confirm_distance_bonds.assert_called_once_with("La")
+        io.prompt_for_charge.assert_not_called()
         message = host.statusBar_mock.showMessage.call_args[0][0]
         assert message.startswith("3D Viewer Mode: Loaded lacl.xyz")
         assert "chemistry skipped" in message and "La" in message

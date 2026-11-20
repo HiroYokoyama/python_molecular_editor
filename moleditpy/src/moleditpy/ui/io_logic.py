@@ -73,7 +73,9 @@ class IOManager:
 
     def __init__(self, host: Any = None) -> None:
         """Initialize IOManager handling molecular file loading and saving."""
-        self._charge_prompt_note = ""
+        # Set when the user cancels a dialog during the last XYZ load, so the
+        # caller can tell a cancel from a file that could not be read.
+        self.xyz_load_cancelled = False
         if host is not None:
             self.host = host
 
@@ -282,6 +284,7 @@ class IOManager:
 
     def _mol_from_xyz_lines(self, raw_lines: list[str]) -> Any:
         """Create an RDKit molecule from XYZ text lines."""
+        self.xyz_load_cancelled = False
         lines = [ln.strip() for ln in raw_lines]
         # Only leading comments are metadata. In a headed XYZ the second line is
         # the title and may itself begin with '#', so discarding every '#' line
@@ -408,36 +411,17 @@ class IOManager:
             }
         )
 
-        def _ask_charge() -> Tuple[Any, bool, bool]:
-            """Ask for the total charge: (charge, accepted, skip chemistry)."""
-            prompt_fn = getattr(self, "prompt_for_charge", None)
-            if callable(prompt_fn):
-                result = prompt_fn()
-                if isinstance(result, tuple) and len(result) == 3:
-                    return result
-            return 0, True, False
-
         if skip_checks or has_dummy_atoms:
             final_mol = _process(0, use_rd_determine=False)
             _set_prop(final_mol, "_xyz_skip_checks", 1)
         elif no_valence_symbols:
-            # Bonds can only come from distances, but the charge is still worth
-            # recording, so the dialog says why and keeps the charge entered.
+            # A charge would not change distance-based bonds, so only confirm.
             elements = ", ".join(no_valence_symbols)
-            self._charge_prompt_note = (
-                f"RDKit cannot assign bond orders to {elements}, so bonds will be "
-                "estimated from interatomic distances."
-            )
-            try:
-                charge_val, ok, skip_flag = _ask_charge()
-            finally:
-                self._charge_prompt_note = ""
-            if not ok:
+            confirm_fn = getattr(self, "confirm_distance_bonds", None)
+            if callable(confirm_fn) and not confirm_fn(elements):
+                self.xyz_load_cancelled = True
                 return None
-            final_mol = _process(
-                0 if skip_flag or charge_val is None else int(charge_val),
-                use_rd_determine=False,
-            )
+            final_mol = _process(0, use_rd_determine=False)
             _set_prop(final_mol, "_xyz_skip_checks", 1)
             final_mol.SetProp("_xyz_no_valence_elements", elements)
         else:
@@ -454,9 +438,17 @@ class IOManager:
             if final_mol is None:
                 while True:
                     prompt_fn = getattr(self, "prompt_for_charge", None)
-                    charge_val, ok, skip_flag = _ask_charge()
+                    if callable(prompt_fn):
+                        result = prompt_fn()
+                        if isinstance(result, tuple) and len(result) == 3:
+                            charge_val, ok, skip_flag = result
+                        else:
+                            charge_val, ok, skip_flag = 0, True, False
+                    else:
+                        charge_val, ok, skip_flag = 0, True, False
 
                     if not ok:
+                        self.xyz_load_cancelled = True
                         return None
                     if skip_flag:
                         final_mol = _process(0, use_rd_determine=False)
@@ -555,6 +547,25 @@ class IOManager:
                 self.host.statusBar().showMessage(f"XYZ display failed: {e}")
             return None
 
+    def confirm_distance_bonds(self, elements: str) -> bool:
+        """Ask whether to load with distance-based bonds; False cancels the load.
+
+        Used for elements RDKit cannot assign bond orders to at any charge.
+        Without a display there is nobody to ask, so the load goes ahead.
+        """
+        if os.environ.get("MOLEDITPY_HEADLESS"):
+            return True
+        parent = self.host if isinstance(self.host, QWidget) else None
+        answer = QMessageBox.information(
+            parent,
+            "Import XYZ",
+            f"RDKit cannot assign bond orders to {elements}, so bonds will be "
+            "estimated from interatomic distances.",
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Ok,
+        )
+        return answer == QMessageBox.StandardButton.Ok
+
     def prompt_for_charge(self) -> Tuple[Optional[int], bool, bool]:
         """Show dialog to prompt user for molecular charge when loading XYZ files."""
         dialog = QDialog(self.host)
@@ -572,11 +583,6 @@ class IOManager:
         hl = QHBoxLayout()
         hl.addWidget(btn_box)
         hl.addWidget(skip_btn)
-        note = getattr(self, "_charge_prompt_note", "")
-        if note:
-            note_label = QLabel(note, dialog)
-            note_label.setWordWrap(True)
-            layout.addWidget(note_label)
         layout.addWidget(QLabel("Enter total molecular charge:"))
         layout.addWidget(line_edit)
         layout.addWidget(error_label)
@@ -1121,6 +1127,9 @@ class IOManager:
 
         try:
             mol = self.load_xyz_file(file_path)
+            if mol is None and self.xyz_load_cancelled:
+                self.host.statusBar().showMessage("Open cancelled.")
+                return
             if mol is None:
                 raise ValueError("Failed to create molecule from XYZ file.")
 
