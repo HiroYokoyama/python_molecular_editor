@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [5.3.1] - 2026-11-20
+
 ### Fixed
 
 - Coordination (dative) bonds were missing from the 3D view. A MOL or SDF file opened in the 3D viewer kept its metal–ligand bonds in the molecule, but only single, aromatic, double and triple bonds were drawn; every other bond type, including dative, now draws as a single bond.
