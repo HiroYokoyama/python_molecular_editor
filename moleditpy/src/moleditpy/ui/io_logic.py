@@ -68,6 +68,10 @@ class SdfSelectionCancelled(Exception):
     """The user closed the SDF record selector without choosing a molecule."""
 
 
+class XyzLoadCancelled(Exception):
+    """The user cancelled a dialog while an XYZ structure was being loaded."""
+
+
 class IOManager:
     """Independent manager for IO actions (Load/Save), ported from Mixins."""
 
@@ -280,7 +284,10 @@ class IOManager:
         return symbol, False
 
     def _mol_from_xyz_lines(self, raw_lines: list[str]) -> Any:
-        """Create an RDKit molecule from XYZ text lines."""
+        """Create an RDKit molecule from XYZ text lines.
+
+        Raises XyzLoadCancelled if the user cancels a dialog it opens.
+        """
         lines = [ln.strip() for ln in raw_lines]
         # Only leading comments are metadata. In a headed XYZ the second line is
         # the title and may itself begin with '#', so discarding every '#' line
@@ -395,9 +402,29 @@ class IOManager:
                 _set_prop(candidate, "_xyz_charge", charge_val)
                 return candidate
 
+        # RDKit's DetermineBonds has no valence table for d- and f-block metals,
+        # so it fails for them at every charge.
+        periodic_table = Chem.GetPeriodicTable()
+        no_valence_symbols = sorted(
+            {
+                atom.GetSymbol()
+                for atom in mol.GetAtoms()
+                if atom.GetAtomicNum() > 0
+                and list(periodic_table.GetValenceList(atom.GetAtomicNum())) == [-1]
+            }
+        )
+
         if skip_checks or has_dummy_atoms:
             final_mol = _process(0, use_rd_determine=False)
             _set_prop(final_mol, "_xyz_skip_checks", 1)
+        elif no_valence_symbols:
+            # A charge would not change distance-based bonds, so only confirm.
+            elements = ", ".join(no_valence_symbols)
+            if not self.confirm_distance_bonds(elements):
+                raise XyzLoadCancelled()
+            final_mol = _process(0, use_rd_determine=False)
+            _set_prop(final_mol, "_xyz_skip_checks", 1)
+            final_mol.SetProp("_xyz_no_valence_elements", elements)
         else:
             final_mol = None
             # First try with charge 0 (per user's 'first try with 0 then ask' requirement)
@@ -422,7 +449,7 @@ class IOManager:
                         charge_val, ok, skip_flag = 0, True, False
 
                     if not ok:
-                        return None
+                        raise XyzLoadCancelled()
                     if skip_flag:
                         final_mol = _process(0, use_rd_determine=False)
                         _set_prop(final_mol, "_xyz_skip_checks", 1)
@@ -453,8 +480,23 @@ class IOManager:
             parent = self.host if isinstance(self.host, QWidget) else None
             QMessageBox.warning(parent, title, message)
 
+    @staticmethod
+    def _xyz_load_note(mol: Chem.Mol) -> str:
+        """Status-bar suffix saying why chemistry was skipped automatically."""
+        if not mol.HasProp("_xyz_no_valence_elements"):
+            return ""
+        elements = mol.GetProp("_xyz_no_valence_elements")
+        return (
+            f" (chemistry skipped: RDKit has no bond orders for {elements}; "
+            "bonds estimated from distances)"
+        )
+
     def load_xyz_file(self, file_path: str) -> Optional[Any]:
-        """Load XYZ file and create RDKit Mol with charge prompt and bond determination."""
+        """Load XYZ file and create RDKit Mol with charge prompt and bond determination.
+
+        Returns None if the file cannot be parsed; raises XyzLoadCancelled if
+        the user cancels a dialog.
+        """
         try:
             return self._mol_from_xyz_lines(self._read_text_lines_flexible(file_path))
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
@@ -462,9 +504,15 @@ class IOManager:
             return None
 
     def load_xyz_block(self, xyz_text: str) -> Optional[Any]:
-        """Load XYZ text and create an RDKit Mol without opening a file dialog."""
+        """Load XYZ text and create an RDKit Mol without opening a file dialog.
+
+        Returns None if the text cannot be parsed or the user cancels a dialog.
+        """
         try:
             return self._mol_from_xyz_lines(xyz_text.splitlines())
+        except XyzLoadCancelled:
+            self.host.statusBar().showMessage("XYZ load cancelled.")
+            return None
         except (RuntimeError, TypeError, ValueError, UnicodeDecodeError) as e:
             self.host.statusBar().showMessage(f"Error parsing XYZ data: {e}")
             return None
@@ -497,7 +545,7 @@ class IOManager:
 
             if self.host.statusBar():
                 self.host.statusBar().showMessage(
-                    f"3D Viewer Mode: Loaded {source_name}"
+                    f"3D Viewer Mode: Loaded {source_name}" + self._xyz_load_note(mol)
                 )
             self.host.edit_actions_manager.reset_history()
             self.host.set_has_unsaved_changes(False)
@@ -507,6 +555,25 @@ class IOManager:
             if self.host.statusBar():
                 self.host.statusBar().showMessage(f"XYZ display failed: {e}")
             return None
+
+    def confirm_distance_bonds(self, elements: str) -> bool:
+        """Ask whether to load with distance-based bonds; False cancels the load.
+
+        Used for elements RDKit cannot assign bond orders to at any charge.
+        Without a display there is nobody to ask, so the load goes ahead.
+        """
+        if os.environ.get("MOLEDITPY_HEADLESS"):
+            return True
+        parent = self.host if isinstance(self.host, QWidget) else None
+        answer = QMessageBox.information(
+            parent,
+            "Import XYZ",
+            f"RDKit cannot assign bond orders to {elements}, so bonds will be "
+            "estimated from interatomic distances.",
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Ok,
+        )
+        return answer == QMessageBox.StandardButton.Ok
 
     def prompt_for_charge(self) -> Tuple[Optional[int], bool, bool]:
         """Show dialog to prompt user for molecular charge when loading XYZ files."""
@@ -1099,6 +1166,7 @@ class IOManager:
 
             if self.host.statusBar():
                 message = f"3D Viewer Mode: Loaded {os.path.basename(file_path)}"
+                message += self._xyz_load_note(mol)
                 nonstandard = 0
                 with suppress_log(AttributeError, KeyError, RuntimeError, TypeError):
                     if mol.HasProp("_xyz_nonstandard_rows"):
@@ -1113,6 +1181,8 @@ class IOManager:
             self.host.edit_actions_manager.reset_history()
             self.host.set_has_unsaved_changes(False)
             self.host.state_manager.update_window_title()
+        except XyzLoadCancelled:
+            self.host.statusBar().showMessage("Open cancelled.")
         except (OSError, IOError, ValueError, RuntimeError, AttributeError) as e:
             self._report_load_error("XYZ Load Error", f"XYZ Load failed: {e}")
 

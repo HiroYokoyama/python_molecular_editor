@@ -251,6 +251,75 @@ def test_add_3d_bond_cylinders_basic(app, mock_parser_host, mock_pv):
     assert len(points) == 14
 
 
+@pytest.mark.parametrize("style", ["ball_and_stick", "stick", "wireframe"])
+@pytest.mark.parametrize(
+    "bond_type", [Chem.BondType.DATIVE, Chem.BondType.ZERO, Chem.BondType.HYDROGEN]
+)
+def test_add_3d_bond_cylinders_draws_other_bond_types(
+    app, mock_parser_host, mock_pv, style, bond_type
+):
+    """Regression: only single, aromatic, double and triple bonds produced
+    geometry, so a coordination (dative) bond read from a MOL/SDF file was
+    present in the molecule but invisible in 3D. Other types draw as single."""
+    view3d = _make_view3d_ext(mock_parser_host)
+
+    mol = Chem.RWMol()
+    mol.AddAtom(Chem.Atom("N"))
+    mol.AddAtom(Chem.Atom("Pt"))
+    mol.AddBond(0, 1, bond_type)
+    conf = Chem.Conformer(2)
+    conf.SetAtomPosition(1, (2.05, 0.0, 0.0))
+    mol.AddConformer(conf)
+    col = np.array([[0.2, 0.2, 1.0], [0.8, 0.8, 0.8]])
+
+    view3d._add_3d_bond_cylinders(
+        mol, mol.GetConformer(), col, style, {"smooth_shading": True}
+    )
+
+    assert mock_pv.PolyData.call_count >= 1
+    points = mock_pv.PolyData.call_args_list[-1][0][0]
+    assert len(points) == (2 if style == "ball_and_stick" else 4)
+    # Exporters read these keys, so a dative bond must register like a single.
+    if style == "ball_and_stick":
+        assert "bond_0" in view3d._3d_color_map
+    else:
+        assert view3d._3d_color_map["bond_0_start"] == [51, 51, 255]
+        assert view3d._3d_color_map["bond_0_end"] == [204, 204, 204]
+
+
+@pytest.mark.parametrize("variant", ["cpk_bond_color", "plugin_override"])
+def test_add_3d_bond_cylinders_dative_split_colors(
+    app, mock_parser_host, mock_pv, variant
+):
+    """In ball-and-stick, CPK bond colouring and a plugin colour override
+    split a dative bond at its midpoint, exactly as they do a single bond."""
+    view3d = _make_view3d_ext(mock_parser_host)
+    mol = Chem.RWMol()
+    mol.AddAtom(Chem.Atom("N"))
+    mol.AddAtom(Chem.Atom("Pt"))
+    mol.AddBond(0, 1, Chem.BondType.DATIVE)
+    conf = Chem.Conformer(2)
+    conf.SetAtomPosition(1, (2.0, 0.0, 0.0))
+    mol.AddConformer(conf)
+    col = np.array([[0.2, 0.2, 1.0], [0.8, 0.8, 0.8]])
+    if variant == "cpk_bond_color":
+        mock_parser_host.init_manager.settings["ball_stick_use_cpk_bond_color"] = True
+        expected = ([51, 51, 255], [204, 204, 204])
+    else:
+        view3d._plugin_bond_color_overrides = {0: "#FF0000"}
+        expected = ([255, 0, 0], [255, 0, 0])
+
+    view3d._add_3d_bond_cylinders(
+        mol, mol.GetConformer(), col, "ball_and_stick", {"smooth_shading": True}
+    )
+
+    points = mock_pv.PolyData.call_args_list[-1][0][0]
+    assert len(points) == 4
+    assert np.allclose(points[1], [1.0, 0.0, 0.0])
+    assert view3d._3d_color_map["bond_0_start"] == expected[0]
+    assert view3d._3d_color_map["bond_0_end"] == expected[1]
+
+
 def test_add_3d_bond_cylinders_styles(app, mock_parser_host, mock_pv):
     """Check style-dependent factors (radius/offset factors) in bond drawing."""
     view3d = _make_view3d_ext(mock_parser_host)
