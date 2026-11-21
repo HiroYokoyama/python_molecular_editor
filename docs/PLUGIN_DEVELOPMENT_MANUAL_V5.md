@@ -137,7 +137,7 @@ def initialize(context):
     context.add_menu_action("Tools/Process", lambda: process_data(context))
 ```
 
-### 1.5 Running a Package Plugin from the Command Line
+### 1.5 Running a Plugin from the Command Line
 A package plugin can also be started on its own, without the editor, by shipping a `__main__.py` next to its `__init__.py`:
 
 ```text
@@ -148,9 +148,28 @@ moleditpy --list-plugins
 
 This works like `python -m HighValuePlugin ARGS...` with the plugin's parent folder on `sys.path`. The working directory is not changed, so relative paths, including file arguments, resolve from wherever the command was run. `__main__.py` runs as `__main__`, `sys.argv[1:]` holds `ARGS` unchanged (options included, so `argparse` in the plugin sees them as given), and `sys.exit(code)` sets the process's exit status. MoleditPy creates no `QApplication` and no main window and does not call `initialize()`; a plugin that wants a window creates its own `QApplication`.
 
-- Only enabled package plugins with a `__main__.py` can be run; single-file plugins cannot. The name is the folder name, which must be a valid Python identifier. Folders inside category folders are found too. `--list-plugins` prints every installed plugin and marks the runnable ones `[run]`.
+- Only enabled plugins that opt in can be run. For a package plugin the name is the folder name, which must be a valid Python identifier. Folders inside category folders are found too. `--list-plugins` prints every installed plugin and marks the runnable ones `[run]`.
 - The package's `__init__.py` is imported first, as with `python -m`, so it must import without a running editor. Keep imports that need the main window inside `initialize()`.
 - `--safe` loads no plugins, so it cannot be combined with `--run-plugin`.
+
+From 5.3.2 a single-file plugin can opt in too, with a top-level `if __name__ == "__main__":` block:
+
+```python
+# my_tool.py
+import sys
+
+def initialize(context):
+    ...
+
+def cli_main(argv):
+    print("my_tool got", argv)
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(cli_main(sys.argv[1:]))
+```
+
+`moleditpy -r my_tool ARGS...` then works like `python my_tool.py ARGS...`: `sys.argv[0]` is the file's path, its folder is on `sys.path`, and the block runs as `__main__` without `initialize()` being called. The name is the file name without `.py`. The guard is found by parsing the file, so listing plugins runs none of their code; a guard inside a function or class does not count. As with a package, the module's top level runs first, so it must import without a running editor.
 
 ---
 
