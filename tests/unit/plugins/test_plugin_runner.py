@@ -71,6 +71,104 @@ def test_a_package_inside_a_category_folder_is_found(manager, name):
     assert plugin_runner.runnable_plugins(manager) == {name: [str(folder)]}
 
 
+SINGLE_FILE_SOURCE = (
+    'PLUGIN_NAME = "Single Tool"\n'
+    'PLUGIN_VERSION = "1.0"\n'
+    "\n"
+    "def initialize(context):\n"
+    "    pass\n"
+    "\n"
+    'if __name__ == "__main__":\n'
+    + "".join("    " + line + "\n" for line in MAIN_SOURCE.strip().splitlines())
+)
+
+
+def make_single_file(base: Path, name: str, source: str = SINGLE_FILE_SOURCE) -> Path:
+    base.mkdir(parents=True, exist_ok=True)
+    path = base / f"{name}.py"
+    path.write_text(source, encoding="utf-8")
+    return path
+
+
+def test_a_single_file_with_a_main_guard_is_runnable(manager, name):
+    path = make_single_file(Path(manager.plugin_dir) / "Utility", name)
+    assert plugin_runner.runnable_plugins(manager) == {name: [str(path)]}
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "",
+        "def initialize(context):\n    pass\n",
+        # Only a top-level guard counts, as only that one runs as a script.
+        "def f():\n    if __name__ == '__main__':\n        pass\n",
+        "if __name__ != '__main__':\n    pass\n",
+        "if __name__ == 'other':\n    pass\n",
+        "this is not python(\n",
+    ],
+)
+def test_a_single_file_without_a_top_level_main_guard_is_not_runnable(
+    manager, name, source
+):
+    make_single_file(Path(manager.plugin_dir), name, source)
+    assert plugin_runner.runnable_plugins(manager) == {}
+
+
+def test_the_main_guard_may_be_written_either_way_round(tmp_path):
+    path = tmp_path / "reversed.py"
+    path.write_text("if '__main__' == __name__:\n    pass\n", encoding="utf-8")
+    assert plugin_runner.has_main_guard(str(path))
+
+
+def test_a_disabled_single_file_is_not_runnable(manager, name):
+    path = make_single_file(Path(manager.plugin_dir), name)
+    manager.disabled_plugins = {manager.plugin_path_key(str(path))}
+    assert plugin_runner.runnable_plugins(manager) == {}
+
+
+def test_a_single_file_runs_like_python_file(manager, name, record):
+    path = make_single_file(Path(manager.plugin_dir), name)
+    saved_argv, saved_path = sys.argv[:], sys.path[:]
+    assert plugin_runner.run_plugin(name, ["update", "--all"], manager) == 0
+    seen = json.loads(record.read_text(encoding="utf-8"))
+    assert seen["argv"] == [str(path), "update", "--all"]
+    assert seen["name"] == "__main__"
+    assert sys.argv == saved_argv
+    assert sys.path == saved_path
+
+
+def test_a_single_files_folder_is_importable_while_it_runs(manager, name, record):
+    base = Path(manager.plugin_dir)
+    helper = f"{name}_helper"
+    (base / f"{helper}.py").write_text("VALUE = 42\n", encoding="utf-8")
+    source = SINGLE_FILE_SOURCE.replace(
+        'if __name__ == "__main__":\n',
+        f'if __name__ == "__main__":\n    import {helper}\n'
+        f"    sys_argv_extra = [str({helper}.VALUE)]\n",
+    ).replace('"argv": sys.argv', '"argv": sys_argv_extra')
+    make_single_file(base, name, source)
+    try:
+        assert plugin_runner.run_plugin(name, [], manager) == 0
+    finally:
+        sys.modules.pop(helper, None)
+    assert json.loads(record.read_text(encoding="utf-8"))["argv"] == ["42"]
+
+
+def test_a_single_files_exit_request_becomes_the_status(
+    manager, name, record, monkeypatch
+):
+    make_single_file(Path(manager.plugin_dir), name)
+    monkeypatch.setenv("RUNNER_EXIT", "4")
+    assert plugin_runner.run_plugin(name, [], manager) == 4
+
+
+def test_a_package_and_a_single_file_with_one_name_are_an_error(manager, name, capsys):
+    make_package(Path(manager.plugin_dir) / "A", name)
+    make_single_file(Path(manager.plugin_dir) / "B", name)
+    assert plugin_runner.run_plugin(name, [], manager) == 2
+    assert "more than one plugin" in capsys.readouterr().err
+
+
 def test_a_package_without_main_and_a_single_file_are_not_runnable(manager, name):
     make_package(Path(manager.plugin_dir), name, main_source=None)
     (Path(manager.plugin_dir) / "single.py").write_text("", encoding="utf-8")
@@ -126,6 +224,22 @@ def test_list_plugins_shows_every_plugin_and_marks_the_runnable(manager, name):
     assert "Utility" in lines["plain_package"]
     assert "[run" not in lines["single"]
     assert "[disabled]" in lines["off_package"]
+
+
+def test_list_plugins_marks_a_runnable_single_file(manager, name):
+    make_single_file(Path(manager.plugin_dir), name)
+    line = plugin_lines(manager)[name]
+    assert "[run]" in line
+    assert "Single Tool 1.0" in line
+
+
+def test_run_plugin_flag_runs_a_single_file(manager, name, record):
+    path = make_single_file(Path(manager.plugin_dir), name)
+    assert run_main(["-r", name, "list"], manager) == 0
+    assert json.loads(record.read_text(encoding="utf-8"))["argv"] == [
+        str(path),
+        "list",
+    ]
 
 
 def test_run_passes_arguments_and_restores_state(manager, name, record):

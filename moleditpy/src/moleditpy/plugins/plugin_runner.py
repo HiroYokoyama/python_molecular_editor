@@ -10,15 +10,19 @@ Repo: https://github.com/HiroYokoyama/python_molecular_editor
 DOI: 10.5281/zenodo.17268532
 """
 
-# Run a plugin package's ``__main__`` from the command line, without the editor.
+# Run a plugin's command line from the command line, without the editor.
 #
-# ``moleditpy --run-plugin NAME ARGS...`` behaves like ``python -m NAME ARGS...``
-# with the plugin's parent folder put on sys.path; the working directory is left
-# alone, so relative paths in ARGS mean what they meant to the caller. A package
-# plugin opts in by shipping a ``__main__.py``. No QApplication or main window
-# is created; the plugin builds whatever it needs, and its exit status becomes
-# the process's.
+# For a package plugin, ``moleditpy --run-plugin NAME ARGS...`` behaves like
+# ``python -m NAME ARGS...`` with the plugin's parent folder put on sys.path;
+# the package opts in by shipping a ``__main__.py``. For a single-file plugin it
+# behaves like ``python NAME.py ARGS...``; the file opts in with a top-level
+# ``if __name__ == "__main__":`` block. The working directory is left alone, so
+# relative paths in ARGS mean what they meant to the caller. No QApplication or
+# main window is created; the plugin builds whatever it needs, and its exit
+# status becomes the process's.
 
+import ast
+import logging
 import os
 import runpy
 import sys
@@ -26,6 +30,35 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, TextIO
 
 from .plugin_manager import PluginManager
+
+
+def _is_main_guard(test: ast.expr) -> bool:
+    if not (
+        isinstance(test, ast.Compare)
+        and len(test.ops) == 1
+        and isinstance(test.ops[0], ast.Eq)
+    ):
+        return False
+    sides = [test.left, test.comparators[0]]
+    names = [s for s in sides if isinstance(s, ast.Name) and s.id == "__name__"]
+    values = [s for s in sides if isinstance(s, ast.Constant) and s.value == "__main__"]
+    return len(names) == 1 and len(values) == 1
+
+
+def has_main_guard(path: str) -> bool:
+    """Whether the file has a top-level ``if __name__ == "__main__":`` block.
+
+    The file is parsed, not imported, so no plugin code runs.
+    """
+    try:
+        with open(path, "rb") as fh:
+            tree = ast.parse(fh.read(), filename=path)
+    except (OSError, SyntaxError, ValueError) as error:
+        logging.error("Could not parse plugin file %s: %s", path, error)
+        return False
+    return any(
+        isinstance(node, ast.If) and _is_main_guard(node.test) for node in tree.body
+    )
 
 
 @dataclass(frozen=True)
@@ -43,12 +76,7 @@ class InstalledPlugin:
     @property
     def runnable(self) -> bool:
         """Whether ``--run-plugin`` can run this plugin."""
-        return (
-            self.package
-            and self.enabled
-            and self.has_main
-            and (self.name.isidentifier())
-        )
+        return self.enabled and self.has_main and self.name.isidentifier()
 
 
 def installed_plugins(manager: Optional[PluginManager] = None) -> List[InstalledPlugin]:
@@ -94,12 +122,18 @@ def installed_plugins(manager: Optional[PluginManager] = None) -> List[Installed
         for filename in sorted(files):
             if filename.endswith(".py") and not filename.startswith("__"):
                 path = os.path.join(root, filename)
-                add(path, os.path.splitext(filename)[0], path, False, False)
+                add(
+                    path,
+                    os.path.splitext(filename)[0],
+                    path,
+                    False,
+                    has_main_guard(path),
+                )
     return found
 
 
 def runnable_plugins(manager: Optional[PluginManager] = None) -> Dict[str, List[str]]:
-    """Map each runnable plugin name to the package folders that provide it.
+    """Map each runnable plugin name to the folders or files that provide it.
 
     More than one folder under one name is reported, not resolved.
     """
@@ -151,28 +185,33 @@ def run_plugin(
     name: str, argv: Sequence[str], manager: Optional[PluginManager] = None
 ) -> int:
     """Run plugin *name*'s ``__main__`` with *argv* and return its exit status."""
-    folders = runnable_plugins(manager).get(name, [])
-    if not folders:
+    paths = runnable_plugins(manager).get(name, [])
+    if not paths:
         print(
             f"Error: no runnable plugin named '{name}'. A plugin can be run when "
-            "it is an enabled package with a __main__.py; see --list-plugins.",
+            "it is enabled and is a package with a __main__.py or a single file "
+            'with an if __name__ == "__main__": block; see --list-plugins.',
             file=sys.stderr,
         )
         return 2
-    if len(folders) > 1:
+    if len(paths) > 1:
         print(
-            f"Error: more than one plugin is named '{name}':\n  "
-            + "\n  ".join(folders),
+            f"Error: more than one plugin is named '{name}':\n  " + "\n  ".join(paths),
             file=sys.stderr,
         )
         return 2
 
-    parent = os.path.dirname(folders[0])
+    path = paths[0]
+    single_file = os.path.isfile(path)
     saved_argv, saved_path = sys.argv[:], sys.path[:]
-    sys.argv = [name, *argv]
-    sys.path.insert(0, parent)
+    # As with ``python FILE``, argv[0] is the file and its folder is importable.
+    sys.argv = [path if single_file else name, *argv]
+    sys.path.insert(0, os.path.dirname(path))
     try:
-        runpy.run_module(name, run_name="__main__", alter_sys=True)
+        if single_file:
+            runpy.run_path(path, run_name="__main__")
+        else:
+            runpy.run_module(name, run_name="__main__", alter_sys=True)
     except SystemExit as exit_request:
         return _exit_status(exit_request.code)
     finally:
