@@ -48,11 +48,14 @@ def _is_main_guard(test: ast.expr) -> bool:
 def has_main_guard(path: str) -> bool:
     """Whether the file has a top-level ``if __name__ == "__main__":`` block.
 
-    The file is parsed, not imported, so no plugin code runs.
+    The file is parsed and compiled, not run, so no plugin code runs, and a
+    file that would not compile does not count.
     """
     try:
         with open(path, "rb") as fh:
             tree = ast.parse(fh.read(), filename=path)
+        # ast.parse skips the compiler's scope checks (e.g. a top-level return).
+        compile(tree, path, "exec")
     except (OSError, SyntaxError, ValueError) as error:
         logging.error("Could not parse plugin file %s: %s", path, error)
         return False

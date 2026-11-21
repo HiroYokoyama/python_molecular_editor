@@ -169,7 +169,7 @@ if __name__ == "__main__":
     sys.exit(cli_main(sys.argv[1:]))
 ```
 
-`moleditpy -r my_tool ARGS...` then works like `python my_tool.py ARGS...`: `sys.argv[0]` is the file's path, its folder is on `sys.path`, and the block runs as `__main__` without `initialize()` being called. The name is the file name without `.py`. The guard is found by parsing the file, so listing plugins runs none of their code; a guard inside a function or class does not count. As with a package, the module's top level runs first, so it must import without a running editor.
+`moleditpy -r my_tool ARGS...` then works like `python my_tool.py ARGS...`: `sys.argv[0]` is the file's path, its folder is on `sys.path`, and the block runs as `__main__` without `initialize()` being called. The name is the file name without `.py`, which must be a valid Python identifier as for a package: `my_tool.py` can be run, `my-tool.py` cannot. The guard is found by parsing the file, so listing plugins runs none of their code; a guard inside a function or class does not count. As with a package, the module's top level runs first, so it must import without a running editor.
 
 ---
 

@@ -105,6 +105,8 @@ def test_a_single_file_with_a_main_guard_is_runnable(manager, name):
         "if __name__ != '__main__':\n    pass\n",
         "if __name__ == 'other':\n    pass\n",
         "this is not python(\n",
+        # Parses, but the compiler rejects it.
+        "if __name__ == '__main__':\n    return 0\n",
     ],
 )
 def test_a_single_file_without_a_top_level_main_guard_is_not_runnable(
