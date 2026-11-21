@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [5.3.2] - 2026-11-22
+
 ### Added
 
 - `moleditpy --run-plugin NAME` can now run a single-file plugin, not only a package with a `__main__.py`. A single-file plugin opts in with a top-level `if __name__ == "__main__":` block and runs like `python NAME.py ARGS`: `sys.argv[0]` is the file's path and its folder is importable. The block is found by parsing the file, so `--list-plugins` runs no plugin code; it marks such plugins `[run]`.
